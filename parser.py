@@ -10,6 +10,8 @@ class Parser:
         options.binary_location = r'C:\Program Files\Mozilla Firefox\firefox.exe'
         self.webdriver = webdriver.Firefox(executable_path=r'D:\Users\Paul\Téléchargement\geckodriver-v0.34.0-win32\geckodriver.exe', options=options)
     
+    def close(self) -> None:
+        self.webdriver.close()
     
     def get_matchup_data(self, champion: str, enemy: str) -> float :
         return self.get_matchup_data_on_patch(self.CURRENT_PATCH, champion, enemy)
@@ -25,7 +27,5 @@ class Parser:
 
         winrate = float(tree.xpath('/html/body/main/div[5]/div[1]/div[2]/div[3]/div/div/div[1]/div[1]/text()')[0])
         games = int(tree.xpath('/html/body/main/div[5]/div[1]/div[2]/div[3]/div/div/div[2]/div[1]/text()')[0].replace(",", ""))
-
-        self.webdriver.close()
 
         return winrate, games
