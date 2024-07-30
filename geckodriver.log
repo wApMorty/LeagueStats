@@ -1,0 +1,160 @@
+1722289731003	geckodriver	INFO	Listening on 127.0.0.1:17176
+1722290134132	geckodriver	INFO	Listening on 127.0.0.1:17527
+1722290152383	geckodriver	INFO	Listening on 127.0.0.1:17563
+1722290339984	geckodriver	INFO	Listening on 127.0.0.1:17742
+1722290342024	mozrunner::runner	INFO	Running command: "C:\\Program Files\\Mozilla Firefox\\firefox.exe" "--marionette" "--remote-debugging-port" "17743" "--remote-allow-hosts" "localhost" "-no-remote" "-profile" "C:\\Users\\pj35\\AppData\\Local\\Temp\\rust_mozprofileql77jd"
+console.warn: services.settings: Ignoring preference override of remote settings server
+console.warn: services.settings: Allow by setting MOZ_REMOTE_SETTINGS_DEVTOOLS=1 in the environment
+Dynamically enable window occlusion 0
+1722290347354	Marionette	INFO	Marionette enabled
+1722290347490	Marionette	INFO	Listening on port 17758
+WebDriver BiDi listening on ws://127.0.0.1:17743
+Read port: 17758
+1722290347640	RemoteAgent	WARN	TLS certificate errors will be ignored for this session
+DevTools listening on ws://127.0.0.1:17743/devtools/browser/af863b2b-029c-4a46-afa6-ca809ce74304
+1722290378602	addons.xpi	ERROR	System addon update list erro1722290379732	mozrunner::runner	INFO	Running command: "C:\\Program Files\\Mozilla Firefox\\firefox.ex1722290479808	Marionette	INFO	Stopped listening on port 17758
+Dynamically enable window occlusion 1
+profile" "C:\\Users\\pj35\\AppData\\Local\\Temp\\rust_mozprofilewKE1v5"
+console.warn: services.settings: Ignoring preference override of remote settings server
+console.warn: services.settings: Allow by setting MOZ_REMOTE_SETTINGS_DEVTOOLS=1 in the environment
+Dynamically enable window occlusion 0
+1722290384728	Marionette	INFO	Marionette enabled
+1722290384874	Marionette	INFO	Listening on port 17829
+WebDriver BiDi listening on ws://127.0.0.1:17814
+Read port: 17829
+1722290385030	RemoteAgent	WARN	TLS certificate errors will be ignored for this session
+DevTools listening on ws://127.0.0.1:17814/devtools/browser/e8fa19ab-ba3a-4620-b6f3-ab2a92428028
+JavaScript warning: https://s.nitropay.com/ads-138.js, line 2: WEBGL_debug_renderer_info is deprecated in Firefox and will be removed. Please use RENDERER.
+1722290414740	addons.xpi	ERROR	System addon update list error SyntaxError: XMLHttpRequest.open: 'http://%(server)s/dummy-system-addons.xml' is not a valid URL.
+JavaScript warning: https://pagead2.googlesyndication.com/pagead/js/rum.js, line 82: Script terminated by timeout at:
+U@https://pagead2.googlesyndication.com/pagead/js/rum.js:82:332
+Bf/this.U@https://pagead2.googlesyndication.com/pagead/js/rum.js:80:190
+
+1722290479689	Marionette	INFO	Stopped listening on port 17829
+Dynamically enable window occlusion 1
+tings: Ignoring preference override of remote settings server
+console.warn: services.settings: Allow by setting MOZ_REMOTE_SETTINGS_DEVTOOLS=1 in the environment
+Dynamically enable window occlusion 0
+1722290452373	Marionette	INFO	Marionette enabled
+1722290457494	Marionette	INFO	Listening on port 50597
+WebDriver BiDi listening on ws://127.0.0.1:17975
+Read port: 50597
+1722290457646	RemoteAgent	WARN	TLS certificate errors will be ignored for this session
+DevTools listening on ws://127.0.0.1:17975/devtools/browser/16350430-19ef-4699-8d22-a328abca3979
+JavaScript warning: https://s.nitropay.com/ads-138.js, line 2: WEBGL_debug_renderer_info is deprecated in Firefox and will be removed. Please use RENDERER.
+1722290481593	Marionette	INFO	Stopped listening on port 50597
+Dynamically enable window occlusion 1
+1722290483535	geckodriver	INFO	Listening on 127.0.0.1:50687
+1722290485580	mozrunner::runner	INFO	Running command: "C:\\Program Files\\Mozilla Firefox\\firefox.exe" "--marionette" "--remote-debugging-port" "50688" "--remote-allow-hosts" "localhost" "-no-remote" "-profile" "C:\\Users\\pj35\\AppData\\Local\\Temp\\rust_mozprofilehnvmHb"
+console.warn: services.settings: Ignoring preference override of remote settings server
+console.warn: services.settings: Allow by setting MOZ_REMOTE_SETTINGS_DEVTOOLS=1 in the environment
+Dynamically enable window occlusion 0
+1722290490657	Marionette	INFO	Marionette enabled
+1722290490816	Marionette	INFO	Listening on port 50700
+WebDriver BiDi listening on ws://127.0.0.1:50688
+Read port: 50700
+1722290491024	RemoteAgent	WARN	TLS certificate errors will be ignored for this session
+DevTools listening on ws://127.0.0.1:50688/devtools/browser/c1ba5fe6-4f22-4b5b-adc5-18662697df85
+JavaScript warning: https://s.nitropay.com/ads-138.js, line 2: WEBGL_debug_renderer_info is deprecated in Firefox and will be removed. Please use RENDERER.
+1722290520672	addons.xpi	ERROR	System addon update list error SyntaxError: XMLHttpRequest.open: 'http://%(server)s/dummy-system-addons.xml' is not a valid URL.
+JavaScript warning: https://www.googletagmanager.com/gtag/js?id=G-FVWZ0RM4DH&l=audDataLayer, line 539: Script terminated by timeout at:
+h.zh@https://www.googletagmanager.com/gtag/js?id=G-FVWZ0RM4DH&l=audDataLayer:539:30
+get@https://www.googletagmanager.com/gtag/js?id=G-FVWZ0RM4DH&l=audDataLayer:537:119
+stop@https://www.googletagmanager.com/gtag/js?id=G-FVWZ0RM4DH&l=audDataLayer:537:87
+h.Rk/c/<@https://www.googletagmanager.com/gtag/js?id=G-FVWZ0RM4DH&l=audDataLayer:537:410
+
+1722290620982	Marionette	INFO	Stopped listening on port 50700
+Dynamically enable window occlusion 1
+te	INFO	Marionette enabled
+1722290607112	Marionette	INFO	Listening on port 50893
+WebDriver BiDi listening on ws://127.0.0.1:50882
+Read port: 50893
+1722290607319	RemoteAgent	WARN	TLS certificate errors will be ignored for this session
+DevTools listening on ws://127.0.0.1:50882/devtools/browser/3ebe8af0-1b98-4d75-b02e-0821c68931d1
+JavaScript warning: https://s.nitropay.com/ads-138.js, line 2: WEBGL_debug_renderer_info is deprecated in Firefox and will be removed. Please use RENDERER.
+JavaScript warning: https://www.googletagmanager.com/gtag/js?id=G-FVWZ0RM4DH&l=audDataLayer, line 539: Script terminated by timeout at:
+h.zh@https://www.googletagmanager.com/gtag/js?id=G-FVWZ0RM4DH&l=audDataLayer:539:30
+get@https://www.googletagmanager.com/gtag/js?id=G-FVWZ0RM4DH&l=audDataLayer:537:119
+stop@https://www.googletagmanager.com/gtag/js?id=G-FVWZ0RM4DH&l=audDataLayer:537:87
+h.Rk/c/<@https://www.googletagmanager.com/gtag/js?id=G-FVWZ0RM4DH&l=audDataLayer:537:410
+
+1722290620412	Marionette	INFO	Stopped listening on port 50893
+Dynamically enable window occlusion 1
+1722290650521	geckodriver	INFO	Listening on 127.0.0.1:51017
+1722290652545	mozrunner::runner	INFO	Running command: "C:\\Program Files\\Mozilla Firefox\\firefox.exe" "--marionette" "--remote-debugging-port" "51018" "--remote-allow-hosts" "localhost" "-no-remote" "-profile" "C:\\Users\\pj35\\AppData\\Local\\Temp\\rust_mozprofileaF7oJI"
+console.warn: services.settings: Ignoring preference override of remote settings server
+console.warn: services.settings: Allow by setting MOZ_REMOTE_SETTINGS_DEVTOOLS=1 in the environment
+Dynamically enable window occlusion 0
+1722290657425	Marionette	INFO	Marionette enabled
+1722290657563	Marionette	INFO	Listening on port 51029
+WebDriver BiDi listening on ws://127.0.0.1:51018
+Read port: 51029
+1722290657687	RemoteAgent	WARN	TLS certificate errors will be ignored for this session
+DevTools listening on ws://127.0.0.1:51018/devtools/browser/382d74f9-6487-47be-9468-babeed79e374
+JavaScript warning: https://s.nitropay.com/ads-138.js, line 2: WEBGL_debug_renderer_info is deprecated in Firefox and will be removed. Please use RENDERER.
+1722290687452	addons.xpi	ERROR	System addon update list error SyntaxError: XMLHttpRequest.open: 'http://%(server)s/dummy-system-addons.xml' is not a valid URL.
+1722290704403	Marionette	INFO	Stopped listening on port 51029
+Dynamically enable window occlusion 1
+profile" "C:\\Users\\pj35\\AppData\\Local\\Temp\\rust_mozprofileJMZmSN"
+console.warn: services.settings: Ignoring preference override of remote settings server
+console.warn: services.settings: Allow by setting MOZ_REMOTE_SETTINGS_DEVTOOLS=1 in the environment
+Dynamically enable window occlusion 0
+1722290682927	Marionette	INFO	Marionette enabled
+1722290683057	Marionette	INFO	Listening on port 51112
+WebDriver BiDi listening on ws://127.0.0.1:51099
+Read port: 51112
+1722290683202	RemoteAgent	WARN	TLS certificate errors will be ignored for this session
+DevTools listening on ws://127.0.0.1:51099/devtools/browser/97b04464-b67b-4327-9082-262754f3a531
+JavaScript warning: https://s.nitropay.com/ads-138.js, line 2: WEBGL_debug_renderer_info is deprecated in Firefox and will be removed. Please use RENDERER.
+1722290686306	Marionette	INFO	Stopped listening on port 51112
+Dynamically enable window occlusion 1
+JavaScript error: , line 0: TypeError: error loading dynamically imported module: https://lolalytics.com/build/q-C6dhWc3g.js
+JavaScript error: , line 0: TypeError: error loading dynamically imported module: https://lolalytics.com/build/q-C6dhWc3g.js
+1722290712907	geckodriver	INFO	Listening on 127.0.0.1:51196
+1722290714955	mozrunner::runner	INFO	Running command: "C:\\Program Files\\Mozilla Firefox\\firefox.exe" "--marionette" "--remote-debugging-port" "51197" "--remote-allow-hosts" "localhost" "-no-remote" "-profile" "C:\\Users\\pj35\\AppData\\Local\\Temp\\rust_mozprofileRMJsFR"
+console.warn: services.settings: Ignoring preference override of remote settings server
+console.warn: services.settings: Allow by setting MOZ_REMOTE_SETTINGS_DEVTOOLS=1 in the environment
+Dynamically enable window occlusion 0
+1722290719851	Marionette	INFO	Marionette enabled
+1722290719989	Marionette	INFO	Listening on port 51208
+WebDriver BiDi listening on ws://127.0.0.1:51197
+Read port: 51208
+1722290720134	RemoteAgent	WARN	TLS certificate errors will be ignored for this session
+DevTools listening on ws://127.0.0.1:51197/devtools/browser/59358639-a9c6-42b1-bc4f-85fe414971a7
+JavaScript warning: https://s.nitropay.com/ads-138.js, line 2: WEBGL_debug_renderer_info is deprecated in Firefox and will be removed. Please use RENDERER.
+1722290723150	Marionette	INFO	Stopped listening on port 51208
+Dynamically enable window occlusion 1
+JavaScript error: , line 0: TypeError: error loading dynamically imported module: https://lolalytics.com/build/q-C6dhWc3g.js
+JavaScript error: , line 0: TypeError: error loading dynamically imported module: https://lolalytics.com/build/q-C6dhWc3g.js
+1722290933616	geckodriver	INFO	Listening on 127.0.0.1:51431
+1722290935664	mozrunner::runner	INFO	Running command: "C:\\Program Files\\Mozilla Firefox\\firefox.exe" "--marionette" "--remote-debugging-port" "51432" "--remote-allow-hosts" "localhost" "-no-remote" "-profile" "C:\\Users\\pj35\\AppData\\Local\\Temp\\rust_mozprofileg16wzS"
+console.warn: services.settings: Ignoring preference override of remote settings server
+console.warn: services.settings: Allow by setting MOZ_REMOTE_SETTINGS_DEVTOOLS=1 in the environment
+Dynamically enable window occlusion 0
+1722290940603	Marionette	INFO	Marionette enabled
+1722290940743	Marionette	INFO	Listening on port 51446
+WebDriver BiDi listening on ws://127.0.0.1:51432
+Read port: 51446
+1722290940889	RemoteAgent	WARN	TLS certificate errors will be ignored for this session
+DevTools listening on ws://127.0.0.1:51432/devtools/browser/aacc247c-0666-4656-8633-18bd8d6cd56b
+JavaScript warning: https://s.nitropay.com/ads-138.js, line 2: WEBGL_debug_renderer_info is deprecated in Firefox and will be removed. Please use RENDERER.
+1722290944139	Marionette	INFO	Stopped listening on port 51446
+Dynamically enable window occlusion 1
+JavaScript error: , line 0: TypeError: error loading dynamically imported module: https://lolalytics.com/build/q-C6dhWc3g.js
+JavaScript error: , line 0: TypeError: error loading dynamically imported module: https://lolalytics.com/build/q-C6dhWc3g.js
+1722290961956	geckodriver	INFO	Listening on 127.0.0.1:51516
+1722290963984	mozrunner::runner	INFO	Running command: "C:\\Program Files\\Mozilla Firefox\\firefox.exe" "--marionette" "--remote-debugging-port" "51517" "--remote-allow-hosts" "localhost" "-no-remote" "-profile" "C:\\Users\\pj35\\AppData\\Local\\Temp\\rust_mozprofilezGmme9"
+console.warn: services.settings: Ignoring preference override of remote settings server
+console.warn: services.settings: Allow by setting MOZ_REMOTE_SETTINGS_DEVTOOLS=1 in the environment
+Dynamically enable window occlusion 0
+1722290968957	Marionette	INFO	Marionette enabled
+1722290969086	Marionette	INFO	Listening on port 51531
+WebDriver BiDi listening on ws://127.0.0.1:51517
+Read port: 51531
+1722290969233	RemoteAgent	WARN	TLS certificate errors will be ignored for this session
+DevTools listening on ws://127.0.0.1:51517/devtools/browser/515b8903-d28e-4c2d-810f-78b14c3ca3b0
+JavaScript warning: https://s.nitropay.com/ads-138.js, line 2: WEBGL_debug_renderer_info is deprecated in Firefox and will be removed. Please use RENDERER.
+1722290972989	Marionette	INFO	Stopped listening on port 51531
+Dynamically enable window occlusion 1
+JavaScript error: , line 0: TypeError: error loading dynamically imported module: https://lolalytics.com/build/q-C6dhWc3g.js
+JavaScript error: , line 0: TypeError: error loading dynamically imported module: https://lolalytics.com/build/q-C6dhWc3g.js
