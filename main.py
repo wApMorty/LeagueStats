@@ -1,17 +1,14 @@
-import db
-import parser
+from db import Database
+from parser import Parser
 
-db = db.Database("db.db")
+db = Database("db.db")
 db.connect()
-# parser = parser.Parser()
-
-print(db.get_champion_id("rumble"))
-
-# winrate, games = parser.get_matchup_data("hecarim", "aatrox")
-# print(winrate)
-# print(games)
+parser = Parser()
 
 # db.init_champion_table()
+for matchup in parser.get_champion_data("camille"):
+    champ, winrate, d1, d2, pick, games = matchup
+    print(f"{champ} - {winrate}% - {d1} - {d2} - {pick} - {games}")
 
-# parser.close()
+parser.close()
 db.close()
