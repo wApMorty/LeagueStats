@@ -168,5 +168,6 @@ CHAMPIONS_LIST = np.unique([
     "Tristana",
     "Ryze",
     "Veigar",
-    "Sion"
+    "Sion",
+    "Diana"
 ])

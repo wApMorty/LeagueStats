@@ -1,5 +1,6 @@
 import sqlite3
 from sqlite3 import Error
+from typing import List
 from constants import CHAMPIONS_LIST
 
 class Database:
@@ -35,18 +36,42 @@ class Database:
 
     def init_matchups_table(self) -> None:
         self.execute_query("DROP TABLE IF EXISTS matchups")
-        self.execute_query("CREATE TABLE matchups (id INTEGER PRIMARY KEY, champion INTEGER NOT NULL, enemy INTEGER NOT NULL, winrate REAL NOT NULL, games INTEGER NOT NULL)")
+        self.execute_query("CREATE TABLE matchups (id INTEGER PRIMARY KEY, champion INTEGER NOT NULL, enemy INTEGER NOT NULL, winrate REAL NOT NULL, delta1 REAL NOT NULL, delta2 REAL NOT NULL, pickrate REAL NOT NULL, games INTEGER NOT NULL)")
 
-    def add_matchup(self, champion: str, enemy: str, winrate: float, games: int) -> None:
+    def add_matchup(self, champion: str, enemy: str, winrate: float, delta1: float, delta2: float, pickrate: float, games: int) -> None:
         champ_id = self.get_champion_id(champion)
         enemy_id = self.get_champion_id(enemy)
-        self.execute_query(f"INSERT INTO matchups (champion, enemy, winrate, games) VALUES ({champ_id}, {enemy_id}, {winrate}, {games})")
+        if champ_id is None or enemy_id is None or winrate is None or delta1 is None or delta2 is None or pickrate is None or games is None :
+            print(f"{champ_id}, {enemy_id}, {winrate}, {delta1}, {delta2}, {pickrate}, {games}")
+            return
+        self.execute_query(f"INSERT INTO matchups (champion, enemy, winrate, delta1, delta2, pickrate, games) VALUES ({champ_id}, {enemy_id}, {winrate}, {delta1}, {delta2}, {pickrate}, {games})")
 
-    def get_champion_id(self, champion: str) -> None:
+    def get_champion_id(self, champion: str) -> int:
         cursor = self.connection.cursor()
         try:
             cursor.execute(f"SELECT id FROM champions WHERE champion = '{champion}' COLLATE NOCASE")
             self.connection.commit()
             return cursor.fetchone()[0]
+        except Error as e:
+            print(f"The error '{e}' occurred")
+
+    def get_champion_by_id(self, id: int) -> str :
+        cursor = self.connection.cursor()
+        try:
+            cursor.execute(f"SELECT champion FROM champions WHERE id = {id}")
+            self.connection.commit()
+            return cursor.fetchone()[0]
+        except Error as e:
+            print(f"The error '{e}' occurred")
+
+    def get_champion_matchups(self, champion: str) -> List[tuple]:
+        champ_id = self.get_champion_id(champion)
+        cursor = self.connection.cursor()
+        try:
+            cursor.execute(f"SELECT * FROM matchups WHERE champion = '{champ_id}' AND pickrate > 0.5")
+            self.connection.commit()
+            result = cursor.fetchall()
+            # returns (enemy, winrate, delta1, delta2, pickrate, games)
+            return [(self.get_champion_by_id(elem[2]), elem[3], elem[4], elem[5], elem[6], elem[7]) for elem in result]
         except Error as e:
             print(f"The error '{e}' occurred")

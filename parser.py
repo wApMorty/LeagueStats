@@ -48,41 +48,36 @@ class Parser:
         
         self.webdriver.execute_script("window.scrollTo(0,1310)")
         
-        sleep(5)
+        sleep(2)
         
-        # Accepting cookies
+        #region Accepting cookies
         actions = ActionChains(self.webdriver)
         actions.move_by_offset(1661, 853).click().perform()
         
         actions = ActionChains(self.webdriver)
         actions.move_by_offset(-1661, -853).perform()
-        
-        actions = ActionChains(self.webdriver)
-        actions.move_by_offset(1187, 151).perform()
+        #endregion
         
         for index in range (2, 7):
-            actions = ActionChains(self.webdriver)
-            actions.move_by_offset(0, 154).perform()
             path = f"/html/body/main/div[6]/div[1]/div[{index}]/div[2]/div"
+            row = self.webdriver.find_elements(By.XPATH, f"{path}/*")
+            actions = ActionChains(self.webdriver)
+            actions.move_to_element_with_offset(row[0], 460, 0).perform()
             enough_data = False
-            
             while not enough_data:
-                row = self.webdriver.find_elements(By.XPATH, f"{path}/*")
-                
                 for elem in row:
+                    index = row.index(elem)+1
                     champ = elem.find_element(By.TAG_NAME, "a").get_dom_attribute("href").split("vs/")[1].split("/build")[0]
-                    winrate = float(elem.find_element(By.XPATH, f"{path}/div[{row.index(elem)+1}]/div[1]/span").get_attribute('innerHTML').split('%')[0])
+                    winrate = float(elem.find_element(By.XPATH, f"{path}/div[{index}]/div[1]/span").get_attribute('innerHTML').split('%')[0])
                     delta1 = float(elem.find_elements(By.CLASS_NAME, "my-1")[4].get_attribute('innerHTML'))
                     delta2 = float(elem.find_elements(By.CLASS_NAME, "my-1")[5].get_attribute('innerHTML'))
                     pickrate = float(elem.find_elements(By.CLASS_NAME, "my-1")[6].get_attribute('innerHTML'))
                     games = int(''.join(elem.find_element(By.CLASS_NAME, "text-\[9px\]").get_attribute('innerHTML').split()))
                     if not self.contains(result, champ, winrate, delta1, delta2, pickrate, games):
                         result.append((champ, winrate, delta1, delta2, pickrate, games))
-                
-                enough_data = pickrate < 0.2
                 actions = ActionChains(self.webdriver)
-                actions.click().perform()
-            
+                actions.click_and_hold().move_by_offset(-460,0).release().move_by_offset(460, 0).perform()
+                enough_data = pickrate < 0.1
         return result
     
     def contains(self, list, champ, winrate, d1, d2, pick, games) -> bool:
