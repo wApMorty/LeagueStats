@@ -72,8 +72,15 @@ class Assistant:
             for index in range(_results):
                 print(scores[index])
 
-    def blind_pick(self) -> List[tuple]:
-        return self.tierlist_delta2()
+    def blind_pick(self) -> None:
+        lst = self.tierlist_delta2()
+        _results = 10
+        for index in range(_results):
+            print(lst[index])
+        while (input("Want more ?") == "y"):
+            _results += 10
+            for index in range(_results):
+                print(lst[index])
     
     def score_teams(self, team1: List[str], team2: List[str]) -> None:
         scores1 = []

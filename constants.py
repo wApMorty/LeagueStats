@@ -1,6 +1,6 @@
 import numpy as np
 
-CURRENT_PATCH = "14.14"
+CURRENT_PATCH = "14.15"
 CHAMPIONS_LIST = np.unique([
     "Leona",
     "Hecarim",

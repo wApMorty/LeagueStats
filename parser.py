@@ -46,6 +46,8 @@ class Parser:
 
         self.webdriver.get(url)
         
+        sleep(2)
+        
         self.webdriver.execute_script("window.scrollTo(0,1310)")
         
         sleep(2)

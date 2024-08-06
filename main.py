@@ -19,10 +19,12 @@ def load_data() -> None:
     db.close()
 
 if __name__ == "__main__":
+    # load_data()
+    
     ast = Assistant()
     
-    ast.draft(10)
-        
-    # ast.score_teams_no_input()
-
+    # ast.blind_pick()
+    # ast.draft(10)
+    ast.score_teams_no_input()
+    
     ast.close()
