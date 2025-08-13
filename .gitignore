@@ -4,3 +4,8 @@ node_modules
 *.json
 *.db
 *.log
+.claude
+CLAUDE.MD
+build
+dist
+*Release
