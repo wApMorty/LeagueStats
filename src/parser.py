@@ -7,7 +7,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 
-from config import config
+from .config import config, denormalize_champion_name_from_url
 
 class Parser:
     def __init__(self) -> None:
@@ -106,7 +106,8 @@ class Parser:
                                 href = link_elem.get_dom_attribute("href")
                                 if not href or "vs/" not in href:
                                     continue
-                                champ = href.split("vs/")[1].split("/build")[0]
+                                url_name = href.split("vs/")[1].split("/build")[0]
+                                champ = denormalize_champion_name_from_url(url_name)
                                 
                                 # Extract stats with error handling
                                 winrate_elem = elem.find_element(By.XPATH, f"{path}/div[{elem_idx+1}]/div[1]/span")

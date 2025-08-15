@@ -7,6 +7,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 from src.db import Database
 from src.parser import Parser
 from src.assistant import Assistant
+from src.config import normalize_champion_name_for_url
 from src.constants import CHAMPIONS_LIST, TOP_LIST, JUNGLE_LIST, MID_LIST, ADC_LIST, SUPPORT_LIST, CHAMPION_POOL
 
 def parse_all_champions_data(db: Database, parser: Parser) -> None:
@@ -14,7 +15,8 @@ def parse_all_champions_data(db: Database, parser: Parser) -> None:
     db.init_champion_table()
     db.init_matchups_table()
     for champion in CHAMPIONS_LIST:
-        for matchup in parser.get_champion_data(champion.lower()):
+        normalized_champion = normalize_champion_name_for_url(champion)
+        for matchup in parser.get_champion_data(normalized_champion):
             enemy, winrate, d1, d2, pick, games = matchup
             db.add_matchup(champion, enemy, winrate, d1, d2, pick, games)
     parser.close()
@@ -23,7 +25,8 @@ def parse_all_champions_data(db: Database, parser: Parser) -> None:
 def _parse_champions_for_role(db: Database, parser: Parser, champion_list: list, lane: str) -> None:
     """Parse champion data for a specific role/lane."""
     for champion in champion_list:
-        for matchup in parser.get_champion_data(champion.lower(), lane):
+        normalized_champion = normalize_champion_name_for_url(champion)
+        for matchup in parser.get_champion_data(normalized_champion, lane):
             enemy, winrate, d1, d2, pick, games = matchup
             db.add_matchup(champion, enemy, winrate, d1, d2, pick, games)
 

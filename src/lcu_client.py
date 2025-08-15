@@ -173,7 +173,7 @@ class LCUClient:
         Args:
             endpoint: API endpoint (e.g. "/lol-champ-select/v1/session")
             method: HTTP method
-            data: Request data for POST/PUT
+            data: Request data for POST/PUT/PATCH
             
         Returns:
             Response JSON or None if error
@@ -189,11 +189,18 @@ class LCUClient:
                 response = self.session.get(url, headers=headers, timeout=5)
             elif method == 'POST':
                 response = self.session.post(url, headers=headers, json=data, timeout=5)
+            elif method == 'PATCH':
+                response = self.session.patch(url, headers=headers, json=data, timeout=5)
+            elif method == 'PUT':
+                response = self.session.put(url, headers=headers, json=data, timeout=5)
             else:
                 return None
             
-            if response.status_code == 200:
-                return response.json()
+            if response.status_code in [200, 204]:  # Include 204 No Content for PATCH success
+                try:
+                    return response.json() if response.content else {}
+                except:
+                    return {}  # For successful requests with no content
             elif response.status_code == 404:
                 return None  # Endpoint not found (normal when not in champ select)
             else:
@@ -236,6 +243,170 @@ class LCUClient:
             phase = gameflow.get('phase', '')
             return phase == 'ChampSelect'
         return False
+    
+    def get_champion_id_by_name(self, champion_name: str) -> Optional[int]:
+        """
+        Get champion ID by champion name with flexible matching.
+        
+        Args:
+            champion_name: Champion name (e.g. "DrMundo", "Aatrox")
+            
+        Returns:
+            Champion ID or None if not found
+        """
+        response = self._make_request("/lol-champions/v1/owned-champions-minimal")
+        if response:
+            # Normalize input name for comparison
+            search_name = self._normalize_champion_name(champion_name)
+            
+            for champion in response:
+                client_name = champion.get('name', '')
+                normalized_client_name = self._normalize_champion_name(client_name)
+                
+                # Try multiple matching strategies
+                if (client_name.lower() == champion_name.lower() or 
+                    normalized_client_name == search_name or
+                    normalized_client_name == champion_name.lower()):
+                    return champion.get('id')
+        return None
+    
+    def _normalize_champion_name(self, name: str) -> str:
+        """Normalize champion name for flexible matching."""
+        return name.lower().replace(" ", "").replace(".", "").replace("'", "")
+    
+    def get_current_player_action_id(self) -> Optional[int]:
+        """
+        Get the current player's action ID in champion select.
+        
+        Returns:
+            Action ID or None if not found
+        """
+        session = self.get_champion_select_session()
+        if not session:
+            return None
+        
+        local_player_cell_id = session.get('localPlayerCellId')
+        if local_player_cell_id is None:
+            return None
+        
+        # Find current action for local player
+        for action_set in session.get('actions', []):
+            for action in action_set:
+                if (action.get('actorCellId') == local_player_cell_id and 
+                    not action.get('completed', False) and 
+                    action.get('type') in ['pick', 'hover']):
+                    return action.get('id')
+        
+        return None
+    
+    def hover_champion(self, champion_name: str) -> bool:
+        """
+        Hover a champion during champion select.
+        
+        Args:
+            champion_name: Champion name to hover
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        if not self.is_in_champion_select():
+            if self.verbose:
+                print("[DEBUG] Not in champion select, cannot hover")
+            return False
+        
+        # Get champion ID
+        champion_id = self.get_champion_id_by_name(champion_name)
+        if not champion_id:
+            # Enhanced debug information
+            if self.verbose:
+                print(f"[WARNING] Champion '{champion_name}' not found in client")
+                # Show available champions for debugging
+                response = self._make_request("/lol-champions/v1/owned-champions-minimal")
+                if response:
+                    similar_names = [c.get('name', '') for c in response[:5]]  # First 5 for debug
+                    print(f"[DEBUG] Available champions sample: {similar_names}")
+                    # Look for close matches
+                    search_name = self._normalize_champion_name(champion_name)
+                    close_matches = []
+                    for c in response:
+                        client_name = c.get('name', '')
+                        if search_name in self._normalize_champion_name(client_name):
+                            close_matches.append(client_name)
+                    if close_matches:
+                        print(f"[DEBUG] Possible matches: {close_matches[:3]}")
+            return False
+        
+        # Get current action ID
+        action_id = self.get_current_player_action_id()
+        if not action_id:
+            if self.verbose:
+                print("[WARNING] No available action to update")
+            return False
+        
+        # Update action to hover the champion
+        endpoint = f"/lol-champ-select/v1/session/actions/{action_id}"
+        data = {
+            "championId": champion_id,
+            "completed": False,
+            "type": "pick"
+        }
+        
+        result = self._make_request(endpoint, method='PATCH', data=data)
+        if result is not None:  # None means error, {} means success
+            if self.verbose:
+                print(f"[SUCCESS] Hovered {champion_name} (ID: {champion_id})")
+            return True
+        else:
+            if self.verbose:
+                print(f"[ERROR] Failed to hover {champion_name}")
+            return False
+    
+    def lock_champion(self, champion_name: str) -> bool:
+        """
+        Lock in a champion during champion select.
+        
+        Args:
+            champion_name: Champion name to lock
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        if not self.is_in_champion_select():
+            if self.verbose:
+                print("[DEBUG] Not in champion select, cannot lock")
+            return False
+        
+        # Get champion ID
+        champion_id = self.get_champion_id_by_name(champion_name)
+        if not champion_id:
+            if self.verbose:
+                print(f"[WARNING] Champion '{champion_name}' not found")
+            return False
+        
+        # Get current action ID
+        action_id = self.get_current_player_action_id()
+        if not action_id:
+            if self.verbose:
+                print("[WARNING] No available action to update")
+            return False
+        
+        # Update action to lock the champion
+        endpoint = f"/lol-champ-select/v1/session/actions/{action_id}"
+        data = {
+            "championId": champion_id,
+            "completed": True,
+            "type": "pick"
+        }
+        
+        result = self._make_request(endpoint, method='PATCH', data=data)
+        if result is not None:
+            if self.verbose:
+                print(f"[SUCCESS] Locked {champion_name} (ID: {champion_id})")
+            return True
+        else:
+            if self.verbose:
+                print(f"[ERROR] Failed to lock {champion_name}")
+            return False
     
     def disconnect(self):
         """Clean up connection resources."""

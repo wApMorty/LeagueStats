@@ -73,5 +73,82 @@ class Config:
         
         raise FileNotFoundError("Firefox executable not found. Please install Firefox or set FIREFOX_PATH environment variable.")
 
+# Champion name normalization for URLs
+def normalize_champion_name_for_url(champion_name: str) -> str:
+    """
+    Normalize champion names for use in LoLalytics URLs.
+    
+    LoLalytics uses lowercase champion names with specific formatting:
+    - Remove spaces and special characters
+    - Convert to lowercase
+    - Handle special cases like Roman numerals
+    """
+    # Handle special cases first
+    special_cases = {
+        'JarvanIV': 'jarvaniv',
+        'AurelionSol': 'aurelionsol', 
+        'DrMundo': 'drmundo',
+        'KhaZix': 'khazix',
+        'LeeSin': 'leesin',
+        'KaiSa': 'kaisa',
+        'MissFortune': 'missfortune',
+        'TwistedFate': 'twistedfate',
+        'XinZhao': 'xinzhao',
+        'ChoGath': 'chogath',
+        'KogMaw': 'kogmaw',
+        'RekSai': 'reksai',
+        'TahmKench': 'tahmkench',
+        'VelKoz': 'velkoz',
+        'BelVeth': 'belveth',
+        'KSante': 'ksante',
+        'MasterYi': 'masteryi'
+    }
+    
+    # Check if it's a special case
+    if champion_name in special_cases:
+        return special_cases[champion_name]
+    
+    # Default normalization: lowercase, remove spaces and special chars
+    normalized = champion_name.lower()
+    # Remove apostrophes and spaces
+    normalized = normalized.replace("'", "").replace(" ", "")
+    
+    return normalized
+
+def denormalize_champion_name_from_url(url_name: str) -> str:
+    """
+    Convert a normalized champion name from URL back to the display name.
+    
+    This is the reverse mapping of normalize_champion_name_for_url.
+    Used when parsing champion names from LoLalytics URLs.
+    """
+    # Reverse mapping from URL names to display names
+    url_to_display = {
+        'jarvaniv': 'JarvanIV',
+        'aurelionsol': 'AurelionSol', 
+        'drmundo': 'DrMundo',
+        'khazix': 'KhaZix',
+        'leesin': 'LeeSin',
+        'kaisa': 'KaiSa',
+        'missfortune': 'MissFortune',
+        'twistedfate': 'TwistedFate',
+        'xinzhao': 'XinZhao',
+        'chogath': 'ChoGath',
+        'kogmaw': 'KogMaw',
+        'reksai': 'RekSai',
+        'tahmkench': 'TahmKench',
+        'velkoz': 'VelKoz',
+        'belveth': 'BelVeth',
+        'ksante': 'KSante',
+        'masteryi': 'MasterYi'
+    }
+    
+    # Check if it's a special case that needs conversion
+    if url_name.lower() in url_to_display:
+        return url_to_display[url_name.lower()]
+    
+    # For regular champions, capitalize first letter
+    return url_name.capitalize()
+
 # Global config instance
 config = Config()

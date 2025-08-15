@@ -9,3 +9,5 @@ CLAUDE.MD
 build
 dist
 *Release
+.zip
+.spec

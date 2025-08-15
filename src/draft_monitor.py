@@ -2,9 +2,9 @@ import time
 import json
 from typing import Dict, List, Optional, Set
 from dataclasses import dataclass, field
-from lcu_client import LCUClient
-from assistant import Assistant
-from constants import SOLOQ_POOL, ROLE_POOLS
+from .lcu_client import LCUClient
+from .assistant import Assistant, safe_print
+from .constants import SOLOQ_POOL, ROLE_POOLS
 
 @dataclass
 class ChampionAction:
@@ -38,7 +38,7 @@ class DraftState:
 class DraftMonitor:
     """Monitors League of Legends champion select and provides coaching."""
     
-    def __init__(self, verbose: bool = False, auto_select_pool: bool = True):
+    def __init__(self, verbose: bool = False, auto_select_pool: bool = True, auto_hover: bool = False):
         self.lcu = LCUClient(verbose=verbose)
         self.assistant = Assistant()
         self.last_draft_state = DraftState()
@@ -47,6 +47,9 @@ class DraftMonitor:
         self.verbose = verbose
         self.current_pool = SOLOQ_POOL  # Default pool
         self.auto_select_pool = auto_select_pool
+        self.auto_hover = auto_hover
+        self.last_recommendation = None  # Track last recommendation to avoid spam
+        self.has_done_initial_hover = False  # Track if we've done the initial hover
         
     def start_monitoring(self):
         """Start monitoring champion select."""
@@ -60,11 +63,10 @@ class DraftMonitor:
         
         # Pool selection
         if not self.auto_select_pool:
-            self.current_pool = self.assistant.select_champion_pool()
+            self.current_pool = self._select_champion_pool_interactive()
         else:
             # Auto-select top pool by default
             self.current_pool = ROLE_POOLS["top"]
-            from assistant import safe_print
             safe_print(f"✅ Using pool: TOP ({', '.join(self.current_pool)})")
         
         self.is_monitoring = True
@@ -98,10 +100,17 @@ class DraftMonitor:
                     enemy_picks = self.last_draft_state.enemy_picks
                     
                     if ally_picks and enemy_picks:
-                        self._calculate_final_scores(ally_picks, enemy_picks)
+                        try:
+                            self._calculate_final_scores(ally_picks, enemy_picks)
+                        except Exception as e:
+                            print(f"[ERROR] Failed to calculate final analysis: {e}")
+                            if self.verbose:
+                                import traceback
+                                traceback.print_exc()
                     
                     # Reset state after analysis
                     self.last_draft_state = DraftState()
+                    self.has_done_initial_hover = False  # Reset for next game
                 return
             
             # Get current champion select data
@@ -194,6 +203,15 @@ class DraftMonitor:
             if ban_id > 0:
                 state.enemy_bans.append(ban_id)  # Store Riot ID directly
         
+        # Find current actor (who's supposed to pick/ban now)
+        for action_set in champ_select_data.get('actions', []):
+            for action in action_set:
+                if not action.get('completed', False):
+                    state.current_actor = action.get('actorCellId')
+                    break
+            if state.current_actor:
+                break
+        
         return state
     
     def _has_draft_changed(self, current_state: DraftState) -> bool:
@@ -210,7 +228,20 @@ class DraftMonitor:
         """Handle draft state change and provide recommendations."""
         print("\n" + "="*80)
         print(f"[INFO] DRAFT UPDATE - Phase: {state.phase}")
+        if self.verbose:
+            print(f"[DEBUG] Current actor: {state.current_actor}, Local player: {state.local_player_cell_id}")
+            print(f"[DEBUG] Enemy picks: {len(state.enemy_picks)}, Ally picks: {len(state.ally_picks)}")
+            print(f"[DEBUG] Enemy bans: {len(state.enemy_bans)}, Ally bans: {len(state.ally_bans)}")
         print("="*80)
+        
+        # Do initial hover when first entering champion select
+        if self.auto_hover and not self.has_done_initial_hover and state.phase:
+            self._do_initial_hover()
+            self.has_done_initial_hover = True
+        
+        # Reset last recommendation if enemy composition changed for fresh hover decisions
+        if self._enemy_picks_changed(state):
+            self.last_recommendation = None
         
         # Display current draft state
         self._display_draft_state(state)
@@ -228,7 +259,8 @@ class DraftMonitor:
         else:
             print("  (No picks yet)")
         
-        if state.ally_bans:
+        # Only show bans during ban phases or when bans are relevant
+        if state.ally_bans and self._should_show_bans(state):
             display_bans = [self._get_display_name(champ_id) for champ_id in state.ally_bans]
             print(f"  Bans: {', '.join(display_bans)}")
         
@@ -240,7 +272,8 @@ class DraftMonitor:
         else:
             print("  (No picks yet)")
             
-        if state.enemy_bans:
+        # Only show bans during ban phases or when bans are relevant
+        if state.enemy_bans and self._should_show_bans(state):
             display_bans = [self._get_display_name(champ_id) for champ_id in state.enemy_bans]
             print(f"  Bans: {', '.join(display_bans)}")
     
@@ -252,12 +285,19 @@ class DraftMonitor:
             
             if not enemy_picks and not ally_picks:
                 print(f"\n[COACH] COACH SAYS: Draft just started - prepare your champion pool!")
+                # Show ban recommendations only if we're actually in a ban phase
+                if self._is_ban_phase(state):
+                    self._show_ban_recommendations_draft()
                 return
             
             # Use existing coach logic
             if enemy_picks:
                 print(f"\n[PICKS] COUNTERPICK RECOMMENDATIONS:")
                 print("-" * 50)
+                
+                # Show adaptive ban recommendations only during actual ban phases
+                if self._is_ban_phase(state) and len(enemy_picks) >= 1:
+                    self._show_adaptive_ban_recommendations(state)
                 
                 # Get champion IDs from current pool only
                 name_to_id = {name: champ_id for champ_id, name in self.champion_id_to_name.items()}
@@ -300,11 +340,29 @@ class DraftMonitor:
                 
                 # Show top 3 recommendations
                 display_count = min(3, len(scores))
+                top_recommendation = None
+                
                 for i in range(display_count):
                     champion_id, score = scores[i]
                     display_name = self._get_display_name(champion_id)
                     rank = "[1st]" if i == 0 else "[2nd]" if i == 1 else "[3rd]"
                     print(f"  {rank} {display_name} (Score: {score:.1f})")
+                    
+                    # Store top recommendation for auto-hover
+                    if i == 0:
+                        top_recommendation = display_name
+                
+                # Auto-hover top recommendation if enabled
+                if (self.auto_hover and top_recommendation and 
+                    top_recommendation != self.last_recommendation):
+                    # Check if we should update hover (either it's our turn or enemy picked)
+                    is_our_turn = self._is_player_turn(state)
+                    enemy_changed = self._enemy_picks_changed(state)
+                    
+                    if is_our_turn or enemy_changed:
+                        reason = "Your turn" if is_our_turn else "Enemy pick update"
+                        self._auto_hover_champion(top_recommendation, reason)
+                        self.last_recommendation = top_recommendation
                 
                 if not scores:
                     print("  [DATA] No data available for current matchups")
@@ -323,9 +381,217 @@ class DraftMonitor:
         except Exception as e:
             print(f"[WARNING] Error providing recommendations: {e}")
     
+    def _is_player_turn(self, state: DraftState) -> bool:
+        """Check if it's the local player's turn to pick."""
+        if not state.current_actor or not state.local_player_cell_id:
+            return False
+        return state.current_actor == state.local_player_cell_id
+    
+    def _enemy_picks_changed(self, state: DraftState) -> bool:
+        """Check if enemy team composition has changed."""
+        return state.enemy_picks != self.last_draft_state.enemy_picks
+    
+    def _is_ban_phase(self, state: DraftState) -> bool:
+        """
+        Check if we are currently in an active ban phase.
+        
+        This method checks multiple conditions:
+        1. Phase name contains 'BAN'
+        2. Current actor exists (someone is supposed to act)
+        3. We haven't reached the maximum number of bans yet
+        
+        Returns:
+            True if currently in an active ban phase, False otherwise
+        """
+        if not state.phase:
+            return False
+        
+        # Check if phase name indicates banning
+        phase_upper = state.phase.upper()
+        if "BAN" not in phase_upper:
+            return False
+        
+        # Additional check: make sure we're not in a pure pick phase
+        if "PICK" in phase_upper and "BAN" not in phase_upper:
+            return False
+        
+        # Check if someone is supposed to act (there's a current actor)
+        if not state.current_actor:
+            return False
+        
+        # Check if we haven't exceeded typical ban limits
+        # In most draft modes, each team gets 5 bans (10 total)
+        total_bans = len(state.ally_bans) + len(state.enemy_bans)
+        if total_bans >= 10:  # Standard draft has 10 bans total
+            if self.verbose:
+                print(f"[DEBUG] Ban phase check: Max bans reached ({total_bans}/10)")
+            return False
+        
+        if self.verbose:
+            print(f"[DEBUG] Ban phase detected: Phase='{state.phase}', Actor={state.current_actor}, Bans={total_bans}/10")
+        
+        return True
+    
+    def _should_show_bans(self, state: DraftState) -> bool:
+        """
+        Determine if bans should be displayed based on the current draft phase.
+        
+        Returns:
+            True if bans should be shown, False otherwise
+        """
+        if not state.phase:
+            return False
+        
+        phase_upper = state.phase.upper()
+        
+        # Show bans during ban phases
+        if "BAN" in phase_upper:
+            return True
+        
+        # Hide bans during pure pick phases
+        if "PICK" in phase_upper and "BAN" not in phase_upper:
+            return False
+        
+        # Show bans during planning phase (before draft starts)
+        if "PLANNING" in phase_upper:
+            return True
+        
+        # Default: hide bans during active picking to reduce clutter
+        return False
+    
+    def _auto_hover_champion(self, champion_name: str, reason: str = ""):
+        """Automatically hover the recommended champion."""
+        try:
+            if self.lcu.hover_champion(champion_name):
+                reason_text = f" ({reason})" if reason else ""
+                print(f"  🎯 [AUTO-HOVER] Hovered {champion_name}{reason_text}")
+            else:
+                if self.verbose:
+                    print(f"  ⚠️ [AUTO-HOVER] Failed to hover {champion_name}")
+        except Exception as e:
+            if self.verbose:
+                print(f"  ❌ [AUTO-HOVER] Error hovering {champion_name}: {e}")
+    
+    def _do_initial_hover(self):
+        """Do initial hover with the best champion from the pool when entering champion select."""
+        try:
+            print(f"\n[INITIAL] Entering champion select - showing your best champion from pool!")
+            
+            # Get best champion from current pool (first champion as fallback)
+            if not self.current_pool:
+                if self.verbose:
+                    print("  ⚠️ [INITIAL-HOVER] No champions in pool")
+                return
+            
+            # Use first champion from pool as initial recommendation
+            # In the future, this could be smarter (e.g., based on meta or personal stats)
+            initial_champion = self.current_pool[0]
+            
+            self._auto_hover_champion(initial_champion, "Initial hover")
+            self.last_recommendation = initial_champion
+            
+        except Exception as e:
+            if self.verbose:
+                print(f"  ⚠️ [INITIAL-HOVER] Error doing initial hover: {e}")
+    
+    def _show_ban_recommendations_draft(self):
+        """Show ban recommendations for current pool during draft."""
+        try:
+            print(f"\n[BANS] 🛡️ STRATEGIC BAN RECOMMENDATIONS")
+            print("-" * 50)
+            
+            ban_recommendations = self.assistant.get_ban_recommendations(self.current_pool, num_bans=3)
+            
+            if ban_recommendations:
+                print(f"Consider banning these threats to your pool:")
+                for i, (enemy, threat_score, matchup_count) in enumerate(ban_recommendations, 1):
+                    print(f"  {i}. {enemy:<12} | Threat: {threat_score:>5.2f} | Counters {matchup_count}/{len(self.current_pool)} of your champions")
+                print(f"💡 These champions have good matchups against your pool")
+            else:
+                if self.verbose:
+                    print(f"⚠️ No ban data available for your pool")
+                    
+        except Exception as e:
+            if self.verbose:
+                print(f"[WARNING] Error showing ban recommendations: {e}")
+    
+    def _show_adaptive_ban_recommendations(self, state: DraftState):
+        """Show ban recommendations adapted to enemy picks."""
+        try:
+            if not state.enemy_picks:
+                return
+            
+            print(f"\n[ADAPTIVE BANS] 🎯 TARGETED BAN RECOMMENDATIONS")
+            print("-" * 50)
+            
+            # Get enemy champion names
+            enemy_names = [self._get_display_name(champ_id) for champ_id in state.enemy_picks]
+            print(f"Enemy team has: {', '.join(enemy_names)}")
+            
+            # Get adaptive ban recommendations based on enemy comp
+            # This could be enhanced to consider synergies, but for now show general threats
+            ban_recommendations = self.assistant.get_ban_recommendations(self.current_pool, num_bans=3)
+            
+            if ban_recommendations:
+                print(f"Priority bans to deny enemy synergies:")
+                for i, (enemy, threat_score, matchup_count) in enumerate(ban_recommendations[:3], 1):
+                    print(f"  {i}. {enemy:<12} | Threat: {threat_score:>5.2f}")
+                print(f"💡 Focus on champions that synergize with their picks")
+            
+        except Exception as e:
+            if self.verbose:
+                print(f"[WARNING] Error showing adaptive ban recommendations: {e}")
+    
+    def _select_champion_pool_interactive(self) -> List[str]:
+        """Interactive pool selection with custom pools support."""
+        try:
+            from .pool_manager import PoolManager
+            pool_manager = PoolManager()
+            
+            print("\n" + "="*50)
+            print("SELECT CHAMPION POOL")
+            print("="*50)
+            
+            # Show available pools
+            pools = pool_manager.get_all_pools()
+            pool_list = []
+            
+            print("\nAvailable pools:")
+            idx = 1
+            for name, pool in sorted(pools.items()):
+                pool_list.append((name, pool))
+                status = "🔧" if pool.created_by == "system" else "👤"
+                print(f"  {idx}. {status} {name:<20} | {pool.role:<8} | {pool.size():>2} champs | {pool.description}")
+                idx += 1
+            
+            # Add legacy options
+            print(f"\n  {idx}. Use Assistant's extended pool selector (legacy)")
+            
+            try:
+                choice = int(input(f"\nChoose pool (1-{idx}): ").strip())
+                
+                if 1 <= choice <= len(pool_list):
+                    selected_name, selected_pool = pool_list[choice - 1]
+                    safe_print(f"✅ Using pool: {selected_name} ({', '.join(selected_pool.champions)})")
+                    return selected_pool.champions
+                elif choice == idx:
+                    # Fallback to assistant's method
+                    return self.assistant.select_champion_pool()
+                else:
+                    print("[WARNING] Invalid choice, using default TOP pool")
+                    return ROLE_POOLS["top"]
+                    
+            except (ValueError, IndexError):
+                print("[WARNING] Invalid input, using default TOP pool")
+                return ROLE_POOLS["top"]
+                
+        except Exception as e:
+            print(f"[WARNING] Pool selection error: {e}")
+            print("Falling back to legacy pool selection...")
+            return self.assistant.select_champion_pool()
+    
     def _calculate_final_scores(self, ally_picks: List[int], enemy_picks: List[int]):
         """Calculate individual scores for each champion at end of draft."""
-        from assistant import safe_print
         
         print("\n" + "="*80)
         safe_print("🎮 FINAL DRAFT ANALYSIS - Individual Champion Scores")

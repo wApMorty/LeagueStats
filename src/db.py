@@ -2,7 +2,7 @@ import sqlite3
 from sqlite3 import Error
 from typing import List, Optional, Dict
 import requests
-from constants import CHAMPIONS_LIST
+from .constants import CHAMPIONS_LIST
 
 class Database:
     def __init__(self, path: str) -> None:
@@ -12,6 +12,8 @@ class Database:
     def connect(self) -> None:
         try:
             self.connection = sqlite3.connect(self.path)
+            # Enable foreign key constraints
+            self.connection.execute("PRAGMA foreign_keys = ON")
             print("Connection to SQLite DB successful")
         except Error as e:
             print(f"The error '{e}' occurred")
@@ -30,7 +32,11 @@ class Database:
             print(f"The error '{e}' occurred")
 
     def init_champion_table(self) -> None:        
+        """Legacy method - use create_riot_champions_table() and update_champions_from_riot_api() instead."""
+        print("[WARNING] Using legacy init_champion_table(). Consider using Riot API integration instead.")
         self.execute_query("DROP TABLE IF EXISTS champions")
+        # Reset auto-increment counter
+        self.execute_query("DELETE FROM sqlite_sequence WHERE name='champions'")
         self.execute_query("CREATE TABLE champions (id INTEGER PRIMARY KEY, champion TEXT NOT NULL)")
         
         for champ in CHAMPIONS_LIST:
@@ -38,7 +44,18 @@ class Database:
 
     def init_matchups_table(self) -> None:
         self.execute_query("DROP TABLE IF EXISTS matchups")
-        self.execute_query("CREATE TABLE matchups (id INTEGER PRIMARY KEY, champion INTEGER NOT NULL, enemy INTEGER NOT NULL, winrate REAL NOT NULL, delta1 REAL NOT NULL, delta2 REAL NOT NULL, pickrate REAL NOT NULL, games INTEGER NOT NULL)")
+        self.execute_query("""CREATE TABLE matchups (
+            id INTEGER PRIMARY KEY, 
+            champion INTEGER NOT NULL, 
+            enemy INTEGER NOT NULL, 
+            winrate REAL NOT NULL, 
+            delta1 REAL NOT NULL, 
+            delta2 REAL NOT NULL, 
+            pickrate REAL NOT NULL, 
+            games INTEGER NOT NULL,
+            FOREIGN KEY (champion) REFERENCES champions(id) ON DELETE CASCADE,
+            FOREIGN KEY (enemy) REFERENCES champions(id) ON DELETE CASCADE
+        )""")
 
     def add_matchup(self, champion: str, enemy: str, winrate: float, delta1: float, delta2: float, pickrate: float, games: int) -> None:
         champ_id = self.get_champion_id(champion)
@@ -141,21 +158,26 @@ class Database:
             cursor.execute("CREATE TABLE IF NOT EXISTS champions_backup AS SELECT * FROM champions WHERE 1=0")
             cursor.execute("INSERT INTO champions_backup SELECT * FROM champions")
             
-            # Clear existing champions
+            # Clear existing champions AND matchups (to avoid orphaned references)
+            cursor.execute("DELETE FROM matchups")  # Clear matchups first (foreign keys)
             cursor.execute("DELETE FROM champions")
+            cursor.execute("DELETE FROM sqlite_sequence WHERE name='champions'")
+            cursor.execute("DELETE FROM sqlite_sequence WHERE name='matchups'")
             
             # Insert new champion data
             champions_inserted = 0
             for key, champ_data in champions_data['data'].items():
                 try:
                     riot_id = int(champ_data['key'])
-                    name = champ_data['name']
+                    display_name = champ_data['name']  # Keep for reference
                     title = champ_data.get('title', '')
                     
+                    # Use the key as name for consistency with constants.py
+                    # This ensures champion names match our normalized format
                     cursor.execute('''
                         INSERT INTO champions (id, key, name, title) 
                         VALUES (?, ?, ?, ?)
-                    ''', (riot_id, key, name, title))
+                    ''', (riot_id, key, key, title))
                     
                     champions_inserted += 1
                     
@@ -176,7 +198,10 @@ class Database:
                 return True
             else:
                 # Restore from backup
+                cursor.execute("DELETE FROM matchups")  # Clear orphaned matchups first
                 cursor.execute("DELETE FROM champions")
+                cursor.execute("DELETE FROM sqlite_sequence WHERE name='champions'")
+                cursor.execute("DELETE FROM sqlite_sequence WHERE name='matchups'")
                 cursor.execute("INSERT INTO champions SELECT * FROM champions_backup")
                 cursor.execute("DROP TABLE champions_backup")
                 self.connection.commit()
@@ -256,68 +281,14 @@ class Database:
             cursor.execute('SELECT name, id FROM champions')
             cache = {}
             
-            # Web scraping name -> Riot official name mapping
-            web_to_riot_mapping = {
-                # Common format differences
-                'ksante': "K'Sante",
-                'drmundo': "Dr. Mundo", 
-                'chogath': "Cho'Gath",
-                'leesin': "Lee Sin",
-                'jarvaniv': "Jarvan IV",
-                'xinzhao': "Xin Zhao",
-                'khazix': "Kha'Zix",
-                'masteryi': "Master Yi",
-                'reksai': "Rek'Sai",
-                'belveth': "Bel'Veth",
-                'nunu': "Nunu & Willump",
-                'twistedfate': "Twisted Fate",
-                'aurelionsol': "Aurelion Sol", 
-                'velkoz': "Vel'Koz",
-                'kaisa': "Kai'Sa",
-                'missfortune': "Miss Fortune",
-                'kogmaw': "Kog'Maw",
-                'renata': "Renata Glasc",
-                'tahmkench': "Tahm Kench",
-                'leblanc': "LeBlanc",
-                'wukong': "Wukong",  # Sometimes called MonkeyKing in old data
-                'monkeyking': "Wukong",
-                
-                # Additional mappings that might be needed
-                'fiddlesticks': "Fiddlesticks",
-                'mundo': "Dr. Mundo",
-                'yi': "Master Yi",
-                'tf': "Twisted Fate",
-                'asol': "Aurelion Sol",
-                'mf': "Miss Fortune",
-                'tk': "Tahm Kench",
-                'lb': "LeBlanc",
-                'j4': "Jarvan IV",
-                'xin': "Xin Zhao",
-                'rg': "Renata Glasc",
-                'nunu': "Nunu & Willump",
-                'willump': "Nunu & Willump",
-            }
-            
             # Get all champions once
             all_champions = cursor.fetchall()
             
             for name, champ_id in all_champions:
-                # Add official name (exact case)
+                # Add official name (exact case) - now these are Riot keys like "DrMundo"
                 cache[name] = champ_id
-                # Add lowercase version
+                # Add lowercase version for flexible matching
                 cache[name.lower()] = champ_id
-                # Add version without spaces/punctuation for web matching
-                clean_name = name.replace(" ", "").replace("'", "").replace(".", "").lower()
-                cache[clean_name] = champ_id
-            
-            # Add web mapping
-            for web_name, riot_name in web_to_riot_mapping.items():
-                # Find the ID for the riot name
-                for name, champ_id in all_champions:
-                    if name == riot_name:
-                        cache[web_name] = champ_id
-                        cache[web_name.lower()] = champ_id
-                        break
             
             return cache
         except Exception as e:
