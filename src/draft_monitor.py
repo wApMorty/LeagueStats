@@ -38,7 +38,7 @@ class DraftState:
 class DraftMonitor:
     """Monitors League of Legends champion select and provides coaching."""
     
-    def __init__(self, verbose: bool = False, auto_select_pool: bool = True, auto_hover: bool = False):
+    def __init__(self, verbose: bool = False, auto_select_pool: bool = True, auto_hover: bool = False, auto_accept_queue: bool = False):
         self.lcu = LCUClient(verbose=verbose)
         self.assistant = Assistant()
         self.last_draft_state = DraftState()
@@ -48,8 +48,12 @@ class DraftMonitor:
         self.current_pool = SOLOQ_POOL  # Default pool
         self.auto_select_pool = auto_select_pool
         self.auto_hover = auto_hover
+        self.auto_accept_queue = auto_accept_queue
         self.last_recommendation = None  # Track last recommendation to avoid spam
         self.has_done_initial_hover = False  # Track if we've done the initial hover
+        self.last_gameflow_phase = ""  # Track last gameflow phase
+        self.has_analyzed_final_draft = False  # Track if we've already analyzed the final draft
+        self.ready_check_accepted_time = 0  # Track when we accepted ready check
         
     def start_monitoring(self):
         """Start monitoring champion select."""
@@ -72,6 +76,8 @@ class DraftMonitor:
         self.is_monitoring = True
         print("[WATCH] Monitoring for champion select...")
         print("   (Start a game to see draft recommendations)")
+        if self.auto_accept_queue:
+            print("   🔥 [AUTO-ACCEPT] Queue auto-accept is ENABLED")
         print("   (Press Ctrl+C to stop)")
         
         try:
@@ -90,27 +96,40 @@ class DraftMonitor:
     def _monitor_loop(self):
         """Main monitoring loop."""
         try:
+            # Check for ready check (queue found) and auto-accept if enabled
+            if self.auto_accept_queue and self.lcu.is_in_ready_check():
+                self._handle_ready_check()
+            
             if not self.lcu.is_in_champion_select():
-                # Calculate final scores before leaving champ select
-                if self.last_draft_state.phase and (self.last_draft_state.ally_picks or self.last_draft_state.enemy_picks):
-                    print("\n[INFO] Left champion select - Draft completed!")
+                # Show ready message when leaving champion select if we had a draft
+                if (self.last_draft_state.phase and 
+                    (self.last_draft_state.ally_picks or self.last_draft_state.enemy_picks)):
                     
-                    # Calculate final team scores
-                    ally_picks = self.last_draft_state.ally_picks
-                    enemy_picks = self.last_draft_state.enemy_picks
-                    
-                    if ally_picks and enemy_picks:
-                        try:
-                            self._calculate_final_scores(ally_picks, enemy_picks)
-                        except Exception as e:
-                            print(f"[ERROR] Failed to calculate final analysis: {e}")
+                    # Only show the message once when leaving champion select
+                    if not hasattr(self, '_shown_ready_message'):
+                        print("\n[INFO] Left champion select - Game starting!")
+                        
+                        # Show ready message for next game
+                        print("\n" + "="*60)
+                        print("🎮 [READY] Waiting for next game...")
+                        if self.auto_accept_queue:
+                            print("   🔥 Auto-accept is enabled for next queue")
+                        print("   (Queue up for another game!)")
+                        print("="*60)
+                        
+                        self._shown_ready_message = True
+                
+                # Check if we've completely left the game flow and should reset
+                gameflow = self.lcu.get_gameflow_session()
+                if gameflow:
+                    current_phase = gameflow.get('phase', '')
+                    # Reset when we're back in lobby or matchmaking
+                    if current_phase in ['Lobby', 'Matchmaking', 'None', '']:
+                        if self.has_analyzed_final_draft:  # Only reset if we had analyzed a draft
                             if self.verbose:
-                                import traceback
-                                traceback.print_exc()
-                    
-                    # Reset state after analysis
-                    self.last_draft_state = DraftState()
-                    self.has_done_initial_hover = False  # Reset for next game
+                                print(f"[DEBUG] Gameflow phase: {current_phase} - Resetting for next game")
+                            self._reset_for_next_game()
+                
                 return
             
             # Get current champion select data
@@ -121,14 +140,125 @@ class DraftMonitor:
             # Parse draft state
             current_state = self._parse_draft_state(champ_select_data)
             
-            # Check for changes and provide recommendations
+            # Check for changes and provide recommendations (only if draft not complete)
             if self._has_draft_changed(current_state):
-                self._handle_draft_change(current_state)
+                # Only show draft updates if we haven't completed the analysis yet
+                if not self.has_analyzed_final_draft:
+                    self._handle_draft_change(current_state)
                 self.last_draft_state = current_state
+                
+            # Check if draft is complete and analyze if needed
+            if self._is_draft_complete(current_state) and not self.has_analyzed_final_draft:
+                self._analyze_complete_draft(current_state)
                 
         except Exception as e:
             if self.verbose:
                 print(f"[WARNING] Monitor error: {e}")
+    
+    def _handle_ready_check(self):
+        """Handle ready check (queue found) and auto-accept if enabled."""
+        try:
+            # Get current gameflow phase to avoid spam
+            gameflow = self.lcu.get_gameflow_session()
+            if not gameflow:
+                return
+            
+            current_phase = gameflow.get('phase', '')
+            current_time = time.time()
+            
+            # Check if we've entered ready check for the first time or after a failed attempt
+            if current_phase == 'ReadyCheck':
+                # Reset ready check acceptance if we haven't accepted in the last 5 seconds
+                # This handles cases where ready check failed and we're in a new one
+                if (self.last_gameflow_phase != 'ReadyCheck' or 
+                    (self.ready_check_accepted_time > 0 and current_time - self.ready_check_accepted_time > 5)):
+                    
+                    print("\n" + "="*60)
+                    print("🎮 [QUEUE] GAME FOUND!")
+                    print("="*60)
+                    
+                    # Get ready check details if available
+                    ready_check = self.lcu.get_ready_check_state()
+                    if ready_check and self.verbose:
+                        timer = ready_check.get('timer', 0)
+                        print(f"[DEBUG] Ready check timer: {timer}s")
+                    
+                    # Auto-accept the queue
+                    if self.lcu.accept_ready_check():
+                        print("✅ [AUTO-ACCEPT] Queue accepted automatically!")
+                        self.ready_check_accepted_time = current_time
+                    else:
+                        print("❌ [AUTO-ACCEPT] Failed to accept queue")
+                    
+                    print("Waiting for other players...")
+                    print("="*60)
+            
+            # Handle transitions out of ready check
+            elif self.last_gameflow_phase == 'ReadyCheck' and current_phase != 'ReadyCheck':
+                if current_phase == 'ChampSelect':
+                    print("✅ [SUCCESS] All players accepted - Entering champion select!")
+                elif current_phase in ['Lobby', 'Matchmaking']:
+                    print("❌ [FAILED] Ready check failed - Someone didn't accept")
+                    print("🔄 [RETRY] Returning to queue...")
+                    # Reset ready check timer to allow new detection
+                    self.ready_check_accepted_time = 0
+            
+            # Update last phase
+            self.last_gameflow_phase = current_phase
+                
+        except Exception as e:
+            if self.verbose:
+                print(f"[WARNING] Error handling ready check: {e}")
+    
+    def _is_draft_complete(self, state: DraftState) -> bool:
+        """Check if the draft is complete (all 10 champions locked)."""
+        total_picks = len(state.ally_picks) + len(state.enemy_picks)
+        return total_picks >= 10
+    
+    def _analyze_complete_draft(self, state: DraftState):
+        """Analyze the complete draft immediately when all champions are locked."""
+        try:
+            ally_picks = state.ally_picks
+            enemy_picks = state.enemy_picks
+            
+            if len(ally_picks) >= 5 and len(enemy_picks) >= 5:
+                print("\n" + "="*80)
+                print("🎯 [DRAFT COMPLETE] All champions locked - Final analysis!")
+                print("="*80)
+                
+                self._calculate_final_scores(ally_picks, enemy_picks)
+                
+                # Show post-draft advice
+                print("\n💡 [ADVICE] Use this analysis to:")
+                print("   • Optimize your runes and summoner spells")
+                print("   • Plan your early game strategy")
+                print("   • Consider dodging if the matchup is very unfavorable")
+                print("   • Focus on your win conditions")
+                
+                # Mark analysis as done
+                self.has_analyzed_final_draft = True
+                
+        except Exception as e:
+            print(f"[ERROR] Failed to analyze complete draft: {e}")
+            if self.verbose:
+                import traceback
+                traceback.print_exc()
+    
+    def _reset_for_next_game(self):
+        """Reset state for the next game."""
+        self.last_draft_state = DraftState()
+        self.has_done_initial_hover = False
+        self.has_analyzed_final_draft = False
+        self.last_recommendation = None
+        self.last_gameflow_phase = ""
+        self.ready_check_accepted_time = 0
+        
+        # Reset ready message flag
+        if hasattr(self, '_shown_ready_message'):
+            delattr(self, '_shown_ready_message')
+        
+        if self.verbose:
+            print("[DEBUG] State reset for next game")
     
     def _load_champion_mappings(self):
         """Load champion mappings from database (now using Riot IDs)."""

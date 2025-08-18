@@ -74,21 +74,22 @@ class PoolManager:
     def _load_default_pools(self):
         """Load default pools from constants."""
         from .constants import (
-            TOP_SOLOQ_POOL, SUPPORT_SOLOQ_POOL, CHAMPION_POOL,
-            TOP_EXTENDED_POOL, SUPPORT_EXTENDED_POOL, JUNGLE_EXTENDED_POOL,
+            TOP_SOLOQ_POOL, JUNGLE_SOLOQ_POOL, MID_SOLOQ_POOL, ADC_SOLOQ_POOL, SUPPORT_SOLOQ_POOL, 
+            CHAMPION_POOL, TOP_EXTENDED_POOL, SUPPORT_EXTENDED_POOL, JUNGLE_EXTENDED_POOL,
             MID_EXTENDED_POOL, ADC_EXTENDED_POOL
         )
         
-        # Create default pools
+        # Create default pools - Complete champion lists by role
         default_pools = [
-            ChampionPool("Top SoloQ", TOP_SOLOQ_POOL, "Main top lane pool for SoloQ", "top", "system", ["default", "soloq"]),
-            ChampionPool("Support SoloQ", SUPPORT_SOLOQ_POOL, "Main support pool for SoloQ", "support", "system", ["default", "soloq"]),
-            ChampionPool("Competitive", CHAMPION_POOL, "Competitive champion pool", "top", "system", ["default", "competitive"]),
-            ChampionPool("Top Extended", TOP_EXTENDED_POOL, "Extended top lane pool", "top", "system", ["extended"]),
-            ChampionPool("Support Extended", SUPPORT_EXTENDED_POOL, "Extended support pool", "support", "system", ["extended"]),
-            ChampionPool("Jungle Extended", JUNGLE_EXTENDED_POOL, "Extended jungle pool", "jungle", "system", ["extended"]),
-            ChampionPool("Mid Extended", MID_EXTENDED_POOL, "Extended mid lane pool", "mid", "system", ["extended"]),
-            ChampionPool("ADC Extended", ADC_EXTENDED_POOL, "Extended ADC pool", "adc", "system", ["extended"]),
+            # Complete role pools
+            ChampionPool("All Top Champions", TOP_SOLOQ_POOL, "Complete list of viable top lane champions", "top", "system", ["complete", "top"]),
+            ChampionPool("All Jungle Champions", JUNGLE_SOLOQ_POOL, "Complete list of viable jungle champions", "jungle", "system", ["complete", "jungle"]),
+            ChampionPool("All Mid Champions", MID_SOLOQ_POOL, "Complete list of viable mid lane champions", "mid", "system", ["complete", "mid"]),
+            ChampionPool("All ADC Champions", ADC_SOLOQ_POOL, "Complete list of viable ADC champions", "adc", "system", ["complete", "adc"]),
+            ChampionPool("All Support Champions", SUPPORT_SOLOQ_POOL, "Complete list of viable support champions", "support", "system", ["complete", "support"]),
+            
+            # Meta/competitive pool
+            ChampionPool("Meta Picks", CHAMPION_POOL, "Balanced selection of meta champions across all roles", "custom", "system", ["meta", "competitive"]),
         ]
         
         for pool in default_pools:

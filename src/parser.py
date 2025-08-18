@@ -7,7 +7,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 
-from .config import config, denormalize_champion_name_from_url
+from .config import config
 
 class Parser:
     def __init__(self) -> None:
@@ -59,14 +59,10 @@ class Parser:
     def get_champion_data(self, champion: str, lane: str = None) -> List[tuple]:
         return self.get_champion_data_on_patch(config.CURRENT_PATCH, champion, lane)
 
-    def get_champion_data_on_patch(self, patch: str, champion: str, lane: str = None) -> List[tuple]:
+    def get_champion_data_on_patch(self, patch: str, champion: str) -> List[tuple]:
         result = []
         
-        url = ""
-        if lane is not None:
-            url = f"https://lolalytics.com/lol/{champion}/build/?lane={lane}&tier=diamond_plus&patch={patch}"
-        else:
-            url = f"https://lolalytics.com/lol/{champion}/build/?tier=diamond_plus&patch={patch}"
+        url = f"https://lolalytics.com/lol/{champion}/build/?tier=diamond_plus&patch={patch}"
 
         self.webdriver.get(url)
         
@@ -77,79 +73,47 @@ class Parser:
         sleep(config.SCROLL_DELAY)
         
         #region Accepting cookies
-        actions = ActionChains(self.webdriver)
-        actions.move_by_offset(1661, 853).click().perform()
-        
-        actions = ActionChains(self.webdriver)
-        actions.move_by_offset(-1661, -853).perform()
+        try:
+            # Use absolute positioning with JavaScript to avoid accumulation
+            self.webdriver.execute_script("""
+                var event = new MouseEvent('click', {
+                    view: window,
+                    bubbles: true,
+                    cancelable: true,
+                    clientX: 1661,
+                    clientY: 853
+                });
+                document.elementFromPoint(1661, 853).dispatchEvent(event);
+            """)
+        except:
+            # Fallback to ActionChains if JS fails
+            actions = ActionChains(self.webdriver)
+            actions.move_by_offset(1661, 853).click().perform()
+            
+            actions = ActionChains(self.webdriver)
+            actions.move_by_offset(-1661, -853).perform()
         #endregion
         
-        try:
-            for index in range(2, 7):
-                path = f"/html/body/main/div[6]/div[1]/div[{index}]/div[2]/div"
-                row = self.webdriver.find_elements(By.XPATH, f"{path}/*")
-                
-                if not row:
-                    print(f"Warning: No elements found for {champion} at index {index}")
-                    continue
-                    
+        for index in range (2, 7):
+            path = f"/html/body/main/div[6]/div[1]/div[{index}]/div[2]/div"
+            row = self.webdriver.find_elements(By.XPATH, f"{path}/*")
+            actions = ActionChains(self.webdriver)
+            actions.move_to_element_with_offset(row[0], 460, 0).perform()
+            enough_data = False
+            while not enough_data:
+                for elem in row:
+                    index = row.index(elem)+1
+                    champ = elem.find_element(By.TAG_NAME, "a").get_dom_attribute("href").split("vs/")[1].split("/build")[0]
+                    winrate = float(elem.find_element(By.XPATH, f"{path}/div[{index}]/div[1]/span").get_attribute('innerHTML').split('%')[0])
+                    delta1 = float(elem.find_elements(By.CLASS_NAME, "my-1")[4].get_attribute('innerHTML'))
+                    delta2 = float(elem.find_elements(By.CLASS_NAME, "my-1")[5].get_attribute('innerHTML'))
+                    pickrate = float(elem.find_elements(By.CLASS_NAME, "my-1")[6].get_attribute('innerHTML'))
+                    games = int(''.join(elem.find_element(By.CLASS_NAME, "text-\[9px\]").get_attribute('innerHTML').split()))
+                    if not self.contains(result, champ, winrate, delta1, delta2, pickrate, games):
+                        result.append((champ, winrate, delta1, delta2, pickrate, games))
                 actions = ActionChains(self.webdriver)
-                actions.move_to_element_with_offset(row[0], 460, 0).perform()
-                enough_data = False
-                
-                while not enough_data:
-                    try:
-                        for elem_idx, elem in enumerate(row):
-                            try:
-                                # Extract champion name
-                                link_elem = elem.find_element(By.TAG_NAME, "a")
-                                href = link_elem.get_dom_attribute("href")
-                                if not href or "vs/" not in href:
-                                    continue
-                                url_name = href.split("vs/")[1].split("/build")[0]
-                                champ = denormalize_champion_name_from_url(url_name)
-                                
-                                # Extract stats with error handling
-                                winrate_elem = elem.find_element(By.XPATH, f"{path}/div[{elem_idx+1}]/div[1]/span")
-                                winrate_text = winrate_elem.get_attribute('innerHTML')
-                                winrate = float(winrate_text.split('%')[0]) if winrate_text else 0.0
-                                
-                                my_elements = elem.find_elements(By.CLASS_NAME, "my-1")
-                                if len(my_elements) < 7:
-                                    print(f"Warning: Insufficient data elements for {champ}")
-                                    continue
-                                    
-                                delta1 = float(my_elements[4].get_attribute('innerHTML') or 0)
-                                delta2 = float(my_elements[5].get_attribute('innerHTML') or 0)
-                                pickrate = float(my_elements[6].get_attribute('innerHTML') or 0)
-                                
-                                games_elem = elem.find_element(By.CLASS_NAME, r"text-\[9px\]")
-                                games_text = games_elem.get_attribute('innerHTML')
-                                games = int(''.join(games_text.split())) if games_text else 0
-                                
-                                if not self.contains(result, champ, winrate, delta1, delta2, pickrate, games):
-                                    result.append((champ, winrate, delta1, delta2, pickrate, games))
-                                    
-                            except Exception as e:
-                                print(f"Error processing element for {champion}: {e}")
-                                continue
-                        
-                        # Scroll action with error handling
-                        try:
-                            actions = ActionChains(self.webdriver)
-                            actions.click_and_hold().move_by_offset(-460, 0).release().move_by_offset(460, 0).perform()
-                            enough_data = pickrate < 0.5
-                        except Exception as e:
-                            print(f"Error during scroll action: {e}")
-                            break
-                            
-                    except Exception as e:
-                        print(f"Error in data extraction loop for {champion}: {e}")
-                        break
-                        
-        except Exception as e:
-            print(f"Critical error in get_champion_data_on_patch for {champion}: {e}")
-            return result
+                actions.click_and_hold().move_by_offset(-460,0).release().move_by_offset(460, 0).perform()
+                enough_data = pickrate < config.MIN_PICKRATE
         return result
     
     def contains(self, list, champ, winrate, d1, d2, pick, games) -> bool:

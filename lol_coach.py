@@ -124,16 +124,18 @@ def _get_patch_version():
         print("[ERROR] Invalid option")
         return None
 
-def run_draft_coach(verbose=False, auto_hover=False):
+def run_draft_coach(verbose=False, auto_hover=False, auto_accept_queue=False):
     """Run the real-time draft coach."""
     print("[INFO] Starting Real-time Draft Coach...")
     print("Make sure League of Legends client is running and start a game!")
     if auto_hover:
         print("🎯 [AUTO-HOVER] Champion auto-hover is ENABLED")
+    if auto_accept_queue:
+        print("🔥 [AUTO-ACCEPT] Queue auto-accept is ENABLED")
     print("Press Ctrl+C to stop monitoring.\n")
     
     try:
-        monitor = DraftMonitor(verbose=verbose, auto_select_pool=False, auto_hover=auto_hover)
+        monitor = DraftMonitor(verbose=verbose, auto_select_pool=False, auto_hover=auto_hover, auto_accept_queue=auto_accept_queue)
         monitor.start_monitoring()
     except KeyboardInterrupt:
         print("\n[INFO] Draft Coach stopped by user")
@@ -440,11 +442,14 @@ def run_optimal_team_builder():
             print(f"Analyzing all possible trio combinations from your pool...")
             print(f"This evaluates trios as complete units rather than blind pick + counterpicks")
             
+            # Ask user for scoring profile
+            scoring_profile = _select_scoring_profile()
+            
             # Run the holistic trio analysis
-            trio_results = ast.find_optimal_trios_holistic(selected_pool, num_results=5)
+            trio_results = ast.find_optimal_trios_holistic(selected_pool, num_results=5, profile=scoring_profile)
             
             # Display results
-            _display_holistic_trio_results(trio_results)
+            _display_holistic_trio_results(trio_results, scoring_profile)
             
             # Offer to save the best trio
             if trio_results:
@@ -629,14 +634,66 @@ def _offer_save_optimization_result(champions: List[str], suggested_name: str):
     except Exception as e:
         print(f"[ERROR] Error saving optimization result: {e}")
 
-def _display_holistic_trio_results(trio_results: List[dict]):
+def _select_scoring_profile() -> str:
+    """Ask user to select a scoring profile for trio analysis."""
+    print(f"\n" + "="*50)
+    print("SELECT SCORING PROFILE")
+    print("="*50)
+    print("Choose your preferred analysis style:")
+    print()
+    print("  1. SAFE       - Prioritizes consistency and balance over raw performance")
+    print("                  Best for: Risk-averse players, ranked climbing")
+    print()
+    print("  2. META       - Focuses on performance against popular champions")
+    print("                  Best for: Current patch adaptation, high elo play")
+    print()
+    print("  3. AGGRESSIVE - Maximizes coverage and diverse champion profiles")
+    print("                  Best for: Proactive players, team flexibility")
+    print()
+    print("  4. BALANCED   - Mathematical weights with no bias")
+    print("                  Best for: Default choice, general use")
+    print()
+    
+    profile_map = {
+        "1": "safe",
+        "2": "meta", 
+        "3": "aggressive",
+        "4": "balanced"
+    }
+    
+    while True:
+        choice = input("Choose scoring profile (1-4): ").strip()
+        
+        if choice in profile_map:
+            selected_profile = profile_map[choice]
+            profile_names = {
+                "safe": "SAFE",
+                "meta": "META", 
+                "aggressive": "AGGRESSIVE",
+                "balanced": "BALANCED"
+            }
+            print(f"\nSelected profile: {profile_names[selected_profile]}")
+            return selected_profile
+        else:
+            print("[ERROR] Invalid choice. Please select 1-4.")
+
+def _display_holistic_trio_results(trio_results: List[dict], profile: str = "balanced"):
     """Display the results of holistic trio analysis in a clear format."""
     try:
         if not trio_results:
-            print("❌ No viable trios found")
+            print("No viable trios found")
             return
         
-        print(f"\n🏆 TOP TRIO COMBINATIONS FOUND:")
+        # Display profile info
+        profile_names = {
+            "safe": "SAFE (Consistency Focus)",
+            "meta": "META (Popular Champions Focus)", 
+            "aggressive": "AGGRESSIVE (Coverage Focus)",
+            "balanced": "BALANCED (Mathematical Weights)"
+        }
+        
+        print(f"\nTOP TRIO COMBINATIONS FOUND:")
+        print(f"Analysis Profile: {profile_names.get(profile, profile.upper())}")
         print("="*80)
         
         for i, result in enumerate(trio_results, 1):
@@ -1182,6 +1239,11 @@ def main():
         action="store_true",
         help="Enable automatic champion hovering in draft coach"
     )
+    parser.add_argument(
+        "--auto-accept-queue",
+        action="store_true",
+        help="Enable automatic queue acceptance when matchmaking finds a game"
+    )
     
     args = parser.parse_args()
     
@@ -1195,7 +1257,7 @@ def main():
         if not check_dependencies() or not check_database():
             sys.exit(1)
         
-        run_draft_coach(args.verbose, auto_hover=args.auto_hover)
+        run_draft_coach(args.verbose, auto_hover=args.auto_hover, auto_accept_queue=args.auto_accept_queue)
         return
     
     # Main menu mode
@@ -1217,7 +1279,11 @@ def main():
                 hover_choice = input("\nEnable automatic champion hovering? (y/N): ").strip().lower()
                 auto_hover = hover_choice == 'y'
                 
-                run_draft_coach(args.verbose, auto_hover=auto_hover)
+                # Ask about auto-accept queue
+                accept_choice = input("Enable automatic queue acceptance? (y/N): ").strip().lower()
+                auto_accept_queue = accept_choice == 'y'
+                
+                run_draft_coach(args.verbose, auto_hover=auto_hover, auto_accept_queue=auto_accept_queue)
                 
             elif choice == "2":
                 update_champion_data()

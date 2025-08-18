@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict
 import sys
 import locale
 from .constants import CHAMPIONS_LIST, CHAMPION_POOL, TOP_LIST, JUNGLE_LIST, MID_LIST, ADC_LIST, SUPPORT_LIST, SOLOQ_POOL, ROLE_POOLS, EXTENDED_POOLS
@@ -466,7 +466,7 @@ class Assistant:
         ban_candidates.sort(key=lambda x: x[1], reverse=True)
         return ban_candidates[:num_bans]
 
-    def find_optimal_trios_holistic(self, champion_pool: List[str], num_results: int = 5) -> List[dict]:
+    def find_optimal_trios_holistic(self, champion_pool: List[str], num_results: int = 5, profile: str = "balanced") -> List[dict]:
         """
         Find optimal 3-champion combinations using holistic evaluation.
         
@@ -475,6 +475,7 @@ class Assistant:
         Args:
             champion_pool: List of champion names to choose from
             num_results: Number of top trios to return
+            profile: Scoring profile ("safe", "meta", "aggressive", "balanced")
             
         Returns:
             List of dictionaries with trio information and scores
@@ -505,6 +506,11 @@ class Assistant:
         print(f"Evaluating {len(trio_combinations)} trio combinations...")
         
         trio_rankings = []
+        
+        # Set the scoring profile for this analysis
+        self.scoring_profile = profile
+        if self.verbose:
+            print(f"[INFO] Using scoring profile: {profile}")
         
         # Step 3: Evaluate each trio holistically
         for trio in trio_combinations:
@@ -576,12 +582,15 @@ class Assistant:
         consistency_score = self._calculate_consistency_score(trio, [matchups1, matchups2, matchups3])
         meta_score = self._calculate_meta_score(enemy_coverage)
         
-        # Weighted total score
-        total_score = (
-            coverage_score * 0.4 +      # Most important: can we handle enemies?
-            balance_score * 0.25 +      # Important: diverse profiles
-            consistency_score * 0.25 +  # Important: reliable performance  
-            meta_score * 0.1           # Nice to have: meta relevance
+        # Calculate contextual total score using adaptive weights
+        total_score, used_weights = self._calculate_contextual_total_score(
+            {
+                'coverage_score': coverage_score,
+                'balance_score': balance_score,
+                'consistency_score': consistency_score,
+                'meta_score': meta_score
+            },
+            profile=getattr(self, 'scoring_profile', 'balanced')
         )
         
         return {
@@ -666,32 +675,359 @@ class Assistant:
             return 50.0
 
     def _calculate_meta_score(self, enemy_coverage: dict) -> float:
-        """Calculate performance against popular/meta champions."""
-        # This could be enhanced to use actual meta data, but for now
-        # we'll use a simplified approach based on champions that appear frequently
+        """
+        Calculate performance against popular/meta champions.
+        
+        Uses actual pickrate data to determine meta relevance:
+        - Gets pickrate for each enemy champion from database
+        - Calculates weighted average of delta2 scores by pickrate
+        - Higher pickrate champions have more influence on the score
+        
+        Returns:
+            Score 0-100 representing performance vs meta champions
+        """
         try:
-            # Popular champions that are commonly seen (this could be data-driven)
-            meta_champions = [
-                'Aatrox', 'Ambessa', 'Fiora', 'Jax', 'Camille', 'Riven', 'Irelia',
-                'Gragas', 'Graves', 'Karthus', 'Hecarim', 'Viego', 
-                'Yasuo', 'Sylas', 'Azir', 'Corki', 'Viktor',
-                'Jinx', 'Caitlyn', 'Aphelios', 'Varus', 'KaiSa',
-                'Thresh', 'Nautilus', 'Leona', 'Pyke', 'Rakan'
-            ]
+            if not enemy_coverage:
+                return 50.0  # Neutral if no coverage data
             
-            meta_scores = []
+            # Get pickrate data for all enemies and calculate weighted score
+            weighted_sum = 0.0
+            total_weight = 0.0
+            
             for enemy, (delta2, _) in enemy_coverage.items():
-                if enemy in meta_champions:
-                    meta_scores.append(max(0, delta2))
+                try:
+                    # Get pickrate for this enemy champion
+                    enemy_matchups = self.db.get_champion_matchups_by_name(enemy)
+                    if not enemy_matchups:
+                        continue
+                    
+                    # Calculate average pickrate for this champion
+                    # Each matchup has: (enemy_id, winrate, delta1, delta2, pickrate, games)
+                    pickrates = [matchup[4] for matchup in enemy_matchups if len(matchup) > 4 and matchup[4] > 0]
+                    
+                    if not pickrates:
+                        continue
+                    
+                    avg_pickrate = sum(pickrates) / len(pickrates)
+                    
+                    # Weight the delta2 score by pickrate
+                    # Higher pickrate = more meta relevant = higher weight
+                    weight = avg_pickrate
+                    weighted_sum += max(0, delta2) * weight
+                    total_weight += weight
+                    
+                except Exception as e:
+                    if self.verbose:
+                        print(f"[DEBUG] Error processing {enemy} pickrate: {e}")
+                    continue
             
-            if not meta_scores:
-                return 50.0  # Neutral if no meta coverage
+            if total_weight == 0:
+                return 50.0  # No valid pickrate data
             
-            avg_meta_score = sum(meta_scores) / len(meta_scores)
-            return min(100.0, (avg_meta_score + 5) * 10)  # Scale to 0-100
+            # Calculate weighted average
+            weighted_avg = weighted_sum / total_weight
             
-        except:
+            # Scale to 0-100 range
+            # delta2 typically ranges from -5 to +5, so we shift and scale
+            score = min(100.0, max(0.0, (weighted_avg + 5) * 10))
+            
+            return score
+            
+        except Exception as e:
+            if self.verbose:
+                print(f"[ERROR] Meta score calculation failed: {e}")
             return 50.0
+
+    def _calculate_enemy_coverage(self, matchups_list: List[List]) -> Dict[str, tuple]:
+        """
+        Calculate enemy coverage for a set of champions.
+        
+        Args:
+            matchups_list: List of matchup lists for each champion
+            
+        Returns:
+            Dictionary mapping enemy_name -> (best_delta2, champion_handling_it)
+        """
+        enemy_coverage = {}
+        all_enemies = set()
+        
+        for i, matchups in enumerate(matchups_list):
+            champion_name = f"Champion{i+1}"  # Fallback name, should be passed properly
+            
+            for enemy, winrate, delta1, delta2, pickrate, games in matchups:
+                if pickrate >= config.MIN_PICKRATE and games >= config.MIN_MATCHUP_GAMES:
+                    all_enemies.add(enemy)
+                    if enemy not in enemy_coverage or delta2 > enemy_coverage[enemy][0]:
+                        enemy_coverage[enemy] = (delta2, champion_name)
+        
+        return enemy_coverage
+
+    def _calculate_adaptive_base_weights(self, sample_trios: List[tuple]) -> Dict[str, float]:
+        """
+        Calculate base weights using variance analysis.
+        
+        Metrics with higher variance discriminate better between trios,
+        so they receive higher weights in the final scoring.
+        
+        Args:
+            sample_trios: List of trio tuples to analyze for variance
+            
+        Returns:
+            Dictionary of normalized base weights
+        """
+        try:
+            if len(sample_trios) < 3:
+                # Fallback to equal weights if insufficient data
+                return {'coverage': 0.25, 'balance': 0.25, 'consistency': 0.25, 'meta': 0.25}
+            
+            # Collect scores for all metrics
+            metric_scores = {
+                'coverage': [],
+                'balance': [], 
+                'consistency': [],
+                'meta': []
+            }
+            
+            if self.verbose:
+                print(f"[DEBUG] Calculating adaptive weights from {len(sample_trios)} trios...")
+            
+            for trio in sample_trios:
+                try:
+                    # Get individual matchups for the trio
+                    matchups = []
+                    for champion in trio:
+                        champ_matchups = self.db.get_champion_matchups_by_name(champion)
+                        if champ_matchups:
+                            matchups.append(champ_matchups)
+                    
+                    if len(matchups) != 3:
+                        continue
+                    
+                    # Calculate individual metric scores
+                    enemy_coverage = self._calculate_enemy_coverage(matchups)
+                    
+                    # Get all enemies for coverage calculation
+                    all_enemies = set()
+                    for matchup_list in matchups:
+                        for enemy, winrate, delta1, delta2, pickrate, games in matchup_list:
+                            if pickrate >= config.MIN_PICKRATE and games >= config.MIN_MATCHUP_GAMES:
+                                all_enemies.add(enemy)
+                    
+                    metric_scores['coverage'].append(self._calculate_coverage_score(enemy_coverage, all_enemies))
+                    metric_scores['balance'].append(self._calculate_balance_score(trio, matchups))
+                    metric_scores['consistency'].append(self._calculate_consistency_score(trio, matchups))
+                    metric_scores['meta'].append(self._calculate_meta_score(enemy_coverage))
+                    
+                except Exception as e:
+                    if self.verbose:
+                        print(f"[DEBUG] Error processing trio {trio}: {e}")
+                    continue
+            
+            # Calculate variances
+            variances = {}
+            for metric, scores in metric_scores.items():
+                if len(scores) >= 2:
+                    # Use numpy for variance calculation if available, otherwise manual
+                    try:
+                        import numpy as np
+                        variances[metric] = float(np.var(scores))
+                    except ImportError:
+                        mean_score = sum(scores) / len(scores)
+                        variance = sum((x - mean_score) ** 2 for x in scores) / len(scores)
+                        variances[metric] = variance
+                else:
+                    variances[metric] = 1.0  # Fallback
+            
+            # Normalize variances to weights (higher variance = higher weight)
+            total_variance = sum(variances.values())
+            if total_variance == 0:
+                # All metrics have zero variance - use equal weights
+                base_weights = {'coverage': 0.25, 'balance': 0.25, 'consistency': 0.25, 'meta': 0.25}
+            else:
+                base_weights = {metric: var / total_variance for metric, var in variances.items()}
+            
+            if self.verbose:
+                print(f"[DEBUG] Variance analysis:")
+                for metric, variance in variances.items():
+                    print(f"  {metric}: variance={variance:.3f}, weight={base_weights[metric]:.3f}")
+            
+            return base_weights
+            
+        except Exception as e:
+            if self.verbose:
+                print(f"[ERROR] Adaptive weight calculation failed: {e}")
+            # Fallback to equal weights
+            return {'coverage': 0.25, 'balance': 0.25, 'consistency': 0.25, 'meta': 0.25}
+
+    def _get_profile_modifiers(self, profile: str = "balanced") -> Dict[str, float]:
+        """
+        Get profile-specific modifiers for weight adjustment.
+        
+        Args:
+            profile: Scoring profile ("safe", "meta", "aggressive", "balanced")
+            
+        Returns:
+            Dictionary of multipliers for each metric
+        """
+        profiles = {
+            "safe": {
+                "consistency": 1.8,    # ++ Fiabilité avant tout
+                "balance": 1.2,        # + Diversité pour éviter risques
+                "coverage": 0.7,       # - Moins important si on joue safe
+                "meta": 0.3           # -- Peu important, on évite les risques
+            },
+            "meta": {
+                "meta": 2.0,          # ++ Performance vs picks populaires
+                "consistency": 1.3,    # + Fiabilité dans le meta actuel
+                "coverage": 0.8,       # - Couverture moins critique
+                "balance": 0.6        # -- Diversité moins importante
+            },
+            "aggressive": {
+                "coverage": 1.5,       # + Maximum de coverage pour dominer
+                "balance": 1.3,        # + Diversité pour surprendre
+                "consistency": 0.8,    # - Moins critique si on cherche à dominer
+                "meta": 0.7           # - Meta moins important
+            },
+            "balanced": {
+                "coverage": 1.0,       # = Garde les poids de variance pure
+                "balance": 1.0,
+                "consistency": 1.0, 
+                "meta": 1.0
+            }
+        }
+        
+        return profiles.get(profile, profiles["balanced"])
+
+    def _calculate_contextual_total_score(self, scores: Dict[str, float], profile: str = "balanced") -> tuple:
+        """
+        Calculate total score using adaptive weights + profile modifiers.
+        
+        Args:
+            scores: Dictionary with individual metric scores
+            profile: Scoring profile to apply
+            
+        Returns:
+            Tuple of (total_score, final_weights_used)
+        """
+        try:
+            # 1. Get base weights (calculated once and cached)
+            if not hasattr(self, '_cached_base_weights'):
+                # Generate sample trios for weight calculation
+                sample_trios = self._generate_sample_trios_for_weights()
+                self._cached_base_weights = self._calculate_adaptive_base_weights(sample_trios)
+                if self.verbose:
+                    print(f"[DEBUG] Cached adaptive base weights: {self._cached_base_weights}")
+            
+            base_weights = self._cached_base_weights
+            
+            # 2. Get profile modifiers
+            modifiers = self._get_profile_modifiers(profile)
+            
+            # 3. Calculate final weights = base × modifier
+            final_weights = {}
+            for metric in ['coverage', 'balance', 'consistency', 'meta']:
+                final_weights[metric] = base_weights[metric] * modifiers[metric]
+            
+            # 4. Renormalize so sum = 1.0
+            total = sum(final_weights.values())
+            if total > 0:
+                final_weights = {k: v/total for k, v in final_weights.items()}
+            else:
+                # Fallback
+                final_weights = {'coverage': 0.25, 'balance': 0.25, 'consistency': 0.25, 'meta': 0.25}
+            
+            # 5. Calculate weighted total score
+            total_score = (
+                scores['coverage_score'] * final_weights['coverage'] +
+                scores['balance_score'] * final_weights['balance'] +
+                scores['consistency_score'] * final_weights['consistency'] +
+                scores['meta_score'] * final_weights['meta']
+            )
+            
+            return total_score, final_weights
+            
+        except Exception as e:
+            if self.verbose:
+                print(f"[ERROR] Contextual scoring failed: {e}")
+            # Fallback to simple average
+            total_score = sum(scores.values()) / len(scores)
+            fallback_weights = {'coverage': 0.25, 'balance': 0.25, 'consistency': 0.25, 'meta': 0.25}
+            return total_score, fallback_weights
+
+    def _generate_sample_trios_for_weights(self, sample_size: int = 15) -> List[tuple]:
+        """
+        Generate a sample of trios for adaptive weight calculation.
+        
+        Uses a subset of available champions to avoid expensive computation.
+        
+        Args:
+            sample_size: Number of sample trios to generate
+            
+        Returns:
+            List of trio tuples
+        """
+        try:
+            from itertools import combinations
+            from .constants import TOP_CHAMPIONS, JUNGLE_CHAMPIONS, MID_CHAMPIONS, ADC_CHAMPIONS, SUPPORT_CHAMPIONS
+            
+            # Get a balanced sample of champions from different roles
+            sample_champions = []
+            
+            # Take some champions from each role for diversity
+            sample_champions.extend(TOP_CHAMPIONS[:3])
+            sample_champions.extend(JUNGLE_CHAMPIONS[:3]) 
+            sample_champions.extend(MID_CHAMPIONS[:3])
+            sample_champions.extend(ADC_CHAMPIONS[:2])
+            sample_champions.extend(SUPPORT_CHAMPIONS[:2])
+            
+            # Filter champions that have data in database
+            valid_champions = []
+            for champion in sample_champions:
+                matchups = self.db.get_champion_matchups_by_name(champion)
+                if matchups and len(matchups) > 10:  # Ensure sufficient data
+                    valid_champions.append(champion)
+            
+            if len(valid_champions) < 3:
+                if self.verbose:
+                    print(f"[WARNING] Insufficient champions with data for weight calculation")
+                return []
+            
+            # Generate combinations and take a sample
+            all_trios = list(combinations(valid_champions, 3))
+            
+            # Take a reasonable sample
+            import random
+            actual_sample_size = min(sample_size, len(all_trios))
+            sample_trios = random.sample(all_trios, actual_sample_size)
+            
+            if self.verbose:
+                print(f"[DEBUG] Generated {len(sample_trios)} sample trios from {len(valid_champions)} champions")
+            
+            return sample_trios
+            
+        except Exception as e:
+            if self.verbose:
+                print(f"[ERROR] Sample trio generation failed: {e}")
+            return []
+
+    def set_scoring_profile(self, profile: str):
+        """
+        Set the scoring profile for trio evaluation.
+        
+        Args:
+            profile: One of "safe", "meta", "aggressive", "balanced"
+        """
+        valid_profiles = ["safe", "meta", "aggressive", "balanced"]
+        if profile in valid_profiles:
+            self.scoring_profile = profile
+            # Clear cached weights to recalculate with new profile
+            if hasattr(self, '_cached_base_weights'):
+                delattr(self, '_cached_base_weights')
+            if self.verbose:
+                print(f"[INFO] Scoring profile set to: {profile}")
+        else:
+            if self.verbose:
+                print(f"[WARNING] Invalid profile '{profile}'. Valid options: {valid_profiles}")
 
     def _calculate_blind_pick_score(self, champion: str) -> float:
         """Calculate average delta2 score for a champion as blind pick."""

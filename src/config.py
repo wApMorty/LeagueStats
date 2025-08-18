@@ -101,7 +101,8 @@ def normalize_champion_name_for_url(champion_name: str) -> str:
         'VelKoz': 'velkoz',
         'BelVeth': 'belveth',
         'KSante': 'ksante',
-        'MasterYi': 'masteryi'
+        'MasterYi': 'masteryi',
+        'MonkeyKing': 'wukong'
     }
     
     # Check if it's a special case
@@ -140,7 +141,8 @@ def denormalize_champion_name_from_url(url_name: str) -> str:
         'velkoz': 'VelKoz',
         'belveth': 'BelVeth',
         'ksante': 'KSante',
-        'masteryi': 'MasterYi'
+        'masteryi': 'MasterYi',
+        'wukong': 'MonkeyKing'
     }
     
     # Check if it's a special case that needs conversion

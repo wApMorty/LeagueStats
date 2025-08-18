@@ -1,49 +1,5 @@
 import numpy as np
 
-CHAMPION_POOL = [
-    "Ambessa",
-    "DrMundo",
-    "Malphite",
-    "Yorick",
-    "Kennen",
-    "Jax",
-    "Shen",
-    "Riven",
-    "Tryndamere",
-    "Irelia",
-    "Fiora",
-    "Gwen"
-]
-
-# Top lane pool (your main pool)
-TOP_SOLOQ_POOL = [
-    "Ambessa",
-    "Malphite", 
-    "Tryndamere"
-]
-
-# Support pool (your secondary pool)
-SUPPORT_SOLOQ_POOL = [
-    "Morgana",
-    "Yuumi",
-    "Seraphine"
-]
-
-# Legacy name for backward compatibility
-SOLOQ_POOL = TOP_SOLOQ_POOL
-
-# Extended pools will be defined after the role lists are defined
-
-# Pool dictionary for easy access
-ROLE_POOLS = {
-    "top": TOP_SOLOQ_POOL,
-    "support": SUPPORT_SOLOQ_POOL,
-    "supp": SUPPORT_SOLOQ_POOL,  # Alias
-    "all": TOP_SOLOQ_POOL + SUPPORT_SOLOQ_POOL  # Combined pool
-}
-
-# Extended pools will be defined at the end of the file after all lists
-
 CHAMPIONS_LIST = np.unique([
     "Leona",
     "Hecarim",
@@ -206,7 +162,7 @@ CHAMPIONS_LIST = np.unique([
     "Azir",
     "Corki",
     "Yorick",
-    "Wukong",
+    "MonkeyKing",
     "VelKoz",
     "Tristana",
     "Ryze",
@@ -218,166 +174,266 @@ CHAMPIONS_LIST = np.unique([
     "Yunara"
 ])
 
-TOP_LIST = [
-    "Irelia",
+TOP_CHAMPIONS = [
+    "Aatrox",
+    "Ambessa", 
+    "Camille",
+    "ChoGath",
     "Darius",
+    "DrMundo",
+    "Fiora",
+    "Galio",
+    "Gangplank",
     "Garen",
-    "Jax",
-    "Ornn",
     "Gnar",
+    "Gragas",
+    "Gwen",
+    "Illaoi",
+    "Irelia",
+    "Jax",
+    "Jayce",
+    "Kennen",
+    "Kled",
     "KSante",
     "Malphite",
+    "Mordekaiser",
+    "Nasus",
+    "Olaf",
+    "Ornn",
+    "Pantheon",
+    "Poppy",
+    "Quinn",
     "Renekton",
+    "Riven",
+    "Rumble",
+    "Sett",
     "Shen",
-    "Zac",
-    "ChoGath"
-    # B Tier
-    # "Galio",
-    # "Camille",
-    # "Aatrox",
-    # "Urgot",
-    # "Kled",
-    # "Gragas",
-    # "Mordekaiser",
-    # "Poppy",
-    # "Illaoi",
-    # "Sion",
-    # "Tryndamere",
-    # "Volibear",
-    # "Gwen",
-    # "Sett"
+    "Singed",
+    "Sion",
+    "Teemo",
+    "Trundle",
+    "Tryndamere",
+    "Urgot",
+    "Volibear",
+    "MonkeyKing",
+    "Yasuo",
+    "Yone",
+    "Yorick",
+    "Zac"
 ]
 
-JUNGLE_LIST = [
-    "Elise",
+JUNGLE_CHAMPIONS = [
+    "Amumu",
+    "BelVeth",
+    "Briar",
+    "Diana",
     "DrMundo",
-    # "Olaf",
+    "Ekko",
+    "Elise",
+    "Evelynn",
+    "Fiddlesticks",
+    "Graves",
     "Gwen",
+    "Hecarim",
+    "Ivern",
     "JarvanIV",
-    "Pantheon",
-    "XinZhao",
+    "Jax",
+    "Karthus",
+    "Kayn",
+    "KhaZix",
+    "Kindred",
+    "LeeSin",
+    "Lillia",
+    "MasterYi",
+    "Naafiri",
     "Nidalee",
     "Nocturne",
-    "Hecarim",
-    "Jax",
-    # "Darius", NO DATA
-    "KhaZix",
-    "BelVeth",
-    "Kindred",
-    "Naafiri",
-    "Viego",
-    "Wukong",
+    "Nunu",
+    "Olaf",
+    "Pantheon",
+    "Poppy",
+    "Rammus",
     "RekSai",
-    "Trundle"
-    # B Tier
-    # "Amumu",
-    # "Volibear",
-    # "Karthus",
-    # "Lillia"
-]
-
-MID_LIST = [
-    "Ahri",
-    "Orianna",
-    "Syndra",
-    "Hwei",
-    "Mel",
-    "Viktor",
-    "Galio",
-    "Naafiri",
-    "Vex",
-    "Aurora",
+    "Rengar",
+    "Sejuani",
+    "Shaco",
+    "Shyvana",
+    "Skarner",
     "Sylas",
-    "Yone",
     "Taliyah",
-    "Fizz",
-    "Corki",
+    "Trundle",
+    "Udyr",
+    "Vi",
+    "Viego",
+    "Volibear",
+    "Warwick",
+    "MonkeyKing",
+    "XinZhao",
+    "Zac"
+]
+
+MID_CHAMPIONS = [
+    "Ahri",
     "Akali",
-    "TwistedFate",
-    "Tristana",
+    "Anivia",
+    "Annie",
+    "AurelionSol",
+    "Aurora",
+    "Azir",
+    "Brand",
+    "Cassiopeia",
+    "Corki",
+    "Diana",
+    "Fizz",
+    "Galio",
+    "Heimerdinger",
+    "Hwei",
+    "Kassadin",
+    "Katarina",
+    "Leblanc",
+    "Lissandra",
+    "Lux",
+    "Malzahar",
+    "Mel",
+    "Naafiri",
+    "Neeko",
+    "Orianna",
+    "Qiyana",
     "Ryze",
-    # B Tier
-    # "Annie",
-    # "AurelionSol",
-    # "Azir",
-    # "Kassadin",
-    # "Diana",
-    # "Lissandra",
-    # "Ziggs",
-    # "Malzahar",
-    # "Zoe",
-    # "Anivia"
+    "Sylas",
+    "Syndra",
+    "Taliyah",
+    "Tristana",
+    "TwistedFate",
+    "Veigar",
+    "Vex",
+    "Viktor",
+    "Vladimir",
+    "Xerath",
+    "Yasuo",
+    "Yone",
+    "Zed",
+    "Ziggs",
+    "Zoe"
 ]
 
-ADC_LIST = [
-    # "Jhin",
-    # "Vayne",
-    # "Ashe",
-    # "KaiSa",
-    # "Ezreal",
-    # "Xayah",
-    # "Lucian"
+ADC_CHAMPIONS = [
+    "Aphelios",
+    "Ashe",
+    "Caitlyn",
+    "Corki",
+    "Draven",
+    "Ezreal",
+    "Jhin",
+    "Jinx",
+    "KaiSa",
+    "Kalista",
+    "KogMaw",
+    "Lucian",
+    "MissFortune",
+    "Nilah",
+    "Samira",
+    "Senna",
+    "Sivir",
+    "Smolder",
+    "Tristana",
+    "Twitch",
+    "Varus",
+    "Vayne",
+    "Xayah",
+    "Zeri"
 ]
 
-SUPPORT_LIST = [
-    "Lulu",
-    "Janna",
-    "Nami",
-    "Milio",
-    "Soraka",
-    "Yuumi",
-    "Karma",
+SUPPORT_CHAMPIONS = [
+    "Alistar",
+    "Bard",
     "Blitzcrank",
-    "Nautilus",
+    "Brand",
     "Braum",
-    "Elise",
+    "Janna",
+    "Karma",
     "Leona",
-    "Seraphine",
+    "Lulu",
+    "Lux",
+    "Maokai",
+    "Milio",
     "Morgana",
+    "Nami",
+    "Nautilus",
+    "Pantheon",
+    "Pyke",
     "Rakan",
-    "Thresh"
-    # B Tier
-    # "Alistar",
-    # "Amumu",
-    # "Camille",
-    # "Galio",
-    # "Poppy",
-    # "Maokai",
-    # "Rell",
-    # "Renata",
-    # "Sona",
-    # "Xerath",
-    # "Taric",
-    # "TahmKench",
-    # "Swain",
-    # "Zyra",
-    # "VelKoz"
+    "Rell",
+    "Renata",
+    "Senna",
+    "Seraphine",
+    "Sona",
+    "Soraka",
+    "Swain",
+    "TahmKench",
+    "Taric",
+    "Thresh",
+    "VelKoz",
+    "Xerath",
+    "Yuumi",
+    "Zilean",
+    "Zyra"
 ]
 
-# Extended pools for Team Builder analysis (using existing curated lists)
-# Include user's main champions + extend with the existing role lists
-TOP_EXTENDED_POOL = TOP_SOLOQ_POOL + [champ for champ in TOP_LIST if champ not in TOP_SOLOQ_POOL]
+# Champions by role dictionary for easy access
+CHAMPIONS_BY_ROLE = {
+    "top": TOP_CHAMPIONS,
+    "jungle": JUNGLE_CHAMPIONS,
+    "mid": MID_CHAMPIONS,
+    "adc": ADC_CHAMPIONS,
+    "support": SUPPORT_CHAMPIONS
+}
 
-SUPPORT_EXTENDED_POOL = SUPPORT_SOLOQ_POOL + [champ for champ in SUPPORT_LIST if champ not in SUPPORT_SOLOQ_POOL]
+# System pools based on the new champion lists
+# These represent complete champion lists by role for system use
+TOP_SOLOQ_POOL = TOP_CHAMPIONS.copy()
+JUNGLE_SOLOQ_POOL = JUNGLE_CHAMPIONS.copy()
+MID_SOLOQ_POOL = MID_CHAMPIONS.copy()
+ADC_SOLOQ_POOL = ADC_CHAMPIONS.copy()
+SUPPORT_SOLOQ_POOL = SUPPORT_CHAMPIONS.copy()
 
-JUNGLE_EXTENDED_POOL = JUNGLE_LIST.copy()  # Use the existing curated jungle list
+# Competitive pool - balanced selection across roles
+CHAMPION_POOL = [
+    # Top lane meta picks
+    "Aatrox", "Ambessa", "Garen", "Jax", "Malphite", "Ornn", "Shen",
+    # Jungle meta picks  
+    "Graves", "Hecarim", "KhaZix", "LeeSin", "Viego", "Warwick",
+    # Mid lane meta picks
+    "Ahri", "Akali", "Orianna", "Sylas", "Yasuo", "Zed",
+    # ADC meta picks
+    "Ashe", "Caitlyn", "Jinx", "KaiSa", "Lucian", "Vayne",
+    # Support meta picks
+    "Leona", "Nautilus", "Thresh", "Lulu", "Nami", "Morgana"
+]
 
-MID_EXTENDED_POOL = MID_LIST.copy()  # Use the existing curated mid list
+# Legacy compatibility - old list names
+TOP_LIST = TOP_CHAMPIONS
+JUNGLE_LIST = JUNGLE_CHAMPIONS
+MID_LIST = MID_CHAMPIONS
+ADC_LIST = ADC_CHAMPIONS
+SUPPORT_LIST = SUPPORT_CHAMPIONS
 
-# For ADC, create from champions available in CHAMPIONS_LIST
-ADC_EXTENDED_POOL = [champ for champ in CHAMPIONS_LIST if champ in [
-    "Jhin", "Vayne", "Ashe", "KaiSa", "Ezreal", "Xayah", "Lucian",
-    "Caitlyn", "MissFortune", "Draven", "Jinx", "Sivir", "Aphelios",
-    "Samira", "Nilah", "Zeri", "Smolder", "Kalista", "KogMaw", "Twitch", "Varus"
-]]
+SOLOQ_POOL = TOP_SOLOQ_POOL
+ROLE_POOLS = CHAMPIONS_BY_ROLE
 
-# Extended pools dictionary for Team Builder (more comprehensive analysis)
+# Extended pools (same as base pools since we have complete lists now)
+TOP_EXTENDED_POOL = TOP_CHAMPIONS
+JUNGLE_EXTENDED_POOL = JUNGLE_CHAMPIONS
+MID_EXTENDED_POOL = MID_CHAMPIONS
+ADC_EXTENDED_POOL = ADC_CHAMPIONS
+SUPPORT_EXTENDED_POOL = SUPPORT_CHAMPIONS
+
 EXTENDED_POOLS = {
     "top": TOP_EXTENDED_POOL,
-    "support": SUPPORT_EXTENDED_POOL,
     "jungle": JUNGLE_EXTENDED_POOL,
     "mid": MID_EXTENDED_POOL,
     "adc": ADC_EXTENDED_POOL,
+    "support": SUPPORT_EXTENDED_POOL,
     "multi-role": TOP_EXTENDED_POOL + SUPPORT_EXTENDED_POOL,
     "all-roles": TOP_EXTENDED_POOL + SUPPORT_EXTENDED_POOL + JUNGLE_EXTENDED_POOL + MID_EXTENDED_POOL + ADC_EXTENDED_POOL
 }

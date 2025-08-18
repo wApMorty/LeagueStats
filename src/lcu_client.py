@@ -244,6 +244,50 @@ class LCUClient:
             return phase == 'ChampSelect'
         return False
     
+    def is_in_ready_check(self) -> bool:
+        """
+        Check if currently in ready check (queue found).
+        
+        Returns:
+            True if in ready check, False otherwise
+        """
+        gameflow = self.get_gameflow_session()
+        if gameflow:
+            phase = gameflow.get('phase', '')
+            return phase == 'ReadyCheck'
+        return False
+    
+    def get_ready_check_state(self) -> Optional[Dict[str, Any]]:
+        """
+        Get current ready check state.
+        
+        Returns:
+            Ready check data or None if not in ready check
+        """
+        return self._make_request("/lol-matchmaking/v1/ready-check")
+    
+    def accept_ready_check(self) -> bool:
+        """
+        Accept the ready check when matchmaking finds a game.
+        
+        Returns:
+            True if successful, False otherwise
+        """
+        if not self.is_in_ready_check():
+            if self.verbose:
+                print("[DEBUG] Not in ready check, cannot accept")
+            return False
+        
+        result = self._make_request("/lol-matchmaking/v1/ready-check/accept", method='POST')
+        if result is not None:
+            if self.verbose:
+                print("[SUCCESS] Ready check accepted")
+            return True
+        else:
+            if self.verbose:
+                print("[ERROR] Failed to accept ready check")
+            return False
+    
     def get_champion_id_by_name(self, champion_name: str) -> Optional[int]:
         """
         Get champion ID by champion name with flexible matching.
