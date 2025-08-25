@@ -111,37 +111,89 @@ class Assistant:
         valid_matchups = self._filter_valid_matchups(matchups)
         if not valid_matchups:
             return 0.0
-        return sum(m[2] * m[4] for m in valid_matchups) / len(valid_matchups)
+        total_weight = sum(m[4] for m in valid_matchups)
+        if total_weight == 0:
+            return 0.0
+        return sum(m[2] * m[4] for m in valid_matchups) / total_weight
 
     def avg_delta2(self, matchups: List[tuple]) -> float:
         """Calculate weighted average delta2 from valid matchups."""
         valid_matchups = self._filter_valid_matchups(matchups)
         if not valid_matchups:
             return 0.0
-        return sum(m[3] * m[4] for m in valid_matchups) / len(valid_matchups)
+        total_weight = sum(m[4] for m in valid_matchups)
+        if total_weight == 0:
+            return 0.0
+        return sum(m[3] * m[4] for m in valid_matchups) / total_weight
     
     def avg_winrate(self, matchups: List[tuple]) -> float:
         """Calculate weighted average winrate from valid matchups."""
         valid_matchups = self._filter_valid_matchups(matchups)
         if not valid_matchups:
             return 0.0
-        return sum(m[1] * m[4] for m in valid_matchups) / len(valid_matchups)
+        total_weight = sum(m[4] for m in valid_matchups)
+        if total_weight == 0:
+            return 0.0
+        return sum(m[1] * m[4] for m in valid_matchups) / total_weight
 
     def score_against_team(self, matchups: List[tuple], team: List[str]) -> float:
-        """Calculate score against a specific team composition."""
-        score = 0
-        remaining_matchups = matchups.copy()  # Don't modify the original list
-        blind_picks = 5 - len(team)
+        """
+        Calculate normalized win probability score against a team composition.
         
+        Converts delta2 values to win probabilities and returns the expected 
+        advantage/disadvantage in percentage points from 50% baseline.
+        
+        Returns:
+            float: Expected advantage in percentage points (positive = favorable)
+        """
+        if not team:
+            # Pure blind pick scenario
+            avg_delta2 = self.avg_delta2(matchups)
+            return self._delta2_to_win_advantage(avg_delta2)
+        
+        total_win_advantage = 0
+        remaining_matchups = matchups.copy()
+        
+        # Calculate advantage for known matchups
         for enemy in team:
             for i, matchup in enumerate(remaining_matchups):
                 if matchup[0].lower() == enemy.lower():
-                    score += matchup[3]  # Add delta2 score
+                    delta2 = matchup[3]
+                    win_advantage = self._delta2_to_win_advantage(delta2)
+                    total_win_advantage += win_advantage
                     remaining_matchups.pop(i)
                     break
         
-        score += blind_picks * self.avg_delta2(remaining_matchups)
-        return score
+        # Calculate advantage for unknown matchups (blind picks)
+        blind_picks = 5 - len(team)
+        if blind_picks > 0:
+            avg_delta2 = self.avg_delta2(remaining_matchups)
+            blind_advantage = self._delta2_to_win_advantage(avg_delta2)
+            total_win_advantage += blind_picks * blind_advantage
+        
+        # Return average advantage per matchup
+        return total_win_advantage / 5
+    
+    def _delta2_to_win_advantage(self, delta2: float) -> float:
+        """
+        Convert delta2 value to win advantage in percentage points.
+        
+        Based on empirical analysis, delta2 roughly corresponds to:
+        - delta2 = +1.0 ≈ ~1.5% win rate advantage  
+        - delta2 = +2.0 ≈ ~3.0% win rate advantage
+        - delta2 = -2.0 ≈ ~3.0% win rate disadvantage
+        
+        Args:
+            delta2: The delta2 value from matchup data
+            
+        Returns:
+            float: Win advantage in percentage points (positive = advantage)
+        """
+        # Conservative scaling: 1 delta2 ≈ 1.5% win rate difference
+        # Cap at ±10% to avoid extreme values
+        scaling_factor = 1.5
+        advantage = delta2 * scaling_factor
+        return max(-10.0, min(10.0, advantage))
 
     def tierlist_delta1(self, champion_list: List[str]) -> List[tuple]:
         scores = []
@@ -414,57 +466,105 @@ class Assistant:
 
     def get_ban_recommendations(self, champion_pool: List[str], num_bans: int = 5) -> List[tuple]:
         """
-        Get ban recommendations against a specific champion pool.
+        Get ban recommendations against a specific champion pool using reverse lookup.
+        
+        For each potential enemy pick, finds your BEST response from your pool.
+        Prioritizes banning enemies where even your best response is insufficient.
         
         Args:
             champion_pool: List of champion names in your pool
             num_bans: Number of ban recommendations to return
             
         Returns:
-            List of tuples (champion_name, threat_score, matchup_count)
+            List of tuples (enemy_name, threat_score, best_response_delta2)
             Sorted by threat_score (descending)
         """
-        threat_scores = {}  # champion_name -> (total_threat, matchup_count)
-        
-        # Calculate threat score for each potential ban target
+        # Get all potential enemies from database
+        all_potential_enemies = set()
         for our_champion in champion_pool:
             try:
-                # Get all matchups for our champion
                 matchups = self.db.get_champion_matchups_by_name(our_champion)
-                if not matchups:
-                    continue
-                    
-                # For each enemy in our champion's matchups
                 for enemy_name, winrate, delta1, delta2, pickrate, games in matchups:
-                    # Skip if insufficient data
-                    if pickrate < config.MIN_PICKRATE or games < config.MIN_MATCHUP_GAMES:
-                        continue
-                    
-                    # Calculate threat: negative delta2 means enemy is strong against us
-                    # We want to ban champions that have positive winrates/deltas against us
-                    threat_value = -delta2 * pickrate  # Weight by pickrate
-                    
-                    if enemy_name not in threat_scores:
-                        threat_scores[enemy_name] = [0.0, 0]
-                    
-                    threat_scores[enemy_name][0] += threat_value
-                    threat_scores[enemy_name][1] += 1
-                    
+                    if pickrate >= config.MIN_PICKRATE and games >= config.MIN_MATCHUP_GAMES:
+                        all_potential_enemies.add(enemy_name)
             except Exception as e:
                 if self.verbose:
-                    print(f"Error calculating threats for {our_champion}: {e}")
+                    print(f"Error getting enemies for {our_champion}: {e}")
                 continue
         
-        # Calculate average threat and filter
         ban_candidates = []
-        for enemy_name, (total_threat, matchup_count) in threat_scores.items():
-            if matchup_count >= 2:  # Must threaten at least 2 of our champions
-                avg_threat = total_threat / matchup_count
-                ban_candidates.append((enemy_name, avg_threat, matchup_count))
         
-        # Sort by threat score (descending) and return top recommendations
+        # For each potential enemy, find our best response
+        for enemy_champion in all_potential_enemies:
+            best_response_delta2 = -float('inf')
+            best_response_champion = None
+            enemy_pickrate = 0.0
+            matchups_found = 0
+            
+            # Check all our champions against this enemy
+            for our_champion in champion_pool:
+                try:
+                    delta2 = self.db.get_matchup_delta2(our_champion, enemy_champion)
+                    
+                    if delta2 is not None:
+                        matchups_found += 1
+                        
+                        # Track the best response we have
+                        if delta2 > best_response_delta2:
+                            best_response_delta2 = delta2
+                            best_response_champion = our_champion
+                        
+                        # Also get pickrate data for this enemy (approximate from one of our matchups)
+                        if enemy_pickrate == 0.0:
+                            try:
+                                matchups = self.db.get_champion_matchups_by_name(our_champion)
+                                for enemy_name, winrate, delta1, d2, pickrate, games in matchups:
+                                    if enemy_name == enemy_champion:
+                                        enemy_pickrate = pickrate
+                                        break
+                            except:
+                                pass
+                                
+                except Exception as e:
+                    if self.verbose:
+                        print(f"Error checking {our_champion} vs {enemy_champion}: {e}")
+                    continue
+            
+            # Skip if no valid matchups found
+            if best_response_champion is None or matchups_found == 0:
+                continue
+            
+            # Calculate threat score: Higher score = enemy should be banned
+            # Key insight: If even our BEST response has negative delta2, this enemy is very threatening
+            base_threat = -best_response_delta2  # Invert: negative delta2 = high threat
+            
+            # Weight by pickrate and coverage
+            pickrate_weight = max(enemy_pickrate, 1.0)  # At least 1.0 to avoid zero weights
+            coverage_bonus = min(matchups_found / len(champion_pool), 1.0)  # How much of our pool this affects
+            
+            # Combined threat score
+            # - Main factor: How bad is our best response? (70%)
+            # - Secondary: How popular is this enemy? (20%) 
+            # - Tertiary: How much of our pool does it affect? (10%)
+            combined_threat = (
+                base_threat * 0.7 +
+                pickrate_weight * 0.2 +
+                coverage_bonus * 10.0 * 0.1  # Scale coverage to reasonable range
+            )
+            
+            ban_candidates.append((
+                enemy_champion,
+                combined_threat,
+                best_response_delta2,
+                best_response_champion,
+                matchups_found
+            ))
+        
+        # Sort by combined threat (descending)
         ban_candidates.sort(key=lambda x: x[1], reverse=True)
-        return ban_candidates[:num_bans]
+        
+        # Return in clean format: (enemy, threat_score, best_response_delta2)  
+        return [(name, threat, best_delta2) for name, threat, best_delta2, _, _ in ban_candidates[:num_bans]]
 
     def find_optimal_trios_holistic(self, champion_pool: List[str], num_results: int = 5, profile: str = "balanced") -> List[dict]:
         """
@@ -540,46 +640,46 @@ class Assistant:
 
     def _evaluate_trio_holistic(self, trio: tuple) -> dict:
         """
-        Evaluate a trio of champions using holistic scoring.
+        Evaluate a trio of champions using holistic scoring with reverse lookup.
+        
+        Uses efficient reverse lookup to avoid duplicate matchups and improve performance.
         
         Returns dict with individual scores and total score.
         """
         champion1, champion2, champion3 = trio
+        trio_list = [champion1, champion2, champion3]
         
-        # Get matchup data for all three champions
-        matchups1 = self.db.get_champion_matchups_by_name(champion1)
-        matchups2 = self.db.get_champion_matchups_by_name(champion2)  
-        matchups3 = self.db.get_champion_matchups_by_name(champion3)
-        
-        # Create enemy -> best_delta2 mapping for the trio
+        # Use reverse lookup to build enemy coverage efficiently
         enemy_coverage = {}  # enemy_name -> (best_delta2, champion_handling_it)
-        all_enemies = set()
         
-        # Process matchups for champion1
-        for enemy, winrate, delta1, delta2, pickrate, games in matchups1:
-            if pickrate >= config.MIN_PICKRATE and games >= config.MIN_MATCHUP_GAMES:
-                all_enemies.add(enemy)
-                if enemy not in enemy_coverage or delta2 > enemy_coverage[enemy][0]:
-                    enemy_coverage[enemy] = (delta2, champion1)
+        for enemy_champion in CHAMPIONS_LIST:
+            best_delta2 = -float('inf')
+            best_counter = None
+            
+            # For this enemy, check which champion in our trio counters it best
+            for our_champion in trio_list:
+                try:
+                    delta2 = self.db.get_matchup_delta2(our_champion, enemy_champion)
+                    
+                    if delta2 is not None and delta2 > best_delta2:
+                        best_delta2 = delta2
+                        best_counter = our_champion
+                        
+                except Exception as e:
+                    if self.verbose:
+                        print(f"Error getting matchup {our_champion} vs {enemy_champion}: {e}")
+                    continue
+            
+            # If we found a valid matchup, record it
+            if best_counter is not None and best_delta2 != -float('inf'):
+                enemy_coverage[enemy_champion] = (best_delta2, best_counter)
         
-        # Process matchups for champion2  
-        for enemy, winrate, delta1, delta2, pickrate, games in matchups2:
-            if pickrate >= config.MIN_PICKRATE and games >= config.MIN_MATCHUP_GAMES:
-                all_enemies.add(enemy)
-                if enemy not in enemy_coverage or delta2 > enemy_coverage[enemy][0]:
-                    enemy_coverage[enemy] = (delta2, champion2)
+        all_enemies = set(enemy_coverage.keys())
         
-        # Process matchups for champion3
-        for enemy, winrate, delta1, delta2, pickrate, games in matchups3:
-            if pickrate >= config.MIN_PICKRATE and games >= config.MIN_MATCHUP_GAMES:
-                all_enemies.add(enemy)
-                if enemy not in enemy_coverage or delta2 > enemy_coverage[enemy][0]:
-                    enemy_coverage[enemy] = (delta2, champion3)
-        
-        # Calculate individual scores
+        # Calculate individual scores using the reverse-lookup data
         coverage_score = self._calculate_coverage_score(enemy_coverage, all_enemies)
-        balance_score = self._calculate_balance_score(trio, [matchups1, matchups2, matchups3])
-        consistency_score = self._calculate_consistency_score(trio, [matchups1, matchups2, matchups3])
+        balance_score = self._calculate_balance_score_reverse(trio_list, enemy_coverage)
+        consistency_score = self._calculate_consistency_score_reverse(trio_list, enemy_coverage)
         meta_score = self._calculate_meta_score(enemy_coverage)
         
         # Calculate contextual total score using adaptive weights
@@ -612,6 +712,98 @@ class Assistant:
         max_possible = len(all_enemies) * 10  # Theoretical max delta2 is around 10
         
         return min(100.0, (total_coverage / max_possible) * 100)
+
+    def _calculate_balance_score_reverse(self, trio_list: List[str], enemy_coverage: dict) -> float:
+        """
+        Calculate diversity of matchup profiles using reverse lookup data.
+        
+        Args:
+            trio_list: List of champion names in the trio
+            enemy_coverage: Dict mapping enemy -> (delta2, best_counter)
+            
+        Returns:
+            Balance score 0-100 (higher = more balanced, fewer shared weaknesses)
+        """
+        try:
+            # For each champion, identify their weaknesses from enemy_coverage
+            champion_weaknesses = {champ: set() for champ in trio_list}
+            
+            for enemy, (best_delta2, best_counter) in enemy_coverage.items():
+                # Check each champion individually against this enemy
+                for our_champion in trio_list:
+                    try:
+                        delta2 = self.db.get_matchup_delta2(our_champion, enemy)
+                        
+                        # If this champion struggles against this enemy (negative delta2)
+                        if delta2 is not None and delta2 < -2.0:
+                            champion_weaknesses[our_champion].add(enemy)
+                            
+                    except Exception:
+                        continue
+            
+            # Calculate overlap in weaknesses
+            weakness_sets = list(champion_weaknesses.values())
+            if len(weakness_sets) < 2:
+                return 50.0
+            
+            # Get union and intersection of all weaknesses
+            all_weaknesses = set.union(*weakness_sets) if weakness_sets else set()
+            shared_weaknesses = set.intersection(*weakness_sets) if weakness_sets else set()
+            
+            if len(all_weaknesses) == 0:
+                return 100.0  # No weaknesses found
+            
+            # Calculate balance: fewer shared weaknesses = better balance
+            balance_ratio = 1 - (len(shared_weaknesses) / len(all_weaknesses))
+            return balance_ratio * 100
+            
+        except Exception as e:
+            if self.verbose:
+                print(f"[ERROR] Balance score calculation failed: {e}")
+            return 50.0  # Neutral score on error
+
+    def _calculate_consistency_score_reverse(self, trio_list: List[str], enemy_coverage: dict) -> float:
+        """
+        Calculate consistency using reverse lookup data.
+        
+        Args:
+            trio_list: List of champion names in the trio
+            enemy_coverage: Dict mapping enemy -> (delta2, best_counter)
+            
+        Returns:
+            Consistency score 0-100 (higher = more consistent performance)
+        """
+        try:
+            all_delta2_scores = []
+            
+            # Collect all delta2 scores from the coverage data
+            for enemy, (delta2, counter) in enemy_coverage.items():
+                all_delta2_scores.append(delta2)
+            
+            if not all_delta2_scores:
+                return 0.0
+            
+            # Calculate consistency metrics
+            import statistics
+            mean_score = statistics.mean(all_delta2_scores)
+            
+            if len(all_delta2_scores) > 1:
+                variance = statistics.variance(all_delta2_scores)
+                # Convert variance to consistency score (lower variance = higher consistency)
+                consistency = max(0, 100 - (variance * 5))  # Scale appropriately
+            else:
+                consistency = 50  # Neutral if only one score
+            
+            # Factor in average performance
+            avg_performance = max(0, mean_score + 5) * 10  # Shift and scale (-5 to +5 -> 0 to 100)
+            
+            # Weighted combination: 60% consistency, 40% performance
+            return (consistency * 0.6 + avg_performance * 0.4)
+            
+        except Exception as e:
+            if self.verbose:
+                print(f"[ERROR] Consistency score calculation failed: {e}")
+            return 50.0
 
     def _calculate_balance_score(self, trio: tuple, all_matchups: List[List]) -> float:
         """Calculate diversity of matchup profiles to avoid same weaknesses."""
@@ -1041,7 +1233,7 @@ class Assistant:
             return 0.0
 
     def _find_optimal_counterpick_duo(self, remaining_pool: List[str], blind_champion: str, show_ranking: bool = False) -> tuple:
-        """Find the best duo of counterpicks to maximize coverage against all champions."""
+        """Find the best duo of counterpicks using reverse lookup to maximize coverage against all champions."""
         from itertools import combinations
         
         if len(remaining_pool) < 2:
@@ -1056,40 +1248,10 @@ class Assistant:
         # Try all possible pairs from remaining pool
         for duo in combinations(remaining_pool, 2):
             try:
-                total_score = 0
                 trio = [blind_champion] + list(duo)
-                valid_matchups_found = 0
+                trio_score = self._calculate_trio_coverage_reverse(trio)
                 
-                # For each enemy champion, find the best counter from our trio
-                for enemy_champion in CHAMPIONS_LIST:
-                    best_counter_score = -float('inf')
-                    
-                    for our_champion in trio:
-                        try:
-                            matchups = self.db.get_champion_matchups_by_name(our_champion)
-                            if not matchups:
-                                continue
-                                
-                            # Find the specific matchup against this enemy
-                            for matchup in matchups:
-                                if matchup[0].lower() == enemy_champion.lower():
-                                    if matchup[3] > best_counter_score:  # delta2 is at index 3
-                                        best_counter_score = matchup[3]
-                                    break
-                        except Exception as e:
-                            continue  # Skip silently for cleaner output
-                    
-                    # If we found a matchup, add it to total score
-                    if best_counter_score != -float('inf'):
-                        total_score += best_counter_score
-                        valid_matchups_found += 1
-                
-                # Calculate coverage metrics
-                coverage_ratio = valid_matchups_found / len(CHAMPIONS_LIST)
-                avg_score_per_matchup = total_score / valid_matchups_found if valid_matchups_found > 0 else 0
-                
-                # Only consider this duo if it has reasonable coverage
-                if coverage_ratio < 0.3:  # Less than 30% coverage
+                if trio_score['coverage_ratio'] < 0.3:  # Less than 30% coverage
                     continue
                 
                 evaluated_combinations += 1
@@ -1097,14 +1259,16 @@ class Assistant:
                 # Store duo info for ranking
                 duo_rankings.append({
                     'duo': duo,
-                    'total_score': total_score,
-                    'coverage': coverage_ratio,
-                    'avg_score': avg_score_per_matchup,
-                    'matchups_covered': valid_matchups_found
+                    'total_score': trio_score['total_score'],
+                    'coverage': trio_score['coverage_ratio'],
+                    'avg_score': trio_score['avg_score'],
+                    'matchups_covered': trio_score['covered_count']
                 })
                     
             except Exception as e:
-                continue  # Skip silently for cleaner output
+                if self.verbose:
+                    print(f"Error evaluating duo {duo}: {e}")
+                continue
         
         if evaluated_combinations == 0:
             raise ValueError("No valid duo combinations could be evaluated")
@@ -1130,12 +1294,67 @@ class Assistant:
                 rank_symbol = "🥇" if i == 0 else "🥈" if i == 1 else "🥉" if i == 2 else f"{i+1}."
                 
                 safe_print(f"{rank_symbol} {duo[0]} + {duo[1]}")
-                print(f"    Total Score: {score:.1f} | Coverage: {coverage:.1%} | Avg/Match: {avg_score:.2f}")
+                print(f"    Total Score: {score:.2f} | Coverage: {coverage:.1%} | Avg/Match: {avg_score:.2f}")
         
         print(f"Evaluated {evaluated_combinations} valid combinations")
         
         best_info = duo_rankings[0]
         return best_info['duo'], best_info['total_score']
+
+    def _calculate_trio_coverage_reverse(self, trio: List[str]) -> dict:
+        """
+        Calculate trio coverage using reverse lookup approach.
+        
+        For each enemy champion, find the best counter from our trio directly.
+        This avoids duplicate matchups and improves performance.
+        
+        Args:
+            trio: List of 3 champion names
+            
+        Returns:
+            dict: Coverage statistics and scores
+        """
+        total_score = 0.0
+        covered_enemies = 0
+        coverage_details = {}  # enemy -> (best_counter, delta2)
+        
+        for enemy_champion in CHAMPIONS_LIST:
+            best_delta2 = -float('inf')
+            best_counter = None
+            
+            # For this enemy, check which champion in our trio counters it best
+            for our_champion in trio:
+                try:
+                    # Use database method to get specific matchup if it exists
+                    matchup_delta2 = self.db.get_matchup_delta2(our_champion, enemy_champion)
+                    
+                    if matchup_delta2 is not None and matchup_delta2 > best_delta2:
+                        best_delta2 = matchup_delta2
+                        best_counter = our_champion
+                        
+                except Exception as e:
+                    if self.verbose:
+                        print(f"Error getting matchup {our_champion} vs {enemy_champion}: {e}")
+                    continue
+            
+            # If we found a valid matchup, record it
+            if best_counter is not None and best_delta2 != -float('inf'):
+                total_score += best_delta2
+                covered_enemies += 1
+                coverage_details[enemy_champion] = (best_counter, best_delta2)
+        
+        # Calculate metrics
+        total_enemies = len(CHAMPIONS_LIST)
+        coverage_ratio = covered_enemies / total_enemies if total_enemies > 0 else 0
+        avg_score = total_score / covered_enemies if covered_enemies > 0 else 0
+        
+        return {
+            'total_score': total_score,
+            'covered_count': covered_enemies,
+            'coverage_ratio': coverage_ratio,
+            'avg_score': avg_score,
+            'coverage_details': coverage_details
+        }
 
     def optimal_trio_from_pool(self, champion_pool: List[str]) -> tuple:
         """
@@ -1382,7 +1601,7 @@ class Assistant:
         self._analyze_trio_coverage(trio_champions)
 
     def _analyze_trio_coverage(self, trio: List[str]) -> None:
-        """Analyze what the trio covers and potential gaps."""
+        """Analyze what the trio covers and potential gaps using reverse lookup."""
         
         safe_print(f"\n📊 COVERAGE ANALYSIS:")
         safe_print("─" * 50)
@@ -1390,24 +1609,23 @@ class Assistant:
         coverage_map = {}  # enemy -> best_counter_info
         uncovered_enemies = []
         
+        # Use efficient reverse lookup
         for enemy_champion in CHAMPIONS_LIST:
             best_counter = None
             best_delta2 = -float('inf')
             
             for our_champion in trio:
                 try:
-                    matchups = self.db.get_champion_matchups_by_name(our_champion)
+                    delta2 = self.db.get_matchup_delta2(our_champion, enemy_champion)
                     
-                    for matchup in matchups:
-                        if matchup[0].lower() == enemy_champion.lower():
-                            if matchup[3] > best_delta2:  # delta2 better
-                                best_delta2 = matchup[3]
-                                best_counter = our_champion
-                            break
-                except:
+                    if delta2 is not None and delta2 > best_delta2:
+                        best_delta2 = delta2
+                        best_counter = our_champion
+                        
+                except Exception:
                     continue
             
-            if best_counter:
+            if best_counter and best_delta2 != -float('inf'):
                 coverage_map[enemy_champion] = (best_counter, best_delta2)
             else:
                 uncovered_enemies.append(enemy_champion)
@@ -1418,7 +1636,7 @@ class Assistant:
         coverage_percent = (covered_count / total_enemies) * 100
         
         safe_print(f"📈 COVERAGE STATS:")
-        print(f"  • Covered: {covered_count}/{total_enemies} champions ({coverage_percent:.1f}%)")
+        print(f"  • Covered: {covered_count}/{total_enemies} champions ({coverage_percent:.2f}%)")
         
         # Categorize coverage quality
         excellent = [(e, c, d) for e, (c, d) in coverage_map.items() if d >= 2.0]
@@ -1427,13 +1645,13 @@ class Assistant:
         struggling = [(e, c, d) for e, (c, d) in coverage_map.items() if d < 0]
         
         if excellent:
-            safe_print(f"  🟢 EXCELLENT counters: {len(excellent)} ({len(excellent)/covered_count*100:.1f}%)")
+            safe_print(f"  🟢 EXCELLENT counters: {len(excellent)} ({len(excellent)/covered_count*100:.2f}%)")
         if good:
-            safe_print(f"  🟡 GOOD counters: {len(good)} ({len(good)/covered_count*100:.1f}%)")
+            safe_print(f"  🟡 GOOD counters: {len(good)} ({len(good)/covered_count*100:.2f}%)")
         if decent:
-            safe_print(f"  🟠 DECENT counters: {len(decent)} ({len(decent)/covered_count*100:.1f}%)")
+            safe_print(f"  🟠 DECENT counters: {len(decent)} ({len(decent)/covered_count*100:.2f}%)")
         if struggling:
-            safe_print(f"  🔴 STRUGGLING against: {len(struggling)} ({len(struggling)/covered_count*100:.1f}%)")
+            safe_print(f"  🔴 STRUGGLING against: {len(struggling)} ({len(struggling)/covered_count*100:.2f}%)")
         
         # Show problematic matchups
         if struggling:

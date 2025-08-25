@@ -381,3 +381,44 @@ class Database:
         except Exception as e:
             print(f"[ERROR] Error clearing matchups for {champion_name}: {e}")
             return False
+    
+    def get_matchup_delta2(self, champion_name: str, enemy_name: str) -> Optional[float]:
+        """
+        Get delta2 value for a specific matchup using direct SQL query.
+        
+        Optimized for reverse lookup approach - avoids loading all matchups.
+        
+        Args:
+            champion_name: Name of our champion
+            enemy_name: Name of enemy champion
+            
+        Returns:
+            delta2 value if matchup exists with sufficient data, None otherwise
+        """
+        try:
+            cursor = self.connection.cursor()
+            
+            # Direct SQL join to get delta2 for specific matchup
+            cursor.execute("""
+                SELECT m.delta2, m.pickrate, m.games
+                FROM matchups m
+                JOIN champions c1 ON m.champion = c1.id  
+                JOIN champions c2 ON m.enemy = c2.id
+                WHERE c1.name = ? COLLATE NOCASE 
+                AND c2.name = ? COLLATE NOCASE
+                AND m.pickrate >= 0.5
+                AND m.games >= 200
+            """, (champion_name, enemy_name))
+            
+            result = cursor.fetchone()
+            
+            if result:
+                delta2, pickrate, games = result
+                return float(delta2)
+            else:
+                return None
+                
+        except Exception as e:
+            if hasattr(self, 'verbose') and self.verbose:
+                print(f"[DEBUG] Error getting matchup {champion_name} vs {enemy_name}: {e}")
+            return None
