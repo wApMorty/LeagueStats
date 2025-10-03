@@ -39,7 +39,7 @@ MAIN MENU:
   1. Real-time Draft Coach     - Monitor champion select and get live recommendations
   2. Update Champion Data      - Fetch latest champions from Riot API
   3. Parse Match Statistics    - Scrape matchup data (SoloQ Pool or All Champions)
-  4. Champion Analysis         - Run tier lists and statistical analysis
+  4. Analysis & Tournament     - Statistical analysis and manual tournament coaching
   5. Optimal Team Builder      - Find best champion combinations
   6. Manage Champion Pools     - Create, edit, and manage custom champion pools
   7. Exit
@@ -80,7 +80,7 @@ def check_dependencies():
 
 def check_database():
     """Check if database file exists."""
-    db_path = "db.db"
+    db_path = config.DATABASE_PATH
     if not os.path.exists(db_path):
         print("[ERROR] DATABASE NOT FOUND:")
         print(f"  - Missing: {db_path}")
@@ -106,14 +106,14 @@ def _get_patch_version():
     if choice == "1":
         return config.CURRENT_PATCH
     elif choice == "2":
-        patch_input = input("Enter patch version (e.g., 15.15): ").strip()
+        patch_input = input(f"Enter patch version (e.g., {config.CURRENT_PATCH}): ").strip()
         if patch_input:
             # Validate patch format (basic validation)
             parts = patch_input.split('.')
             if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
                 return patch_input
             else:
-                print("[ERROR] Invalid patch format. Use format like 15.15")
+                print(f"[ERROR] Invalid patch format. Use format like {config.CURRENT_PATCH}")
                 return None
         else:
             print("[ERROR] Patch version cannot be empty")
@@ -124,7 +124,7 @@ def _get_patch_version():
         print("[ERROR] Invalid option")
         return None
 
-def run_draft_coach(verbose=False, auto_hover=False, auto_accept_queue=False):
+def run_draft_coach(verbose=False, auto_hover=False, auto_accept_queue=False, auto_ban_hover=False, open_onetricks=None):
     """Run the real-time draft coach."""
     print("[INFO] Starting Real-time Draft Coach...")
     print("Make sure League of Legends client is running and start a game!")
@@ -132,10 +132,14 @@ def run_draft_coach(verbose=False, auto_hover=False, auto_accept_queue=False):
         print("🎯 [AUTO-HOVER] Champion auto-hover is ENABLED")
     if auto_accept_queue:
         print("🔥 [AUTO-ACCEPT] Queue auto-accept is ENABLED")
+    if auto_ban_hover:
+        print("🚫 [AUTO-BAN-HOVER] Ban hover is ENABLED")
+    if open_onetricks:
+        print("🌐 [ONETRICKS] Open champion page on draft completion is ENABLED")
     print("Press Ctrl+C to stop monitoring.\n")
     
     try:
-        monitor = DraftMonitor(verbose=verbose, auto_select_pool=False, auto_hover=auto_hover, auto_accept_queue=auto_accept_queue)
+        monitor = DraftMonitor(verbose=verbose, auto_select_pool=False, auto_hover=auto_hover, auto_accept_queue=auto_accept_queue, auto_ban_hover=auto_ban_hover, open_onetricks=open_onetricks)
         monitor.start_monitoring()
     except KeyboardInterrupt:
         print("\n[INFO] Draft Coach stopped by user")
@@ -213,7 +217,7 @@ def parse_champion_pool(patch_version=None):
     print(f"\n✅ Parsing statistics for: {pool_name}")
     print(f"🔧 Patch version: {patch_version or 'default'}")
     print(f"Champions to process: {', '.join(pool_champions)}")
-    print(f"This will take approximately {len(pool_champions)*0.5:.1f}-{len(pool_champions)*1:.1f} minutes...")
+    print(f"This will take approximately {len(pool_champions)*0.5:.2f}-{len(pool_champions)*1:.2f} minutes...")
     
     confirm = input(f"\nProceed with parsing {len(pool_champions)} champions? (y/N): ").strip().lower()
     if confirm != 'y':
@@ -222,7 +226,7 @@ def parse_champion_pool(patch_version=None):
     
     try:
         from src.config import config, normalize_champion_name_for_url
-        db = Database(config.DATABASE_PATH if 'config' in globals() else "db.db")
+        db = Database(config.DATABASE_PATH)
         parser = Parser()
         
         db.connect()
@@ -301,7 +305,7 @@ def parse_all_champions(patch_version=None):
     try:
         from src.constants import CHAMPIONS_LIST
         from src.config import config, normalize_champion_name_for_url
-        db = Database(config.DATABASE_PATH if 'config' in globals() else "db.db")
+        db = Database(config.DATABASE_PATH)
         parser = Parser()
         
         db.connect()
@@ -365,8 +369,27 @@ def parse_all_champions(patch_version=None):
         print(f"[ERROR] Parsing error: {e}")
 
 def run_champion_analysis():
-    """Run champion analysis and tier lists."""
-    print("[INFO] Running champion analysis...")
+    """Run champion analysis and tournament coaching."""
+    print("[INFO] Champion Analysis & Tournament Coaching")
+    print("\nAvailable options:")
+    print("1. Statistical Analysis - Run tier lists and competitive draft analysis")
+    print("2. Tournament Draft Coach - Manual coaching for external tournaments")
+    print("3. Back to main menu")
+    
+    choice = input("\nChoose option (1-3): ").strip()
+    
+    if choice == "1":
+        run_statistical_analysis()
+    elif choice == "2":
+        run_tournament_draft_coach()
+    elif choice == "3":
+        return
+    else:
+        print("[ERROR] Invalid option")
+
+def run_statistical_analysis():
+    """Run statistical champion analysis and tier lists."""
+    print("[INFO] Running statistical analysis...")
     
     try:
         ast = Assistant()
@@ -379,6 +402,537 @@ def run_champion_analysis():
         
     except Exception as e:
         print(f"[ERROR] Analysis error: {e}")
+
+def run_tournament_draft_coach():
+    """Manual draft coaching for tournament scenarios."""
+    print("[INFO] Tournament Draft Coach")
+    print("Perfect for external tournaments, scrimmages, or any draft outside the League client")
+    print("\nThis tool provides the same coaching logic as the real-time coach,")
+    print("but allows you to manually input pick/ban information.")
+    
+    try:
+        from src.tournament_coach import TournamentCoach
+        coach = TournamentCoach()
+        coach.start_coaching_session()
+        
+    except ImportError:
+        # If the module doesn't exist yet, create a basic implementation
+        print("\n[INFO] Starting tournament coaching session...")
+        _run_basic_tournament_coach()
+    except Exception as e:
+        print(f"[ERROR] Tournament coach error: {e}")
+
+def _run_basic_tournament_coach():
+    """Enhanced tournament coaching implementation with full features."""
+    from src.assistant import Assistant
+    from src.pool_manager import PoolManager
+    import time
+    import json
+
+    try:
+        assistant = Assistant()
+
+        # Select coaching pool
+        print("\n" + "="*60)
+        print("SELECT CHAMPION POOL FOR COACHING")
+        print("="*60)
+
+        selected_pool_info = _select_pool_for_analysis()
+        if not selected_pool_info:
+            print("[WARNING] No pool selected, using assistant's extended pool")
+            champion_pool = assistant.select_extended_champion_pool()
+            pool_name = "Extended Pool"
+        else:
+            pool_name, champion_pool = selected_pool_info
+
+        print(f"\n✅ Using pool: {pool_name} ({len(champion_pool)} champions)")
+
+        # Initialize draft state
+        ally_team = []
+        enemy_team = []
+        banned_champions = []
+        draft_history = []  # (timestamp, action, champion, side)
+        auto_recommend = True  # Auto-show recommendations after picks
+
+        print("\n" + "="*80)
+        print("🎯 TOURNAMENT DRAFT COACHING SESSION")
+        print("="*80)
+        _show_tournament_help()
+
+        while True:
+            try:
+                cmd = input("\n⚡ Coach > ").strip().lower()
+
+                if cmd in ["quit", "exit", "q"]:
+                    break
+
+                elif cmd == "status":
+                    _show_tournament_draft_state(assistant, ally_team, enemy_team, banned_champions, champion_pool)
+
+                elif cmd == "reset":
+                    ally_team.clear()
+                    enemy_team.clear()
+                    banned_champions.clear()
+                    draft_history.clear()
+                    print("✅ Draft state reset!")
+
+                elif cmd == "recommend":
+                    _show_recommendations(assistant, enemy_team, ally_team, banned_champions, champion_pool, 5)
+
+                elif cmd == "analyze":
+                    if len(ally_team) == 5 and len(enemy_team) == 5:
+                        _analyze_complete_draft(assistant, ally_team, enemy_team)
+                    else:
+                        print(f"⚠️ Draft incomplete: {len(ally_team)}/5 ally, {len(enemy_team)}/5 enemy")
+
+                elif cmd.startswith("ally "):
+                    champ_input = cmd[5:].strip()
+                    champ = assistant.validate_champion_name(champ_input)
+                    if champ:
+                        if champ in ally_team:
+                            print(f"⚠️ {champ} already in your team")
+                        elif champ in enemy_team:
+                            print(f"⚠️ {champ} already picked by enemy")
+                        elif champ in banned_champions:
+                            print(f"⚠️ {champ} is banned")
+                        elif len(ally_team) >= 5:
+                            print(f"⚠️ Your team is full (5/5)")
+                        else:
+                            ally_team.append(champ)
+                            draft_history.append((time.time(), "ally", champ, "ally"))
+                            print(f"✅ Added {champ} to your team ({len(ally_team)}/5)")
+                            if auto_recommend and enemy_team:
+                                print(f"\n📊 Top picks after adding {champ}:")
+                                _show_recommendations(assistant, enemy_team, ally_team, banned_champions, champion_pool, 3)
+
+                elif cmd.startswith("enemy "):
+                    champ_input = cmd[6:].strip()
+                    champ = assistant.validate_champion_name(champ_input)
+                    if champ:
+                        if champ in enemy_team:
+                            print(f"⚠️ {champ} already in enemy team")
+                        elif champ in ally_team:
+                            print(f"⚠️ {champ} already picked by you")
+                        elif champ in banned_champions:
+                            print(f"⚠️ {champ} is banned")
+                        elif len(enemy_team) >= 5:
+                            print(f"⚠️ Enemy team is full (5/5)")
+                        else:
+                            enemy_team.append(champ)
+                            draft_history.append((time.time(), "enemy", champ, "enemy"))
+                            print(f"✅ Enemy picked {champ} ({len(enemy_team)}/5)")
+                            if auto_recommend:
+                                print(f"\n📊 Best counters to {champ}:")
+                                _show_recommendations(assistant, enemy_team, ally_team, banned_champions, champion_pool, 3)
+
+                elif cmd.startswith("ban "):
+                    champ_input = cmd[4:].strip()
+                    champ = assistant.validate_champion_name(champ_input)
+                    if champ:
+                        if champ in banned_champions:
+                            print(f"⚠️ {champ} already banned")
+                        elif champ in ally_team or champ in enemy_team:
+                            print(f"⚠️ {champ} already picked")
+                        else:
+                            banned_champions.append(champ)
+                            draft_history.append((time.time(), "ban", champ, "ban"))
+                            print(f"✅ Banned {champ}")
+
+                elif cmd.startswith("remove ally "):
+                    champ_input = cmd[12:].strip()
+                    champ = assistant.validate_champion_name(champ_input)
+                    if champ and champ in ally_team:
+                        ally_team.remove(champ)
+                        draft_history.append((time.time(), "remove_ally", champ, "ally"))
+                        print(f"✅ Removed {champ} from your team")
+                    else:
+                        print(f"⚠️ {champ_input} not in your team")
+
+                elif cmd.startswith("remove enemy "):
+                    champ_input = cmd[13:].strip()
+                    champ = assistant.validate_champion_name(champ_input)
+                    if champ and champ in enemy_team:
+                        enemy_team.remove(champ)
+                        draft_history.append((time.time(), "remove_enemy", champ, "enemy"))
+                        print(f"✅ Removed {champ} from enemy team")
+                    else:
+                        print(f"⚠️ {champ_input} not in enemy team")
+
+                elif cmd.startswith("remove ban "):
+                    champ_input = cmd[11:].strip()
+                    champ = assistant.validate_champion_name(champ_input)
+                    if champ and champ in banned_champions:
+                        banned_champions.remove(champ)
+                        draft_history.append((time.time(), "unban", champ, "ban"))
+                        print(f"✅ Unbanned {champ}")
+                    else:
+                        print(f"⚠️ {champ_input} not in ban list")
+
+                elif cmd == "history":
+                    _show_draft_history(draft_history)
+
+                elif cmd == "undo":
+                    if draft_history:
+                        ts, action, champ, side = draft_history.pop()
+                        if action == "ally":
+                            ally_team.remove(champ)
+                            print(f"↩️ Undone: {champ} removed from ally team")
+                        elif action == "enemy":
+                            enemy_team.remove(champ)
+                            print(f"↩️ Undone: {champ} removed from enemy team")
+                        elif action == "ban":
+                            banned_champions.remove(champ)
+                            print(f"↩️ Undone: {champ} unbanned")
+                        elif action.startswith("remove"):
+                            # Can't undo removes easily, skip
+                            print(f"⚠️ Can't undo remove action")
+                    else:
+                        print("⚠️ No actions to undo")
+
+                elif cmd.startswith("import "):
+                    _handle_import_command(cmd, assistant, ally_team, enemy_team, banned_champions, draft_history)
+
+                elif cmd == "export":
+                    _export_draft(ally_team, enemy_team, banned_champions, pool_name)
+
+                elif cmd == "auto on":
+                    auto_recommend = True
+                    print("✅ Auto-recommendations enabled")
+                elif cmd == "auto off":
+                    auto_recommend = False
+                    print("✅ Auto-recommendations disabled")
+
+                elif cmd in ["help", "h", "?"]:
+                    _show_tournament_help()
+
+                elif cmd == "":
+                    continue
+
+                else:
+                    print(f"❌ Unknown command: '{cmd}'. Type 'help' for available commands.")
+
+            except KeyboardInterrupt:
+                print("\n\n👋 Exiting tournament coach...")
+                break
+            except Exception as e:
+                print(f"❌ Error: {e}")
+                if "--debug" in sys.argv:
+                    import traceback
+                    traceback.print_exc()
+
+        assistant.close()
+        print("\n✅ Tournament coaching session ended!")
+
+    except Exception as e:
+        print(f"❌ Tournament coaching error: {e}")
+        import traceback
+        traceback.print_exc()
+
+def _show_tournament_help():
+    """Display tournament coach help."""
+    print("\n📖 TOURNAMENT COACH COMMANDS")
+    print("="*60)
+    print("DRAFT MANAGEMENT:")
+    print("  ally <champion>          - Add champion to your team")
+    print("  enemy <champion>         - Add champion to enemy team")
+    print("  ban <champion>           - Add champion to ban list")
+    print("  remove ally/enemy/ban <champion> - Remove champion")
+    print()
+    print("ANALYSIS:")
+    print("  status                   - Show current draft state with scores")
+    print("  recommend                - Get champion recommendations")
+    print("  analyze                  - Full analysis (when both teams complete)")
+    print("  history                  - Show draft action history")
+    print()
+    print("UTILITIES:")
+    print("  undo                     - Undo last action")
+    print("  reset                    - Clear entire draft")
+    print("  auto on/off              - Toggle auto-recommendations")
+    print("  export                   - Save draft to JSON file")
+    print("  import <type>: <champs>  - Quick import (see examples below)")
+    print()
+    print("  help, h, ?               - Show this help")
+    print("  quit, exit, q            - Exit coach")
+    print()
+    print("IMPORT EXAMPLES:")
+    print("  import ally: Aatrox, Graves, Ahri")
+    print("  import enemy: Gwen, Lee Sin, Syndra")
+    print("  import bans: Yone, Yasuo, Zed")
+    print("="*60)
+
+def _show_tournament_draft_state(assistant, ally_team, enemy_team, banned_champions, champion_pool):
+    """Show enhanced tournament draft state with individual champion scores."""
+    print(f"\n" + "="*70)
+    print("📋 CURRENT DRAFT STATE")
+    print("="*70)
+
+    # Show teams with individual scores
+    print(f"\n🟦 YOUR TEAM ({len(ally_team)}/5):")
+    if ally_team:
+        for champ in ally_team:
+            matchups = assistant.db.get_champion_matchups_by_name(champ)
+            if matchups and enemy_team:
+                advantage = assistant.score_against_team(matchups, enemy_team, champ)
+                if advantage >= 2.0:
+                    status = "✅ Strong"
+                elif advantage >= 0:
+                    status = "🟡 Good"
+                else:
+                    status = "🔴 Weak"
+                print(f"  • {champ:<15} {status:>10}  ({advantage:+.2f}%)")
+            else:
+                print(f"  • {champ:<15}")
+    else:
+        print("  (No picks yet)")
+
+    print(f"\n🟥 ENEMY TEAM ({len(enemy_team)}/5):")
+    if enemy_team:
+        for champ in enemy_team:
+            print(f"  • {champ}")
+    else:
+        print("  (No picks yet)")
+
+    print(f"\n🚫 BANNED CHAMPIONS ({len(banned_champions)}):")
+    if banned_champions:
+        print(f"  {', '.join(banned_champions)}")
+    else:
+        print("  (None)")
+
+    # Show progress
+    remaining_ally = 5 - len(ally_team)
+    remaining_enemy = 5 - len(enemy_team)
+    print(f"\n📊 REMAINING PICKS:")
+    print(f"  You: {remaining_ally}  |  Enemy: {remaining_enemy}")
+
+    # Show team winrate estimate if both teams have picks
+    if len(ally_team) >= 3 and len(enemy_team) >= 3:
+        print(f"\n💯 DRAFT ADVANTAGE:")
+        ally_advantages = []
+        for champ in ally_team:
+            matchups = assistant.db.get_champion_matchups_by_name(champ)
+            if matchups:
+                adv = assistant.score_against_team(matchups, enemy_team, champ)
+                ally_advantages.append(adv)
+
+        if ally_advantages:
+            avg_advantage = sum(ally_advantages) / len(ally_advantages)
+            if avg_advantage >= 2.0:
+                print(f"  ✅ Strong advantage ({avg_advantage:+.2f}% avg)")
+            elif avg_advantage >= 0:
+                print(f"  🟡 Slight advantage ({avg_advantage:+.2f}% avg)")
+            else:
+                print(f"  🔴 Disadvantage ({avg_advantage:+.2f}% avg)")
+
+    print("="*70)
+
+def _show_recommendations(assistant, enemy_team, ally_team, banned_champions, champion_pool, nb_results):
+    """Show formatted recommendations."""
+    if not enemy_team and not ally_team:
+        print("⚠️ No picks yet. Add enemy picks first for meaningful recommendations.")
+        return
+
+    print(f"\n🎯 TOP {nb_results} RECOMMENDATIONS:")
+    print("-" * 50)
+    assistant._calculate_and_display_recommendations(
+        enemy_team, ally_team, nb_results, champion_pool, banned_champions
+    )
+
+def _show_draft_history(draft_history):
+    """Display draft action history."""
+    if not draft_history:
+        print("📜 No actions yet")
+        return
+
+    print(f"\n📜 DRAFT HISTORY ({len(draft_history)} actions):")
+    print("-" * 60)
+    for i, (ts, action, champ, side) in enumerate(draft_history, 1):
+        action_icons = {
+            "ally": "🟦",
+            "enemy": "🟥",
+            "ban": "🚫",
+            "remove_ally": "↩️🟦",
+            "remove_enemy": "↩️🟥",
+            "unban": "↩️🚫"
+        }
+        icon = action_icons.get(action, "•")
+        print(f"  {i:2}. {icon} {action.upper():<12} {champ}")
+
+def _analyze_complete_draft(assistant, ally_team, enemy_team):
+    """Analyze complete draft using same logic as draft monitor."""
+    print("\n" + "="*80)
+    print("🎯 COMPLETE DRAFT ANALYSIS")
+    print("="*80)
+
+    # Calculate individual scores
+    ally_scores = []
+    for champ in ally_team:
+        matchups = assistant.db.get_champion_matchups_by_name(champ)
+        if matchups:
+            advantage = assistant.score_against_team(matchups, enemy_team, champ)
+            ally_scores.append((champ, advantage))
+        else:
+            ally_scores.append((champ, None))
+
+    enemy_scores = []
+    for champ in enemy_team:
+        matchups = assistant.db.get_champion_matchups_by_name(champ)
+        if matchups:
+            advantage = assistant.score_against_team(matchups, ally_team, champ)
+            enemy_scores.append((champ, advantage))
+        else:
+            enemy_scores.append((champ, None))
+
+    # Sort by advantage
+    ally_scores.sort(key=lambda x: x[1] if x[1] is not None else -999, reverse=True)
+    enemy_scores.sort(key=lambda x: x[1] if x[1] is not None else -999, reverse=True)
+
+    # Display ally team
+    print(f"\n🟦 YOUR TEAM PERFORMANCE:")
+    print("-" * 60)
+    for champ, advantage in ally_scores:
+        if advantage is None:
+            print(f"  {champ:<15} | ❌ Insufficient data")
+        elif advantage >= 2.0:
+            print(f"  {champ:<15} | ✅ {advantage:+.2f}% (Excellent)")
+        elif advantage >= 1.0:
+            print(f"  {champ:<15} | 🟢 {advantage:+.2f}% (Good)")
+        elif advantage >= -1.0:
+            print(f"  {champ:<15} | 🟡 {advantage:+.2f}% (Neutral)")
+        elif advantage >= -2.0:
+            print(f"  {champ:<15} | 🟠 {advantage:.2f}% (Bad)")
+        else:
+            print(f"  {champ:<15} | 🔴 {advantage:.2f}% (Very Bad)")
+
+    # Display enemy team
+    print(f"\n🟥 ENEMY TEAM PERFORMANCE:")
+    print("-" * 60)
+    for champ, advantage in enemy_scores:
+        if advantage is None:
+            print(f"  {champ:<15} | ❌ Insufficient data")
+        elif advantage >= 2.0:
+            print(f"  {champ:<15} | ⚠️ {advantage:+.2f}% (Strong vs us)")
+        elif advantage >= 1.0:
+            print(f"  {champ:<15} | 🟡 {advantage:+.2f}% (Good vs us)")
+        elif advantage >= -1.0:
+            print(f"  {champ:<15} | ➖ {advantage:+.2f}% (Neutral)")
+        elif advantage >= -2.0:
+            print(f"  {champ:<15} | 🟢 {advantage:.2f}% (Weak vs us)")
+        else:
+            print(f"  {champ:<15} | ✅ {advantage:.2f}% (Very weak vs us)")
+
+    # Team winrate calculation using geometric mean
+    ally_valid = [adv for _, adv in ally_scores if adv is not None]
+    enemy_valid = [adv for _, adv in enemy_scores if adv is not None]
+
+    if ally_valid and enemy_valid:
+        print(f"\n📊 TEAM MATCHUP PREDICTION:")
+        print("-" * 60)
+
+        # Convert to winrates and use geometric mean
+        ally_winrates = [50.0 + adv for adv in ally_valid]
+        enemy_winrates = [50.0 + adv for adv in enemy_valid]
+
+        ally_team_stats = assistant._calculate_team_winrate(ally_winrates)
+        enemy_team_stats = assistant._calculate_team_winrate(enemy_winrates)
+
+        # Normalize to 100%
+        total = ally_team_stats['team_winrate'] + enemy_team_stats['team_winrate']
+        ally_normalized = (ally_team_stats['team_winrate'] / total) * 100
+        enemy_normalized = (enemy_team_stats['team_winrate'] / total) * 100
+
+        print(f"  Your team:   {ally_normalized:.1f}%")
+        print(f"  Enemy team:  {enemy_normalized:.1f}%")
+
+        diff = ally_normalized - enemy_normalized
+        if diff >= 5.0:
+            print(f"\n  ✅ Major advantage ({diff:+.1f}%)")
+        elif diff >= 2.5:
+            print(f"\n  🟢 Good advantage ({diff:+.1f}%)")
+        elif diff >= -2.5:
+            print(f"\n  🟡 Even matchup ({diff:+.1f}%)")
+        elif diff >= -5.0:
+            print(f"\n  🟠 Disadvantage ({diff:.1f}%)")
+        else:
+            print(f"\n  🔴 Major disadvantage ({diff:.1f}%)")
+
+    print("\n" + "="*80)
+
+def _handle_import_command(cmd, assistant, ally_team, enemy_team, banned_champions, draft_history):
+    """Handle import commands for quick draft entry."""
+    import time
+
+    try:
+        # Format: import ally: Aatrox, Jax, Ahri
+        if ":" not in cmd:
+            print("⚠️ Import format: import <type>: <champion1>, <champion2>, ...")
+            print("   Example: import ally: Aatrox, Graves, Ahri")
+            return
+
+        parts = cmd.split(":", 1)
+        cmd_part = parts[0].strip().lower()
+        champs_part = parts[1].strip()
+
+        target_type = cmd_part.replace("import ", "").strip()
+
+        if target_type not in ["ally", "enemy", "bans", "ban"]:
+            print(f"⚠️ Unknown import type: {target_type}. Use: ally, enemy, or bans")
+            return
+
+        # Parse champion names
+        champ_names = [c.strip() for c in champs_part.split(",")]
+
+        imported = 0
+        for champ_input in champ_names:
+            champ = assistant.validate_champion_name(champ_input)
+            if not champ:
+                continue
+
+            if target_type == "ally":
+                if champ not in ally_team and len(ally_team) < 5:
+                    ally_team.append(champ)
+                    draft_history.append((time.time(), "ally", champ, "ally"))
+                    imported += 1
+            elif target_type == "enemy":
+                if champ not in enemy_team and len(enemy_team) < 5:
+                    enemy_team.append(champ)
+                    draft_history.append((time.time(), "enemy", champ, "enemy"))
+                    imported += 1
+            elif target_type in ["bans", "ban"]:
+                if champ not in banned_champions:
+                    banned_champions.append(champ)
+                    draft_history.append((time.time(), "ban", champ, "ban"))
+                    imported += 1
+
+        print(f"✅ Imported {imported}/{len(champ_names)} champions to {target_type}")
+
+    except Exception as e:
+        print(f"❌ Import error: {e}")
+
+def _export_draft(ally_team, enemy_team, banned_champions, pool_name):
+    """Export draft to JSON file."""
+    import json
+    import time
+    from datetime import datetime
+
+    timestamp = int(time.time())
+    filename = f"draft_{timestamp}.json"
+
+    draft_data = {
+        "timestamp": timestamp,
+        "datetime": datetime.fromtimestamp(timestamp).isoformat(),
+        "pool": pool_name,
+        "ally_team": ally_team,
+        "enemy_team": enemy_team,
+        "banned_champions": banned_champions,
+        "version": "1.0"
+    }
+
+    try:
+        with open(filename, "w", encoding="utf-8") as f:
+            json.dump(draft_data, f, indent=2, ensure_ascii=False)
+        print(f"✅ Draft exported to: {filename}")
+    except Exception as e:
+        print(f"❌ Export failed: {e}")
 
 def run_optimal_team_builder():
     """Run optimal team building tools."""
@@ -416,7 +970,7 @@ def run_optimal_team_builder():
             print(f"Total Score: {score:.2f}")
             
             # Proposer de sauvegarder le trio comme nouveau pool
-            _offer_save_optimization_result([blind, counter1, counter2], f"Optimal Trio (Score: {score:.1f})")
+            _offer_save_optimization_result([blind, counter1, counter2], f"Optimal Trio (Score: {score:.2f})")
             
         elif choice == "2":
             champion = input("Enter champion name: ").strip()
@@ -431,7 +985,7 @@ def run_optimal_team_builder():
                     # Extract the 3 champions (exclude the score)
                     fixed_champ, companion1, companion2, score = duo_result
                     duo_champions = [fixed_champ, companion1, companion2]
-                    _offer_save_optimization_result(duo_champions, f"Optimal Duo for {champion} (Score: {score:.1f})")
+                    _offer_save_optimization_result(duo_champions, f"Optimal Duo for {champion} (Score: {score:.2f})")
             else:
                 print("[ERROR] No champion name provided")
                 
@@ -455,7 +1009,7 @@ def run_optimal_team_builder():
             if trio_results:
                 best_trio = trio_results[0]['trio']
                 best_score = trio_results[0]['total_score']
-                _offer_save_optimization_result(list(best_trio), f"Holistic Trio (Score: {best_score:.1f})")
+                _offer_save_optimization_result(list(best_trio), f"Holistic Trio (Score: {best_score:.2f})")
                 
         else:
             print("[ERROR] Invalid option")
@@ -542,7 +1096,7 @@ def _select_pool_for_parsing():
         for name, pool in sorted(pools.items()):
             pool_list.append((name, pool))
             status = "🔧" if pool.created_by == "system" else "👤"
-            time_est = f"~{pool.size()*0.5:.1f}-{pool.size()*1:.1f}min"
+            time_est = f"~{pool.size()*0.5:.2f}-{pool.size()*1:.2f}min"
             print(f"  {idx:>2}. {status} {name:<18} | {pool.role:<8} | {pool.size():>2} champs | {time_est:>8} | {pool.description}")
             idx += 1
         
@@ -708,11 +1262,11 @@ def _display_holistic_trio_results(trio_results: List[dict], profile: str = "bal
             rank_symbol = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}."
             
             print(f"\n{rank_symbol} {trio[0]} + {trio[1]} + {trio[2]}")
-            print(f"   🎯 Total Score: {total:>5.1f}/100")
-            print(f"   📊 Coverage:    {coverage:>5.1f}/100  (Enemy matchup coverage)")
-            print(f"   ⚖️  Balance:     {balance:>5.1f}/100  (Diverse profiles)")
-            print(f"   📈 Consistency: {consistency:>5.1f}/100  (Reliable performance)")
-            print(f"   🌟 Meta:        {meta:>5.1f}/100  (vs popular picks)")
+            print(f"   🎯 Total Score: {total:>5.2f}/100")
+            print(f"   📊 Coverage:    {coverage:>5.2f}/100  (Enemy matchup coverage)")
+            print(f"   ⚖️  Balance:     {balance:>5.2f}/100  (Diverse profiles)")
+            print(f"   📈 Consistency: {consistency:>5.2f}/100  (Reliable performance)")
+            print(f"   🌟 Meta:        {meta:>5.2f}/100  (vs popular picks)")
             
             # Show some enemy coverage examples for top trio
             if i == 1 and 'enemy_coverage' in result:
@@ -720,7 +1274,7 @@ def _display_holistic_trio_results(trio_results: List[dict], profile: str = "bal
                 if coverage_data:
                     print(f"   Best matchups: ", end="")
                     top_matchups = sorted(coverage_data.items(), key=lambda x: x[1][0], reverse=True)[:3]
-                    matchup_strs = [f"{enemy}(+{delta2:.1f})" for enemy, (delta2, _) in top_matchups if delta2 > 0]
+                    matchup_strs = [f"{enemy}(+{delta2:.2f})" for enemy, (delta2, _) in top_matchups if delta2 > 0]
                     print(", ".join(matchup_strs[:3]) if matchup_strs else "None significant")
         
         print("\n" + "="*80)
@@ -1244,6 +1798,21 @@ def main():
         action="store_true",
         help="Enable automatic queue acceptance when matchmaking finds a game"
     )
+    parser.add_argument(
+        "--auto-ban-hover",
+        action="store_true",
+        help="Enable automatic ban hovering during ban phases"
+    )
+    parser.add_argument(
+        "--open-onetricks",
+        action="store_true",
+        help="Open champion page on Onetricks.gg when draft completes"
+    )
+    parser.add_argument(
+        "--no-onetricks",
+        action="store_true",
+        help="Disable opening champion page on Onetricks.gg (overrides config default)"
+    )
     
     args = parser.parse_args()
     
@@ -1257,7 +1826,15 @@ def main():
         if not check_dependencies() or not check_database():
             sys.exit(1)
         
-        run_draft_coach(args.verbose, auto_hover=args.auto_hover, auto_accept_queue=args.auto_accept_queue)
+        # Determine open_onetricks setting from command line args
+        if args.no_onetricks:
+            open_onetricks = False
+        elif args.open_onetricks:
+            open_onetricks = True
+        else:
+            open_onetricks = None  # Use config default
+        
+        run_draft_coach(args.verbose, auto_hover=args.auto_hover, auto_accept_queue=args.auto_accept_queue, auto_ban_hover=args.auto_ban_hover, open_onetricks=open_onetricks)
         return
     
     # Main menu mode
@@ -1283,7 +1860,15 @@ def main():
                 accept_choice = input("Enable automatic queue acceptance? (y/N): ").strip().lower()
                 auto_accept_queue = accept_choice == 'y'
                 
-                run_draft_coach(args.verbose, auto_hover=auto_hover, auto_accept_queue=auto_accept_queue)
+                # Ask about auto-ban-hover
+                ban_hover_choice = input("Enable automatic ban hovering? (y/N): ").strip().lower()
+                auto_ban_hover = ban_hover_choice == 'y'
+                
+                # Ask about opening Onetricks.gg page
+                onetricks_choice = input("Open champion page on Onetricks.gg when draft completes? (Y/n): ").strip().lower()
+                open_onetricks = onetricks_choice != 'n'  # Default to True unless explicitly 'n'
+                
+                run_draft_coach(args.verbose, auto_hover=auto_hover, auto_accept_queue=auto_accept_queue, auto_ban_hover=auto_ban_hover, open_onetricks=open_onetricks)
                 
             elif choice == "2":
                 update_champion_data()
