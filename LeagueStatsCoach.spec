@@ -5,7 +5,7 @@ a = Analysis(
     ['lol_coach.py'],
     pathex=[],
     binaries=[],
-    datas=[('data/db.db', '.'), ('docs/CLAUDE.md', '.'), ('README.md', '.')],
+    datas=[('data/db.db', '.'), ('README.md', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

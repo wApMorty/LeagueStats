@@ -32,7 +32,7 @@ def create_distribution():
     zip_size = os.path.getsize(zip_name) / (1024 * 1024)
     
     print(f"\nPackage ZIP cree: {zip_name}")
-    print(f"Taille: {zip_size:.1f} MB")
+    print(f"Taille: {zip_size:.2f} MB")
     print("\nPret pour Gaming House!")
     
     return True
