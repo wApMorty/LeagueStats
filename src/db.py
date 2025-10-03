@@ -124,6 +124,28 @@ class Database:
             print(f"The error '{e}' occurred")
             return []
     
+    def get_champion_base_winrate(self, champion_name: str) -> float:
+        """Calculate champion base winrate from all matchup data using weighted average."""
+        matchups = self.get_champion_matchups_by_name(champion_name)
+        if not matchups:
+            return 50.0  # Default to 50% if no data
+        
+        total_weighted_winrate = 0.0
+        total_weight = 0.0
+        
+        for enemy_name, winrate, delta1, delta2, pickrate, games in matchups:
+            # Use games as weight (more games = more reliable data)
+            # Could also use pickrate or combination of both
+            weight = games
+            total_weighted_winrate += winrate * weight
+            total_weight += weight
+        
+        if total_weight == 0:
+            return 50.0
+        
+        base_winrate = total_weighted_winrate / total_weight
+        return base_winrate
+    
     # === RIOT API INTEGRATION ===
     
     def update_champions_from_riot_api(self) -> bool:

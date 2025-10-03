@@ -4,6 +4,7 @@ import base64
 import requests
 import time
 import psutil
+import unicodedata
 from typing import Optional, Dict, Any
 from dataclasses import dataclass
 
@@ -315,8 +316,13 @@ class LCUClient:
         return None
     
     def _normalize_champion_name(self, name: str) -> str:
-        """Normalize champion name for flexible matching."""
-        return name.lower().replace(" ", "").replace(".", "").replace("'", "")
+        """Normalize champion name for flexible matching, handling accents and special characters."""
+        # First, normalize Unicode and remove accents
+        normalized = unicodedata.normalize('NFD', name)
+        # Remove accent marks (combining characters)
+        without_accents = ''.join(c for c in normalized if unicodedata.category(c) != 'Mn')
+        # Convert to lowercase and remove spaces, dots, apostrophes
+        return without_accents.lower().replace(" ", "").replace(".", "").replace("'", "")
     
     def get_current_player_action_id(self) -> Optional[int]:
         """

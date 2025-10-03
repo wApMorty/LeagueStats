@@ -136,63 +136,82 @@ class Assistant:
             return 0.0
         return sum(m[1] * m[4] for m in valid_matchups) / total_weight
 
-    def score_against_team(self, matchups: List[tuple], team: List[str]) -> float:
+    def score_against_team(self, matchups: List[tuple], team: List[str], champion_name: str = None) -> float:
         """
-        Calculate normalized win probability score against a team composition.
+        Calculate advantage against a team composition using base winrate + delta2.
         
-        Converts delta2 values to win probabilities and returns the expected 
-        advantage/disadvantage in percentage points from 50% baseline.
+        Args:
+            matchups: List of matchup data tuples
+            team: Enemy team composition
+            champion_name: Name of our champion (for accurate base winrate calculation)
         
         Returns:
             float: Expected advantage in percentage points (positive = favorable)
         """
+        if not champion_name:
+            # Can't calculate accurately without champion name, return 0
+            if self.verbose:
+                print("[WARNING] score_against_team called without champion_name, returning neutral advantage")
+            return 0.0
+        
+        # Use new logistic transformation for delta2 to advantage conversion
         if not team:
             # Pure blind pick scenario
             avg_delta2 = self.avg_delta2(matchups)
-            return self._delta2_to_win_advantage(avg_delta2)
+            return self._delta2_to_win_advantage(avg_delta2, champion_name)
         
-        total_win_advantage = 0
+        total_delta2 = 0
+        matchup_count = 0
         remaining_matchups = matchups.copy()
         
-        # Calculate advantage for known matchups
+        # Calculate delta2 for known matchups
         for enemy in team:
             for i, matchup in enumerate(remaining_matchups):
                 if matchup[0].lower() == enemy.lower():
                     delta2 = matchup[3]
-                    win_advantage = self._delta2_to_win_advantage(delta2)
-                    total_win_advantage += win_advantage
+                    total_delta2 += delta2
+                    matchup_count += 1
                     remaining_matchups.pop(i)
                     break
         
-        # Calculate advantage for unknown matchups (blind picks)
+        # Calculate delta2 for unknown matchups (blind picks)
         blind_picks = 5 - len(team)
         if blind_picks > 0:
             avg_delta2 = self.avg_delta2(remaining_matchups)
-            blind_advantage = self._delta2_to_win_advantage(avg_delta2)
-            total_win_advantage += blind_picks * blind_advantage
+            total_delta2 += blind_picks * avg_delta2
+            matchup_count += blind_picks
         
-        # Return average advantage per matchup
-        return total_win_advantage / 5
+        # Convert average delta2 to advantage using logistic transformation
+        if matchup_count == 0:
+            return 0.0  # No data available
+        else:
+            avg_delta2 = total_delta2 / matchup_count
+            return self._delta2_to_win_advantage(avg_delta2, champion_name)
     
-    def _delta2_to_win_advantage(self, delta2: float) -> float:
+    def _delta2_to_win_advantage(self, delta2: float, champion_name: str) -> float:
         """
-        Convert delta2 value to win advantage in percentage points.
+        Convert delta2 value to win advantage using logistic transformation.
         
-        Based on empirical analysis, delta2 roughly corresponds to:
-        - delta2 = +1.0 ≈ ~1.5% win rate advantage  
-        - delta2 = +2.0 ≈ ~3.0% win rate advantage
-        - delta2 = -2.0 ≈ ~3.0% win rate disadvantage
+        Uses mathematical model from CLAUDE.md:
+        - Logistic scaling for realistic bounds and diminishing returns
+        - log_odds = 0.12 * delta2 (~1.2% per delta2 unit)
+        - advantage = (win_probability - 0.5) * 100
         
         Args:
             delta2: The delta2 value from matchup data
+            champion_name: Champion name (kept for interface compatibility)
             
         Returns:
-            float: Win advantage in percentage points (positive = advantage)
+            float: Win advantage percentage (positive = our team favored)
         """
-        # Conservative scaling: 1 delta2 ≈ 1.5% win rate difference
-        # Cap at ±10% to avoid extreme values
-        scaling_factor = 1.5
-        advantage = delta2 * scaling_factor
+        import math
+        
+        # Logistic transformation for realistic bounds
+        log_odds = 0.12 * delta2  # ~1.2% per delta2 unit
+        win_probability = 1 / (1 + math.exp(-log_odds))
+        advantage = (win_probability - 0.5) * 100  # Percentage points from 50% baseline
+        
+        # Apply conservative bounds (-10% to +10%)
         return max(-10.0, min(10.0, advantage))
 
     def tierlist_delta1(self, champion_list: List[str]) -> List[tuple]:
@@ -200,7 +219,7 @@ class Assistant:
         for champion in champion_list:
             matchups = self.db.get_champion_matchups_by_name(champion)
             if sum(m[5] for m in matchups) < self.MIN_GAMES:
-                break
+                continue  # Skip this champion but continue processing others
             score = self.avg_delta1(matchups)
             scores.append((champion, score))
             scores.sort(key=lambda x: -x[1])
@@ -211,7 +230,7 @@ class Assistant:
         for champion in champion_list:
             matchups = self.db.get_champion_matchups_by_name(champion)
             if sum(m[5] for m in matchups) < self.MIN_GAMES:
-                break
+                continue  # Skip this champion but continue processing others
             score = self.avg_delta2(matchups)
             scores.append((champion, score))
             scores.sort(key=lambda x: -x[1])
@@ -249,7 +268,7 @@ class Assistant:
                 matchups = self.db.get_champion_matchups_by_name(champion)
                 if sum(m[5] for m in matchups) < 10000:
                     break
-                score = self.score_against_team(matchups, enemy_team)
+                score = self.score_against_team(matchups, enemy_team, champion_name=champion)
                 scores.append((str(champion), score))
                 scores.sort(key=lambda x: -x[1])
 
@@ -260,26 +279,101 @@ class Assistant:
             for index in range(_results):
                 print(scores[index])
 
-    def _calculate_and_display_recommendations(self, enemy_team: List[str], ally_team: List[str], nb_results: int, champion_pool: List[str] = None) -> None:
-        """Calculate champion recommendations and display top results."""
+    def _calculate_and_display_recommendations(self, enemy_team: List[str], ally_team: List[str], nb_results: int, champion_pool: List[str] = None, banned_champions: List[str] = None) -> List[tuple]:
+        """
+        Calculate champion recommendations and display top results.
+
+        Args:
+            enemy_team: List of enemy champions
+            ally_team: List of ally champions
+            nb_results: Number of results to display
+            champion_pool: Pool to select from (defaults to SOLOQ_POOL)
+            banned_champions: List of banned champions to exclude
+
+        Returns:
+            List of (champion, advantage) tuples, sorted by score
+        """
         if champion_pool is None:
             champion_pool = SOLOQ_POOL
-        
+        if banned_champions is None:
+            banned_champions = []
+
         scores = []
-        
+        skipped_low_data = 0
+
         for champion in champion_pool:
-            if champion not in enemy_team and champion not in ally_team:
-                matchups = self.db.get_champion_matchups_by_name(champion)
-                if sum(m[5] for m in matchups) < config.MIN_GAMES_COMPETITIVE:
-                    continue
-                score = self.score_against_team(matchups, enemy_team)
-                scores.append((str(champion), score))
-        
+            # Skip if already picked or banned
+            if champion in enemy_team or champion in ally_team or champion in banned_champions:
+                continue
+
+            matchups = self.db.get_champion_matchups_by_name(champion)
+            total_games = sum(m[5] for m in matchups)
+
+            if total_games < config.MIN_GAMES_COMPETITIVE:
+                skipped_low_data += 1
+                continue
+
+            score = self.score_against_team(matchups, enemy_team, champion_name=champion)
+            scores.append((str(champion), score))
+
         scores.sort(key=lambda x: -x[1])
-        
-        for index in range(min(nb_results, len(scores))):
-            print(scores[index])
+
+        # Display formatted results
+        if scores:
+            rank_emojis = ["🥇", "🥈", "🥉"]
+            for index in range(min(nb_results, len(scores))):
+                champion, advantage = scores[index]
+                rank = rank_emojis[index] if index < 3 else f"  {index+1}."
+                print(f"{rank} {champion:<15} | {advantage:+6.2f}% advantage")
+        else:
+            print("  ⚠️ No recommendations available")
+            if skipped_low_data > 0:
+                print(f"     ({skipped_low_data} champions skipped - insufficient data)")
+
+        return scores
     
+    def validate_champion_name(self, name: str) -> Optional[str]:
+        """
+        Validate and normalize champion name.
+
+        Args:
+            name: Champion name to validate
+
+        Returns:
+            Normalized champion name if valid, None otherwise
+        """
+        if not name:
+            return None
+
+        from .constants import CHAMPIONS_LIST
+
+        # Normalize input
+        normalized = name.strip()
+
+        # Try exact match (case-insensitive)
+        for champion in CHAMPIONS_LIST:
+            if champion.lower() == normalized.lower():
+                return champion
+
+        # Try fuzzy match (starts with)
+        suggestions = [c for c in CHAMPIONS_LIST if c.lower().startswith(normalized.lower())]
+
+        if len(suggestions) == 1:
+            # Single match - auto-complete
+            return suggestions[0]
+        elif len(suggestions) > 1:
+            # Multiple matches - show suggestions
+            print(f"  ⚠️ Ambiguous name. Did you mean: {', '.join(suggestions[:5])}?")
+            return None
+        else:
+            # No matches - try contains
+            contains_matches = [c for c in CHAMPIONS_LIST if normalized.lower() in c.lower()]
+            if contains_matches:
+                print(f"  ⚠️ Champion not found. Similar: {', '.join(contains_matches[:5])}")
+            else:
+                print(f"  ❌ Champion '{name}' not found")
+            return None
+
     def _get_champion_input(self, team_name: str, champion_number: int) -> str:
         """Get champion input from user with consistent formatting."""
         return input(f"{team_name} - Champion {champion_number}: ")
@@ -365,29 +459,127 @@ class Assistant:
                 for index in range(_results):
                     print(lst[index])
     
+    def _calculate_team_winrate(self, individual_winrates: List[float]) -> dict:
+        """
+        Calculate team win probability from individual champion winrates using geometric mean.
+        
+        Uses probability theory to combine individual winrates:
+        - Converts winrates to probabilities (divide by 100)
+        - Calculates team probability using geometric mean (multiplicative effects)
+        - More mathematically sound than arithmetic averaging
+        
+        Args:
+            individual_winrates: List of actual winrates (e.g. [54.2, 48.5, 52.1])
+            
+        Returns:
+            dict with 'team_winrate', 'individual_winrates'
+        """
+        import math
+        
+        if not individual_winrates:
+            return {'team_winrate': 50.0, 'individual_winrates': []}
+        
+        # Clamp individual winrates to realistic bounds
+        clamped_winrates = []
+        for winrate in individual_winrates:
+            clamped_winrate = max(20.0, min(80.0, winrate))
+            clamped_winrates.append(clamped_winrate)
+        
+        # Convert to probabilities and calculate geometric mean
+        geometric_mean = 1.0
+        for winrate in clamped_winrates:
+            probability = winrate / 100.0  # Convert to probability (0.0 to 1.0)
+            geometric_mean *= probability
+        
+        # Take nth root to get geometric mean probability
+        geometric_mean = geometric_mean ** (1.0 / len(clamped_winrates))
+        
+        # Convert back to percentage
+        team_winrate = geometric_mean * 100.0
+        
+        # Apply conservative bounds (extreme team winrates are unrealistic)
+        team_winrate = max(25.0, min(75.0, team_winrate))
+        
+        return {
+            'team_winrate': team_winrate,
+            'individual_winrates': clamped_winrates
+        }
+
     def score_teams(self, team1: List[str], team2: List[str]) -> None:
+        """Statistical team analysis using geometric mean for team winrates."""
         scores1 = []
-        for i in range(len(team1)):
-            scores1.append((team1[i], self.score_against_team(self.db.get_champion_matchups_by_name(team1[i]), team2)))
+        for champion in team1:
+            advantage = self.score_against_team(self.db.get_champion_matchups_by_name(champion), team2, champion_name=champion)
+            scores1.append((champion, advantage))
+        
         scores2 = []
-        for i in range(len(team2)):
-            scores2.append((team2[i], self.score_against_team(self.db.get_champion_matchups_by_name(team2[i]), team1)))
+        for champion in team2:
+            advantage = self.score_against_team(self.db.get_champion_matchups_by_name(champion), team1, champion_name=champion)
+            scores2.append((champion, advantage))
         
-        print("=============")
-        sm = 0
-        for i in range(len(scores1)):
-            print(f"{scores1[i][0]} - {scores1[i][1]}")
-            sm += scores1[i][1]
-        print("---------")
-        print(sm/5)
+        # Convert advantages to winrates for geometric mean calculation
+        # score_against_team returns advantage in percentage points from 50% baseline
+        # So winrate = 50.0 + advantage (e.g., +3.5% advantage = 53.5% winrate)
+        winrates1 = [50.0 + advantage for champion, advantage in scores1]
+        winrates2 = [50.0 + advantage for champion, advantage in scores2]
         
-        print("=============")
-        sm = 0
-        for i in range(len(scores2)):
-            print(f"{scores2[i][0]} - {scores2[i][1]}")
-            sm += scores2[i][1]
-        print("---------")
-        print(sm/5)
+        team1_stats = self._calculate_team_winrate(winrates1)
+        team2_stats = self._calculate_team_winrate(winrates2)
+        
+        # Normalize team winrates to ensure they sum to 100%
+        total_winrate = team1_stats['team_winrate'] + team2_stats['team_winrate']
+        if total_winrate > 0:
+            team1_normalized = (team1_stats['team_winrate'] / total_winrate) * 100.0
+            team2_normalized = (team2_stats['team_winrate'] / total_winrate) * 100.0
+        else:
+            team1_normalized = team2_normalized = 50.0  # Fallback for edge case
+        
+        # Update stats with normalized values
+        team1_stats['raw_winrate'] = team1_stats['team_winrate']
+        team2_stats['raw_winrate'] = team2_stats['team_winrate'] 
+        team1_stats['team_winrate'] = team1_normalized
+        team2_stats['team_winrate'] = team2_normalized
+        
+        # Display results
+        print("=" * 60)
+        safe_print(f"🔵 TEAM 1 ANALYSIS:")
+        print("-" * 40)
+        for champion, advantage in scores1:
+            winrate = 50.0 + advantage
+            print(f"{champion:<15} | {advantage:+5.2f}% advantage ({winrate:.1f}% winrate)")
+
+        print("-" * 40)
+        safe_print(f"🎯 Team Winrate: {team1_stats['team_winrate']:.1f}% (raw: {team1_stats['raw_winrate']:.1f}%)")
+
+        print("=" * 60)
+        safe_print(f"🔴 TEAM 2 ANALYSIS:")
+        print("-" * 40)
+        for champion, advantage in scores2:
+            winrate = 50.0 + advantage
+            print(f"{champion:<15} | {advantage:+5.2f}% advantage ({winrate:.1f}% winrate)")
+        
+        print("-" * 40)
+        safe_print(f"🎯 Team Winrate: {team2_stats['team_winrate']:.1f}% (raw: {team2_stats['raw_winrate']:.1f}%)")
+        
+        # Matchup prediction
+        print("=" * 60)
+        safe_print(f"📊 MATCHUP PREDICTION:")
+        team_diff = team1_stats['team_winrate'] - team2_stats['team_winrate']
+        
+        print(f"Team 1 vs Team 2: {team1_stats['team_winrate']:.1f}% vs {team2_stats['team_winrate']:.1f}%")
+        print(f"Expected advantage: {team_diff:+.1f}% for Team 1")
+        
+        # Confidence level based on magnitude
+        if abs(team_diff) >= 10:
+            safe_print(f"🟢 Strong advantage predicted")
+        elif abs(team_diff) >= 5:
+            safe_print(f"🟡 Moderate advantage predicted") 
+        elif abs(team_diff) >= 2:
+            safe_print(f"🟠 Small advantage predicted")
+        else:
+            safe_print(f"⚪ Very close matchup predicted")
+        
+        print("=" * 60)
     
     def score_teams_no_input(self) -> None:
         team1 = []
@@ -476,7 +668,8 @@ class Assistant:
             num_bans: Number of ban recommendations to return
             
         Returns:
-            List of tuples (enemy_name, threat_score, best_response_delta2)
+            List of tuples (enemy_name, threat_score, champions_countered)
+            Where champions_countered is the number of champions in your pool that have negative delta2 vs this enemy
             Sorted by threat_score (descending)
         """
         # Get all potential enemies from database
@@ -494,12 +687,13 @@ class Assistant:
         
         ban_candidates = []
         
-        # For each potential enemy, find our best response
+        # For each potential enemy, find our best response and count how many it counters
         for enemy_champion in all_potential_enemies:
             best_response_delta2 = -float('inf')
             best_response_champion = None
             enemy_pickrate = 0.0
             matchups_found = 0
+            champions_countered = 0  # Count of our champions with negative delta2 vs this enemy
             
             # Check all our champions against this enemy
             for our_champion in champion_pool:
@@ -508,6 +702,10 @@ class Assistant:
                     
                     if delta2 is not None:
                         matchups_found += 1
+                        
+                        # Count champions that are countered (negative delta2)
+                        if delta2 < 0:
+                            champions_countered += 1
                         
                         # Track the best response we have
                         if delta2 > best_response_delta2:
@@ -538,33 +736,33 @@ class Assistant:
             # Key insight: If even our BEST response has negative delta2, this enemy is very threatening
             base_threat = -best_response_delta2  # Invert: negative delta2 = high threat
             
-            # Weight by pickrate and coverage
+            # Weight by pickrate and how many champions it counters
             pickrate_weight = max(enemy_pickrate, 1.0)  # At least 1.0 to avoid zero weights
-            coverage_bonus = min(matchups_found / len(champion_pool), 1.0)  # How much of our pool this affects
+            counter_ratio = champions_countered / len(champion_pool)  # Fraction of our pool this enemy counters
             
             # Combined threat score
             # - Main factor: How bad is our best response? (70%)
             # - Secondary: How popular is this enemy? (20%) 
-            # - Tertiary: How much of our pool does it affect? (10%)
+            # - Tertiary: How many of our champions does it counter? (10%)
             combined_threat = (
                 base_threat * 0.7 +
                 pickrate_weight * 0.2 +
-                coverage_bonus * 10.0 * 0.1  # Scale coverage to reasonable range
+                counter_ratio * 10.0 * 0.1  # Scale counter ratio to reasonable range
             )
             
             ban_candidates.append((
                 enemy_champion,
                 combined_threat,
-                best_response_delta2,
+                champions_countered,  # Now correctly shows number of champions countered
                 best_response_champion,
-                matchups_found
+                best_response_delta2
             ))
         
         # Sort by combined threat (descending)
         ban_candidates.sort(key=lambda x: x[1], reverse=True)
         
-        # Return in clean format: (enemy, threat_score, best_response_delta2)  
-        return [(name, threat, best_delta2) for name, threat, best_delta2, _, _ in ban_candidates[:num_bans]]
+        # Return in clean format: (enemy, threat_score, champions_countered)  
+        return [(name, threat, countered) for name, threat, countered, _, _ in ban_candidates[:num_bans]]
 
     def find_optimal_trios_holistic(self, champion_pool: List[str], num_results: int = 5, profile: str = "balanced") -> List[dict]:
         """
@@ -1149,25 +1347,26 @@ class Assistant:
     def _generate_sample_trios_for_weights(self, sample_size: int = 15) -> List[tuple]:
         """
         Generate a sample of trios for adaptive weight calculation.
-        
+
         Uses a subset of available champions to avoid expensive computation.
-        
+
         Args:
             sample_size: Number of sample trios to generate
-            
+
         Returns:
             List of trio tuples
         """
         try:
             from itertools import combinations
-            from .constants import TOP_CHAMPIONS, JUNGLE_CHAMPIONS, MID_CHAMPIONS, ADC_CHAMPIONS, SUPPORT_CHAMPIONS
-            
+            from .constants import (TOP_CHAMPIONS, JUNGLE_CHAMPIONS, MID_CHAMPIONS,
+                                  ADC_CHAMPIONS, SUPPORT_CHAMPIONS)
+
             # Get a balanced sample of champions from different roles
             sample_champions = []
-            
+
             # Take some champions from each role for diversity
             sample_champions.extend(TOP_CHAMPIONS[:3])
-            sample_champions.extend(JUNGLE_CHAMPIONS[:3]) 
+            sample_champions.extend(JUNGLE_CHAMPIONS[:3])
             sample_champions.extend(MID_CHAMPIONS[:3])
             sample_champions.extend(ADC_CHAMPIONS[:2])
             sample_champions.extend(SUPPORT_CHAMPIONS[:2])

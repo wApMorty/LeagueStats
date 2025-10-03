@@ -1,10 +1,13 @@
 import time
 import json
+import subprocess
+import os
 from typing import Dict, List, Optional, Set
 from dataclasses import dataclass, field
 from .lcu_client import LCUClient
 from .assistant import Assistant, safe_print
 from .constants import SOLOQ_POOL, ROLE_POOLS
+from .config import config, normalize_champion_name_for_onetricks
 
 @dataclass
 class ChampionAction:
@@ -38,7 +41,7 @@ class DraftState:
 class DraftMonitor:
     """Monitors League of Legends champion select and provides coaching."""
     
-    def __init__(self, verbose: bool = False, auto_select_pool: bool = True, auto_hover: bool = False, auto_accept_queue: bool = False):
+    def __init__(self, verbose: bool = False, auto_select_pool: bool = True, auto_hover: bool = False, auto_accept_queue: bool = False, auto_ban_hover: bool = False, open_onetricks: bool = None):
         self.lcu = LCUClient(verbose=verbose)
         self.assistant = Assistant()
         self.last_draft_state = DraftState()
@@ -49,11 +52,15 @@ class DraftMonitor:
         self.auto_select_pool = auto_select_pool
         self.auto_hover = auto_hover
         self.auto_accept_queue = auto_accept_queue
+        self.auto_ban_hover = auto_ban_hover
+        self.open_onetricks = open_onetricks if open_onetricks is not None else config.OPEN_ONETRICKS_ON_DRAFT_END
         self.last_recommendation = None  # Track last recommendation to avoid spam
+        self.last_ban_recommendation = None  # Track last ban recommendation to avoid spam
         self.has_done_initial_hover = False  # Track if we've done the initial hover
         self.last_gameflow_phase = ""  # Track last gameflow phase
         self.has_analyzed_final_draft = False  # Track if we've already analyzed the final draft
         self.ready_check_accepted_time = 0  # Track when we accepted ready check
+        self.player_champion = None  # Track the player's selected champion
         
     def start_monitoring(self):
         """Start monitoring champion select."""
@@ -78,6 +85,10 @@ class DraftMonitor:
         print("   (Start a game to see draft recommendations)")
         if self.auto_accept_queue:
             print("   🔥 [AUTO-ACCEPT] Queue auto-accept is ENABLED")
+        if self.auto_ban_hover:
+            print("   🚫 [AUTO-BAN-HOVER] Ban hover is ENABLED")
+        if self.open_onetricks:
+            print("   🌐 [ONETRICKS] Open champion page on draft completion is ENABLED")
         print("   (Press Ctrl+C to stop)")
         
         try:
@@ -88,6 +99,40 @@ class DraftMonitor:
             print("\n[STOP] Stopping draft monitor...")
         finally:
             self.cleanup()
+    
+    def _open_champion_page_on_onetricks(self):
+        """Open the player's champion page on OneTriks.gg using Brave browser."""
+        try:
+            if not self.player_champion:
+                if self.verbose:
+                    print("[ONETRICKS] No player champion detected, skipping browser open")
+                return
+            
+            # Normalize champion name for OneTricks.gg URL
+            normalized_name = normalize_champion_name_for_onetricks(self.player_champion)
+            onetricks_url = f"https://www.onetricks.gg/champions/builds/{normalized_name}"
+            
+            # Try to get Brave browser path
+            try:
+                brave_path = config.get_brave_path()
+            except FileNotFoundError:
+                if self.verbose:
+                    print("[ONETRICKS] Brave browser not found, trying default browser")
+                # Fallback to default browser
+                import webbrowser
+                webbrowser.open(onetricks_url)
+                return
+            
+            # Open with Brave browser
+            subprocess.Popen([brave_path, onetricks_url], 
+                           stdout=subprocess.DEVNULL, 
+                           stderr=subprocess.DEVNULL)
+            
+        except Exception as e:
+            if self.verbose:
+                print(f"[WARNING] Failed to open OneTriks.gg page: {e}")
+            else:
+                print(f"[WARNING] Failed to open champion page in browser")
     
     def stop_monitoring(self):
         """Stop monitoring."""
@@ -210,6 +255,68 @@ class DraftMonitor:
             if self.verbose:
                 print(f"[WARNING] Error handling ready check: {e}")
     
+    def _handle_auto_ban_hover(self, state: DraftState):
+        """Handle auto-ban-hover when it's our turn to ban."""
+        try:
+            if self.verbose:
+                print(f"[DEBUG] Auto-ban-hover called: Phase='{state.phase}', Actor={state.current_actor}, Local={state.local_player_cell_id}")
+            
+            # Only act if it's our turn to ban
+            if not self._is_player_ban_turn(state):
+                if self.verbose:
+                    print(f"[DEBUG] Not player ban turn - skipping auto-ban-hover")
+                return
+            
+            if self.verbose:
+                print(f"[DEBUG] It's our ban turn! Getting recommendations for pool size {len(self.current_pool)}")
+            
+            # Get ban recommendations for our pool
+            ban_recommendations = self.assistant.get_ban_recommendations(self.current_pool, num_bans=3)
+            
+            if not ban_recommendations:
+                print("[DEBUG] No ban recommendations available")
+                return
+            
+            if self.verbose:
+                print(f"[DEBUG] Got {len(ban_recommendations)} ban recommendations")
+            
+            # Get the top ban recommendation
+            top_ban, threat_score, matchup_count = ban_recommendations[0]
+            
+            if self.verbose:
+                print(f"[DEBUG] Top ban recommendation: {top_ban} (threat: {threat_score:.2f})")
+            
+            # Only hover if it's a different recommendation or first time
+            if top_ban != self.last_ban_recommendation:
+                # Check if this champion is already banned
+                banned_champions = []
+                for ban_id in state.ally_bans + state.enemy_bans:
+                    banned_champions.append(self._get_display_name(ban_id))
+
+                if self.verbose:
+                    print(f"[DEBUG] Currently banned: {banned_champions}")
+                    print(f"[DEBUG] Checking if '{top_ban}' is in banned list")
+
+                # Case-insensitive comparison to handle potential name mismatches
+                banned_champions_lower = [name.lower() for name in banned_champions]
+                if top_ban.lower() not in banned_champions_lower:
+                    print(f"[DEBUG] Attempting to hover {top_ban}...")
+                    if self._auto_hover_champion(top_ban, "Ban recommendation"):
+                        print(f"  🚫 [AUTO-BAN-HOVER] Hovering {top_ban} (Threat: {threat_score:.2f})")
+                        self.last_ban_recommendation = top_ban
+                    else:
+                        print(f"  ⚠️ [AUTO-BAN-HOVER] Failed to hover {top_ban}")
+                else:
+                    print(f"  ⚠️ [AUTO-BAN-HOVER] {top_ban} already banned, skipping")
+            else:
+                if self.verbose:
+                    print(f"[DEBUG] Same recommendation as before ({top_ban}), skipping")
+                
+        except Exception as e:
+            print(f"[WARNING] Error handling auto-ban-hover: {e}")
+            import traceback
+            traceback.print_exc()
+    
     def _is_draft_complete(self, state: DraftState) -> bool:
         """Check if the draft is complete (all 10 champions locked)."""
         total_picks = len(state.ally_picks) + len(state.enemy_picks)
@@ -228,15 +335,12 @@ class DraftMonitor:
                 
                 self._calculate_final_scores(ally_picks, enemy_picks)
                 
-                # Show post-draft advice
-                print("\n💡 [ADVICE] Use this analysis to:")
-                print("   • Optimize your runes and summoner spells")
-                print("   • Plan your early game strategy")
-                print("   • Consider dodging if the matchup is very unfavorable")
-                print("   • Focus on your win conditions")
-                
                 # Mark analysis as done
                 self.has_analyzed_final_draft = True
+                
+                # Open champion page on OneTriks.gg if enabled
+                if self.open_onetricks:
+                    self._open_champion_page_on_onetricks()
                 
         except Exception as e:
             print(f"[ERROR] Failed to analyze complete draft: {e}")
@@ -250,8 +354,10 @@ class DraftMonitor:
         self.has_done_initial_hover = False
         self.has_analyzed_final_draft = False
         self.last_recommendation = None
+        self.last_ban_recommendation = None
         self.last_gameflow_phase = ""
         self.ready_check_accepted_time = 0
+        self.player_champion = None
         
         # Reset ready message flag
         if hasattr(self, '_shown_ready_message'):
@@ -277,24 +383,23 @@ class DraftMonitor:
         """Get display name for champion ID."""
         return self.champion_id_to_name.get(champion_id, f"Champion{champion_id}")
     
-    def _calculate_score_against_team(self, matchups: List[tuple], enemy_team: List[int]) -> float:
-        """Calculate average delta2 score against enemy team."""
+    def _calculate_score_against_team(self, matchups: List[tuple], enemy_team: List[int], champion_name: str) -> float:
+        """Calculate score against enemy team using Assistant's method."""
         if not matchups or not enemy_team:
             return 0.0
         
-        # Convert matchups to dict for faster lookup
-        matchup_dict = {enemy_id: delta2 for enemy_id, winrate, delta1, delta2, pickrate, games in matchups}
-        
-        # Calculate average delta2 against picked enemies
-        relevant_scores = []
+        # Convert enemy IDs to champion names for the assistant method
+        enemy_names = []
         for enemy_id in enemy_team:
-            if enemy_id in matchup_dict:
-                relevant_scores.append(matchup_dict[enemy_id])
+            enemy_name = self._get_display_name(enemy_id)
+            if enemy_name:
+                enemy_names.append(enemy_name)
         
-        if not relevant_scores:
+        if not enemy_names:
             return 0.0
-            
-        return sum(relevant_scores) / len(relevant_scores)
+        
+        # Use the assistant's scoring method which includes blind pick logic
+        return self.assistant.score_against_team(matchups, enemy_names, champion_name)
     
     def _parse_draft_state(self, champ_select_data: Dict) -> DraftState:
         """Parse champion select data into DraftState."""
@@ -333,9 +438,14 @@ class DraftMonitor:
             if ban_id > 0:
                 state.enemy_bans.append(ban_id)  # Store Riot ID directly
         
-        # Find current actor (who's supposed to pick/ban now)
+        # Find current actor (who's supposed to pick/ban now) and track player's champion
         for action_set in champ_select_data.get('actions', []):
             for action in action_set:
+                # Track player's champion selection
+                if (action.get('actorCellId') == state.local_player_cell_id and 
+                    action.get('type') == 'pick' and action.get('championId', 0) > 0):
+                    self.player_champion = self._get_display_name(action.get('championId'))
+                
                 if not action.get('completed', False):
                     state.current_actor = action.get('actorCellId')
                     break
@@ -459,11 +569,12 @@ class DraftMonitor:
                             print(f"[DEBUG] Skipping banned champion: {banned_name}")
                         continue
                         
-                    # Get matchups for this champion
-                    matchups = self.assistant.db.get_champion_matchups(champion_id)
+                    # Get champion name and matchups
+                    champion_name = self._get_display_name(champion_id)
+                    matchups = self.assistant.db.get_champion_matchups_by_name(champion_name)
                     if matchups and sum(m[5] for m in matchups) >= 500:  # Threshold for valid data
-                        # Calculate score against enemy team
-                        score = self._calculate_score_against_team(matchups, enemy_picks)
+                        # Calculate score against enemy team using unified scoring method
+                        score = self._calculate_score_against_team(matchups, enemy_picks, champion_name)
                         scores.append((champion_id, score))
                 
                 scores.sort(key=lambda x: -x[1])
@@ -476,7 +587,13 @@ class DraftMonitor:
                     champion_id, score = scores[i]
                     display_name = self._get_display_name(champion_id)
                     rank = "[1st]" if i == 0 else "[2nd]" if i == 1 else "[3rd]"
-                    print(f"  {rank} {display_name} (Score: {score:.1f})")
+                    # Format score as win rate advantage
+                    if score > 0:
+                        print(f"  {rank} {display_name} (+{score:.2f}% advantage)")
+                    elif score < 0:
+                        print(f"  {rank} {display_name} ({score:.2f}% disadvantage)")
+                    else:
+                        print(f"  {rank} {display_name} (neutral)")
                     
                     # Store top recommendation for auto-hover
                     if i == 0:
@@ -493,9 +610,13 @@ class DraftMonitor:
                         reason = "Your turn" if is_our_turn else "Enemy pick update"
                         self._auto_hover_champion(top_recommendation, reason)
                         self.last_recommendation = top_recommendation
-                
+            
                 if not scores:
                     print("  [DATA] No data available for current matchups")
+            
+            # Handle auto-ban-hover for ban phases
+            elif self._is_ban_phase(state) and self.auto_ban_hover:
+                self._handle_auto_ban_hover(state)
             
             # Phase-specific advice
             phase_advice = {
@@ -513,6 +634,14 @@ class DraftMonitor:
     
     def _is_player_turn(self, state: DraftState) -> bool:
         """Check if it's the local player's turn to pick."""
+        if not state.current_actor or not state.local_player_cell_id:
+            return False
+        return state.current_actor == state.local_player_cell_id
+    
+    def _is_player_ban_turn(self, state: DraftState) -> bool:
+        """Check if it's the local player's turn to ban."""
+        if not self._is_ban_phase(state):
+            return False
         if not state.current_actor or not state.local_player_cell_id:
             return False
         return state.current_actor == state.local_player_cell_id
@@ -613,9 +742,8 @@ class DraftMonitor:
                     print("  ⚠️ [INITIAL-HOVER] No champions in pool")
                 return
             
-            # Use first champion from pool as initial recommendation
-            # In the future, this could be smarter (e.g., based on meta or personal stats)
-            initial_champion = self.current_pool[0]
+            # Calculate best champion from pool using smart analysis
+            initial_champion = self._get_best_champion_from_pool()
             
             self._auto_hover_champion(initial_champion, "Initial hover")
             self.last_recommendation = initial_champion
@@ -623,6 +751,48 @@ class DraftMonitor:
         except Exception as e:
             if self.verbose:
                 print(f"  ⚠️ [INITIAL-HOVER] Error doing initial hover: {e}")
+    
+    def _get_best_champion_from_pool(self) -> str:
+        """Get the best champion from current pool using tier list analysis."""
+        try:
+            # Convert current_pool (names) to champion IDs for scoring
+            champion_ids = []
+            for champ_name in self.current_pool:
+                # Find champion ID by name
+                for champ_id, name in self.champion_id_to_name.items():
+                    if name.lower() == champ_name.lower():
+                        champion_ids.append(champ_id)
+                        break
+            
+            if not champion_ids:
+                # Fallback to first champion if no IDs found
+                return self.current_pool[0]
+            
+            # Calculate scores for pool champions (blind pick scenario)
+            scores = []
+            for champion_id in champion_ids:
+                champion_name = self._get_display_name(champion_id)
+                matchups = self.assistant.db.get_champion_matchups_by_name(champion_name)
+                if matchups and sum(m[5] for m in matchups) >= 500:  # Threshold for valid data
+                    # Use blind pick scoring (empty enemy team)
+                    score = self.assistant.score_against_team(matchups, [], champion_name)
+                    scores.append((champion_name, score))
+            
+            if scores:
+                # Sort by score and return best champion
+                scores.sort(key=lambda x: x[1], reverse=True)
+                best_champion = scores[0][0]
+                if self.verbose:
+                    print(f"  ✅ [INITIAL-HOVER] Best from pool: {best_champion} ({scores[0][1]:+.2f}% advantage)")
+                return best_champion
+            else:
+                # Fallback to first champion
+                return self.current_pool[0]
+                
+        except Exception as e:
+            if self.verbose:
+                print(f"  ⚠️ [INITIAL-HOVER] Error getting best champion: {e}")
+            return self.current_pool[0]  # Fallback
     
     def _show_ban_recommendations_draft(self):
         """Show ban recommendations for current pool during draft."""
@@ -756,21 +926,18 @@ class DraftMonitor:
                     ally_scores.append((champion_name, None, 0))  # Mark insufficient data
                     continue
                 
-                # Calculate score against enemy team
-                total_score = 0
-                valid_matchups = 0
+                # Use the new normalized scoring system
+                enemy_names = [self._get_display_name(enemy_id) for enemy_id in enemy_picks]
                 
-                for enemy_id in enemy_picks:
-                    # Find specific matchup
-                    for matchup in matchups:
-                        if matchup[0] == enemy_id:  # enemy_id is first element
-                            delta2 = matchup[3]  # delta2 is at index 3
-                            total_score += delta2
-                            valid_matchups += 1
-                            break
+                # Get champion matchups by name for assistant method
+                champion_matchups = self.assistant.db.get_champion_matchups_by_name(champion_name)
                 
-                avg_score = total_score / valid_matchups if valid_matchups > 0 else 0
-                ally_scores.append((champion_name, avg_score, total_score))
+                if champion_matchups:
+                    # Use assistant's new win advantage calculation
+                    win_advantage = self.assistant.score_against_team(champion_matchups, enemy_names, champion_name)
+                    ally_scores.append((champion_name, win_advantage, len(enemy_picks)))
+                else:
+                    ally_scores.append((champion_name, None, 0))
                 
             except Exception as e:
                 ally_scores.append((champion_name, None, 0))  # Mark error
@@ -787,102 +954,121 @@ class DraftMonitor:
                     enemy_scores.append((champion_name, None, 0))  # Mark insufficient data
                     continue
                 
-                # Calculate score against ally team
-                total_score = 0
-                valid_matchups = 0
+                # Use the new normalized scoring system  
+                ally_names = [self._get_display_name(ally_id) for ally_id in ally_picks]
                 
-                for ally_id in ally_picks:
-                    # Find specific matchup
-                    for matchup in matchups:
-                        if matchup[0] == ally_id:  # ally_id is first element
-                            delta2 = matchup[3]  # delta2 is at index 3
-                            total_score += delta2
-                            valid_matchups += 1
-                            break
+                # Get champion matchups by name for assistant method
+                champion_matchups = self.assistant.db.get_champion_matchups_by_name(champion_name)
                 
-                avg_score = total_score / valid_matchups if valid_matchups > 0 else 0
-                enemy_scores.append((champion_name, avg_score, total_score))
+                if champion_matchups:
+                    # Use assistant's new win advantage calculation
+                    win_advantage = self.assistant.score_against_team(champion_matchups, ally_names, champion_name)
+                    enemy_scores.append((champion_name, win_advantage, len(ally_picks)))
+                else:
+                    enemy_scores.append((champion_name, None, 0))
                 
             except Exception as e:
                 enemy_scores.append((champion_name, None, 0))  # Mark error
         
-        # Sort both teams by average score (descending - best scores first)
+        # Sort both teams by win advantage (descending - best advantages first)
         ally_scores.sort(key=lambda x: x[1] if x[1] is not None else -999, reverse=True)
         enemy_scores.sort(key=lambda x: x[1] if x[1] is not None else -999, reverse=True)
         
         # Display ALLY team performance (sorted)
         safe_print(f"\n🟢 YOUR TEAM:")
-        for champion_name, avg_score, total_score in ally_scores:
-            if avg_score is None:
+        for champion_name, win_advantage, matchup_count in ally_scores:
+            if win_advantage is None:
                 safe_print(f"  {champion_name:<15} | ❌ Insufficient data")
             else:
-                # Overall assessment with symmetric thresholds
-                if avg_score > 1.0:
-                    safe_print(f"  {champion_name:<15} | ✅ +{avg_score:.1f} (Excellent)")
-                elif avg_score >= 0.5:
-                    safe_print(f"  {champion_name:<15} | 🟡 +{avg_score:.1f} (Good)")
-                elif avg_score >= -0.5:
-                    safe_print(f"  {champion_name:<15} | ➖ {avg_score:+.1f} (Neutral)")
-                elif avg_score >= -1.0:
-                    safe_print(f"  {champion_name:<15} | 🟠 {avg_score:.1f} (Bad)")
+                # Overall assessment with win rate thresholds
+                if win_advantage >= 2.0:
+                    safe_print(f"  {champion_name:<15} | ✅ +{win_advantage:.2f}% (Excellent)")
+                elif win_advantage >= 1.0:
+                    safe_print(f"  {champion_name:<15} | 🟡 +{win_advantage:.2f}% (Good)")
+                elif win_advantage >= -1.0:
+                    safe_print(f"  {champion_name:<15} | ➖ {win_advantage:+.2f}% (Neutral)")
+                elif win_advantage >= -2.0:
+                    safe_print(f"  {champion_name:<15} | 🟠 {win_advantage:.2f}% (Bad)")
                 else:
-                    safe_print(f"  {champion_name:<15} | 🔴 {avg_score:.1f} (Very Bad)")
+                    safe_print(f"  {champion_name:<15} | 🔴 {win_advantage:.2f}% (Very Bad)")
         
         # Display ENEMY team performance (sorted)
         safe_print(f"\n🔴 ENEMY TEAM:")
-        for champion_name, avg_score, total_score in enemy_scores:
-            if avg_score is None:
+        for champion_name, win_advantage, matchup_count in enemy_scores:
+            if win_advantage is None:
                 safe_print(f"  {champion_name:<15} | ❌ Insufficient data")
             else:
-                # Overall assessment (from enemy perspective)
-                if avg_score > 1.0:
-                    safe_print(f"  {champion_name:<15} | ✅ +{avg_score:.1f} (Excellent)")
-                elif avg_score >= 0.5:
-                    safe_print(f"  {champion_name:<15} | 🟡 +{avg_score:.1f} (Good)")
-                elif avg_score >= -0.5:
-                    safe_print(f"  {champion_name:<15} | ➖ {avg_score:+.1f} (Neutral)")
-                elif avg_score >= -1.0:
-                    safe_print(f"  {champion_name:<15} | 🟠 {avg_score:.1f} (Bad)")
+                # Overall assessment (from enemy perspective - their advantage against us)
+                if win_advantage >= 2.0:
+                    safe_print(f"  {champion_name:<15} | ✅ +{win_advantage:.2f}% (Strong against us)")
+                elif win_advantage >= 1.0:
+                    safe_print(f"  {champion_name:<15} | 🟡 +{win_advantage:.2f}% (Good against us)")
+                elif win_advantage >= -1.0:
+                    safe_print(f"  {champion_name:<15} | ➖ {win_advantage:+.2f}% (Neutral)")
+                elif win_advantage >= -2.0:
+                    safe_print(f"  {champion_name:<15} | 🟠 {win_advantage:.2f}% (Weak against us)")
                 else:
-                    safe_print(f"  {champion_name:<15} | 🔴 {avg_score:.1f} (Very Bad)")
+                    safe_print(f"  {champion_name:<15} | 🔴 {win_advantage:.2f}% (Very weak against us)")
         
         # Team summary comparison
         safe_print(f"\n📈 DRAFT COMPARISON:")
         print("-" * 40)
-        
-        # Calculate averages only for champions with valid scores
+
+        # Calculate team winrates using geometric mean (same method as score_teams)
         ally_valid_scores = [score[1] for score in ally_scores if score[1] is not None]
         enemy_valid_scores = [score[1] for score in enemy_scores if score[1] is not None]
-        
+
         if ally_valid_scores:
-            ally_avg = sum(ally_valid_scores) / len(ally_valid_scores)
-            safe_print(f"  🟢 Your Team Avg:  {ally_avg:+.1f}")
+            # Convert advantages to individual winrates
+            ally_winrates = [50.0 + advantage for advantage in ally_valid_scores]
+            # Use geometric mean for team strength calculation
+            ally_team_stats = self.assistant._calculate_team_winrate(ally_winrates)
+            ally_team_winrate = ally_team_stats['team_winrate']
+            ally_total = sum(ally_valid_scores)  # For display purposes
+            safe_print(f"  🟢 Your Team: {ally_total:+.2f}% total advantage → {ally_team_winrate:.2f}% team winrate")
         else:
-            ally_avg = 0
-            safe_print(f"  🟢 Your Team Avg:  No valid data")
-            
+            ally_team_winrate = 50.0
+            ally_total = 0
+            safe_print(f"  🟢 Your Team: No valid data")
+
         if enemy_valid_scores:
-            enemy_avg = sum(enemy_valid_scores) / len(enemy_valid_scores)
-            safe_print(f"  🔴 Enemy Team Avg: {enemy_avg:+.1f}")
+            # Convert advantages to individual winrates
+            enemy_winrates = [50.0 + advantage for advantage in enemy_valid_scores]
+            # Use geometric mean for team strength calculation
+            enemy_team_stats = self.assistant._calculate_team_winrate(enemy_winrates)
+            enemy_team_winrate = enemy_team_stats['team_winrate']
+            enemy_total = sum(enemy_valid_scores)  # For display purposes
+            safe_print(f"  🔴 Enemy Team: {enemy_total:+.2f}% total advantage → {enemy_team_winrate:.2f}% team winrate")
         else:
-            enemy_avg = 0
-            safe_print(f"  🔴 Enemy Team Avg: No valid data")
-        
-        # Draft advantage calculation
-        draft_diff = ally_avg - enemy_avg
-        safe_print(f"  📊 Draft Difference: {draft_diff:+.1f}")
-        
-        # Overall assessment based on difference
-        if draft_diff > 1.0:
-            safe_print(f"  Assessment: ✅ Major draft advantage")
-        elif draft_diff >= 0.5:
-            safe_print(f"  Assessment: 🟡 Good draft advantage") 
-        elif draft_diff >= -0.5:
-            safe_print(f"  Assessment: ➖ Even draft")
-        elif draft_diff >= -1.0:
-            safe_print(f"  Assessment: 🟠 Draft disadvantage")
+            enemy_team_winrate = 50.0
+            enemy_total = 0
+            safe_print(f"  🔴 Enemy Team: No valid data")
+
+        # Normalize team winrates to ensure they sum to 100%
+        if ally_team_winrate != 50.0 or enemy_team_winrate != 50.0:
+            total_winrate = ally_team_winrate + enemy_team_winrate
+            our_expected = (ally_team_winrate / total_winrate) * 100.0
+            their_expected = (enemy_team_winrate / total_winrate) * 100.0
+
+            safe_print(f"\n  🎯 Expected Matchup (normalized): {our_expected:.2f}% vs {their_expected:.2f}%")
+
+            # Overall assessment based on normalized winrates
+            draft_diff = our_expected - their_expected
         else:
-            safe_print(f"  Assessment: 🔴 Major draft disadvantage")
+            # No valid data - neutral matchup
+            our_expected = 50.0
+            their_expected = 50.0
+            draft_diff = 0.0
+        if draft_diff >= 5.0:
+            safe_print(f"  Assessment: ✅ Major draft advantage ({draft_diff:+.2f}% total edge)")
+        elif draft_diff >= 2.5:
+            safe_print(f"  Assessment: 🟡 Good draft advantage ({draft_diff:+.2f}% total edge)") 
+        elif draft_diff >= -2.5:
+            safe_print(f"  Assessment: ➖ Even draft ({draft_diff:+.2f}% difference)")
+        elif draft_diff >= -5.0:
+            safe_print(f"  Assessment: 🟠 Draft disadvantage ({draft_diff:.2f}% behind)")
+        else:
+            safe_print(f"  Assessment: 🔴 Major draft disadvantage ({draft_diff:.2f}% behind)")
         
         print("\n" + "="*80)
 
