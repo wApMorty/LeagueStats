@@ -28,7 +28,6 @@ def main():
         '--clean',
         '--name', 'LeagueStatsCoach',
         '--add-data', 'data/db.db;.',
-        '--add-data', 'docs/CLAUDE.md;.',
         '--add-data', 'README.md;.',
         '--console',
         'lol_coach.py'
@@ -57,10 +56,13 @@ def main():
         print("Erreur: executable non trouve")
         return False
     
-    # Copier la base de données explicitement
+    # Copier la base de données explicitement à côté de l'exe
     if os.path.exists("data/db.db"):
         shutil.copy2("data/db.db", f"{release_dir}/db.db")
-        print("Base de donnees copiee")
+        print("Base de donnees copiee (data/db.db -> release/db.db)")
+    else:
+        print("ATTENTION: data/db.db introuvable - l'exe ne fonctionnera pas!")
+        return False
     
     # Copier la documentation
     doc_files = [
