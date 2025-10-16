@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Optional
 import sys
 import locale
 from .constants import CHAMPIONS_LIST, CHAMPION_POOL, TOP_LIST, JUNGLE_LIST, MID_LIST, ADC_LIST, SUPPORT_LIST, SOLOQ_POOL, ROLE_POOLS, EXTENDED_POOLS
@@ -17,8 +17,8 @@ def safe_print(text: str) -> None:
             '📊': 'STATS', '🔸': '-', '🟢': 'GREEN', '🟡': 'YELLOW',
             '🟠': 'ORANGE', '🔴': 'RED', '💡': 'TIPS', '📈': 'TREND',
             '🛡️': 'SHIELD', '🥇': '1st', '🥈': '2nd', '🥉': '3rd',
-            '🎮': 'GAME', '➖': '-', '─': '-', '═': '=', '•': '*', '→': '>', 
-            '🟢': 'GREEN', '🔴': 'RED', '📊': 'STATS'
+            '🎮': 'GAME', '➖': '-', '─': '-', '═': '=', '•': '*', '→': '>',
+            '⚔️': '[SWORD]', '💥': '[BOOM]', '≥': '>=', '⭐': '*'
         }
         for emoji, replacement in emoji_map.items():
             fallback_text = fallback_text.replace(emoji, replacement)
@@ -1879,8 +1879,504 @@ class Assistant:
             safe_print("  🟠 Decent pool but consider expanding.")
         else:
             safe_print("  🔴 Pool has significant gaps - consider more champions.")
-        
+
         if len(excellent) > len(struggling):
             safe_print("  📈 Pool favors aggressive counterpicking.")
         else:
             safe_print("  🛡️ Pool requires careful champion selection.")
+
+    # ========== Tier List Generation ==========
+
+    def calculate_blind_pick_score(self, matchups: List[tuple], pool_min_delta2: float = None, pool_max_delta2: float = None, pool_min_variance: float = None, pool_max_variance: float = None, pool_min_coverage: float = None, pool_max_coverage: float = None) -> dict:
+        """
+        Calculate normalized blind pick score for a champion.
+
+        Blind pick score prioritizes:
+        - High average performance across all matchups
+        - Low variance (consistency)
+        - High coverage of decent matchups
+
+        Args:
+            matchups: List of matchup tuples (enemy, winrate, delta1, delta2, pickrate, games)
+            pool_min_delta2: Minimum delta2 in the pool (for pool-relative normalization)
+            pool_max_delta2: Maximum delta2 in the pool (for pool-relative normalization)
+            pool_min_variance: Minimum variance in the pool (for pool-relative normalization)
+            pool_max_variance: Maximum variance in the pool (for pool-relative normalization)
+            pool_min_coverage: Minimum coverage in the pool (for pool-relative normalization)
+            pool_max_coverage: Maximum coverage in the pool (for pool-relative normalization)
+
+        Returns:
+            dict: {
+                'final_score': float (0-100),
+                'avg_performance_norm': float (0-1),
+                'avg_delta2_raw': float,
+                'stability': float (0-1),
+                'variance': float,
+                'coverage_norm': float (0-1),
+                'coverage_raw': float
+            }
+        """
+        from .config import tierlist_config
+        import statistics
+
+        valid_matchups = self._filter_valid_matchups(matchups)
+
+        if not valid_matchups:
+            return {
+                'final_score': 0.0,
+                'avg_performance_norm': 0.0,
+                'avg_delta2_raw': 0.0,
+                'stability': 0.0,
+                'variance': 0.0,
+                'coverage_norm': 0.0,
+                'coverage_raw': 0.0
+            }
+
+        # 1. Performance moyenne (normalisée avec pool-relative ou config ranges)
+        avg_delta2_raw = self.avg_delta2(matchups)
+
+        # Use pool-relative normalization if provided, otherwise fall back to config
+        if pool_min_delta2 is not None and pool_max_delta2 is not None:
+            min_delta2 = pool_min_delta2
+            max_delta2 = pool_max_delta2
+        else:
+            min_delta2 = tierlist_config.MIN_DELTA2
+            max_delta2 = tierlist_config.MAX_DELTA2
+
+        avg_performance_norm = (avg_delta2_raw - min_delta2) / (max_delta2 - min_delta2)
+        avg_performance_norm = max(0.0, min(1.0, avg_performance_norm))  # Clamp 0-1
+
+        # 2. Stabilité (inverse variance, 0-1)
+        delta2_values = [m[3] for m in valid_matchups]
+        variance_val = statistics.variance(delta2_values) if len(delta2_values) > 1 else 0.0
+
+        # Use pool-relative normalization if provided, otherwise fall back to formula
+        if pool_min_variance is not None and pool_max_variance is not None:
+            # Pool-relative: low variance = high stability
+            variance_normalized = (variance_val - pool_min_variance) / (pool_max_variance - pool_min_variance)
+            variance_normalized = max(0.0, min(1.0, variance_normalized))  # Clamp 0-1
+            stability = 1.0 - variance_normalized  # Invert: low variance = high stability
+        else:
+            # Fallback to old formula
+            stability = 1 / (1 + variance_val)
+
+        # 3. Couverture (proportion matchups décents, pool-relative normalization)
+        decent_weight = sum(m[4] for m in matchups if m[3] > tierlist_config.DECENT_MATCHUP_THRESHOLD)
+        total_weight = sum(m[4] for m in matchups)
+        coverage_raw = decent_weight / total_weight if total_weight > 0 else 0.0
+
+        # Use pool-relative normalization if provided, otherwise use raw coverage
+        if pool_min_coverage is not None and pool_max_coverage is not None:
+            coverage_norm = (coverage_raw - pool_min_coverage) / (pool_max_coverage - pool_min_coverage)
+            coverage_norm = max(0.0, min(1.0, coverage_norm))  # Clamp 0-1
+        else:
+            coverage_norm = coverage_raw  # Already 0-1
+
+        # Score composite (0-1)
+        normalized_score = (
+            avg_performance_norm * tierlist_config.BLIND_AVG_WEIGHT +
+            stability * tierlist_config.BLIND_STABILITY_WEIGHT +
+            coverage_norm * tierlist_config.BLIND_COVERAGE_WEIGHT
+        )
+
+        # Convertir en 0-100
+        final_score = normalized_score * 100
+
+        return {
+            'final_score': final_score,
+            'avg_performance_norm': avg_performance_norm,
+            'avg_delta2_raw': avg_delta2_raw,
+            'stability': stability,
+            'variance': variance_val,
+            'coverage_norm': coverage_norm,
+            'coverage_raw': coverage_raw
+        }
+
+    def calculate_counter_pick_score(self, matchups: List[tuple],
+                                      pool_min_peak_impact: float = None,
+                                      pool_max_peak_impact: float = None,
+                                      pool_min_variance: float = None,
+                                      pool_max_variance: float = None,
+                                      pool_min_target_ratio: float = None,
+                                      pool_max_target_ratio: float = None) -> dict:
+        """
+        Calculate normalized counter pick score for a champion.
+
+        Counter pick score prioritizes:
+        - High impact in excellent/good matchups (weighted by pickrate)
+        - High variance (volatility indicates situational strength)
+        - High proportion of viable counterpick targets
+
+        Args:
+            matchups: List of matchup tuples (enemy, winrate, delta1, delta2, pickrate, games)
+            pool_min_peak_impact: Minimum peak_impact in the pool (for pool-relative normalization)
+            pool_max_peak_impact: Maximum peak_impact in the pool (for pool-relative normalization)
+            pool_min_variance: Minimum variance in the pool (for pool-relative normalization)
+            pool_max_variance: Maximum variance in the pool (for pool-relative normalization)
+            pool_min_target_ratio: Minimum target_ratio in the pool (for pool-relative normalization)
+            pool_max_target_ratio: Maximum target_ratio in the pool (for pool-relative normalization)
+
+        Returns:
+            dict: {
+                'final_score': float (0-100),
+                'peak_impact_norm': float (0-1),
+                'peak_impact_raw': float,
+                'volatility_norm': float (0-1),
+                'variance': float,
+                'target_ratio_norm': float (0-1),
+                'target_ratio_raw': float
+            }
+        """
+        from .config import tierlist_config
+        import statistics
+
+        valid_matchups = self._filter_valid_matchups(matchups)
+
+        if not valid_matchups:
+            return {
+                'final_score': 0.0,
+                'peak_impact_norm': 0.0,
+                'peak_impact_raw': 0.0,
+                'volatility_norm': 0.0,
+                'variance': 0.0,
+                'target_ratio_norm': 0.0,
+                'target_ratio_raw': 0.0
+            }
+
+        # 1. Impact pondéré dans bons matchups (pool-relative normalization)
+        excellent_impact = sum(m[3] * m[4] for m in matchups
+                              if m[3] > tierlist_config.EXCELLENT_MATCHUP_THRESHOLD)
+        good_impact = sum(m[3] * m[4] for m in matchups
+                          if tierlist_config.GOOD_MATCHUP_THRESHOLD < m[3] <= tierlist_config.EXCELLENT_MATCHUP_THRESHOLD)
+        peak_impact_raw = excellent_impact + good_impact * 0.5  # Excellent matchups count more
+
+        # Use pool-relative normalization if provided, otherwise fall back to config
+        if pool_min_peak_impact is not None and pool_max_peak_impact is not None:
+            peak_impact_norm = (peak_impact_raw - pool_min_peak_impact) / (pool_max_peak_impact - pool_min_peak_impact)
+            peak_impact_norm = max(0.0, min(1.0, peak_impact_norm))  # Clamp 0-1
+        else:
+            peak_impact_norm = min(peak_impact_raw / tierlist_config.MAX_PEAK_IMPACT, 1.0)
+
+        # 2. Volatilité (variance normalisée, 0-1)
+        delta2_values = [m[3] for m in valid_matchups]
+        variance_val = statistics.variance(delta2_values) if len(delta2_values) > 1 else 0.0
+
+        # Use pool-relative normalization if provided, otherwise fall back to config
+        if pool_min_variance is not None and pool_max_variance is not None:
+            volatility_norm = (variance_val - pool_min_variance) / (pool_max_variance - pool_min_variance)
+            volatility_norm = max(0.0, min(1.0, volatility_norm))  # Clamp 0-1
+        else:
+            volatility_norm = min(variance_val / tierlist_config.MAX_VARIANCE, 1.0)
+
+        # 3. Proportion cibles viables (pool-relative normalization)
+        viable_weight = sum(m[4] for m in matchups if m[3] > tierlist_config.GOOD_MATCHUP_THRESHOLD)
+        total_weight = sum(m[4] for m in matchups)
+        target_ratio_raw = viable_weight / total_weight if total_weight > 0 else 0.0
+
+        # Use pool-relative normalization if provided, otherwise use raw ratio
+        if pool_min_target_ratio is not None and pool_max_target_ratio is not None:
+            target_ratio_norm = (target_ratio_raw - pool_min_target_ratio) / (pool_max_target_ratio - pool_min_target_ratio)
+            target_ratio_norm = max(0.0, min(1.0, target_ratio_norm))  # Clamp 0-1
+        else:
+            target_ratio_norm = target_ratio_raw  # Already 0-1
+
+        # Score composite (0-1)
+        normalized_score = (
+            peak_impact_norm * tierlist_config.COUNTER_PEAK_WEIGHT +
+            volatility_norm * tierlist_config.COUNTER_VOLATILITY_WEIGHT +
+            target_ratio_norm * tierlist_config.COUNTER_TARGETS_WEIGHT
+        )
+
+        # Convertir en 0-100
+        final_score = normalized_score * 100
+
+        return {
+            'final_score': final_score,
+            'peak_impact_norm': peak_impact_norm,
+            'peak_impact_raw': peak_impact_raw,
+            'volatility_norm': volatility_norm,
+            'variance': variance_val,
+            'target_ratio_norm': target_ratio_norm,
+            'target_ratio_raw': target_ratio_raw
+        }
+
+    def generate_tier_list(self, champion_pool: List[str], analysis_type: str = "blind_pick") -> List[dict]:
+        """
+        Generate a tier list for a champion pool using pre-computed global scores.
+
+        Uses global normalization: normalizes metrics based on ALL champions in the
+        database, making scores comparable across different pools.
+
+        Args:
+            champion_pool: List of champion names to include in tier list
+            analysis_type: "blind_pick" or "counter_pick"
+
+        Returns:
+            List of dicts sorted by score (descending), each containing:
+            {
+                'champion': str,
+                'tier': str ('S', 'A', 'B', or 'C'),
+                'score': float (0-100),
+                'metrics': dict (detailed metrics)
+            }
+        """
+        from .config import tierlist_config
+        import statistics
+
+        # Check if champion_scores table exists and has data
+        if not self.db.champion_scores_table_exists():
+            print("[WARNING] Champion scores not found in database.")
+            print("[INFO] Please run 'Parse Match Statistics' to generate scores first.")
+            return []
+
+        # Step 1: Collect all scores from database for global normalization
+        all_scores_data = self.db.get_all_champion_scores()
+
+        if not all_scores_data:
+            print("[ERROR] No champion scores found in database")
+            return []
+
+        # Extract global ranges for normalization
+        all_metrics = {
+            'avg_delta2': [],
+            'variance': [],
+            'coverage': [],
+            'peak_impact': [],
+            'volatility': [],
+            'target_ratio': []
+        }
+
+        for row in all_scores_data:
+            # row = (name, avg_delta2, variance, coverage, peak_impact, volatility, target_ratio)
+            all_metrics['avg_delta2'].append(row[1])
+            all_metrics['variance'].append(row[2])
+            all_metrics['coverage'].append(row[3])
+            all_metrics['peak_impact'].append(row[4])
+            all_metrics['volatility'].append(row[5])
+            all_metrics['target_ratio'].append(row[6])
+
+        # Calculate global ranges
+        min_delta2_global = min(all_metrics['avg_delta2'])
+        max_delta2_global = max(all_metrics['avg_delta2'])
+        min_variance_global = min(all_metrics['variance'])
+        max_variance_global = max(all_metrics['variance'])
+        min_coverage_global = min(all_metrics['coverage'])
+        max_coverage_global = max(all_metrics['coverage'])
+        min_peak_impact_global = min(all_metrics['peak_impact'])
+        max_peak_impact_global = max(all_metrics['peak_impact'])
+        min_target_ratio_global = min(all_metrics['target_ratio'])
+        max_target_ratio_global = max(all_metrics['target_ratio'])
+
+        # Avoid division by zero
+        if max_delta2_global == min_delta2_global:
+            min_delta2_global -= 0.05
+            max_delta2_global += 0.05
+        if max_variance_global == min_variance_global:
+            min_variance_global -= 0.05
+            max_variance_global += 0.05
+        if max_coverage_global == min_coverage_global:
+            min_coverage_global -= 0.05
+            max_coverage_global += 0.05
+        if max_peak_impact_global == min_peak_impact_global:
+            min_peak_impact_global -= 0.5
+            max_peak_impact_global += 0.5
+        if max_target_ratio_global == min_target_ratio_global:
+            min_target_ratio_global -= 0.05
+            max_target_ratio_global += 0.05
+
+        if self.verbose:
+            print(f"[INFO] Global normalization ranges:")
+            print(f"  Delta2: {min_delta2_global:.2f} to {max_delta2_global:.2f}")
+            print(f"  Variance: {min_variance_global:.2f} to {max_variance_global:.2f}")
+            if analysis_type == "blind_pick":
+                print(f"  Coverage: {min_coverage_global:.3f} to {max_coverage_global:.3f}")
+            elif analysis_type == "counter_pick":
+                print(f"  Peak Impact: {min_peak_impact_global:.3f} to {max_peak_impact_global:.3f}")
+                print(f"  Target Ratio: {min_target_ratio_global:.3f} to {max_target_ratio_global:.3f}")
+
+        # Step 2: Get scores from database and calculate normalized scores
+        results = []
+
+        for champion in champion_pool:
+            # Get pre-computed scores from database
+            scores = self.db.get_champion_scores_by_name(champion)
+
+            if scores is None:
+                if self.verbose:
+                    print(f"  [SKIP] {champion}: No scores in database")
+                continue
+
+            # Calculate normalized score based on analysis type
+            if analysis_type == "blind_pick":
+                # Normalize components
+                avg_perf_norm = (scores['avg_delta2'] - min_delta2_global) / (max_delta2_global - min_delta2_global)
+                avg_perf_norm = max(0.0, min(1.0, avg_perf_norm))
+
+                variance_norm = (scores['variance'] - min_variance_global) / (max_variance_global - min_variance_global)
+                variance_norm = max(0.0, min(1.0, variance_norm))
+                stability = 1.0 - variance_norm  # Invert: low variance = high stability
+
+                coverage_norm = (scores['coverage'] - min_coverage_global) / (max_coverage_global - min_coverage_global)
+                coverage_norm = max(0.0, min(1.0, coverage_norm))
+
+                # Calculate final score
+                normalized_score = (
+                    avg_perf_norm * tierlist_config.BLIND_AVG_WEIGHT +
+                    stability * tierlist_config.BLIND_STABILITY_WEIGHT +
+                    coverage_norm * tierlist_config.BLIND_COVERAGE_WEIGHT
+                )
+                final_score = normalized_score * 100
+
+                # Build metrics dict for display
+                metrics = {
+                    'final_score': final_score,
+                    'avg_performance_norm': avg_perf_norm,
+                    'avg_delta2_raw': scores['avg_delta2'],
+                    'stability': stability,
+                    'variance': scores['variance'],
+                    'coverage_norm': coverage_norm,
+                    'coverage_raw': scores['coverage']
+                }
+
+            elif analysis_type == "counter_pick":
+                # Normalize components
+                peak_impact_norm = (scores['peak_impact'] - min_peak_impact_global) / (max_peak_impact_global - min_peak_impact_global)
+                peak_impact_norm = max(0.0, min(1.0, peak_impact_norm))
+
+                volatility_norm = (scores['volatility'] - min_variance_global) / (max_variance_global - min_variance_global)
+                volatility_norm = max(0.0, min(1.0, volatility_norm))
+
+                target_ratio_norm = (scores['target_ratio'] - min_target_ratio_global) / (max_target_ratio_global - min_target_ratio_global)
+                target_ratio_norm = max(0.0, min(1.0, target_ratio_norm))
+
+                # Calculate final score
+                normalized_score = (
+                    peak_impact_norm * tierlist_config.COUNTER_PEAK_WEIGHT +
+                    volatility_norm * tierlist_config.COUNTER_VOLATILITY_WEIGHT +
+                    target_ratio_norm * tierlist_config.COUNTER_TARGETS_WEIGHT
+                )
+                final_score = normalized_score * 100
+
+                # Build metrics dict for display
+                metrics = {
+                    'final_score': final_score,
+                    'peak_impact_norm': peak_impact_norm,
+                    'peak_impact_raw': scores['peak_impact'],
+                    'volatility_norm': volatility_norm,
+                    'variance': scores['volatility'],
+                    'target_ratio_norm': target_ratio_norm,
+                    'target_ratio_raw': scores['target_ratio']
+                }
+
+            else:
+                raise ValueError(f"Unknown analysis type: {analysis_type}")
+
+            # Determine tier
+            if final_score >= tierlist_config.S_TIER_THRESHOLD:
+                tier = "S"
+            elif final_score >= tierlist_config.A_TIER_THRESHOLD:
+                tier = "A"
+            elif final_score >= tierlist_config.B_TIER_THRESHOLD:
+                tier = "B"
+            else:
+                tier = "C"
+
+            results.append({
+                'champion': champion,
+                'tier': tier,
+                'score': final_score,
+                'metrics': metrics
+            })
+
+        # Sort by score (descending)
+        results.sort(key=lambda x: x['score'], reverse=True)
+
+        return results
+
+    def calculate_global_scores(self) -> int:
+        """
+        Calculate and save scores for all champions in the database.
+
+        This function computes raw metrics (avg_delta2, variance, coverage,
+        peak_impact, volatility, target_ratio) for all champions and stores
+        them in the champion_scores table.
+
+        Should be called after parsing/updating matchup data.
+
+        Returns:
+            Number of champions scored and saved
+        """
+        from .constants import CHAMPIONS_LIST
+        from .config import tierlist_config
+        import statistics
+
+        print("[INFO] Calculating global champion scores...")
+
+        champions_scored = 0
+
+        for champion in CHAMPIONS_LIST:
+            try:
+                matchups = self.db.get_champion_matchups_by_name(champion)
+                if not matchups:
+                    if self.verbose:
+                        print(f"  [SKIP] {champion}: No matchups found")
+                    continue
+
+                valid_matchups = self._filter_valid_matchups(matchups)
+                if not valid_matchups:
+                    if self.verbose:
+                        print(f"  [SKIP] {champion}: No valid matchups after filtering")
+                    continue
+
+                # Calculate raw metrics
+                avg_delta2 = self.avg_delta2(matchups)
+
+                delta2_values = [m[3] for m in valid_matchups]
+                variance = statistics.variance(delta2_values) if len(delta2_values) > 1 else 0.0
+
+                # Coverage (blind pick metric)
+                decent_weight = sum(m[4] for m in matchups if m[3] > tierlist_config.DECENT_MATCHUP_THRESHOLD)
+                total_weight = sum(m[4] for m in matchups)
+                coverage = decent_weight / total_weight if total_weight > 0 else 0.0
+
+                # Peak impact (counter pick metric)
+                excellent_impact = sum(m[3] * m[4] for m in matchups
+                                      if m[3] > tierlist_config.EXCELLENT_MATCHUP_THRESHOLD)
+                good_impact = sum(m[3] * m[4] for m in matchups
+                                  if tierlist_config.GOOD_MATCHUP_THRESHOLD < m[3] <= tierlist_config.EXCELLENT_MATCHUP_THRESHOLD)
+                peak_impact = excellent_impact + good_impact * 0.5
+
+                # Volatility (counter pick metric) - same as variance
+                volatility = variance
+
+                # Target ratio (counter pick metric)
+                viable_weight = sum(m[4] for m in matchups if m[3] > tierlist_config.GOOD_MATCHUP_THRESHOLD)
+                target_ratio = viable_weight / total_weight if total_weight > 0 else 0.0
+
+                # Get champion ID and save scores
+                champion_id = self.db.get_champion_id(champion)
+                if champion_id is None:
+                    if self.verbose:
+                        print(f"  [ERROR] {champion}: Could not get champion ID")
+                    continue
+
+                self.db.save_champion_scores(
+                    champion_id=champion_id,
+                    avg_delta2=avg_delta2,
+                    variance=variance,
+                    coverage=coverage,
+                    peak_impact=peak_impact,
+                    volatility=volatility,
+                    target_ratio=target_ratio
+                )
+
+                champions_scored += 1
+                if self.verbose:
+                    print(f"  ✓ {champion}: avg_delta2={avg_delta2:.3f}, variance={variance:.3f}, coverage={coverage:.3f}")
+
+            except Exception as e:
+                print(f"  [ERROR] {champion}: {e}")
+                continue
+
+        print(f"[SUCCESS] Scored {champions_scored}/{len(CHAMPIONS_LIST)} champions")
+        return champions_scored

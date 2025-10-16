@@ -17,6 +17,7 @@ from src.db import Database
 from src.parser import Parser
 from src.assistant import Assistant
 from src.constants import TOP_SOLOQ_POOL
+from src.config import config
 
 def print_banner():
     """Print application banner."""
@@ -150,19 +151,40 @@ def run_draft_coach(verbose=False, auto_hover=False, auto_accept_queue=False, au
             traceback.print_exc()
 
 def update_champion_data():
-    """Update champion data from Riot API."""
+    """Update champion data with submenu."""
+    print("\n" + "="*60)
+    print("CHAMPION DATA MANAGEMENT")
+    print("="*60)
+    print("\nOptions:")
+    print("1. Update Champion List        - Fetch latest champions from Riot API")
+    print("2. Recalculate Champion Scores - Rebuild tier list scores from existing data")
+    print("3. Back to main menu")
+
+    choice = input("\nChoose option (1-3): ").strip()
+
+    if choice == "1":
+        _update_champion_list_from_riot()
+    elif choice == "2":
+        _recalculate_champion_scores()
+    elif choice == "3":
+        return
+    else:
+        print("[ERROR] Invalid option")
+
+def _update_champion_list_from_riot():
+    """Update champion list from Riot API."""
     print("[INFO] Updating champion data from Riot API...")
-    
+
     try:
         from src.config import config
         db = Database(config.DATABASE_PATH)
         db.connect()
-        
+
         # Ensure table structure is correct
         if not db.create_riot_champions_table():
             print("[ERROR] Failed to create/update champions table")
             return
-        
+
         # Update from Riot API
         if db.update_champions_from_riot_api():
             # Show some stats
@@ -170,10 +192,64 @@ def update_champion_data():
             print(f"[SUCCESS] Updated {len(champion_names)} champions in database")
         else:
             print("[ERROR] Failed to update champion data")
-        
+
         db.close()
     except Exception as e:
         print(f"[ERROR] Update error: {e}")
+
+def _recalculate_champion_scores():
+    """Recalculate champion scores for tier lists from existing matchup data."""
+    print("\n[INFO] Recalculating Champion Scores for Tier Lists")
+    print("="*60)
+    print("\nThis will recalculate all champion scores from existing matchup data.")
+    print("Useful after modifying tier list configuration or thresholds.")
+    print("\nNote: This does NOT fetch new data from the web.")
+    print("      Use 'Parse Match Statistics' to update matchup data first.")
+
+    confirm = input("\nProceed with score calculation? (y/n): ").strip().lower()
+    if confirm != 'y':
+        print("[INFO] Cancelled")
+        return
+
+    try:
+        from src.config import config
+        from src.assistant import Assistant
+
+        db = Database(config.DATABASE_PATH)
+        db.connect()
+
+        # Check if matchup data exists
+        cursor = db.connection.cursor()
+        cursor.execute("SELECT COUNT(*) FROM matchups")
+        matchup_count = cursor.fetchone()[0]
+
+        if matchup_count == 0:
+            print("\n[ERROR] No matchup data found in database")
+            print("[INFO] Please run 'Parse Match Statistics' first to populate matchup data")
+            db.close()
+            return
+
+        print(f"\n[INFO] Found {matchup_count:,} matchups in database")
+
+        # Initialize champion_scores table
+        print("[INFO] Initializing champion_scores table...")
+        db.init_champion_scores_table()
+
+        # Calculate scores
+        print("[INFO] Calculating global champion scores...")
+        assistant = Assistant()
+        champions_scored = assistant.calculate_global_scores()
+
+        print(f"\n[SUCCESS] Successfully scored {champions_scored} champions")
+        print("[INFO] Tier lists are now ready to use")
+
+        assistant.close()
+        db.close()
+
+    except Exception as e:
+        print(f"[ERROR] Calculation error: {e}")
+        import traceback
+        traceback.print_exc()
 
 def parse_match_statistics():
     """Parse match statistics from web sources with submenu."""
@@ -225,7 +301,8 @@ def parse_champion_pool(patch_version=None):
         return
     
     try:
-        from src.config import config, normalize_champion_name_for_url
+        from src.config import config
+        from src.constants import normalize_champion_name_for_url
         db = Database(config.DATABASE_PATH)
         parser = Parser()
         
@@ -241,8 +318,9 @@ def parse_champion_pool(patch_version=None):
             db.create_riot_champions_table()
             db.update_champions_from_riot_api()
         
-        # Initialize matchups table
+        # Initialize matchups and champion_scores tables
         db.init_matchups_table()
+        db.init_champion_scores_table()
         
         # Build champion cache once for much better performance
         print("[INFO] Building champion cache for fast lookups...")
@@ -283,8 +361,15 @@ def parse_champion_pool(patch_version=None):
                 print(f"  [WARNING] Error processing {champion}: {e}")
         
         parser.close()
-        db.close()
-        print(f"[SUCCESS] SoloQ Pool statistics updated! ({processed} champions, {total_inserted} total matchups)")
+
+        # Calculate global scores for tier lists
+        print("\n[INFO] Calculating global champion scores for tier lists...")
+        db.close()  # Close first DB connection before Assistant creates its own
+
+        assistant = Assistant()
+        champions_scored = assistant.calculate_global_scores()
+        assistant.close()
+        print(f"[SUCCESS] SoloQ Pool statistics updated! ({processed} champions, {total_inserted} total matchups, {champions_scored} scored)")
         
     except Exception as e:
         print(f"[ERROR] Parsing error: {e}")
@@ -303,8 +388,8 @@ def parse_all_champions(patch_version=None):
     print("This will take approximately 30-60 minutes...")
     
     try:
-        from src.constants import CHAMPIONS_LIST
-        from src.config import config, normalize_champion_name_for_url
+        from src.constants import CHAMPIONS_LIST, normalize_champion_name_for_url
+        from src.config import config
         db = Database(config.DATABASE_PATH)
         parser = Parser()
         
@@ -322,6 +407,7 @@ def parse_all_champions(patch_version=None):
         
         # Initialize tables
         db.init_matchups_table()
+        db.init_champion_scores_table()
         
         # Build champion cache once for much better performance
         print("[INFO] Building champion cache for fast lookups...")
@@ -362,8 +448,15 @@ def parse_all_champions(patch_version=None):
                 print(f"  [WARNING] Error processing {champion}: {e}")
         
         parser.close()
-        db.close()
-        print(f"[SUCCESS] All champion statistics updated! ({processed} champions, {total_inserted} total matchups)")
+
+        # Calculate global scores for tier lists
+        print("\n[INFO] Calculating global champion scores for tier lists...")
+        db.close()  # Close first DB connection before Assistant creates its own
+
+        assistant = Assistant()
+        champions_scored = assistant.calculate_global_scores()
+        assistant.close()
+        print(f"[SUCCESS] All champion statistics updated! ({processed} champions, {total_inserted} total matchups, {champions_scored} scored)")
         
     except Exception as e:
         print(f"[ERROR] Parsing error: {e}")
@@ -372,14 +465,14 @@ def run_champion_analysis():
     """Run champion analysis and tournament coaching."""
     print("[INFO] Champion Analysis & Tournament Coaching")
     print("\nAvailable options:")
-    print("1. Statistical Analysis - Run tier lists and competitive draft analysis")
-    print("2. Tournament Draft Coach - Manual coaching for external tournaments")
+    print("1. Generate Tier List       - Create blind pick or counter pick tier lists")
+    print("2. Tournament Draft Coach   - Manual coaching for external tournaments")
     print("3. Back to main menu")
-    
+
     choice = input("\nChoose option (1-3): ").strip()
-    
+
     if choice == "1":
-        run_statistical_analysis()
+        run_tier_list_generator()
     elif choice == "2":
         run_tournament_draft_coach()
     elif choice == "3":
@@ -388,20 +481,169 @@ def run_champion_analysis():
         print("[ERROR] Invalid option")
 
 def run_statistical_analysis():
-    """Run statistical champion analysis and tier lists."""
+    """Run statistical champion analysis and tier lists (deprecated - use tier list generator)."""
     print("[INFO] Running statistical analysis...")
-    
+
     try:
         ast = Assistant()
-        
+
         print("\n=== COMPETITIVE DRAFT ANALYSIS ===")
         ast.competitive_draft(3)
-        
+
         ast.close()
         print("\n[SUCCESS] Analysis completed!")
-        
+
     except Exception as e:
         print(f"[ERROR] Analysis error: {e}")
+
+def run_tier_list_generator():
+    """Generate tier lists for champion pools."""
+    print("[INFO] Tier List Generator")
+
+    try:
+        from src.assistant import Assistant
+
+        # Step 1: Select champion pool
+        print("\n" + "="*60)
+        print("STEP 1: SELECT CHAMPION POOL")
+        print("="*60)
+
+        selected_pool_info = _select_pool_for_analysis()
+        if not selected_pool_info:
+            print("[ERROR] No pool selected")
+            return
+
+        pool_name, champion_pool = selected_pool_info
+        print(f"\n✅ Selected pool: {pool_name} ({len(champion_pool)} champions)")
+
+        # Step 2: Select analysis type
+        print("\n" + "="*60)
+        print("STEP 2: SELECT ANALYSIS TYPE")
+        print("="*60)
+        print("\nChoose tier list type:")
+        print("  1. Blind Pick    - Champions with consistent performance across matchups")
+        print("  2. Counter Pick  - Champions with high peaks in specific matchups")
+        print("  3. Cancel")
+
+        type_choice = input("\nChoice (1-3): ").strip()
+
+        if type_choice == "1":
+            analysis_type = "blind_pick"
+            type_name = "BLIND PICK"
+        elif type_choice == "2":
+            analysis_type = "counter_pick"
+            type_name = "COUNTER PICK"
+        elif type_choice == "3":
+            print("[INFO] Cancelled by user")
+            return
+        else:
+            print("[ERROR] Invalid choice")
+            return
+
+        # Step 3: Generate tier list
+        print("\n" + "="*60)
+        print(f"GENERATING {type_name} TIER LIST...")
+        print("="*60)
+
+        assistant = Assistant()
+        tier_list = assistant.generate_tier_list(champion_pool, analysis_type)
+        assistant.close()
+
+        if not tier_list:
+            print("[WARNING] No champions with sufficient data found in pool")
+            return
+
+        # Step 4: Display results
+        _display_tier_list(tier_list, pool_name, type_name, analysis_type)
+
+    except Exception as e:
+        print(f"[ERROR] Tier list generation error: {e}")
+        import traceback
+        traceback.print_exc()
+
+def _display_tier_list(tier_list: List[dict], pool_name: str, type_name: str, analysis_type: str):
+    """Display formatted tier list results."""
+    from src.config import tierlist_config
+    from src.assistant import safe_print
+
+    print("\n" + "="*80)
+    if analysis_type == "blind_pick":
+        safe_print(f"🎯 {type_name} TIER LIST - {pool_name} ({len(tier_list)} champions)")
+        print("Focus: Consistency and stability across all matchups")
+    else:
+        safe_print(f"⚔️ {type_name} TIER LIST - {pool_name} ({len(tier_list)} champions)")
+        print("Focus: Situational power and counter potential")
+    print("="*80)
+
+    # Group by tier
+    tiers = {'S': [], 'A': [], 'B': [], 'C': []}
+    for entry in tier_list:
+        tiers[entry['tier']].append(entry)
+
+    # Display each tier
+    tier_icons = {'S': '🟢', 'A': '🟡', 'B': '🟠', 'C': '🔴'}
+    tier_ranges = {
+        'S': f"{tierlist_config.S_TIER_THRESHOLD:.0f}-100",
+        'A': f"{tierlist_config.A_TIER_THRESHOLD:.0f}-{tierlist_config.S_TIER_THRESHOLD:.0f}",
+        'B': f"{tierlist_config.B_TIER_THRESHOLD:.0f}-{tierlist_config.A_TIER_THRESHOLD:.0f}",
+        'C': f"0-{tierlist_config.B_TIER_THRESHOLD:.0f}"
+    }
+
+    for tier_letter in ['S', 'A', 'B', 'C']:
+        champions_in_tier = tiers[tier_letter]
+        if not champions_in_tier:
+            continue
+
+        tier_desc = {
+            'S': 'Elite' if analysis_type == 'blind_pick' else 'Premium counterpicks',
+            'A': 'Strong' if analysis_type == 'blind_pick' else 'Strong counterpicks',
+            'B': 'Situational' if analysis_type == 'blind_pick' else 'Niche counterpicks',
+            'C': 'Weak' if analysis_type == 'blind_pick' else 'Limited value'
+        }
+
+        safe_print(f"\n{tier_icons[tier_letter]} {tier_letter}-TIER ({tier_ranges[tier_letter]}) - {tier_desc[tier_letter]}")
+
+        for i, entry in enumerate(champions_in_tier, 1):
+            champion = entry['champion']
+            score = entry['score']
+            metrics = entry['metrics']
+
+            print(f"  {i}. {champion:<15} | Score: {score:>5.1f} / 100")
+
+            # Display metrics based on analysis type
+            if analysis_type == "blind_pick":
+                avg_delta2 = metrics['avg_delta2_raw']
+                variance = metrics['variance']
+                coverage = metrics['coverage_raw']
+                safe_print(f"     📊 Avg Delta2:   {avg_delta2:>+5.2f}  (Performance)")
+                safe_print(f"     📈 Stability:    {metrics['stability']:>5.2f}  (Variance: {variance:.2f})")
+                safe_print(f"     ✅ Coverage:     {coverage:>5.1%}  (Decent matchups)")
+
+            elif analysis_type == "counter_pick":
+                peak_impact = metrics['peak_impact_raw']
+                variance = metrics['variance']
+                target_ratio = metrics['target_ratio_raw']
+                safe_print(f"     💥 Peak Impact:  {peak_impact:>5.2f}  (Weighted good matchups)")
+                safe_print(f"     📊 Volatility:   {variance:>5.2f}  (High = situational)")
+                safe_print(f"     🎯 Targets:      {target_ratio:>5.1%}  (Viable counterpick %)")
+
+            print()
+
+    # Summary footer
+    print("="*80)
+    safe_print("💡 TIER LIST CONFIGURATION:")
+    if analysis_type == "blind_pick":
+        safe_print(f"   • Weights: Performance {tierlist_config.BLIND_AVG_WEIGHT:.0%}, "
+                   f"Stability {tierlist_config.BLIND_STABILITY_WEIGHT:.0%}, "
+                   f"Coverage {tierlist_config.BLIND_COVERAGE_WEIGHT:.0%}")
+    else:
+        safe_print(f"   • Weights: Peak Impact {tierlist_config.COUNTER_PEAK_WEIGHT:.0%}, "
+                   f"Volatility {tierlist_config.COUNTER_VOLATILITY_WEIGHT:.0%}, "
+                   f"Targets {tierlist_config.COUNTER_TARGETS_WEIGHT:.0%}")
+    safe_print(f"   • Thresholds: S≥{tierlist_config.S_TIER_THRESHOLD:.0f}, "
+               f"A≥{tierlist_config.A_TIER_THRESHOLD:.0f}, "
+               f"B≥{tierlist_config.B_TIER_THRESHOLD:.0f}")
+    print("="*80)
 
 def run_tournament_draft_coach():
     """Manual draft coaching for tournament scenarios."""
