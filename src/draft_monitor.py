@@ -6,8 +6,8 @@ from typing import Dict, List, Optional, Set
 from dataclasses import dataclass, field
 from .lcu_client import LCUClient
 from .assistant import Assistant, safe_print
-from .constants import SOLOQ_POOL, ROLE_POOLS
-from .config import config, normalize_champion_name_for_onetricks
+from .constants import SOLOQ_POOL, ROLE_POOLS, normalize_champion_name_for_onetricks
+from .config import config
 
 @dataclass
 class ChampionAction:
@@ -613,9 +613,9 @@ class DraftMonitor:
             
                 if not scores:
                     print("  [DATA] No data available for current matchups")
-            
-            # Handle auto-ban-hover for ban phases
-            elif self._is_ban_phase(state) and self.auto_ban_hover:
+
+            # Handle auto-ban-hover for ban phases (independent of pick phase)
+            if self._is_ban_phase(state) and self.auto_ban_hover:
                 self._handle_auto_ban_hover(state)
             
             # Phase-specific advice

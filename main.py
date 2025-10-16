@@ -7,8 +7,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 from src.db import Database
 from src.parser import Parser
 from src.assistant import Assistant
-from src.config import normalize_champion_name_for_url
-from src.constants import CHAMPIONS_LIST, TOP_LIST, JUNGLE_LIST, MID_LIST, ADC_LIST, SUPPORT_LIST, CHAMPION_POOL
+from src.constants import CHAMPIONS_LIST, TOP_LIST, JUNGLE_LIST, MID_LIST, ADC_LIST, SUPPORT_LIST, CHAMPION_POOL, normalize_champion_name_for_url
 
 def parse_all_champions_data(db: Database, parser: Parser) -> None:
     db.connect()
