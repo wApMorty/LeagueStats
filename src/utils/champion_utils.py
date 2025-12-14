@@ -1,7 +1,7 @@
 """Champion validation and pool selection utilities."""
 
 from typing import List, Dict, Optional, Tuple
-from ..constants import CHAMPIONS_LIST, ROLE_POOLS, EXTENDED_POOLS
+from src.constants import CHAMPIONS_LIST, ROLE_POOLS, EXTENDED_POOLS
 from ..db import Database
 from ..config_constants import analysis_config
 from .display import safe_print
