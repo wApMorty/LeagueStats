@@ -1,0 +1,19 @@
+# LeagueStats Coach - Dependencies
+# Generated: 2025-11-27
+
+# Web scraping and automation
+selenium>=4.15.0,<5.0.0
+lxml>=5.1.0,<6.0.0
+
+# Data processing and analysis
+numpy>=1.26.0,<2.0.0
+
+# HTTP requests
+requests>=2.31.0,<3.0.0
+urllib3>=2.0.0,<3.0.0
+
+# System and process management
+psutil>=5.9.6,<6.0.0
+
+# Build tool (optional - only needed for creating executable)
+# pyinstaller>=6.0.0,<7.0.0

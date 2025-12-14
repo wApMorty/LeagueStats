@@ -4,6 +4,7 @@ import locale
 from .constants import CHAMPIONS_LIST, CHAMPION_POOL, TOP_LIST, JUNGLE_LIST, MID_LIST, ADC_LIST, SUPPORT_LIST, SOLOQ_POOL, ROLE_POOLS, EXTENDED_POOLS
 from .db import Database
 from .config import config
+from .config_constants import analysis_config
 
 def safe_print(text: str) -> None:
     """Print text with emoji fallback for Windows terminals that don't support UTF-8."""
@@ -26,7 +27,7 @@ def safe_print(text: str) -> None:
 
 class Assistant:
     def __init__(self, verbose: bool = False) -> None:
-        self.MIN_GAMES = config.MIN_GAMES_THRESHOLD
+        self.MIN_GAMES = analysis_config.MIN_GAMES_THRESHOLD
         self.db = Database(config.DATABASE_PATH)
         self.db.connect()
         self.verbose = verbose
@@ -104,7 +105,7 @@ class Assistant:
 
     def _filter_valid_matchups(self, matchups: List[tuple]) -> List[tuple]:
         """Filter matchups with sufficient pick rate and games data."""
-        return [m for m in matchups if m[4] >= config.MIN_PICKRATE and m[5] >= config.MIN_MATCHUP_GAMES]
+        return [m for m in matchups if m[4] >= analysis_config.MIN_PICKRATE and m[5] >= analysis_config.MIN_MATCHUP_GAMES]
 
     def avg_delta1(self, matchups: List[tuple]) -> float:
         """Calculate weighted average delta1 from valid matchups."""
@@ -266,7 +267,7 @@ class Assistant:
         for champion in CHAMPION_POOL:
             if champion not in enemy_team:
                 matchups = self.db.get_champion_matchups_by_name(champion)
-                if sum(m[5] for m in matchups) < 10000:
+                if sum(m[5] for m in matchups) < analysis_config.MIN_GAMES_COMPETITIVE:
                     break
                 score = self.score_against_team(matchups, enemy_team, champion_name=champion)
                 scores.append((str(champion), score))

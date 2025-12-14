@@ -8,6 +8,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 
 from .config import config
+from .config_constants import scraping_config, xpath_config
 
 class Parser:
     def __init__(self) -> None:
@@ -29,19 +30,17 @@ class Parser:
         try:
             self.webdriver.get(url)
             tree = lxml.html.fromstring(self.webdriver.page_source)
-            
+
             # Try to extract winrate with fallback paths
-            winrate_xpath = '/html/body/main/div[5]/div[1]/div[2]/div[3]/div/div/div[1]/div[1]/text()'
-            winrate_elements = tree.xpath(winrate_xpath)
+            winrate_elements = tree.xpath(xpath_config.WINRATE_XPATH)
             if not winrate_elements:
                 print(f"Warning: Could not find winrate for {champion} vs {enemy}")
                 return None, None
             
             winrate = float(winrate_elements[0])
-            
+
             # Try to extract games with fallback paths
-            games_xpath = '/html/body/main/div[5]/div[1]/div[2]/div[3]/div/div/div[2]/div[1]/text()'
-            games_elements = tree.xpath(games_xpath)
+            games_elements = tree.xpath(xpath_config.GAMES_XPATH)
             if not games_elements:
                 print(f"Warning: Could not find games count for {champion} vs {enemy}")
                 return winrate, 0
@@ -65,40 +64,41 @@ class Parser:
         url = f"https://lolalytics.com/lol/{champion}/build/?tier=diamond_plus&patch={patch}"
 
         self.webdriver.get(url)
-        
-        sleep(config.PAGE_LOAD_DELAY)
-        
-        self.webdriver.execute_script("window.scrollTo(0,1310)")
-        
-        sleep(config.SCROLL_DELAY)
+
+        sleep(scraping_config.PAGE_LOAD_DELAY)
+
+        self.webdriver.execute_script(f"window.scrollTo(0,{scraping_config.MATCHUP_SCROLL_Y})")
+
+        sleep(scraping_config.SCROLL_DELAY)
         
         #region Accepting cookies
         try:
             # Use absolute positioning with JavaScript to avoid accumulation
-            self.webdriver.execute_script("""
-                var event = new MouseEvent('click', {
+            # TODO (Tâche #4): Replace hardcoded coordinates with dynamic element detection
+            self.webdriver.execute_script(f"""
+                var event = new MouseEvent('click', {{
                     view: window,
                     bubbles: true,
                     cancelable: true,
-                    clientX: 1661,
-                    clientY: 853
-                });
-                document.elementFromPoint(1661, 853).dispatchEvent(event);
+                    clientX: {scraping_config.COOKIE_CLICK_X},
+                    clientY: {scraping_config.COOKIE_CLICK_Y}
+                }});
+                document.elementFromPoint({scraping_config.COOKIE_CLICK_X}, {scraping_config.COOKIE_CLICK_Y}).dispatchEvent(event);
             """)
         except:
             # Fallback to ActionChains if JS fails
             actions = ActionChains(self.webdriver)
-            actions.move_by_offset(1661, 853).click().perform()
-            
+            actions.move_by_offset(scraping_config.COOKIE_CLICK_X, scraping_config.COOKIE_CLICK_Y).click().perform()
+
             actions = ActionChains(self.webdriver)
-            actions.move_by_offset(-1661, -853).perform()
+            actions.move_by_offset(-scraping_config.COOKIE_CLICK_X, -scraping_config.COOKIE_CLICK_Y).perform()
         #endregion
         
         for index in range (2, 7):
             path = f"/html/body/main/div[6]/div[1]/div[{index}]/div[2]/div"
             row = self.webdriver.find_elements(By.XPATH, f"{path}/*")
             actions = ActionChains(self.webdriver)
-            actions.move_to_element_with_offset(row[0], 460, 0).perform()
+            actions.move_to_element_with_offset(row[0], scraping_config.MATCHUP_CAROUSEL_SCROLL_X, 0).perform()
             enough_data = False
             while not enough_data:
                 for elem in row:
@@ -108,11 +108,11 @@ class Parser:
                     delta1 = float(elem.find_elements(By.CLASS_NAME, "my-1")[4].get_attribute('innerHTML'))
                     delta2 = float(elem.find_elements(By.CLASS_NAME, "my-1")[5].get_attribute('innerHTML'))
                     pickrate = float(elem.find_elements(By.CLASS_NAME, "my-1")[6].get_attribute('innerHTML'))
-                    games = int(''.join(elem.find_element(By.CLASS_NAME, "text-\[9px\]").get_attribute('innerHTML').split()))
+                    games = int(''.join(elem.find_element(By.CLASS_NAME, r"text-\[9px\]").get_attribute('innerHTML').split()))
                     if not self.contains(result, champ, winrate, delta1, delta2, pickrate, games):
                         result.append((champ, winrate, delta1, delta2, pickrate, games))
                 actions = ActionChains(self.webdriver)
-                actions.click_and_hold().move_by_offset(-460,0).release().move_by_offset(460, 0).perform()
+                actions.click_and_hold().move_by_offset(-scraping_config.MATCHUP_CAROUSEL_SCROLL_X, 0).release().move_by_offset(scraping_config.MATCHUP_CAROUSEL_SCROLL_X, 0).perform()
                 enough_data = pickrate < config.MIN_PICKRATE
         return result
     
