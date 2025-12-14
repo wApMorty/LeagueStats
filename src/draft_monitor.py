@@ -5,7 +5,8 @@ import os
 from typing import Dict, List, Optional, Set
 from dataclasses import dataclass, field
 from .lcu_client import LCUClient
-from .assistant import Assistant, safe_print
+from .assistant import Assistant
+from .utils.display import safe_print
 from .constants import SOLOQ_POOL, ROLE_POOLS, normalize_champion_name_for_onetricks
 from .config import config
 from .config_constants import draft_config
