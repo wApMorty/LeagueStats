@@ -247,35 +247,43 @@ def test_calculate_score(assistant):
 - `fix/sql-injection-vulnerabilities`
 - `fix/cookie-click-coordinates`
 
-### Commits
+### Commits avec Gitmoji
 
-**Format**: `Type: Description courte`
+**Format**: `<gitmoji> Type: Description courte`
 
-**Types**:
-- `Feature:` - Nouvelle fonctionnalité
-- `Refactor:` - Refactoring sans changement de comportement
-- `Fix:` - Correction de bug
-- `Test:` - Ajout/modification de tests
-- `Docs:` - Documentation
-- `Perf:` - Amélioration performance
-- `Chore:` - Maintenance (deps, config, etc.)
+**Types et Gitmojis**:
+- ✨ `Feature:` - Nouvelle fonctionnalité
+- ♻️ `Refactor:` - Refactoring sans changement de comportement
+- 🐛 `Fix:` - Correction de bug
+- ✅ `Test:` - Ajout/modification de tests
+- 📝 `Docs:` - Documentation
+- ⚡ `Perf:` - Amélioration performance
+- 🔧 `Chore:` - Maintenance (deps, config, etc.)
+- 🔒 `Security:` - Corrections sécurité
+- 🎨 `Style:` - Formatage, style code
+- 🚀 `Deploy:` - Déploiement, build
+- 🗃️ `Database:` - Migrations, schéma BD
 
 **Exemples**:
 ```bash
-git commit -m "Refactor: Extract UI logic to src/ui/ modules"
-git commit -m "Feature: Add database migrations with Alembic"
-git commit -m "Fix: SQL injection in get_champion_id()"
-git commit -m "Test: Add unit tests for scoring algorithms (70% coverage)"
-git commit -m "Perf: Add database indexes for 50-80% speedup"
-git commit -m "Docs: Update TODO.md with Dette Technique First approach"
+git commit -m "♻️ Refactor: Extract UI logic to src/ui/ modules"
+git commit -m "✨ Feature: Add database migrations with Alembic"
+git commit -m "🐛 Fix: SQL injection in get_champion_id()"
+git commit -m "✅ Test: Add unit tests for scoring algorithms (70% coverage)"
+git commit -m "⚡ Perf: Add database indexes for 50-80% speedup"
+git commit -m "📝 Docs: Update TODO.md with Dette Technique First approach"
+git commit -m "🔒 Security: Parameterize all SQL queries"
+git commit -m "🗃️ Database: Add Alembic migration for role column"
 ```
+
+**Référence Gitmoji**: [gitmoji.dev](https://gitmoji.dev)
 
 ### Messages de Commit Détaillés
 
 Pour les commits complexes, utiliser description étendue:
 
 ```bash
-git commit -m "Refactor: Decompose assistant.py into analysis/ modules
+git commit -m "♻️ Refactor: Decompose assistant.py into analysis/ modules
 
 - Extract scoring algorithms to analysis/scoring.py
 - Extract tier list generation to analysis/tierlist.py
@@ -290,21 +298,52 @@ Impact: assistant.py reduced from 2,381 → 450 lines
 
 ---
 
-## ✅ Process de Code Review
+## ✅ Process de Code Review (Pull Request GitHub)
 
-### Template de Review Request
+### Workflow Pull Request
 
-Utiliser ce template pour demander validation:
+**IMPORTANT**: Utiliser les Pull Requests GitHub pour toutes les code reviews
+
+**Étapes**:
+1. ✅ Créer feature branch et développer
+2. ✅ Push feature branch vers GitHub
+3. ✅ Créer Pull Request via `gh pr create`
+4. ✅ **ATTENDRE VALIDATION** de l'utilisateur sur GitHub
+5. ✅ Merger via GitHub après approbation
+6. ✅ Pull des changements en local
+
+**Commandes**:
+```bash
+# 1. Push feature branch
+git push -u origin feature/task-name
+
+# 2. Créer Pull Request avec gh CLI
+gh pr create --title "🎯 Tâche #X: Titre de la tâche" \
+             --body-file .github/PR_TEMPLATE.md \
+             --assignee @pj35 \
+             --label "enhancement"
+
+# 3. Après validation GitHub
+gh pr merge --merge  # ou --squash selon préférence
+
+# 4. Pull changes
+git checkout inspiring-rhodes
+git pull origin inspiring-rhodes
+git branch -d feature/task-name
+```
+
+### Template de Pull Request
+
+Utiliser ce template dans la description PR:
 
 ```markdown
-# 🔍 Code Review Request - Tâche #X: [Nom Tâche]
-
 ## 📊 Résumé
 
+**Tâche**: #X - [Nom complet de la tâche]
 **Branche**: `feature/task-name`
-**Tâche**: #X - [Nom complet]
-**Durée**: X jours
+**Durée estimée**: X jours
 **Commits**: X commits
+**Gitmoji**: [Emoji principal de la PR]
 
 ## 📝 Changements
 
@@ -336,10 +375,12 @@ Utiliser ce template pour demander validation:
 ## 📦 Commits
 
 ```
-1. [hash] - Type: Description commit 1
-2. [hash] - Type: Description commit 2
-3. [hash] - Type: Description commit 3
+1. [hash] - 🎨 Type: Description commit 1
+2. [hash] - ♻️ Type: Description commit 2
+3. [hash] - ✅ Type: Description commit 3
 ```
+
+*(Liste complète visible dans l'onglet "Commits" de la PR)*
 
 ## ⚠️ Points d'Attention
 
@@ -357,31 +398,43 @@ Utiliser ce template pour demander validation:
 
 ## 🚀 Prochaines Étapes
 
-Après validation:
-1. Merger feature branch → inspiring-rhodes
-2. Supprimer feature branch
-3. Mettre à jour TODO.md (marquer tâche ✅)
-4. Commencer Tâche #Y (si applicable)
+Après validation et merge de cette PR:
+1. ✅ Mettre à jour TODO.md (marquer tâche ✅)
+2. ✅ Mettre à jour CHANGELOG.md si nécessaire
+3. ✅ Pull changes en local
+4. ✅ Commencer Tâche #Y (si applicable)
 
 ## ❓ Questions
 
-[Questions éventuelles pour l'utilisateur]
+[Questions éventuelles pour review]
 
 ---
 
-**Status**: ❌ **EN ATTENTE DE VALIDATION UTILISATEUR**
+**Checklist Review**:
+- [ ] Code compilable
+- [ ] Tests passent
+- [ ] Documentation à jour
+- [ ] Pas de valeurs hardcodées
+- [ ] Requêtes SQL paramétrées
+- [ ] Backward compatibility
 
-Pouvez-vous valider ces changements pour que je procède au merge ?
+---
+
+📋 **Merci de review cette PR sur GitHub et d'approuver/commenter directement sur l'interface !**
 ```
 
-### Validation Utilisateur
+### Validation GitHub
 
-**NE JAMAIS merger sans validation explicite**:
-- ✅ "OK, tu peux merger"
-- ✅ "Approuvé, go ahead"
-- ✅ "Parfait, merge"
-- ❌ Absence de réponse
-- ❌ Question sur les changements
+**Process de validation**:
+1. ✅ Review code sur GitHub (interface web)
+2. ✅ Commenter les lignes spécifiques si besoin
+3. ✅ Approuver la PR via "Approve" ou demander changements
+4. ✅ Merger via interface GitHub ou `gh pr merge`
+
+**L'assistant NE mergera JAMAIS sans**:
+- ✅ Approbation explicite sur GitHub ("Approved")
+- ✅ Aucun "Request changes" en attente
+- ✅ Validation utilisateur claire
 
 ---
 
