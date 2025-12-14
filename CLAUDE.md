@@ -324,7 +324,7 @@ gh pr create --title "🎯 Tâche #X: Titre de la tâche" \
              --label "enhancement"
 
 # 3. Après validation GitHub
-gh pr merge --merge  # ou --squash selon préférence
+gh pr merge --squash  # Préférence: squash (combine tous commits en 1)
 
 # 4. Pull changes
 git checkout inspiring-rhodes
