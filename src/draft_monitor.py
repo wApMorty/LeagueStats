@@ -5,9 +5,11 @@ import os
 from typing import Dict, List, Optional, Set
 from dataclasses import dataclass, field
 from .lcu_client import LCUClient
-from .assistant import Assistant, safe_print
+from .assistant import Assistant
+from .utils.display import safe_print
 from .constants import SOLOQ_POOL, ROLE_POOLS, normalize_champion_name_for_onetricks
 from .config import config
+from .config_constants import draft_config
 
 @dataclass
 class ChampionAction:
@@ -53,7 +55,7 @@ class DraftMonitor:
         self.auto_hover = auto_hover
         self.auto_accept_queue = auto_accept_queue
         self.auto_ban_hover = auto_ban_hover
-        self.open_onetricks = open_onetricks if open_onetricks is not None else config.OPEN_ONETRICKS_ON_DRAFT_END
+        self.open_onetricks = open_onetricks if open_onetricks is not None else draft_config.OPEN_ONETRICKS_ON_DRAFT_END
         self.last_recommendation = None  # Track last recommendation to avoid spam
         self.last_ban_recommendation = None  # Track last ban recommendation to avoid spam
         self.has_done_initial_hover = False  # Track if we've done the initial hover
@@ -94,7 +96,7 @@ class DraftMonitor:
         try:
             while self.is_monitoring:
                 self._monitor_loop()
-                time.sleep(1)  # Check every second
+                time.sleep(draft_config.POLL_INTERVAL)  # Check draft state periodically
         except KeyboardInterrupt:
             print("\n[STOP] Stopping draft monitor...")
         finally:
@@ -213,10 +215,11 @@ class DraftMonitor:
             
             # Check if we've entered ready check for the first time or after a failed attempt
             if current_phase == 'ReadyCheck':
-                # Reset ready check acceptance if we haven't accepted in the last 5 seconds
+                # Reset ready check acceptance if we haven't accepted recently
                 # This handles cases where ready check failed and we're in a new one
-                if (self.last_gameflow_phase != 'ReadyCheck' or 
-                    (self.ready_check_accepted_time > 0 and current_time - self.ready_check_accepted_time > 5)):
+                cooldown = draft_config.READY_CHECK_COOLDOWN * 2.5  # 5 seconds default
+                if (self.last_gameflow_phase != 'ReadyCheck' or
+                    (self.ready_check_accepted_time > 0 and current_time - self.ready_check_accepted_time > cooldown)):
                     
                     print("\n" + "="*60)
                     print("🎮 [QUEUE] GAME FOUND!")

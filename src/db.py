@@ -15,11 +15,56 @@ class Database:
             # Enable foreign key constraints
             self.connection.execute("PRAGMA foreign_keys = ON")
             print("Connection to SQLite DB successful")
+            # Ensure indexes exist for optimal performance (only if tables exist)
+            try:
+                self.create_database_indexes()
+            except Error:
+                # Tables might not exist yet, indexes will be created when tables are initialized
+                pass
         except Error as e:
             print(f"The error '{e}' occurred")
 
     def close(self) -> None:
         self.connection.close()
+
+    def create_database_indexes(self) -> None:
+        """Create database indexes for performance optimization."""
+        print("[INFO] Creating database indexes for performance optimization...")
+        cursor = self.connection.cursor()
+
+        try:
+            # Check if tables exist before creating indexes
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('champions', 'matchups')")
+            existing_tables = {row[0] for row in cursor.fetchall()}
+
+            if 'champions' in existing_tables:
+                # Index on champions.name for faster name lookups
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_champions_name ON champions(name)")
+                print("[INFO]   - Created index: idx_champions_name")
+
+            if 'matchups' in existing_tables:
+                # Indexes on matchups table for faster queries
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_matchups_champion ON matchups(champion)")
+                print("[INFO]   - Created index: idx_matchups_champion")
+
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_matchups_enemy ON matchups(enemy)")
+                print("[INFO]   - Created index: idx_matchups_enemy")
+
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_matchups_pickrate ON matchups(pickrate)")
+                print("[INFO]   - Created index: idx_matchups_pickrate")
+
+                # Composite index for common query pattern (champion + pickrate filter)
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_matchups_champion_pickrate ON matchups(champion, pickrate)")
+                print("[INFO]   - Created index: idx_matchups_champion_pickrate")
+
+                # Composite index for reverse lookups (enemy + pickrate)
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_matchups_enemy_pickrate ON matchups(enemy, pickrate)")
+                print("[INFO]   - Created index: idx_matchups_enemy_pickrate")
+
+            self.connection.commit()
+            print("[INFO] Database indexes created successfully")
+        except Error as e:
+            print(f"[WARNING] Error creating indexes: {e}")
 
     def execute_query(self, query: str, commit: bool = True) -> None:
         cursor = self.connection.cursor()
@@ -31,16 +76,22 @@ class Database:
         except Error as e:
             print(f"The error '{e}' occurred")
 
-    def init_champion_table(self) -> None:        
+    def init_champion_table(self) -> None:
         """Legacy method - use create_riot_champions_table() and update_champions_from_riot_api() instead."""
         print("[WARNING] Using legacy init_champion_table(). Consider using Riot API integration instead.")
         self.execute_query("DROP TABLE IF EXISTS champions")
         # Reset auto-increment counter
         self.execute_query("DELETE FROM sqlite_sequence WHERE name='champions'")
         self.execute_query("CREATE TABLE champions (id INTEGER PRIMARY KEY, champion TEXT NOT NULL)")
-        
-        for champ in CHAMPIONS_LIST:
-            self.execute_query(f"INSERT INTO champions (champion) VALUES ('{champ}')")
+
+        cursor = self.connection.cursor()
+        try:
+            for champ in CHAMPIONS_LIST:
+                cursor.execute("INSERT INTO champions (champion) VALUES (?)", (champ,))
+            self.connection.commit()
+            print("Champions inserted successfully")
+        except Error as e:
+            print(f"The error '{e}' occurred")
 
     def init_matchups_table(self) -> None:
         self.execute_query("DROP TABLE IF EXISTS matchups")
@@ -56,6 +107,8 @@ class Database:
             FOREIGN KEY (champion) REFERENCES champions(id) ON DELETE CASCADE,
             FOREIGN KEY (enemy) REFERENCES champions(id) ON DELETE CASCADE
         )""")
+        # Create indexes for performance optimization
+        self.create_database_indexes()
 
     def init_champion_scores_table(self) -> None:
         """Create or reset champion_scores table for tier list calculations."""
@@ -77,13 +130,20 @@ class Database:
         if champ_id is None or enemy_id is None or winrate is None or delta1 is None or delta2 is None or pickrate is None or games is None :
             print(f"{champ_id}, {enemy_id}, {winrate}, {delta1}, {delta2}, {pickrate}, {games}")
             return
-        self.execute_query(f"INSERT INTO matchups (champion, enemy, winrate, delta1, delta2, pickrate, games) VALUES ({champ_id}, {enemy_id}, {winrate}, {delta1}, {delta2}, {pickrate}, {games})")
+        cursor = self.connection.cursor()
+        try:
+            cursor.execute("INSERT INTO matchups (champion, enemy, winrate, delta1, delta2, pickrate, games) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                         (champ_id, enemy_id, winrate, delta1, delta2, pickrate, games))
+            self.connection.commit()
+            print(f"Query executed successfully : INSERT INTO matchups")
+        except Error as e:
+            print(f"The error '{e}' occurred")
 
     def get_champion_id(self, champion: str) -> int:
         """Get champion ID by name (for backward compatibility)."""
         cursor = self.connection.cursor()
         try:
-            cursor.execute(f"SELECT id FROM champions WHERE name = '{champion}' COLLATE NOCASE")
+            cursor.execute("SELECT id FROM champions WHERE name = ? COLLATE NOCASE", (champion,))
             # No commit needed for SELECT queries!
             result = cursor.fetchone()
             return result[0] if result else None
@@ -95,7 +155,7 @@ class Database:
         """Get champion name by ID."""
         cursor = self.connection.cursor()
         try:
-            cursor.execute(f"SELECT name FROM champions WHERE id = {id}")
+            cursor.execute("SELECT name FROM champions WHERE id = ?", (id,))
             # No commit needed for SELECT queries!
             result = cursor.fetchone()
             return result[0] if result else None
@@ -107,7 +167,7 @@ class Database:
         """Get matchups for a champion by Riot ID."""
         cursor = self.connection.cursor()
         try:
-            cursor.execute(f"SELECT * FROM matchups WHERE champion = {champion_id} AND pickrate > 0.5")
+            cursor.execute("SELECT * FROM matchups WHERE champion = ? AND pickrate > 0.5", (champion_id,))
             # No commit needed for SELECT queries!
             result = cursor.fetchall()
             # returns (enemy_id, winrate, delta1, delta2, pickrate, games)
@@ -121,16 +181,16 @@ class Database:
         champ_id = self.get_champion_id(champion_name)
         if champ_id is None:
             return []
-        
+
         cursor = self.connection.cursor()
         try:
             # Join avec la table champions pour obtenir les noms des ennemis
-            cursor.execute(f"""
-                SELECT c.name, m.winrate, m.delta1, m.delta2, m.pickrate, m.games 
+            cursor.execute("""
+                SELECT c.name, m.winrate, m.delta1, m.delta2, m.pickrate, m.games
                 FROM matchups m
                 JOIN champions c ON m.enemy = c.id
-                WHERE m.champion = {champ_id} AND m.pickrate > 0.5
-            """)
+                WHERE m.champion = ? AND m.pickrate > 0.5
+            """, (champ_id,))
             result = cursor.fetchall()
             # returns (enemy_name, winrate, delta1, delta2, pickrate, games)
             return result

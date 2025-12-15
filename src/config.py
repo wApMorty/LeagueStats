@@ -57,22 +57,60 @@ class Config:
     # Brave settings
     BRAVE_PATH: str = os.getenv('BRAVE_PATH', r'C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe')
 
-    # Draft completion browser opening
-    OPEN_ONETRICKS_ON_DRAFT_END: bool = True
-
     # Scraping settings
     CURRENT_PATCH: str = "15.17"
-    MIN_GAMES_THRESHOLD: int = 2000  # Minimum total games for a champion to be included in tier lists
-    MIN_GAMES_COMPETITIVE: int = 10000  # Higher threshold for competitive analysis
-    MIN_PICKRATE: float = 0.5  # Minimum pickrate percentage for matchup inclusion
-    MIN_MATCHUP_GAMES: int = 200  # Minimum games for individual matchup reliability
 
-    # UI settings
-    DEFAULT_RESULTS_COUNT: int = 10
+    # ========== Backward Compatibility Properties ==========
+    # These redirect to config_constants.py for centralized management
+    # Kept here for backward compatibility with existing code
 
-    # Delays for web scraping (in seconds)
-    SCROLL_DELAY: float = 2.0
-    PAGE_LOAD_DELAY: float = 2.0
+    @property
+    def MIN_GAMES_THRESHOLD(self) -> int:
+        """Redirect to config_constants.analysis_config"""
+        from .config_constants import analysis_config
+        return analysis_config.MIN_GAMES_THRESHOLD
+
+    @property
+    def MIN_GAMES_COMPETITIVE(self) -> int:
+        """Redirect to config_constants.analysis_config"""
+        from .config_constants import analysis_config
+        return analysis_config.MIN_GAMES_COMPETITIVE
+
+    @property
+    def MIN_PICKRATE(self) -> float:
+        """Redirect to config_constants.analysis_config"""
+        from .config_constants import analysis_config
+        return analysis_config.MIN_PICKRATE
+
+    @property
+    def MIN_MATCHUP_GAMES(self) -> int:
+        """Redirect to config_constants.analysis_config"""
+        from .config_constants import analysis_config
+        return analysis_config.MIN_MATCHUP_GAMES
+
+    @property
+    def DEFAULT_RESULTS_COUNT(self) -> int:
+        """Redirect to config_constants.ui_config"""
+        from .config_constants import ui_config
+        return ui_config.DEFAULT_RESULTS_COUNT
+
+    @property
+    def SCROLL_DELAY(self) -> float:
+        """Redirect to config_constants.scraping_config"""
+        from .config_constants import scraping_config
+        return scraping_config.SCROLL_DELAY
+
+    @property
+    def PAGE_LOAD_DELAY(self) -> float:
+        """Redirect to config_constants.scraping_config"""
+        from .config_constants import scraping_config
+        return scraping_config.PAGE_LOAD_DELAY
+
+    @property
+    def OPEN_ONETRICKS_ON_DRAFT_END(self) -> bool:
+        """Redirect to config_constants.draft_config"""
+        from .config_constants import draft_config
+        return draft_config.OPEN_ONETRICKS_ON_DRAFT_END
 
     @classmethod
     def get_firefox_path(cls) -> str:
