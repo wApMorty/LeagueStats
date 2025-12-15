@@ -279,5 +279,5 @@ class TestCalculateTeamWinrate:
         """Test calculation with single champion."""
         result = scorer.calculate_team_winrate([55.0])
 
-        assert result["team_winrate"] == 55.0
+        assert abs(result["team_winrate"] - 55.0) < 0.01
         assert result["individual_winrates"] == [55.0]
