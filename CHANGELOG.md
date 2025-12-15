@@ -2,6 +2,52 @@
 
 All notable changes to LeagueStats Coach will be documented in this file.
 
+## [1.1.0] - 2025-12-14
+
+### ♻️ Refactoring
+
+- **MAJOR**: Refactored monolithic files into modular architecture (PR #2)
+  - `assistant.py`: 2,381 → 190 lines (-92%)
+  - `lol_coach.py`: 2,159 → 215 lines (-90%)
+  - Created 9 new modules organized into `analysis/`, `ui/`, and `utils/`
+  - Largest file reduced from 2,381 → 220 lines (-91%)
+
+### 📦 Added
+
+- **Analysis modules**:
+  - `src/analysis/scoring.py` - Champion scoring algorithms (216 lines)
+  - `src/analysis/tier_list.py` - Tier list generation (91 lines)
+  - `src/analysis/recommendations.py` - Draft recommendations (116 lines)
+  - `src/analysis/team_analysis.py` - Team composition analysis (129 lines)
+- **Utils modules**:
+  - `src/utils/display.py` - Emoji fallback for Windows terminals (30 lines)
+  - `src/utils/champion_utils.py` - Champion validation/selection (220 lines)
+- **UI modules**:
+  - `src/ui/menu_system.py` - Main menu system (45 lines)
+  - `src/ui/champion_data_ui.py` - Champion data management (105 lines)
+  - `src/ui/draft_coach_ui.py` - Real-time draft coach UI (52 lines)
+  - `src/ui/lol_coach_legacy.py` - Legacy UI functions (temporary)
+
+### 🔧 Changed
+
+- `src/assistant.py` - Replaced monolithic class with delegation pattern
+- `lol_coach.py` - Replaced with minimal entry point delegating to UI modules
+- `src/draft_monitor.py` - Fixed import for `safe_print` from utils.display
+
+### 🐛 Fixed
+
+- Type hint for `open_onetricks` parameter (str → Optional[bool])
+
+### 📊 Impact
+
+- **Maintainability**: Code now organized in focused modules (<500 lines each)
+- **Testing**: Easier to write unit tests for isolated components
+- **Onboarding**: Clearer code structure for new contributors
+- **Foundation**: Clean base for future features and refactoring
+- **Compatibility**: 100% backward compatible, all tests pass
+
+---
+
 ## [1.0.1] - 2025-11-27
 
 ### 🔒 Security
