@@ -34,20 +34,20 @@ def temp_db(tmp_path):
         )
     """)
 
-    # Matchups table
+    # Matchups table - using production schema column names
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS matchups (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            champion_id INTEGER NOT NULL,
-            enemy_id INTEGER NOT NULL,
+            champion INTEGER NOT NULL,
+            enemy INTEGER NOT NULL,
             winrate REAL NOT NULL,
             delta1 REAL NOT NULL,
             delta2 REAL NOT NULL,
             pickrate REAL NOT NULL,
             games INTEGER NOT NULL,
             patch TEXT,
-            FOREIGN KEY (champion_id) REFERENCES champions(id),
-            FOREIGN KEY (enemy_id) REFERENCES champions(id)
+            FOREIGN KEY (champion) REFERENCES champions(id),
+            FOREIGN KEY (enemy) REFERENCES champions(id)
         )
     """)
 
@@ -126,3 +126,40 @@ def sample_champions(db):
     db.connection.commit()
 
     return champions
+
+
+@pytest.fixture
+def insert_matchup(db):
+    """
+    Helper function to insert matchup data using champion names.
+
+    Args:
+        db: Database fixture
+
+    Returns:
+        Function that accepts (champion, enemy, winrate, delta1, delta2, pickrate, games)
+    """
+    def _insert(champion, enemy, winrate, delta1, delta2, pickrate, games):
+        """Insert matchup using champion names, creating champions if needed."""
+        cursor = db.connection.cursor()
+
+        # Ensure both champions exist in champions table
+        for champ_name in [champion, enemy]:
+            cursor.execute("INSERT OR IGNORE INTO champions (name) VALUES (?)", (champ_name,))
+
+        # Get champion IDs
+        cursor.execute("SELECT id FROM champions WHERE name = ?", (champion,))
+        champion_id = cursor.fetchone()[0]
+
+        cursor.execute("SELECT id FROM champions WHERE name = ?", (enemy,))
+        enemy_id = cursor.fetchone()[0]
+
+        # Insert matchup - using production schema column names (champion, enemy)
+        cursor.execute("""
+            INSERT INTO matchups (champion, enemy, winrate, delta1, delta2, pickrate, games)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (champion_id, enemy_id, winrate, delta1, delta2, pickrate, games))
+
+        db.connection.commit()
+
+    return _insert
