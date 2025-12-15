@@ -1,5 +1,6 @@
 """UI for real-time draft coach (League Client integration)."""
 
+from typing import Optional
 from ..draft_monitor import DraftMonitor
 
 
@@ -8,7 +9,7 @@ def run_draft_coach(
     auto_hover: bool = False,
     auto_accept_queue: bool = False,
     auto_ban_hover: bool = False,
-    open_onetricks: str = None
+    open_onetricks: Optional[bool] = None
 ) -> None:
     """
     Run the real-time draft coach.
