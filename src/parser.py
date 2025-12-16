@@ -129,10 +129,14 @@ class Parser:
     def get_champion_data(self, champion: str, lane: str = None) -> List[tuple]:
         return self.get_champion_data_on_patch(config.CURRENT_PATCH, champion, lane)
 
-    def get_champion_data_on_patch(self, patch: str, champion: str) -> List[tuple]:
+    def get_champion_data_on_patch(self, patch: str, champion: str, lane: str = None) -> List[tuple]:
         result = []
-        
-        url = f"https://lolalytics.com/lol/{champion}/build/?tier=diamond_plus&patch={patch}"
+
+        # Build URL with optional lane parameter
+        if lane:
+            url = f"https://lolalytics.com/lol/{champion}/build/?lane={lane}&tier=diamond_plus&patch={patch}"
+        else:
+            url = f"https://lolalytics.com/lol/{champion}/build/?tier=diamond_plus&patch={patch}"
 
         self.webdriver.get(url)
 
