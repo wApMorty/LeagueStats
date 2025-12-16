@@ -2,7 +2,6 @@
 
 import pytest
 import sqlite3
-from pathlib import Path
 
 from src.db import Database
 from src.analysis.scoring import ChampionScorer

@@ -1,7 +1,6 @@
 """Tests for scoring algorithms (src/analysis/scoring.py)."""
 
 import pytest
-import math
 from src.analysis.scoring import ChampionScorer
 from src.config_constants import analysis_config
 
