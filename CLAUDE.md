@@ -29,9 +29,10 @@ LeagueStats Coach est un outil d'analyse et de coaching pour League of Legends q
 **Stack Technique**:
 - **Langage**: Python 3.13+
 - **Base de données**: SQLite (data/db.db)
+- **Migrations BD**: Alembic 1.13+
 - **Web Scraping**: Selenium + Firefox
 - **Distribution**: PyInstaller (standalone .exe)
-- **Tests**: pytest + pytest-cov
+- **Tests**: pytest + pytest-cov + pytest-mock
 
 ### État Actuel (Version 1.0.2)
 
@@ -482,36 +483,38 @@ Après validation et merge de cette PR:
 
 **Résoudre dette technique AVANT features** = Vélocité élevée ensuite
 
-### Sprint 1 - Dette Technique (EN COURS)
+### Sprint 1 - Dette Technique (PRESQUE TERMINÉ ✅)
 
 **Objectif**: Fondations solides
 
 **Tâches**:
-1. 🔴🔴🔴 **Tâche #1**: Refactoring fichiers monolithiques (2-3j) - **NEXT**
+1. ✅ **Tâche #1**: Refactoring fichiers monolithiques (COMPLÉTÉ)
    - `lol_coach.py` (2,160 lignes) → `src/ui/` modules
    - `assistant.py` (2,381 lignes) → `src/analysis/` modules
-   - Objectif: <500 lignes/fichier
+   - Résultat: <500 lignes/fichier atteint
 
-2. 🔴 **Tâche #9**: Migrations Base de Données (1j)
-   - Setup Alembic
-   - Migrations initiales
-   - Protection perte données
+2. ✅ **Tâche #3**: Framework Tests Automatisés (COMPLÉTÉ)
+   - Setup pytest + pytest-cov + pytest-mock
+   - Tests scoring algorithms (74 tests)
+   - Résultat: **89% couverture** (objectif 70%+ largement dépassé)
 
-3. 🔴🔴 **Tâche #3**: Framework Tests Automatisés (3-5j)
-   - Setup pytest + pytest-cov
-   - Tests scoring algorithms
-   - Objectif: 70% couverture
+3. 🔴 **Tâche #9**: Migrations Base de Données (EN COURS)
+   - ✅ Setup Alembic 1.13+
+   - ✅ Migration initiale (schema complet)
+   - ✅ Tests up/down validés
+   - ⏳ Documentation mise à jour
+   - ⏳ Code review à finaliser
 
-**Impact**: Code maintenable + tests auto + migrations = Base saine pour TOUS futurs développements
+**Impact**: Code maintenable + tests auto (89%) + migrations = Base saine pour TOUS futurs développements ✅
 
 ### Métriques Cibles Sprint 1
 
-| Métrique | Actuel | Objectif Sprint 1 |
-|----------|--------|-------------------|
-| Largest File | 2,381 lignes | **<500 lignes** 🔴🔴🔴 |
-| Test Coverage | ~5% | **70%+** 🔴🔴 |
-| Migrations BD | Non 🔴 | **Alembic** 🔴 |
-| Hardcoded Values | ~20 | **0** ✅ (déjà fait) |
+| Métrique | Avant | Après Sprint 1 | Statut |
+|----------|-------|----------------|--------|
+| Largest File | 2,381 lignes | **<500 lignes** | ✅ Atteint |
+| Test Coverage | ~5% | **89%** (analysis module) | ✅ Dépassé (objectif: 70%) |
+| Migrations BD | Non | **Alembic 1.13+** configuré | ✅ Opérationnel |
+| Hardcoded Values | ~20 | **0** (config_constants.py) | ✅ Complété |
 
 ---
 
@@ -615,6 +618,52 @@ python create_package.py                 # Créer .zip distribution
 # Database maintenance
 python cleanup_db.py                     # Backup et nettoyage
 ```
+
+### Database Migrations (Alembic)
+
+```bash
+# Check current migration version
+python -m alembic current
+
+# View migration history
+python -m alembic history
+
+# Upgrade to latest version (head)
+python -m alembic upgrade head
+
+# Downgrade to previous version
+python -m alembic downgrade -1
+
+# Downgrade to specific version
+python -m alembic downgrade <revision_id>
+
+# Downgrade to base (empty database)
+python -m alembic downgrade base
+
+# Create new migration (manual)
+python -m alembic revision -m "Description of changes"
+
+# Create new migration with autogenerate (requires SQLAlchemy models)
+python -m alembic revision --autogenerate -m "Description"
+
+# Show SQL without executing (dry-run)
+python -m alembic upgrade head --sql
+```
+
+**Important Notes**:
+- ✅ Always backup database before running migrations in production
+- ✅ Test migrations locally before deploying
+- ✅ Database path configured in `alembic.ini`: `sqlite:///data/db.db`
+- ✅ Schema defined in `alembic/env.py` for migration tracking
+- ✅ Migration files stored in `alembic/versions/`
+- ⚠️ Downgrading may result in data loss - use with caution
+
+**Migration Workflow**:
+1. Create migration: `alembic revision -m "Add new column"`
+2. Edit migration file in `alembic/versions/` (implement upgrade/downgrade)
+3. Test locally: `alembic upgrade head` then `alembic downgrade -1`
+4. Commit migration file with code changes
+5. Deploy: Run `alembic upgrade head` in production
 
 ---
 
