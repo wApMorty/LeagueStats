@@ -27,13 +27,16 @@ class Parser:
 
         # CRITICAL: Wait for window manager (Komorebi) to settle
         # Window managers may resize windows after initialization
-        sleep(2.0)  # 2 second delay to let Komorebi finish processing
+        sleep(4.0)  # 4 second delay to let Komorebi finish processing completely
 
         # Re-apply fullscreen to ensure it sticks after window manager intervention
         try:
             self.webdriver.fullscreen_window()
         except:
             self.webdriver.maximize_window()
+
+        # Additional settling time after re-applying fullscreen
+        sleep(1.0)  # 1 extra second to ensure fullscreen is stable
 
     def close(self) -> None:
         self.webdriver.quit()
