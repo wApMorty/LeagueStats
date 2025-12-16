@@ -3,7 +3,7 @@ import os
 import sys
 
 from sqlalchemy import engine_from_config
-from sqlalchemy import pool, MetaData, Table, Column, Integer, String, Float, TIMESTAMP, ForeignKey
+from sqlalchemy import pool, MetaData, Table, Column, Integer, String, Float, TIMESTAMP, ForeignKey, text
 
 from alembic import context
 
@@ -31,8 +31,8 @@ champions_table = Table(
     Column('key', String),
     Column('name', String, nullable=False),
     Column('title', String),
-    Column('created_at', TIMESTAMP, server_default='CURRENT_TIMESTAMP'),
-    Column('updated_at', TIMESTAMP, server_default='CURRENT_TIMESTAMP')
+    Column('created_at', TIMESTAMP, server_default=text('CURRENT_TIMESTAMP')),
+    Column('updated_at', TIMESTAMP, server_default=text('CURRENT_TIMESTAMP'))
 )
 
 # Matchups table - Champion vs Champion statistics

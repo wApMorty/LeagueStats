@@ -77,5 +77,15 @@ def downgrade() -> None:
     """Downgrade schema: Drop all tables."""
     # Drop tables in reverse order (respect foreign keys)
     op.drop_table('champion_scores')
+
+    # Drop matchups indexes explicitly for clarity
+    op.drop_index('idx_matchups_enemy_pickrate', table_name='matchups')
+    op.drop_index('idx_matchups_champion_pickrate', table_name='matchups')
+    op.drop_index('idx_matchups_pickrate', table_name='matchups')
+    op.drop_index('idx_matchups_enemy', table_name='matchups')
+    op.drop_index('idx_matchups_champion', table_name='matchups')
     op.drop_table('matchups')
+
+    # Drop champions index explicitly for clarity
+    op.drop_index('idx_champions_name', table_name='champions')
     op.drop_table('champions')
