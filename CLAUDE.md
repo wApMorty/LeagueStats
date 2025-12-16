@@ -207,30 +207,68 @@ cursor.execute("SELECT * FROM champions WHERE name = ?", (name,))
 
 ### Tests
 
-**Couverture Minimale**: 70% (objectif Sprint 1)
+**Framework**: pytest + pytest-cov + pytest-mock (Sprint 1 ✅)
+**Couverture**: **89% du module analysis (objectif 70%+ largement dépassé)
 
+**Structure**:
+```
+tests/
+├── __init__.py
+├── conftest.py              # Fixtures partagées (DB, scorer, insert_matchup)
+├── test_scoring.py          # 27 tests - 95% coverage
+├── test_tier_list.py        # 18 tests - 100% coverage
+└── test_team_analysis.py    # 13 tests - 97% coverage
+```
+
+**Commandes**:
+```bash
+# Lancer tous les tests
+pytest tests/ -v
+
+# Tests avec couverture
+pytest tests/ --cov=src --cov-report=term
+pytest tests/ --cov=src --cov-report=html  # Rapport HTML
+
+# Tests d'un module spécifique
+pytest tests/test_scoring.py -v
+```
+
+**Fixtures disponibles** (tests/conftest.py):
+- `temp_db`: Base de données SQLite temporaire
+- `db`: Instance Database connectée
+- `scorer`: Instance ChampionScorer
+- `insert_matchup`: Helper pour insérer matchups facilement
+- `sample_matchups`: Données de matchups d'exemple
+- `sample_champions`: Liste de champions d'exemple
+
+**Exemple de test**:
 ```python
 import pytest
-from src.assistant import Assistant
+from src.analysis.scoring import ChampionScorer
 
-@pytest.fixture
-def assistant(tmp_path):
-    """Fixture pour Assistant avec DB temporaire."""
-    db_path = tmp_path / "test.db"
-    return Assistant(db_path)
+def test_weighted_average_calculation(scorer, insert_matchup):
+    """Test calcul moyenne pondérée par pickrate."""
+    # Arrange - Setup test data
+    insert_matchup('Champ1', 'Enemy1', 50.0, 100.0, 0, 10.0, 1000)
+    insert_matchup('Champ1', 'Enemy2', 50.0, 200.0, 0, 20.0, 1000)
 
-def test_calculate_score(assistant):
-    """Test calcul score avec cas nominal."""
-    # Arrange
-    delta2 = 2.5
+    # Expected: (100*10 + 200*20) / (10+20) = 166.67
+    matchups = [...]  # Retrieve matchups
 
     # Act
-    score = assistant.calculate_score(delta2)
+    result = scorer.avg_delta1(matchups)
 
     # Assert
-    assert 0 <= score <= 100
-    assert score > 50  # Champion favorable
+    assert abs(result - 166.67) < 0.01
 ```
+
+**Couverture par module**:
+- `src/analysis/scoring.py`: **95%** (82 statements, 4 missed)
+- `src/analysis/tier_list.py`: **100%** (45 statements, 0 missed)
+- `src/analysis/team_analysis.py`: **97%** (69 statements, 2 missed)
+- `src/analysis/recommendations.py`: **65%** (60 statements, 21 missed - draft_simple legacy)
+
+**Documentation**: [tests/README.md](tests/README.md) (à créer si besoin)
 
 ---
 
