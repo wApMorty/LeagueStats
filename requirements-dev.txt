@@ -12,6 +12,9 @@ pytest>=8.0.0,<10.0.0
 pytest-cov>=4.1.0,<6.0.0
 pytest-mock>=3.12.0,<4.0.0
 
+# Database migrations (Sprint 1)
+alembic>=1.13.0,<2.0.0
+
 # Code quality (for future implementation)
 # pylint>=3.0.0,<4.0.0
 # black>=24.0.0,<25.0.0
