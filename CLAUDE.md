@@ -208,7 +208,7 @@ cursor.execute("SELECT * FROM champions WHERE name = ?", (name,))
 ### Tests
 
 **Framework**: pytest + pytest-cov + pytest-mock (Sprint 1 ✅)
-**Couverture**: 74% du module analysis (objectif 70%+ atteint)
+**Couverture**: **89% du module analysis (objectif 70%+ largement dépassé)
 
 **Structure**:
 ```
@@ -266,7 +266,7 @@ def test_weighted_average_calculation(scorer, insert_matchup):
 - `src/analysis/scoring.py`: **95%** (82 statements, 4 missed)
 - `src/analysis/tier_list.py`: **100%** (45 statements, 0 missed)
 - `src/analysis/team_analysis.py`: **97%** (69 statements, 2 missed)
-- `src/analysis/recommendations.py`: 0% (future work)
+- `src/analysis/recommendations.py`: **65%** (60 statements, 21 missed - draft_simple legacy)
 
 **Documentation**: [tests/README.md](tests/README.md) (à créer si besoin)
 
