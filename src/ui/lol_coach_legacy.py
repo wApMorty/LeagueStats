@@ -334,10 +334,11 @@ def parse_champion_pool(patch_version=None):
         db.init_champion_scores_table()
 
         # Use parallel scraping
+        from src.config_constants import scraping_config
         start_time = time.time()
-        parallel_parser = ParallelParser(max_workers=8)
+        parallel_parser = ParallelParser(max_workers=scraping_config.DEFAULT_MAX_WORKERS)
 
-        print(f"\n[INFO] Starting parallel scraping with 8 workers...")
+        print(f"\n[INFO] Starting parallel scraping with {scraping_config.DEFAULT_MAX_WORKERS} workers...")
         stats = parallel_parser.parse_champions_by_role(
             db,
             pool_champions,
@@ -413,10 +414,11 @@ def parse_all_champions(patch_version=None):
         db.init_champion_scores_table()
 
         # Use parallel scraping
+        from src.config_constants import scraping_config
         start_time = time.time()
-        parallel_parser = ParallelParser(max_workers=8)
+        parallel_parser = ParallelParser(max_workers=scraping_config.DEFAULT_MAX_WORKERS)
 
-        print(f"\n[INFO] Starting parallel scraping with 8 workers...")
+        print(f"\n[INFO] Starting parallel scraping with {scraping_config.DEFAULT_MAX_WORKERS} workers...")
         print(f"[INFO] Parsing {len(CHAMPIONS_LIST)} champions...")
 
         stats = parallel_parser.parse_all_champions(

@@ -129,11 +129,12 @@ def parse_champions_by_role_parallel(db: Database, max_workers: int = 8) -> dict
 def load_data() -> None:
     """Load data using parallel scraping for better performance."""
     from src.config import config
+    from src.config_constants import scraping_config
     db = Database(config.DATABASE_PATH)
 
     # Use parallel scraping (80% faster)
     print("Starting parallel scraping...")
-    stats = parse_champions_by_role_parallel(db, max_workers=8)
+    stats = parse_champions_by_role_parallel(db, max_workers=scraping_config.DEFAULT_MAX_WORKERS)
 
     # Display statistics
     print("\n" + "="*60)

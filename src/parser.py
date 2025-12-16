@@ -18,25 +18,16 @@ class Parser:
         options.add_argument("--start-maximized")
         self.webdriver = webdriver.Firefox(options=options)
 
-        # Try fullscreen mode to prevent window managers from resizing
+        # Fullscreen mode (with Firefox exception configured in Komorebi)
         try:
             self.webdriver.fullscreen_window()
         except:
             # Fallback to maximize if fullscreen not supported
             self.webdriver.maximize_window()
 
-        # CRITICAL: Wait for window manager (Komorebi) to settle
-        # Window managers may resize windows after initialization
-        sleep(4.0)  # 4 second delay to let Komorebi finish processing completely
-
-        # Re-apply fullscreen to ensure it sticks after window manager intervention
-        try:
-            self.webdriver.fullscreen_window()
-        except:
-            self.webdriver.maximize_window()
-
-        # Additional settling time after re-applying fullscreen
-        sleep(1.0)  # 1 extra second to ensure fullscreen is stable
+        # Minimal delay for Firefox initialization
+        # NOTE: Komorebi should have Firefox in float_rules to avoid window manager interference
+        sleep(scraping_config.FIREFOX_STARTUP_DELAY)
 
     def close(self) -> None:
         self.webdriver.quit()
