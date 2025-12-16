@@ -20,6 +20,77 @@ class Parser:
     def close(self) -> None:
         self.webdriver.quit()
 
+    def _accept_cookies(self) -> None:
+        """Accept cookies banner using dynamic element detection.
+
+        Tries multiple strategies in order:
+        1. Find button by ID (didomi-notice-agree-button)
+        2. Find button by CSS selector (common patterns)
+        3. Find button by text content
+        4. Fallback to hardcoded coordinates (Bug #1 legacy method)
+        """
+        try:
+            # Strategy 1: Find by ID (most reliable)
+            cookie_button = self.webdriver.find_element(By.ID, "didomi-notice-agree-button")
+            cookie_button.click()
+            return
+        except:
+            pass
+
+        try:
+            # Strategy 2: Find by CSS selector (button with specific text)
+            selectors = [
+                "button[aria-label*='agree' i]",
+                "button[aria-label*='accept' i]",
+                "button.didomi-button",
+                ".didomi-notice-agree-button"
+            ]
+            for selector in selectors:
+                try:
+                    cookie_button = self.webdriver.find_element(By.CSS_SELECTOR, selector)
+                    cookie_button.click()
+                    return
+                except:
+                    continue
+        except:
+            pass
+
+        try:
+            # Strategy 3: Find button by XPath with text content
+            xpath_patterns = [
+                "//button[contains(translate(text(), 'ACCEPT', 'accept'), 'accept')]",
+                "//button[contains(translate(text(), 'AGREE', 'agree'), 'agree')]",
+                "//button[contains(@class, 'agree')]"
+            ]
+            for xpath in xpath_patterns:
+                try:
+                    cookie_button = self.webdriver.find_element(By.XPATH, xpath)
+                    cookie_button.click()
+                    return
+                except:
+                    continue
+        except:
+            pass
+
+        # Strategy 4: Fallback to hardcoded coordinates (Bug #1 legacy)
+        try:
+            self.webdriver.execute_script(f"""
+                var event = new MouseEvent('click', {{
+                    view: window,
+                    bubbles: true,
+                    cancelable: true,
+                    clientX: {scraping_config.COOKIE_CLICK_X},
+                    clientY: {scraping_config.COOKIE_CLICK_Y}
+                }});
+                document.elementFromPoint({scraping_config.COOKIE_CLICK_X}, {scraping_config.COOKIE_CLICK_Y}).dispatchEvent(event);
+            """)
+        except:
+            # Final fallback to ActionChains
+            actions = ActionChains(self.webdriver)
+            actions.move_by_offset(scraping_config.COOKIE_CLICK_X, scraping_config.COOKIE_CLICK_Y).click().perform()
+            actions = ActionChains(self.webdriver)
+            actions.move_by_offset(-scraping_config.COOKIE_CLICK_X, -scraping_config.COOKIE_CLICK_Y).perform()
+
     def get_matchup_data(self, champion: str, enemy: str) -> float :
         return self.get_matchup_data_on_patch(config.CURRENT_PATCH, champion, enemy)
 
@@ -72,26 +143,7 @@ class Parser:
         sleep(scraping_config.SCROLL_DELAY)
         
         #region Accepting cookies
-        try:
-            # Use absolute positioning with JavaScript to avoid accumulation
-            # TODO (Tâche #4): Replace hardcoded coordinates with dynamic element detection
-            self.webdriver.execute_script(f"""
-                var event = new MouseEvent('click', {{
-                    view: window,
-                    bubbles: true,
-                    cancelable: true,
-                    clientX: {scraping_config.COOKIE_CLICK_X},
-                    clientY: {scraping_config.COOKIE_CLICK_Y}
-                }});
-                document.elementFromPoint({scraping_config.COOKIE_CLICK_X}, {scraping_config.COOKIE_CLICK_Y}).dispatchEvent(event);
-            """)
-        except:
-            # Fallback to ActionChains if JS fails
-            actions = ActionChains(self.webdriver)
-            actions.move_by_offset(scraping_config.COOKIE_CLICK_X, scraping_config.COOKIE_CLICK_Y).click().perform()
-
-            actions = ActionChains(self.webdriver)
-            actions.move_by_offset(-scraping_config.COOKIE_CLICK_X, -scraping_config.COOKIE_CLICK_Y).perform()
+        self._accept_cookies()
         #endregion
         
         for index in range (2, 7):
