@@ -14,8 +14,15 @@ class Parser:
     def __init__(self) -> None:
         options = Options()
         options.binary_location = config.get_firefox_path()
+        # Add argument to start maximized (helps with window managers like Komorebi)
+        options.add_argument("--start-maximized")
         self.webdriver = webdriver.Firefox(options=options)
-        self.webdriver.maximize_window()
+        # Try fullscreen mode to prevent window managers from resizing
+        try:
+            self.webdriver.fullscreen_window()
+        except:
+            # Fallback to maximize if fullscreen not supported
+            self.webdriver.maximize_window()
 
     def close(self) -> None:
         self.webdriver.quit()

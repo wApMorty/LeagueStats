@@ -28,10 +28,11 @@ Usage:
 """
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from threading import Lock
+from threading import Lock, local, current_thread
 from time import sleep
 from typing import List, Optional, Tuple
 import logging
+import threading
 
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from tqdm import tqdm
@@ -47,6 +48,9 @@ logging.basicConfig(
     format='%(asctime)s - %(threadName)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Thread-local storage for parser instances (one parser per thread)
+thread_local = local()
 
 
 class ParallelParser:
@@ -76,12 +80,20 @@ class ParallelParser:
     def _get_parser(self) -> Parser:
         """Get or create a Parser instance for current thread.
 
+        Uses thread-local storage to ensure ONE parser per thread, not per champion.
+        This prevents creating multiple Firefox windows per thread.
+
         Returns:
             Parser: Thread-local parser instance with dedicated webdriver
         """
-        parser = Parser()
-        self.parsers.append(parser)
-        return parser
+        # Check if this thread already has a parser
+        if not hasattr(thread_local, 'parser'):
+            # Create new parser for this thread (first time only)
+            thread_local.parser = Parser()
+            self.parsers.append(thread_local.parser)
+            logger.info(f"Created new parser for {threading.current_thread().name}")
+
+        return thread_local.parser
 
     @retry(
         stop=stop_after_attempt(3),
