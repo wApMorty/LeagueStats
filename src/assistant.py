@@ -263,33 +263,47 @@ class Assistant:
     def _find_optimal_counterpick_duo(self, remaining_pool: List[str], blind_champion: str, show_ranking: bool = False) -> tuple:
         """Find the best duo of counterpicks to maximize coverage against all champions."""
         from itertools import combinations
-        
+
         if len(remaining_pool) < 2:
             raise ValueError(f"Need at least 2 champions in pool, got {len(remaining_pool)}")
-        
+
+        # DIAGNOSTIC: Check if champions in pool have matchup data
+        print(f"\n[DEBUG] Checking matchup data for pool champions...")
+        champions_without_data = []
+        for champ in [blind_champion] + remaining_pool[:5]:  # Check first 5 from pool
+            matchups = self.db.get_champion_matchups_by_name(champ)
+            matchup_count = len(matchups) if matchups else 0
+            print(f"  {champ}: {matchup_count} matchups")
+            if matchup_count == 0:
+                champions_without_data.append(champ)
+
+        if champions_without_data:
+            print(f"[WARNING] {len(champions_without_data)} champions have no matchup data!")
+
         duo_rankings = []  # Store all viable duos with their scores
         evaluated_combinations = 0
-        
+        filtered_by_coverage = 0
+
         total_combinations = len(list(combinations(remaining_pool, 2)))
-        print(f"Evaluating {total_combinations} possible duos...")
-        
+        print(f"\nEvaluating {total_combinations} possible duos...")
+
         # Try all possible pairs from remaining pool
         for duo in combinations(remaining_pool, 2):
             try:
                 total_score = 0
                 trio = [blind_champion] + list(duo)
                 valid_matchups_found = 0
-                
+
                 # For each enemy champion, find the best counter from our trio
                 for enemy_champion in CHAMPIONS_LIST:
                     best_counter_score = -float('inf')
-                    
+
                     for our_champion in trio:
                         try:
                             matchups = self.db.get_champion_matchups_by_name(our_champion)
                             if not matchups:
                                 continue
-                                
+
                             # Find the specific matchup against this enemy
                             for matchup in matchups:
                                 if matchup[0].lower() == enemy_champion.lower():
@@ -298,22 +312,27 @@ class Assistant:
                                     break
                         except Exception as e:
                             continue  # Skip silently for cleaner output
-                    
+
                     # If we found a matchup, add it to total score
                     if best_counter_score != -float('inf'):
                         total_score += best_counter_score
                         valid_matchups_found += 1
-                
+
                 # Calculate coverage metrics
                 coverage_ratio = valid_matchups_found / len(CHAMPIONS_LIST)
                 avg_score_per_matchup = total_score / valid_matchups_found if valid_matchups_found > 0 else 0
-                
+
+                # DIAGNOSTIC: Log first few duos to understand coverage
+                if filtered_by_coverage < 3:
+                    print(f"[DEBUG] Duo {duo[0]} + {duo[1]}: coverage={coverage_ratio:.1%} ({valid_matchups_found}/{len(CHAMPIONS_LIST)} champions)")
+
                 # Only consider this duo if it has reasonable coverage
                 if coverage_ratio < 0.10:  # Less than 10% coverage
+                    filtered_by_coverage += 1
                     continue
-                
+
                 evaluated_combinations += 1
-                
+
                 # Store duo info for ranking
                 duo_rankings.append({
                     'duo': duo,
@@ -322,38 +341,40 @@ class Assistant:
                     'avg_score': avg_score_per_matchup,
                     'matchups_covered': valid_matchups_found
                 })
-                    
+
             except Exception as e:
                 continue  # Skip silently for cleaner output
-        
+
+        print(f"[DEBUG] Filtered {filtered_by_coverage} duos due to <10% coverage")
+
         if evaluated_combinations == 0:
-            raise ValueError("No valid duo combinations could be evaluated")
-        
+            raise ValueError(f"No valid duo combinations could be evaluated (filtered {filtered_by_coverage} duos with <10% coverage)")
+
         # Sort by total score (descending)
         duo_rankings.sort(key=lambda x: x['total_score'], reverse=True)
-        
+
         if not duo_rankings:
             raise ValueError("No viable duo found after evaluation")
-        
+
         # Display rankings if requested
         if show_ranking and len(duo_rankings) > 1:
             safe_print(f"\n📊 TOP DUO RANKINGS:")
             safe_print("─" * 80)
             display_count = min(5, len(duo_rankings))  # Show top 5
-            
+
             for i, info in enumerate(duo_rankings[:display_count]):
                 duo = info['duo']
                 score = info['total_score']
                 coverage = info['coverage']
                 avg_score = info['avg_score']
-                
+
                 rank_symbol = "🥇" if i == 0 else "🥈" if i == 1 else "🥉" if i == 2 else f"{i+1}."
-                
+
                 safe_print(f"{rank_symbol} {duo[0]} + {duo[1]}")
                 print(f"    Total Score: {score:.1f} | Coverage: {coverage:.1%} | Avg/Match: {avg_score:.2f}")
-        
+
         print(f"Evaluated {evaluated_combinations} valid combinations")
-        
+
         best_info = duo_rankings[0]
         return best_info['duo'], best_info['total_score']
 
