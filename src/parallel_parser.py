@@ -63,19 +63,23 @@ class ParallelParser:
         executor (ThreadPoolExecutor): Thread pool for parallel execution
     """
 
-    def __init__(self, max_workers: int = 8):
+    def __init__(self, max_workers: int = 8, patch_version: str = None):
         """Initialize parallel parser with worker pool.
 
         Args:
             max_workers: Number of concurrent threads (default: 8)
                         Recommended range: 6-10 for optimal I/O performance
+            patch_version: Optional patch version (e.g. "15.24"). If None, uses config.CURRENT_PATCH
         """
+        from .config import config
+
         self.max_workers = max_workers
+        self.patch_version = patch_version or config.CURRENT_PATCH
         self.parsers: List[Parser] = []
         self.db_lock = Lock()
         self.executor: Optional[ThreadPoolExecutor] = None
 
-        logger.info(f"ParallelParser initialized with {max_workers} workers")
+        logger.info(f"ParallelParser initialized with {max_workers} workers, patch={self.patch_version}")
 
     def _get_parser(self) -> Parser:
         """Get or create a Parser instance for current thread.
@@ -126,8 +130,8 @@ class ParallelParser:
 
         try:
             normalized_champion = normalize_func(champion)
-            matchups = parser.get_champion_data(normalized_champion)
-            logger.info(f"Successfully scraped {champion}: {len(matchups)} matchups")
+            matchups = parser.get_champion_data_on_patch(self.patch_version, normalized_champion)
+            logger.info(f"Successfully scraped {champion} (patch {self.patch_version}): {len(matchups)} matchups")
             return champion, matchups
         except (WebDriverException, TimeoutException) as e:
             logger.warning(f"Retry triggered for {champion}: {e}")
@@ -184,13 +188,9 @@ class ParallelParser:
         if not db.create_riot_champions_table():
             logger.warning("Failed to create/update champions table schema")
 
-        # Ensure champions are populated from Riot API
-        cursor = db.connection.cursor()
-        cursor.execute("SELECT COUNT(*) FROM champions")
-        champ_count = cursor.fetchone()[0]
-        if champ_count == 0:
-            logger.info("Populating champions from Riot API...")
-            db.update_champions_from_riot_api()
+        # Always update champions from Riot API to ensure new champions (like Zaahen) are included
+        logger.info("Updating champions from Riot API...")
+        db.update_champions_from_riot_api()
 
         db.init_matchups_table()
 
@@ -267,13 +267,9 @@ class ParallelParser:
         if not db.create_riot_champions_table():
             logger.warning("Failed to create/update champions table schema")
 
-        # Ensure champions are populated from Riot API
-        cursor = db.connection.cursor()
-        cursor.execute("SELECT COUNT(*) FROM champions")
-        champ_count = cursor.fetchone()[0]
-        if champ_count == 0:
-            logger.info("Populating champions from Riot API...")
-            db.update_champions_from_riot_api()
+        # Always update champions from Riot API to ensure new champions (like Zaahen) are included
+        logger.info("Updating champions from Riot API...")
+        db.update_champions_from_riot_api()
 
         db.init_matchups_table()
 
@@ -285,8 +281,8 @@ class ParallelParser:
             parser = self._get_parser()
             try:
                 normalized_champion = normalize_func(champion)
-                matchups = parser.get_champion_data(normalized_champion, lane)
-                logger.info(f"Successfully scraped {champion} ({lane}): {len(matchups)} matchups")
+                matchups = parser.get_champion_data_on_patch(self.patch_version, normalized_champion, lane)
+                logger.info(f"Successfully scraped {champion} ({lane}, patch {self.patch_version}): {len(matchups)} matchups")
                 return champion, matchups
             except Exception as e:
                 logger.error(f"Error scraping {champion} ({lane}): {e}")

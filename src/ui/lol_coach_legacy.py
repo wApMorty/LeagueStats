@@ -302,9 +302,7 @@ def parse_champion_pool(patch_version=None):
     print(f"(Sequential mode would take ~{sequential_time:.1f} minutes)")
 
     if patch_version:
-        print("\n[WARNING] Patch version parameter is currently not supported with parallel scraping.")
-        print("[WARNING] Using default patch from config.")
-        input("Press Enter to continue or Ctrl+C to cancel...")
+        print(f"\n[INFO] Will scrape data for patch version: {patch_version}")
 
     confirm = input(f"\nProceed with parsing {len(pool_champions)} champions? (y/N): ").strip().lower()
     if confirm != 'y':
@@ -336,9 +334,9 @@ def parse_champion_pool(patch_version=None):
         # Use parallel scraping
         from src.config_constants import scraping_config
         start_time = time.time()
-        parallel_parser = ParallelParser(max_workers=scraping_config.DEFAULT_MAX_WORKERS)
+        parallel_parser = ParallelParser(max_workers=scraping_config.DEFAULT_MAX_WORKERS, patch_version=patch_version)
 
-        print(f"\n[INFO] Starting parallel scraping with {scraping_config.DEFAULT_MAX_WORKERS} workers...")
+        print(f"\n[INFO] Starting parallel scraping with {scraping_config.DEFAULT_MAX_WORKERS} workers (patch {patch_version or config.CURRENT_PATCH})...")
         stats = parallel_parser.parse_champions_by_role(
             db,
             pool_champions,
@@ -381,9 +379,7 @@ def parse_all_champions(patch_version=None):
     print("[INFO] Parallel mode: 6-8 minutes (80% faster)")
 
     if patch_version:
-        print("\n[WARNING] Patch version parameter is currently not supported with parallel scraping.")
-        print("[WARNING] Using default patch from config.")
-        input("Press Enter to continue or Ctrl+C to cancel...")
+        print(f"\n[INFO] Will scrape data for patch version: {patch_version}")
 
     confirm = input("\nAre you sure you want to continue? (y/N): ").strip().lower()
 
@@ -416,9 +412,9 @@ def parse_all_champions(patch_version=None):
         # Use parallel scraping
         from src.config_constants import scraping_config
         start_time = time.time()
-        parallel_parser = ParallelParser(max_workers=scraping_config.DEFAULT_MAX_WORKERS)
+        parallel_parser = ParallelParser(max_workers=scraping_config.DEFAULT_MAX_WORKERS, patch_version=patch_version)
 
-        print(f"\n[INFO] Starting parallel scraping with {scraping_config.DEFAULT_MAX_WORKERS} workers...")
+        print(f"\n[INFO] Starting parallel scraping with {scraping_config.DEFAULT_MAX_WORKERS} workers (patch {patch_version or config.CURRENT_PATCH})...")
         print(f"[INFO] Parsing {len(CHAMPIONS_LIST)} champions...")
 
         stats = parallel_parser.parse_all_champions(

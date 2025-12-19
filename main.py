@@ -23,18 +23,19 @@ def parse_all_champions_data(db: Database, parser: Parser) -> None:
     parser.close()
     db.close()
 
-def parse_all_champions_parallel(db: Database, max_workers: int = 8) -> dict:
+def parse_all_champions_parallel(db: Database, max_workers: int = 8, patch_version: str = None) -> dict:
     """Parse all champions using parallel scraping (80% faster).
 
     Args:
         db: Database instance
         max_workers: Number of concurrent threads (default: 8)
+        patch_version: Optional patch version (e.g. "15.24"). If None, uses config.CURRENT_PATCH
 
     Returns:
         dict: Statistics with 'success', 'failed', 'total', 'duration' keys
     """
     db.connect()
-    parallel_parser = ParallelParser(max_workers=max_workers)
+    parallel_parser = ParallelParser(max_workers=max_workers, patch_version=patch_version)
 
     try:
         stats = parallel_parser.parse_all_champions(
@@ -78,18 +79,19 @@ def parse_restricted_champions_by_role(db: Database, parser: Parser) -> None:
     parser.close()
     db.close()
 
-def parse_champions_by_role_parallel(db: Database, max_workers: int = 8) -> dict:
+def parse_champions_by_role_parallel(db: Database, max_workers: int = 8, patch_version: str = None) -> dict:
     """Parse champions by role using parallel scraping (80% faster).
 
     Args:
         db: Database instance
         max_workers: Number of concurrent threads (default: 8)
+        patch_version: Optional patch version (e.g. "15.24"). If None, uses config.CURRENT_PATCH
 
     Returns:
         dict: Combined statistics from all roles
     """
     db.connect()
-    parallel_parser = ParallelParser(max_workers=max_workers)
+    parallel_parser = ParallelParser(max_workers=max_workers, patch_version=patch_version)
 
     # Define role mappings
     role_mappings = [
