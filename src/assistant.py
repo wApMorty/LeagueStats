@@ -264,6 +264,12 @@ class Assistant:
         """Find the best duo of counterpicks to maximize coverage against all champions."""
         from itertools import combinations
 
+        print(f"[DEBUG] _find_optimal_counterpick_duo called with:")
+        print(f"  remaining_pool = {remaining_pool}")
+        print(f"  len(remaining_pool) = {len(remaining_pool)}")
+        print(f"  type(remaining_pool) = {type(remaining_pool)}")
+        print(f"  blind_champion = '{blind_champion}'")
+
         if len(remaining_pool) < 2:
             raise ValueError(f"Need at least 2 champions in pool, got {len(remaining_pool)}")
 
@@ -464,10 +470,15 @@ class Assistant:
         
         # Step 2: Find best counterpick duo from remaining viable champions
         remaining_pool = [champ for champ in viable_champions if champ != best_blind]
-        
+
+        print(f"[DEBUG] viable_champions = {viable_champions}")
+        print(f"[DEBUG] best_blind = '{best_blind}'")
+        print(f"[DEBUG] remaining_pool = {remaining_pool}")
+        print(f"[DEBUG] len(remaining_pool) = {len(remaining_pool)}")
+
         if len(remaining_pool) < 2:
             raise ValueError(f"Insufficient remaining champions for duo: only {len(remaining_pool)} available")
-        
+
         try:
             best_duo, duo_score = self._find_optimal_counterpick_duo(remaining_pool, best_blind, show_ranking=True)
         except Exception as e:
