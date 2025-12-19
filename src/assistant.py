@@ -182,15 +182,15 @@ class Assistant:
         Returns:
             Number of champions scored and saved
         """
-        from .constants import CHAMPIONS_LIST
         from .config import tierlist_config
         import statistics
 
         print("[INFO] Calculating global champion scores...")
 
         champions_scored = 0
+        all_champions = list(self.db.get_all_champion_names().values())
 
-        for champion in CHAMPIONS_LIST:
+        for champion in all_champions:
             try:
                 matchups = self.db.get_champion_matchups_by_name(champion)
                 if not matchups:
@@ -254,7 +254,7 @@ class Assistant:
                 print(f"  [ERROR] {champion}: {e}")
                 continue
 
-        print(f"[SUCCESS] Scored {champions_scored}/{len(CHAMPIONS_LIST)} champions")
+        print(f"[SUCCESS] Scored {champions_scored}/{len(all_champions)} champions")
         return champions_scored
 
     # ==================== Optimal Trio Analysis ====================
@@ -291,6 +291,10 @@ class Assistant:
         filtered_by_coverage = 0
         duos_tested = 0
 
+        # Get all champions from database (dynamic, includes new champions like Zaahen)
+        all_champions = list(self.db.get_all_champion_names().values())
+        total_enemies = len(all_champions)
+
         total_combinations = len(list(combinations(remaining_pool, 2)))
         print(f"\nEvaluating {total_combinations} possible duos...")
 
@@ -306,7 +310,7 @@ class Assistant:
                 valid_matchups_found = 0
 
                 # For each enemy champion, find the best counter from our trio
-                for enemy_champion in CHAMPIONS_LIST:
+                for enemy_champion in all_champions:
                     best_counter_score = -float('inf')
 
                     for our_champion in trio:
@@ -330,13 +334,13 @@ class Assistant:
                         valid_matchups_found += 1
 
                 # Calculate coverage metrics
-                coverage_ratio = valid_matchups_found / len(CHAMPIONS_LIST)
+                coverage_ratio = valid_matchups_found / total_enemies
                 avg_score_per_matchup = total_score / valid_matchups_found if valid_matchups_found > 0 else 0
 
                 # DIAGNOSTIC: Log first 5 duos tested (BEFORE filtering)
                 if duos_tested <= 5:
                     status = "✓ PASS" if coverage_ratio >= 0.10 else "✗ FILTERED"
-                    print(f"[DEBUG] Duo #{duos_tested} - {duo[0]} + {duo[1]}: {coverage_ratio:.1%} coverage ({valid_matchups_found}/{len(CHAMPIONS_LIST)} champions) - {status}")
+                    print(f"[DEBUG] Duo #{duos_tested} - {duo[0]} + {duo[1]}: {coverage_ratio:.1%} coverage ({valid_matchups_found}/{total_enemies} champions) - {status}")
 
                 # Only consider this duo if it has reasonable coverage
                 if coverage_ratio < 0.10:  # Less than 10% coverage
@@ -643,14 +647,17 @@ class Assistant:
 
     def _analyze_trio_coverage(self, trio: List[str]) -> None:
         """Analyze what the trio covers and potential gaps."""
-        
+
         safe_print(f"\n📊 COVERAGE ANALYSIS:")
         safe_print("─" * 50)
-        
+
+        # Get all champions from database (dynamic, includes new champions)
+        all_champions = list(self.db.get_all_champion_names().values())
+
         coverage_map = {}  # enemy -> best_counter_info
         uncovered_enemies = []
-        
-        for enemy_champion in CHAMPIONS_LIST:
+
+        for enemy_champion in all_champions:
             best_counter = None
             best_delta2 = -float('inf')
             
@@ -673,7 +680,7 @@ class Assistant:
                 uncovered_enemies.append(enemy_champion)
         
         # Statistics
-        total_enemies = len(CHAMPIONS_LIST)
+        total_enemies = len(all_champions)
         covered_count = len(coverage_map)
         coverage_percent = (covered_count / total_enemies) * 100
 
