@@ -260,31 +260,50 @@ class Assistant:
     # ==================== Optimal Trio Analysis ====================
     # These methods find optimal champion compositions for draft phases
 
+    def _display_live_podium(self, top_duos: List[dict], tested: int, total: int, viable: int) -> None:
+        """Display live podium of top 3 duos during evaluation."""
+        import sys
+
+        # Clear previous lines (move cursor up 6 lines and clear)
+        if tested > 50:  # Don't clear on first display
+            sys.stdout.write('\033[6A')  # Move up 6 lines
+            sys.stdout.write('\033[J')   # Clear from cursor to end of screen
+
+        progress_pct = (tested / total) * 100
+        bar_width = 30
+        filled = int(bar_width * tested / total)
+        bar = '█' * filled + '░' * (bar_width - filled)
+
+        print(f"Progress: [{bar}] {progress_pct:.1f}% ({tested}/{total}) | Viable: {viable}")
+        print("─" * 80)
+
+        if not top_duos:
+            print("🔍 Searching for optimal duos...")
+            print()
+            return
+
+        medals = ["🥇", "🥈", "🥉"]
+        for i, duo_info in enumerate(top_duos):
+            duo = duo_info['duo']
+            score = duo_info['total_score']
+            coverage = duo_info['coverage']
+
+            medal = medals[i] if i < len(medals) else f"{i+1}."
+            print(f"{medal} {duo[0]} + {duo[1]} | Score: {score:.1f} | Coverage: {coverage:.1%}")
+
+        # Add empty lines to keep spacing consistent
+        for _ in range(3 - len(top_duos)):
+            print()
+
+        sys.stdout.flush()
+
     def _find_optimal_counterpick_duo(self, remaining_pool: List[str], blind_champion: str, show_ranking: bool = False) -> tuple:
         """Find the best duo of counterpicks to maximize coverage against all champions."""
         from itertools import combinations
-
-        print(f"[DEBUG] _find_optimal_counterpick_duo called with:")
-        print(f"  remaining_pool = {remaining_pool}")
-        print(f"  len(remaining_pool) = {len(remaining_pool)}")
-        print(f"  type(remaining_pool) = {type(remaining_pool)}")
-        print(f"  blind_champion = '{blind_champion}'")
+        import sys
 
         if len(remaining_pool) < 2:
             raise ValueError(f"Need at least 2 champions in pool, got {len(remaining_pool)}")
-
-        # DIAGNOSTIC: Check if champions in pool have matchup data
-        print(f"\n[DEBUG] Checking matchup data for pool champions...")
-        champions_without_data = []
-        for champ in [blind_champion] + remaining_pool[:5]:  # Check first 5 from pool
-            matchups = self.db.get_champion_matchups_by_name(champ)
-            matchup_count = len(matchups) if matchups else 0
-            print(f"  {champ}: {matchup_count} matchups")
-            if matchup_count == 0:
-                champions_without_data.append(champ)
-
-        if champions_without_data:
-            print(f"[WARNING] {len(champions_without_data)} champions have no matchup data!")
 
         duo_rankings = []  # Store all viable duos with their scores
         evaluated_combinations = 0
@@ -296,13 +315,11 @@ class Assistant:
         total_enemies = len(all_champions)
 
         total_combinations = len(list(combinations(remaining_pool, 2)))
-        print(f"\nEvaluating {total_combinations} possible duos...")
+        print(f"\n🔍 Evaluating {total_combinations} possible duos...\n")
 
         # Try all possible pairs from remaining pool
         for duo in combinations(remaining_pool, 2):
             duos_tested += 1
-            if duos_tested == 1:
-                print(f"[DEBUG] First duo iteration: {duo}")
 
             try:
                 total_score = 0
@@ -337,11 +354,6 @@ class Assistant:
                 coverage_ratio = valid_matchups_found / total_enemies
                 avg_score_per_matchup = total_score / valid_matchups_found if valid_matchups_found > 0 else 0
 
-                # DIAGNOSTIC: Log first 5 duos tested (BEFORE filtering)
-                if duos_tested <= 5:
-                    status = "✓ PASS" if coverage_ratio >= 0.10 else "✗ FILTERED"
-                    print(f"[DEBUG] Duo #{duos_tested} - {duo[0]} + {duo[1]}: {coverage_ratio:.1%} coverage ({valid_matchups_found}/{total_enemies} champions) - {status}")
-
                 # Only consider this duo if it has reasonable coverage
                 if coverage_ratio < 0.10:  # Less than 10% coverage
                     filtered_by_coverage += 1
@@ -358,12 +370,19 @@ class Assistant:
                     'matchups_covered': valid_matchups_found
                 })
 
-            except Exception as e:
-                if duos_tested <= 5:  # Log first 5 exceptions
-                    print(f"[DEBUG] Exception processing duo #{duos_tested}: {type(e).__name__}: {e}")
-                continue
+                # Sort to keep top 3 and display real-time podium
+                duo_rankings.sort(key=lambda x: x['total_score'], reverse=True)
 
-        print(f"[DEBUG] Tested {duos_tested} duos total, filtered {filtered_by_coverage} due to <10% coverage, {evaluated_combinations} passed")
+                # Display live podium every 50 duos (or if in top 3)
+                if duos_tested % 50 == 0 or len(duo_rankings) <= 3:
+                    self._display_live_podium(duo_rankings[:3], duos_tested, total_combinations, evaluated_combinations)
+
+            except Exception as e:
+                continue  # Skip silently for cleaner output
+
+        # Final podium
+        print("\n" + "=" * 80)
+        print(f"✅ Evaluation complete: {duos_tested}/{total_combinations} tested, {evaluated_combinations} viable")
 
         if evaluated_combinations == 0:
             raise ValueError(f"No valid duo combinations could be evaluated (filtered {filtered_by_coverage} duos with <10% coverage)")
@@ -479,11 +498,6 @@ class Assistant:
         
         # Step 2: Find best counterpick duo from remaining viable champions
         remaining_pool = [champ for champ in viable_champions if champ != best_blind]
-
-        print(f"[DEBUG] viable_champions = {viable_champions}")
-        print(f"[DEBUG] best_blind = '{best_blind}'")
-        print(f"[DEBUG] remaining_pool = {remaining_pool}")
-        print(f"[DEBUG] len(remaining_pool) = {len(remaining_pool)}")
 
         if len(remaining_pool) < 2:
             raise ValueError(f"Insufficient remaining champions for duo: only {len(remaining_pool)} available")
