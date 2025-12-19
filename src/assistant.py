@@ -296,6 +296,10 @@ class Assistant:
 
         # Try all possible pairs from remaining pool
         for duo in combinations(remaining_pool, 2):
+            duos_tested += 1
+            if duos_tested == 1:
+                print(f"[DEBUG] First duo iteration: {duo}")
+
             try:
                 total_score = 0
                 trio = [blind_champion] + list(duo)
@@ -330,7 +334,6 @@ class Assistant:
                 avg_score_per_matchup = total_score / valid_matchups_found if valid_matchups_found > 0 else 0
 
                 # DIAGNOSTIC: Log first 5 duos tested (BEFORE filtering)
-                duos_tested += 1
                 if duos_tested <= 5:
                     status = "✓ PASS" if coverage_ratio >= 0.10 else "✗ FILTERED"
                     print(f"[DEBUG] Duo #{duos_tested} - {duo[0]} + {duo[1]}: {coverage_ratio:.1%} coverage ({valid_matchups_found}/{len(CHAMPIONS_LIST)} champions) - {status}")
@@ -352,7 +355,9 @@ class Assistant:
                 })
 
             except Exception as e:
-                continue  # Skip silently for cleaner output
+                if duos_tested <= 5:  # Log first 5 exceptions
+                    print(f"[DEBUG] Exception processing duo #{duos_tested}: {type(e).__name__}: {e}")
+                continue
 
         print(f"[DEBUG] Tested {duos_tested} duos total, filtered {filtered_by_coverage} due to <10% coverage, {evaluated_combinations} passed")
 
