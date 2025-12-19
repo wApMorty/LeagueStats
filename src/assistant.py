@@ -309,7 +309,7 @@ class Assistant:
                 avg_score_per_matchup = total_score / valid_matchups_found if valid_matchups_found > 0 else 0
                 
                 # Only consider this duo if it has reasonable coverage
-                if coverage_ratio < 0.3:  # Less than 30% coverage
+                if coverage_ratio < 0.10:  # Less than 10% coverage
                     continue
                 
                 evaluated_combinations += 1
@@ -637,6 +637,54 @@ class Assistant:
         covered_count = len(coverage_map)
         coverage_percent = (covered_count / total_enemies) * 100
 
-    # ==================== Optimal Trio Analysis ====================
-    # These methods find optimal champion compositions for draft phases
+        safe_print(f"📈 COVERAGE STATS:")
+        print(f"  • Covered: {covered_count}/{total_enemies} champions ({coverage_percent:.1f}%)")
+
+        # Categorize coverage quality
+        excellent = [(e, c, d) for e, (c, d) in coverage_map.items() if d >= 2.0]
+        good = [(e, c, d) for e, (c, d) in coverage_map.items() if 1.0 <= d < 2.0]
+        decent = [(e, c, d) for e, (c, d) in coverage_map.items() if 0 <= d < 1.0]
+        struggling = [(e, c, d) for e, (c, d) in coverage_map.items() if d < 0]
+
+        if excellent:
+            safe_print(f"  🟢 EXCELLENT counters: {len(excellent)} ({len(excellent)/covered_count*100:.1f}%)")
+        if good:
+            safe_print(f"  🟡 GOOD counters: {len(good)} ({len(good)/covered_count*100:.1f}%)")
+        if decent:
+            safe_print(f"  🟠 DECENT counters: {len(decent)} ({len(decent)/covered_count*100:.1f}%)")
+        if struggling:
+            safe_print(f"  🔴 STRUGGLING against: {len(struggling)} ({len(struggling)/covered_count*100:.1f}%)")
+
+        # Show problematic matchups
+        if struggling:
+            safe_print(f"\n⚠️  DIFFICULT MATCHUPS:")
+            worst_struggling = sorted(struggling, key=lambda x: x[2])[:3]  # Worst 3
+            for enemy, counter, delta2 in worst_struggling:
+                print(f"    • {enemy}: Best answer is {counter} ({delta2:+.2f} delta2)")
+
+        if uncovered_enemies:
+            safe_print(f"\n❌ UNCOVERED CHAMPIONS ({len(uncovered_enemies)}):")
+            if len(uncovered_enemies) <= 5:
+                for enemy in uncovered_enemies:
+                    print(f"    • {enemy}")
+            else:
+                for enemy in uncovered_enemies[:3]:
+                    print(f"    • {enemy}")
+                print(f"    ... and {len(uncovered_enemies)-3} more")
+
+        # Draft recommendations
+        safe_print(f"\n💡 DRAFT RECOMMENDATIONS:")
+        if coverage_percent >= 85:
+            safe_print("  🟢 Excellent pool! Very few gaps.")
+        elif coverage_percent >= 70:
+            safe_print("  🟡 Good pool with minor gaps.")
+        elif coverage_percent >= 50:
+            safe_print("  🟠 Decent pool but consider expanding.")
+        else:
+            safe_print("  🔴 Pool has significant gaps - consider more champions.")
+
+        if len(excellent) > len(struggling):
+            safe_print("  📈 Pool favors aggressive counterpicking.")
+        else:
+            safe_print("  🛡️ Pool requires careful champion selection.")
 
