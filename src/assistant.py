@@ -283,6 +283,7 @@ class Assistant:
         duo_rankings = []  # Store all viable duos with their scores
         evaluated_combinations = 0
         filtered_by_coverage = 0
+        duos_tested = 0
 
         total_combinations = len(list(combinations(remaining_pool, 2)))
         print(f"\nEvaluating {total_combinations} possible duos...")
@@ -322,9 +323,11 @@ class Assistant:
                 coverage_ratio = valid_matchups_found / len(CHAMPIONS_LIST)
                 avg_score_per_matchup = total_score / valid_matchups_found if valid_matchups_found > 0 else 0
 
-                # DIAGNOSTIC: Log first few duos to understand coverage
-                if filtered_by_coverage < 3:
-                    print(f"[DEBUG] Duo {duo[0]} + {duo[1]}: coverage={coverage_ratio:.1%} ({valid_matchups_found}/{len(CHAMPIONS_LIST)} champions)")
+                # DIAGNOSTIC: Log first 5 duos tested (BEFORE filtering)
+                duos_tested += 1
+                if duos_tested <= 5:
+                    status = "✓ PASS" if coverage_ratio >= 0.10 else "✗ FILTERED"
+                    print(f"[DEBUG] Duo #{duos_tested} - {duo[0]} + {duo[1]}: {coverage_ratio:.1%} coverage ({valid_matchups_found}/{len(CHAMPIONS_LIST)} champions) - {status}")
 
                 # Only consider this duo if it has reasonable coverage
                 if coverage_ratio < 0.10:  # Less than 10% coverage
@@ -345,7 +348,7 @@ class Assistant:
             except Exception as e:
                 continue  # Skip silently for cleaner output
 
-        print(f"[DEBUG] Filtered {filtered_by_coverage} duos due to <10% coverage")
+        print(f"[DEBUG] Tested {duos_tested} duos total, filtered {filtered_by_coverage} due to <10% coverage, {evaluated_combinations} passed")
 
         if evaluated_combinations == 0:
             raise ValueError(f"No valid duo combinations could be evaluated (filtered {filtered_by_coverage} duos with <10% coverage)")
