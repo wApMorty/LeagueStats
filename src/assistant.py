@@ -164,3 +164,93 @@ class Assistant:
     def score_teams_no_input(self) -> None:
         """Interactive team analysis with user input."""
         return self.team_analyzer.analyze_teams_interactive()
+
+    # ==================== Global Score Calculation ====================
+
+    def calculate_global_scores(self) -> int:
+        """
+        Calculate and save scores for all champions in the database.
+
+        This function computes raw metrics (avg_delta2, variance, coverage,
+        peak_impact, volatility, target_ratio) for all champions and stores
+        them in the champion_scores table.
+
+        Should be called after parsing/updating matchup data.
+
+        Returns:
+            Number of champions scored and saved
+        """
+        from .constants import CHAMPIONS_LIST
+        from .config import tierlist_config
+        import statistics
+
+        print("[INFO] Calculating global champion scores...")
+
+        champions_scored = 0
+
+        for champion in CHAMPIONS_LIST:
+            try:
+                matchups = self.db.get_champion_matchups_by_name(champion)
+                if not matchups:
+                    if self.verbose:
+                        print(f"  [SKIP] {champion}: No matchups found")
+                    continue
+
+                valid_matchups = self._filter_valid_matchups(matchups)
+                if not valid_matchups:
+                    if self.verbose:
+                        print(f"  [SKIP] {champion}: No valid matchups after filtering")
+                    continue
+
+                # Calculate raw metrics
+                avg_delta2 = self.avg_delta2(matchups)
+
+                delta2_values = [m[3] for m in valid_matchups]
+                variance = statistics.variance(delta2_values) if len(delta2_values) > 1 else 0.0
+
+                # Coverage (blind pick metric)
+                decent_weight = sum(m[4] for m in matchups if m[3] > tierlist_config.DECENT_MATCHUP_THRESHOLD)
+                total_weight = sum(m[4] for m in matchups)
+                coverage = decent_weight / total_weight if total_weight > 0 else 0.0
+
+                # Peak impact (counter pick metric)
+                excellent_impact = sum(m[3] * m[4] for m in matchups
+                                      if m[3] > tierlist_config.EXCELLENT_MATCHUP_THRESHOLD)
+                good_impact = sum(m[3] * m[4] for m in matchups
+                                  if tierlist_config.GOOD_MATCHUP_THRESHOLD < m[3] <= tierlist_config.EXCELLENT_MATCHUP_THRESHOLD)
+                peak_impact = excellent_impact + good_impact * 0.5
+
+                # Volatility (counter pick metric) - same as variance
+                volatility = variance
+
+                # Target ratio (counter pick metric)
+                viable_weight = sum(m[4] for m in matchups if m[3] > tierlist_config.GOOD_MATCHUP_THRESHOLD)
+                target_ratio = viable_weight / total_weight if total_weight > 0 else 0.0
+
+                # Get champion ID and save scores
+                champion_id = self.db.get_champion_id(champion)
+                if champion_id is None:
+                    if self.verbose:
+                        print(f"  [ERROR] {champion}: Could not get champion ID")
+                    continue
+
+                self.db.save_champion_scores(
+                    champion_id=champion_id,
+                    avg_delta2=avg_delta2,
+                    variance=variance,
+                    coverage=coverage,
+                    peak_impact=peak_impact,
+                    volatility=volatility,
+                    target_ratio=target_ratio
+                )
+
+                champions_scored += 1
+                if self.verbose:
+                    print(f"  ✓ {champion}: avg_delta2={avg_delta2:.3f}, variance={variance:.3f}, coverage={coverage:.3f}")
+
+            except Exception as e:
+                print(f"  [ERROR] {champion}: {e}")
+                continue
+
+        print(f"[SUCCESS] Scored {champions_scored}/{len(CHAMPIONS_LIST)} champions")
+        return champions_scored

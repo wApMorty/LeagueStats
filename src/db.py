@@ -257,8 +257,14 @@ class Database:
             # Clear existing champions AND matchups (to avoid orphaned references)
             cursor.execute("DELETE FROM matchups")  # Clear matchups first (foreign keys)
             cursor.execute("DELETE FROM champions")
-            cursor.execute("DELETE FROM sqlite_sequence WHERE name='champions'")
-            cursor.execute("DELETE FROM sqlite_sequence WHERE name='matchups'")
+
+            # Reset auto-increment counters (only if sqlite_sequence exists)
+            try:
+                cursor.execute("DELETE FROM sqlite_sequence WHERE name='champions'")
+                cursor.execute("DELETE FROM sqlite_sequence WHERE name='matchups'")
+            except Exception:
+                # sqlite_sequence doesn't exist yet (no AUTOINCREMENT tables created)
+                pass
             
             # Insert new champion data
             champions_inserted = 0
