@@ -178,8 +178,20 @@ class ParallelParser:
 
         logger.info(f"Starting parallel scraping of {len(champion_list)} champions")
 
-        # Initialize database tables
-        db.init_champion_table()
+        # Initialize database tables (use Alembic-compatible schema)
+        # Note: init_champion_table() is deprecated and breaks Alembic migrations
+        # Use Riot API integration instead to populate champions table
+        if not db.create_riot_champions_table():
+            logger.warning("Failed to create/update champions table schema")
+
+        # Ensure champions are populated from Riot API
+        cursor = db.connection.cursor()
+        cursor.execute("SELECT COUNT(*) FROM champions")
+        champ_count = cursor.fetchone()[0]
+        if champ_count == 0:
+            logger.info("Populating champions from Riot API...")
+            db.update_champions_from_riot_api()
+
         db.init_matchups_table()
 
         # Create thread pool and submit tasks
@@ -249,8 +261,20 @@ class ParallelParser:
 
         logger.info(f"Starting parallel scraping of {len(champion_list)} champions for {lane}")
 
-        # Initialize database tables
-        db.init_champion_table()
+        # Initialize database tables (use Alembic-compatible schema)
+        # Note: init_champion_table() is deprecated and breaks Alembic migrations
+        # Use Riot API integration instead to populate champions table
+        if not db.create_riot_champions_table():
+            logger.warning("Failed to create/update champions table schema")
+
+        # Ensure champions are populated from Riot API
+        cursor = db.connection.cursor()
+        cursor.execute("SELECT COUNT(*) FROM champions")
+        champ_count = cursor.fetchone()[0]
+        if champ_count == 0:
+            logger.info("Populating champions from Riot API...")
+            db.update_champions_from_riot_api()
+
         db.init_matchups_table()
 
         # Create thread pool and submit tasks
