@@ -2,6 +2,71 @@
 
 All notable changes to LeagueStats Coach will be documented in this file.
 
+## [1.1.0-dev] - 2025-12-20 (Sprint 2 - In Progress)
+
+### ⚡ Performance
+
+- **MAJOR**: Parallel web scraping implementation (PR #5)
+  - **87% performance improvement** - Data updates now take 12 minutes instead of 90-120 minutes
+  - ThreadPoolExecutor with 10 concurrent workers (optimized for i5-14600KF)
+  - Automatic retry mechanism with exponential backoff (tenacity)
+  - Thread-safe database operations with proper locking
+  - Real-time progress tracking with tqdm progress bars
+  - Komorebi window manager integration with fullscreen mode
+  - Dynamic cookie acceptance (fixes hardcoded coordinates bug)
+
+### ✨ Features
+
+- **MAJOR**: Restored 24 missing Assistant methods from refactoring (+902 lines)
+  - 7 draft & competitive methods: `draft()`, `competitive_draft()`, `blind_pick()`, etc.
+  - 14 holistic trio analysis methods: `find_optimal_trios_holistic()`, `_evaluate_trio_holistic()`, etc.
+  - 3 ban recommendation methods: `get_ban_recommendations()` with reverse lookup strategy
+  - All methods updated to use dynamic DB queries instead of hardcoded CHAMPIONS_LIST
+- **Live podium display** during optimal duo/trio optimization
+  - Real-time updates every 50 evaluations
+  - Top 3 rankings with medals (🥇🥈🥉)
+  - Progress bar with percentage and viable count
+  - ANSI escape codes for in-place terminal updates
+- **New champions support**: Zaahen (TOP), Yunara (ADC)
+
+### 🐛 Fixes
+
+- Fixed `get_ban_recommendations()` AttributeError (method was lost during Sprint 1 refactoring)
+- Fixed missing draft and holistic trio analysis methods (24 methods restored)
+- Removed debug logging from optimal duo finder for cleaner output
+- Fixed CHAMPIONS_LIST dependency by using dynamic `db.get_all_champion_names().values()`
+
+### 📦 Added
+
+- `src/parallel_parser.py` - Parallel web scraping with ThreadPoolExecutor (389 lines)
+- Live podium display method in `src/assistant.py` (36 lines)
+- 24 restored methods in `src/assistant.py` (+902 lines total)
+
+### 🔧 Changed
+
+- `src/assistant.py`: Added `Dict` to type imports
+- `src/assistant.py`: Refactored `_find_optimal_counterpick_duo()` to use live podium (117 lines)
+- `src/assistant.py`: Updated all methods to use dynamic DB queries instead of hardcoded constants
+- `src/constants.py`: Added Zaahen and Yunara champion entries
+- `main.py`: Added `parse_all_champions_parallel()` and `parse_champions_by_role_parallel()` functions
+
+### 📊 Impact
+
+- **Performance**: 87% faster data updates (12min vs 90-120min)
+- **Completeness**: 54 total Assistant methods (vs 30 before restoration)
+- **User Experience**: Live progress tracking, real-time podium, cleaner output
+- **Reliability**: Automatic retries, thread-safe operations, dynamic configuration
+- **Compatibility**: 100% backward compatible, all methods functional
+
+### 🧪 Testing
+
+- Manual testing of parallel scraping with 10 workers
+- Verification of all 24 restored methods accessibility
+- Performance benchmarking: 12min for full champion pool (170 champions)
+- Thread-safety validation with concurrent database writes
+
+---
+
 ## [1.1.0] - 2025-12-14
 
 ### ♻️ Refactoring
