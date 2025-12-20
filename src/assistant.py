@@ -136,6 +136,14 @@ class Assistant:
         """Generate tier list for a specific lane using delta2."""
         return self.tier_list_gen.generate_for_lane(lane)
 
+    def generate_tier_list(self, champion_pool: List[str], analysis_type: str = "blind_pick") -> List[dict]:
+        """
+        Generate tier list with S/A/B/C classification using global normalization.
+
+        Delegates to TierListGenerator for actual implementation.
+        """
+        return self.tier_list_gen.generate_tier_list(champion_pool, analysis_type, verbose=self.verbose)
+
     # ==================== Recommendations ====================
     # Delegated to analysis.recommendations.RecommendationEngine
 
