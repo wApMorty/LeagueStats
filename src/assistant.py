@@ -5,7 +5,7 @@ This is the new modular version that delegates to specialized modules while
 maintaining backward compatibility with the original API.
 """
 
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 from .db import Database
 from .config import config
@@ -748,4 +748,905 @@ class Assistant:
             safe_print("  📈 Pool favors aggressive counterpicking.")
         else:
             safe_print("  🛡️ Pool requires careful champion selection.")
+
+    # ==================== Ban Recommendations ====================
+
+    def get_ban_recommendations(self, champion_pool: List[str], num_bans: int = 5) -> List[tuple]:
+        """
+        Get ban recommendations against a specific champion pool using reverse lookup.
+
+        For each potential enemy pick, finds your BEST response from your pool.
+        Prioritizes banning enemies where even your best response is insufficient.
+
+        Args:
+            champion_pool: List of champion names in your pool
+            num_bans: Number of ban recommendations to return
+
+        Returns:
+            List of tuples (enemy_name, threat_score, best_response_delta2)
+            Sorted by threat_score (descending)
+        """
+        from .config import config
+
+        # Get all potential enemies from database
+        all_potential_enemies = set()
+        for our_champion in champion_pool:
+            try:
+                matchups = self.db.get_champion_matchups_by_name(our_champion)
+                for enemy_name, winrate, delta1, delta2, pickrate, games in matchups:
+                    if pickrate >= config.MIN_PICKRATE and games >= config.MIN_MATCHUP_GAMES:
+                        all_potential_enemies.add(enemy_name)
+            except Exception as e:
+                if self.verbose:
+                    print(f"Error getting enemies for {our_champion}: {e}")
+                continue
+
+        ban_candidates = []
+
+        # For each potential enemy, find our best response
+        for enemy_champion in all_potential_enemies:
+            best_response_delta2 = -float('inf')
+            best_response_champion = None
+            enemy_pickrate = 0.0
+            matchups_found = 0
+
+            # Check all our champions against this enemy
+            for our_champion in champion_pool:
+                try:
+                    delta2 = self.db.get_matchup_delta2(our_champion, enemy_champion)
+
+                    if delta2 is not None:
+                        matchups_found += 1
+
+                        # Track the best response we have
+                        if delta2 > best_response_delta2:
+                            best_response_delta2 = delta2
+                            best_response_champion = our_champion
+
+                        # Also get pickrate data for this enemy (approximate from one of our matchups)
+                        if enemy_pickrate == 0.0:
+                            try:
+                                matchups = self.db.get_champion_matchups_by_name(our_champion)
+                                for enemy_name, winrate, delta1, d2, pickrate, games in matchups:
+                                    if enemy_name == enemy_champion:
+                                        enemy_pickrate = pickrate
+                                        break
+                            except:
+                                pass
+
+                except Exception as e:
+                    if self.verbose:
+                        print(f"Error checking {our_champion} vs {enemy_champion}: {e}")
+                    continue
+
+            # Skip if no valid matchups found
+            if best_response_champion is None or matchups_found == 0:
+                continue
+
+            # Calculate threat score: Higher score = enemy should be banned
+            # Key insight: If even our BEST response has negative delta2, this enemy is very threatening
+            base_threat = -best_response_delta2  # Invert: negative delta2 = high threat
+
+            # Weight by pickrate and coverage
+            pickrate_weight = max(enemy_pickrate, 1.0)  # At least 1.0 to avoid zero weights
+            coverage_bonus = min(matchups_found / len(champion_pool), 1.0)  # How much of our pool this affects
+
+            # Combined threat score
+            # - Main factor: How bad is our best response? (70%)
+            # - Secondary: How popular is this enemy? (20%)
+            # - Tertiary: How much of our pool does it affect? (10%)
+            combined_threat = (
+                base_threat * 0.7 +
+                pickrate_weight * 0.2 +
+                coverage_bonus * 10.0 * 0.1  # Scale coverage to reasonable range
+            )
+
+            ban_candidates.append((
+                enemy_champion,
+                combined_threat,
+                best_response_delta2,
+                best_response_champion,
+                matchups_found
+            ))
+
+        # Sort by combined threat (descending)
+        ban_candidates.sort(key=lambda x: x[1], reverse=True)
+
+        # Return in clean format: (enemy, threat_score, best_response_delta2)
+        return [(name, threat, best_delta2) for name, threat, best_delta2, _, _ in ban_candidates[:num_bans]]
+
+    # ==================== Draft & Competitive Methods ====================
+
+    def draft(self, nb_results: int) -> None:
+        """
+        Simple draft simulation with recommendations.
+
+        Args:
+            nb_results: Number of champion recommendations to display
+        """
+        enemy_team = []
+        ally_team = []
+
+        for i in range(5):
+            enemy_champion = input(f"Enemy Champion {i+1}: ")
+            enemy_team.append(enemy_champion)
+
+            # Show recommendations after each enemy pick
+            self._calculate_and_display_recommendations(enemy_team, ally_team, nb_results)
+
+            if i < 4:  # Don't ask for ally pick after last enemy pick
+                ally_champion = input(f"Your Champion {i+1}: ")
+                ally_team.append(ally_champion)
+
+        # Final team score
+        self.score_teams(enemy_team, ally_team)
+
+    def _get_champion_input(self, team_name: str, champion_number: int) -> str:
+        """Get champion input from user with consistent formatting."""
+        return input(f"{team_name} - Champion {champion_number}: ")
+
+    def _calculate_and_display_recommendations(
+        self,
+        enemy_team: List[str],
+        ally_team: List[str],
+        nb_results: int,
+        champion_pool: List[str] = None
+    ) -> None:
+        """Calculate champion recommendations and display top results."""
+        from .constants import SOLOQ_POOL
+
+        if champion_pool is None:
+            champion_pool = SOLOQ_POOL
+
+        scores = []
+
+        for champion in champion_pool:
+            if champion not in enemy_team and champion not in ally_team:
+                matchups = self.db.get_champion_matchups_by_name(champion)
+                if sum(m[5] for m in matchups) < config.MIN_GAMES_COMPETITIVE:
+                    continue
+                score = self.score_against_team(matchups, enemy_team)
+                scores.append((str(champion), score))
+
+        scores.sort(key=lambda x: -x[1])
+
+        for index in range(min(nb_results, len(scores))):
+            print(scores[index])
+
+    def _draft_red_side(self, enemy_team: List[str], ally_team: List[str], nb_results: int) -> None:
+        """Handle red side draft sequence."""
+        # Pick 1
+        enemy_team.append(self._get_champion_input("Equipe 1", 1))
+
+        self._calculate_and_display_recommendations(enemy_team, ally_team, nb_results)
+        ally_team.append(self._get_champion_input("Equipe 2", 1))
+        ally_team.append(self._get_champion_input("Equipe 2", 2))
+
+        # Pick 2-3
+        enemy_team.append(self._get_champion_input("Equipe 1", 2))
+        enemy_team.append(self._get_champion_input("Equipe 1", 3))
+
+        self._calculate_and_display_recommendations(enemy_team, ally_team, nb_results)
+        ally_team.append(self._get_champion_input("Equipe 2", 3))
+        ally_team.append(self._get_champion_input("Equipe 2", 4))
+
+        # Pick 4-5
+        enemy_team.append(self._get_champion_input("Equipe 1", 4))
+        enemy_team.append(self._get_champion_input("Equipe 1", 5))
+
+        self._calculate_and_display_recommendations(enemy_team, ally_team, nb_results)
+        ally_team.append(self._get_champion_input("Equipe 2", 5))
+
+    def _draft_blue_side(self, enemy_team: List[str], ally_team: List[str], nb_results: int) -> None:
+        """Handle blue side draft sequence."""
+        # Initial recommendations
+        self._calculate_and_display_recommendations(enemy_team, ally_team, nb_results)
+
+        # Pick 1
+        ally_team.append(self._get_champion_input("Equipe 1", 1))
+
+        enemy_team.append(self._get_champion_input("Equipe 2", 1))
+        enemy_team.append(self._get_champion_input("Equipe 2", 2))
+
+        # Pick 2
+        self._calculate_and_display_recommendations(enemy_team, ally_team, nb_results)
+        ally_team.append(self._get_champion_input("Equipe 1", 2))
+        ally_team.append(self._get_champion_input("Equipe 1", 3))
+
+        # Pick 3-4
+        enemy_team.append(self._get_champion_input("Equipe 2", 3))
+        enemy_team.append(self._get_champion_input("Equipe 2", 4))
+
+        # Pick 4
+        self._calculate_and_display_recommendations(enemy_team, ally_team, nb_results)
+        ally_team.append(self._get_champion_input("Equipe 1", 4))
+        ally_team.append(self._get_champion_input("Equipe 1", 5))
+
+        enemy_team.append(self._get_champion_input("Equipe 2", 5))
+
+    def competitive_draft(self, nb_results: int) -> None:
+        """Simulate a competitive draft with pick recommendations."""
+        enemy_team = []
+        ally_team = []
+        side = input("Side (b/r): ")
+
+        if side.lower() == 'r':
+            self._draft_red_side(enemy_team, ally_team, nb_results)
+            self.score_teams(enemy_team, ally_team)
+        elif side.lower() == 'b':
+            self._draft_blue_side(enemy_team, ally_team, nb_results)
+            self.score_teams(ally_team, enemy_team)
+        else:
+            print("Couldn't parse side")
+
+    def blind_pick(self) -> None:
+        """Display tier list for blind pick scenarios."""
+        lst = self.tierlist_delta2(list(self.db.get_all_champion_names().values()))
+        _results = 10
+
+        if len(lst) < _results:
+            for index in range(len(lst)):
+                print(lst[index])
+        else:
+            for index in range(_results):
+                print(lst[index])
+
+    # ==================== Holistic Trio Analysis ====================
+
+    def find_optimal_trios_holistic(self, champion_pool: List[str], num_results: int = 5, profile: str = "balanced") -> List[dict]:
+        """
+        Find optimal 3-champion combinations using holistic evaluation.
+        
+        Unlike the blind-pick approach, this evaluates all possible trios as complete units.
+        
+        Args:
+            champion_pool: List of champion names to choose from
+            num_results: Number of top trios to return
+            profile: Scoring profile ("safe", "meta", "aggressive", "balanced")
+            
+        Returns:
+            List of dictionaries with trio information and scores
+            
+        Algorithm:
+        1. Generate all combinations of 3 champions
+        2. For each trio, calculate holistic score based on:
+           - Coverage: How well they handle all potential enemies
+           - Balance: Diversity of matchup profiles (avoid same weaknesses)
+           - Consistency: Reliable performance across situations
+           - Meta relevance: Performance against popular picks
+        """
+        import itertools
+        
+        if len(champion_pool) < 3:
+            raise ValueError("Champion pool must contain at least 3 champions")
+        
+        print(f"Analyzing all trio combinations from pool: {champion_pool}")
+        
+        # Step 1: Validate champion data availability
+        viable_champions, validation_report = self._validate_champion_pool(champion_pool)
+        
+        if len(viable_champions) < 3:
+            raise ValueError(f"Insufficient data: only {len(viable_champions)}/3 champions viable")
+        
+        # Step 2: Generate all combinations of 3 champions
+        trio_combinations = list(itertools.combinations(viable_champions, 3))
+        print(f"Evaluating {len(trio_combinations)} trio combinations...")
+        
+        trio_rankings = []
+        
+        # Set the scoring profile for this analysis
+        self.scoring_profile = profile
+        if self.verbose:
+            print(f"[INFO] Using scoring profile: {profile}")
+        
+        # Step 3: Evaluate each trio holistically
+        for trio in trio_combinations:
+            try:
+                trio_score = self._evaluate_trio_holistic(trio)
+                trio_rankings.append({
+                    'trio': trio,
+                    'total_score': trio_score['total_score'],
+                    'coverage_score': trio_score['coverage_score'],
+                    'balance_score': trio_score['balance_score'], 
+                    'consistency_score': trio_score['consistency_score'],
+                    'meta_score': trio_score['meta_score'],
+                    'enemy_coverage': trio_score['enemy_coverage']
+                })
+            except Exception as e:
+                if self.verbose:
+                    print(f"Error evaluating trio {trio}: {e}")
+                continue
+        
+        if not trio_rankings:
+            raise ValueError("No viable trios found after evaluation")
+        
+        # Step 4: Sort by total score
+        trio_rankings.sort(key=lambda x: x['total_score'], reverse=True)
+        
+        return trio_rankings[:num_results]
+
+    def _evaluate_trio_holistic(self, trio: tuple) -> dict:
+        """
+        Evaluate a trio of champions using holistic scoring with reverse lookup.
+        
+        Uses efficient reverse lookup to avoid duplicate matchups and improve performance.
+        
+        Returns dict with individual scores and total score.
+        """
+        champion1, champion2, champion3 = trio
+        trio_list = [champion1, champion2, champion3]
+        
+        # Use reverse lookup to build enemy coverage efficiently
+        enemy_coverage = {}  # enemy_name -> (best_delta2, champion_handling_it)
+        
+        # Get all champions from database (dynamic, includes new champions)
+        all_champions = list(self.db.get_all_champion_names().values())
+        for enemy_champion in all_champions:
+            best_delta2 = -float('inf')
+            best_counter = None
+            
+            # For this enemy, check which champion in our trio counters it best
+            for our_champion in trio_list:
+                try:
+                    delta2 = self.db.get_matchup_delta2(our_champion, enemy_champion)
+                    
+                    if delta2 is not None and delta2 > best_delta2:
+                        best_delta2 = delta2
+                        best_counter = our_champion
+                        
+                except Exception as e:
+                    if self.verbose:
+                        print(f"Error getting matchup {our_champion} vs {enemy_champion}: {e}")
+                    continue
+            
+            # If we found a valid matchup, record it
+            if best_counter is not None and best_delta2 != -float('inf'):
+                enemy_coverage[enemy_champion] = (best_delta2, best_counter)
+        
+        all_enemies = set(enemy_coverage.keys())
+        
+        # Calculate individual scores using the reverse-lookup data
+        coverage_score = self._calculate_coverage_score(enemy_coverage, all_enemies)
+        balance_score = self._calculate_balance_score_reverse(trio_list, enemy_coverage)
+        consistency_score = self._calculate_consistency_score_reverse(trio_list, enemy_coverage)
+        meta_score = self._calculate_meta_score(enemy_coverage)
+        
+        # Calculate contextual total score using adaptive weights
+        total_score, used_weights = self._calculate_contextual_total_score(
+            {
+                'coverage_score': coverage_score,
+                'balance_score': balance_score,
+                'consistency_score': consistency_score,
+                'meta_score': meta_score
+            },
+            profile=getattr(self, 'scoring_profile', 'balanced')
+        )
+        
+        return {
+            'total_score': total_score,
+            'coverage_score': coverage_score,
+            'balance_score': balance_score,
+            'consistency_score': consistency_score, 
+            'meta_score': meta_score,
+            'enemy_coverage': enemy_coverage
+        }
+
+    def _calculate_coverage_score(self, enemy_coverage: dict, all_enemies: set) -> float:
+        """Calculate how well the trio covers all potential enemies."""
+        if not all_enemies:
+            return 0.0
+        
+        # Sum of best delta2 scores against all enemies
+        total_coverage = sum(max(0, delta2) for delta2, _ in enemy_coverage.values())
+        max_possible = len(all_enemies) * 10  # Theoretical max delta2 is around 10
+        
+        return min(100.0, (total_coverage / max_possible) * 100)
+
+    def _calculate_balance_score_reverse(self, trio_list: List[str], enemy_coverage: dict) -> float:
+        """
+        Calculate diversity of matchup profiles using reverse lookup data.
+        
+        Args:
+            trio_list: List of champion names in the trio
+            enemy_coverage: Dict mapping enemy -> (delta2, best_counter)
+            
+        Returns:
+            Balance score 0-100 (higher = more balanced, fewer shared weaknesses)
+        """
+        try:
+            # For each champion, identify their weaknesses from enemy_coverage
+            champion_weaknesses = {champ: set() for champ in trio_list}
+            
+            for enemy, (best_delta2, best_counter) in enemy_coverage.items():
+                # Check each champion individually against this enemy
+                for our_champion in trio_list:
+                    try:
+                        delta2 = self.db.get_matchup_delta2(our_champion, enemy)
+                        
+                        # If this champion struggles against this enemy (negative delta2)
+                        if delta2 is not None and delta2 < -2.0:
+                            champion_weaknesses[our_champion].add(enemy)
+                            
+                    except Exception:
+                        continue
+            
+            # Calculate overlap in weaknesses
+            weakness_sets = list(champion_weaknesses.values())
+            if len(weakness_sets) < 2:
+                return 50.0
+            
+            # Get union and intersection of all weaknesses
+            all_weaknesses = set.union(*weakness_sets) if weakness_sets else set()
+            shared_weaknesses = set.intersection(*weakness_sets) if weakness_sets else set()
+            
+            if len(all_weaknesses) == 0:
+                return 100.0  # No weaknesses found
+            
+            # Calculate balance: fewer shared weaknesses = better balance
+            balance_ratio = 1 - (len(shared_weaknesses) / len(all_weaknesses))
+            return balance_ratio * 100
+            
+        except Exception as e:
+            if self.verbose:
+                print(f"[ERROR] Balance score calculation failed: {e}")
+            return 50.0  # Neutral score on error
+
+    def _calculate_consistency_score_reverse(self, trio_list: List[str], enemy_coverage: dict) -> float:
+        """
+        Calculate consistency using reverse lookup data.
+        
+        Args:
+            trio_list: List of champion names in the trio
+            enemy_coverage: Dict mapping enemy -> (delta2, best_counter)
+            
+        Returns:
+            Consistency score 0-100 (higher = more consistent performance)
+        """
+        try:
+            all_delta2_scores = []
+            
+            # Collect all delta2 scores from the coverage data
+            for enemy, (delta2, counter) in enemy_coverage.items():
+                all_delta2_scores.append(delta2)
+            
+            if not all_delta2_scores:
+                return 0.0
+            
+            # Calculate consistency metrics
+            import statistics
+            mean_score = statistics.mean(all_delta2_scores)
+            
+            if len(all_delta2_scores) > 1:
+                variance = statistics.variance(all_delta2_scores)
+                # Convert variance to consistency score (lower variance = higher consistency)
+                consistency = max(0, 100 - (variance * 5))  # Scale appropriately
+            else:
+                consistency = 50  # Neutral if only one score
+            
+            # Factor in average performance
+            avg_performance = max(0, mean_score + 5) * 10  # Shift and scale (-5 to +5 -> 0 to 100)
+            
+            # Weighted combination: 60% consistency, 40% performance
+            return (consistency * 0.6 + avg_performance * 0.4)
+            
+        except Exception as e:
+            if self.verbose:
+                print(f"[ERROR] Consistency score calculation failed: {e}")
+            return 50.0
+
+    def _calculate_balance_score(self, trio: tuple, all_matchups: List[List]) -> float:
+        """Calculate diversity of matchup profiles to avoid same weaknesses."""
+        try:
+            # For each champion, get their worst matchups (big threats)
+            champion_weaknesses = []
+            
+            for i, matchups in enumerate(all_matchups):
+                weaknesses = []
+                for enemy, winrate, delta1, delta2, pickrate, games in matchups:
+                    if pickrate >= config.MIN_PICKRATE and games >= config.MIN_MATCHUP_GAMES:
+                        if delta2 < -2.0:  # Significantly negative matchup
+                            weaknesses.append(enemy)
+                champion_weaknesses.append(set(weaknesses))
+            
+            # Calculate overlap in weaknesses (lower overlap = better balance)
+            if len(champion_weaknesses) < 2:
+                return 50.0
+            
+            total_weaknesses = len(champion_weaknesses[0] | champion_weaknesses[1] | champion_weaknesses[2])
+            shared_weaknesses = len(champion_weaknesses[0] & champion_weaknesses[1] & champion_weaknesses[2])
+            
+            if total_weaknesses == 0:
+                return 100.0
+            
+            balance_ratio = 1 - (shared_weaknesses / total_weaknesses)
+            return balance_ratio * 100
+            
+        except:
+            return 50.0  # Neutral score on error
+
+    def _calculate_consistency_score(self, trio: tuple, all_matchups: List[List]) -> float:
+        """Calculate how consistently the trio performs across matchups."""
+        try:
+            all_scores = []
+            
+            for matchups in all_matchups:
+                for enemy, winrate, delta1, delta2, pickrate, games in matchups:
+                    if pickrate >= config.MIN_PICKRATE and games >= config.MIN_MATCHUP_GAMES:
+                        all_scores.append(delta2)
+            
+            if not all_scores:
+                return 0.0
+            
+            # Lower variance = more consistent
+            import statistics
+            mean_score = statistics.mean(all_scores)
+            if len(all_scores) > 1:
+                variance = statistics.variance(all_scores)
+                # Convert variance to consistency score (0-100)
+                consistency = max(0, 100 - (variance * 5))  # Scale variance appropriately
+            else:
+                consistency = 50
+            
+            # Also factor in average performance
+            avg_performance = max(0, mean_score + 5) * 10  # Shift and scale
+            
+            return (consistency * 0.6 + avg_performance * 0.4)
+            
+        except:
+            return 50.0
+
+    def _calculate_meta_score(self, enemy_coverage: dict) -> float:
+        """
+        Calculate performance against popular/meta champions.
+        
+        Uses actual pickrate data to determine meta relevance:
+        - Gets pickrate for each enemy champion from database
+        - Calculates weighted average of delta2 scores by pickrate
+        - Higher pickrate champions have more influence on the score
+        
+        Returns:
+            Score 0-100 representing performance vs meta champions
+        """
+        try:
+            if not enemy_coverage:
+                return 50.0  # Neutral if no coverage data
+            
+            # Get pickrate data for all enemies and calculate weighted score
+            weighted_sum = 0.0
+            total_weight = 0.0
+            
+            for enemy, (delta2, _) in enemy_coverage.items():
+                try:
+                    # Get pickrate for this enemy champion
+                    enemy_matchups = self.db.get_champion_matchups_by_name(enemy)
+                    if not enemy_matchups:
+                        continue
+                    
+                    # Calculate average pickrate for this champion
+                    # Each matchup has: (enemy_id, winrate, delta1, delta2, pickrate, games)
+                    pickrates = [matchup[4] for matchup in enemy_matchups if len(matchup) > 4 and matchup[4] > 0]
+                    
+                    if not pickrates:
+                        continue
+                    
+                    avg_pickrate = sum(pickrates) / len(pickrates)
+                    
+                    # Weight the delta2 score by pickrate
+                    # Higher pickrate = more meta relevant = higher weight
+                    weight = avg_pickrate
+                    weighted_sum += max(0, delta2) * weight
+                    total_weight += weight
+                    
+                except Exception as e:
+                    if self.verbose:
+                        print(f"[DEBUG] Error processing {enemy} pickrate: {e}")
+                    continue
+            
+            if total_weight == 0:
+                return 50.0  # No valid pickrate data
+            
+            # Calculate weighted average
+            weighted_avg = weighted_sum / total_weight
+            
+            # Scale to 0-100 range
+            # delta2 typically ranges from -5 to +5, so we shift and scale
+            score = min(100.0, max(0.0, (weighted_avg + 5) * 10))
+            
+            return score
+            
+        except Exception as e:
+            if self.verbose:
+                print(f"[ERROR] Meta score calculation failed: {e}")
+            return 50.0
+
+    def _calculate_enemy_coverage(self, matchups_list: List[List]) -> Dict[str, tuple]:
+        """
+        Calculate enemy coverage for a set of champions.
+        
+        Args:
+            matchups_list: List of matchup lists for each champion
+            
+        Returns:
+            Dictionary mapping enemy_name -> (best_delta2, champion_handling_it)
+        """
+        enemy_coverage = {}
+        all_enemies = set()
+        
+        for i, matchups in enumerate(matchups_list):
+            champion_name = f"Champion{i+1}"  # Fallback name, should be passed properly
+            
+            for enemy, winrate, delta1, delta2, pickrate, games in matchups:
+                if pickrate >= config.MIN_PICKRATE and games >= config.MIN_MATCHUP_GAMES:
+                    all_enemies.add(enemy)
+                    if enemy not in enemy_coverage or delta2 > enemy_coverage[enemy][0]:
+                        enemy_coverage[enemy] = (delta2, champion_name)
+        
+        return enemy_coverage
+
+    def _calculate_adaptive_base_weights(self, sample_trios: List[tuple]) -> Dict[str, float]:
+        """
+        Calculate base weights using variance analysis.
+        
+        Metrics with higher variance discriminate better between trios,
+        so they receive higher weights in the final scoring.
+        
+        Args:
+            sample_trios: List of trio tuples to analyze for variance
+            
+        Returns:
+            Dictionary of normalized base weights
+        """
+        try:
+            if len(sample_trios) < 3:
+                # Fallback to equal weights if insufficient data
+                return {'coverage': 0.25, 'balance': 0.25, 'consistency': 0.25, 'meta': 0.25}
+            
+            # Collect scores for all metrics
+            metric_scores = {
+                'coverage': [],
+                'balance': [], 
+                'consistency': [],
+                'meta': []
+            }
+            
+            if self.verbose:
+                print(f"[DEBUG] Calculating adaptive weights from {len(sample_trios)} trios...")
+            
+            for trio in sample_trios:
+                try:
+                    # Get individual matchups for the trio
+                    matchups = []
+                    for champion in trio:
+                        champ_matchups = self.db.get_champion_matchups_by_name(champion)
+                        if champ_matchups:
+                            matchups.append(champ_matchups)
+                    
+                    if len(matchups) != 3:
+                        continue
+                    
+                    # Calculate individual metric scores
+                    enemy_coverage = self._calculate_enemy_coverage(matchups)
+                    
+                    # Get all enemies for coverage calculation
+                    all_enemies = set()
+                    for matchup_list in matchups:
+                        for enemy, winrate, delta1, delta2, pickrate, games in matchup_list:
+                            if pickrate >= config.MIN_PICKRATE and games >= config.MIN_MATCHUP_GAMES:
+                                all_enemies.add(enemy)
+                    
+                    metric_scores['coverage'].append(self._calculate_coverage_score(enemy_coverage, all_enemies))
+                    metric_scores['balance'].append(self._calculate_balance_score(trio, matchups))
+                    metric_scores['consistency'].append(self._calculate_consistency_score(trio, matchups))
+                    metric_scores['meta'].append(self._calculate_meta_score(enemy_coverage))
+                    
+                except Exception as e:
+                    if self.verbose:
+                        print(f"[DEBUG] Error processing trio {trio}: {e}")
+                    continue
+            
+            # Calculate variances
+            variances = {}
+            for metric, scores in metric_scores.items():
+                if len(scores) >= 2:
+                    # Use numpy for variance calculation if available, otherwise manual
+                    try:
+                        import numpy as np
+                        variances[metric] = float(np.var(scores))
+                    except ImportError:
+                        mean_score = sum(scores) / len(scores)
+                        variance = sum((x - mean_score) ** 2 for x in scores) / len(scores)
+                        variances[metric] = variance
+                else:
+                    variances[metric] = 1.0  # Fallback
+            
+            # Normalize variances to weights (higher variance = higher weight)
+            total_variance = sum(variances.values())
+            if total_variance == 0:
+                # All metrics have zero variance - use equal weights
+                base_weights = {'coverage': 0.25, 'balance': 0.25, 'consistency': 0.25, 'meta': 0.25}
+            else:
+                base_weights = {metric: var / total_variance for metric, var in variances.items()}
+            
+            if self.verbose:
+                print(f"[DEBUG] Variance analysis:")
+                for metric, variance in variances.items():
+                    print(f"  {metric}: variance={variance:.3f}, weight={base_weights[metric]:.3f}")
+            
+            return base_weights
+            
+        except Exception as e:
+            if self.verbose:
+                print(f"[ERROR] Adaptive weight calculation failed: {e}")
+            # Fallback to equal weights
+            return {'coverage': 0.25, 'balance': 0.25, 'consistency': 0.25, 'meta': 0.25}
+
+    def _get_profile_modifiers(self, profile: str = "balanced") -> Dict[str, float]:
+        """
+        Get profile-specific modifiers for weight adjustment.
+        
+        Args:
+            profile: Scoring profile ("safe", "meta", "aggressive", "balanced")
+            
+        Returns:
+            Dictionary of multipliers for each metric
+        """
+        profiles = {
+            "safe": {
+                "consistency": 1.8,    # ++ Fiabilité avant tout
+                "balance": 1.2,        # + Diversité pour éviter risques
+                "coverage": 0.7,       # - Moins important si on joue safe
+                "meta": 0.3           # -- Peu important, on évite les risques
+            },
+            "meta": {
+                "meta": 2.0,          # ++ Performance vs picks populaires
+                "consistency": 1.3,    # + Fiabilité dans le meta actuel
+                "coverage": 0.8,       # - Couverture moins critique
+                "balance": 0.6        # -- Diversité moins importante
+            },
+            "aggressive": {
+                "coverage": 1.5,       # + Maximum de coverage pour dominer
+                "balance": 1.3,        # + Diversité pour surprendre
+                "consistency": 0.8,    # - Moins critique si on cherche à dominer
+                "meta": 0.7           # - Meta moins important
+            },
+            "balanced": {
+                "coverage": 1.0,       # = Garde les poids de variance pure
+                "balance": 1.0,
+                "consistency": 1.0, 
+                "meta": 1.0
+            }
+        }
+        
+        return profiles.get(profile, profiles["balanced"])
+
+    def _calculate_contextual_total_score(self, scores: Dict[str, float], profile: str = "balanced") -> tuple:
+        """
+        Calculate total score using adaptive weights + profile modifiers.
+        
+        Args:
+            scores: Dictionary with individual metric scores
+            profile: Scoring profile to apply
+            
+        Returns:
+            Tuple of (total_score, final_weights_used)
+        """
+        try:
+            # 1. Get base weights (calculated once and cached)
+            if not hasattr(self, '_cached_base_weights'):
+                # Generate sample trios for weight calculation
+                sample_trios = self._generate_sample_trios_for_weights()
+                self._cached_base_weights = self._calculate_adaptive_base_weights(sample_trios)
+                if self.verbose:
+                    print(f"[DEBUG] Cached adaptive base weights: {self._cached_base_weights}")
+            
+            base_weights = self._cached_base_weights
+            
+            # 2. Get profile modifiers
+            modifiers = self._get_profile_modifiers(profile)
+            
+            # 3. Calculate final weights = base × modifier
+            final_weights = {}
+            for metric in ['coverage', 'balance', 'consistency', 'meta']:
+                final_weights[metric] = base_weights[metric] * modifiers[metric]
+            
+            # 4. Renormalize so sum = 1.0
+            total = sum(final_weights.values())
+            if total > 0:
+                final_weights = {k: v/total for k, v in final_weights.items()}
+            else:
+                # Fallback
+                final_weights = {'coverage': 0.25, 'balance': 0.25, 'consistency': 0.25, 'meta': 0.25}
+            
+            # 5. Calculate weighted total score
+            total_score = (
+                scores['coverage_score'] * final_weights['coverage'] +
+                scores['balance_score'] * final_weights['balance'] +
+                scores['consistency_score'] * final_weights['consistency'] +
+                scores['meta_score'] * final_weights['meta']
+            )
+            
+            return total_score, final_weights
+            
+        except Exception as e:
+            if self.verbose:
+                print(f"[ERROR] Contextual scoring failed: {e}")
+            # Fallback to simple average
+            total_score = sum(scores.values()) / len(scores)
+            fallback_weights = {'coverage': 0.25, 'balance': 0.25, 'consistency': 0.25, 'meta': 0.25}
+            return total_score, fallback_weights
+
+    def _generate_sample_trios_for_weights(self, sample_size: int = 15) -> List[tuple]:
+        """
+        Generate a sample of trios for adaptive weight calculation.
+        
+        Uses a subset of available champions to avoid expensive computation.
+        
+        Args:
+            sample_size: Number of sample trios to generate
+            
+        Returns:
+            List of trio tuples
+        """
+        try:
+            from itertools import combinations
+            from .constants import TOP_CHAMPIONS, JUNGLE_CHAMPIONS, MID_CHAMPIONS, ADC_CHAMPIONS, SUPPORT_CHAMPIONS
+            
+            # Get a balanced sample of champions from different roles
+            sample_champions = []
+            
+            # Take some champions from each role for diversity
+            sample_champions.extend(TOP_CHAMPIONS[:3])
+            sample_champions.extend(JUNGLE_CHAMPIONS[:3]) 
+            sample_champions.extend(MID_CHAMPIONS[:3])
+            sample_champions.extend(ADC_CHAMPIONS[:2])
+            sample_champions.extend(SUPPORT_CHAMPIONS[:2])
+            
+            # Filter champions that have data in database
+            valid_champions = []
+            for champion in sample_champions:
+                matchups = self.db.get_champion_matchups_by_name(champion)
+                if matchups and len(matchups) > 10:  # Ensure sufficient data
+                    valid_champions.append(champion)
+            
+            if len(valid_champions) < 3:
+                if self.verbose:
+                    print(f"[WARNING] Insufficient champions with data for weight calculation")
+                return []
+            
+            # Generate combinations and take a sample
+            all_trios = list(combinations(valid_champions, 3))
+            
+            # Take a reasonable sample
+            import random
+            actual_sample_size = min(sample_size, len(all_trios))
+            sample_trios = random.sample(all_trios, actual_sample_size)
+            
+            if self.verbose:
+                print(f"[DEBUG] Generated {len(sample_trios)} sample trios from {len(valid_champions)} champions")
+            
+            return sample_trios
+            
+        except Exception as e:
+            if self.verbose:
+                print(f"[ERROR] Sample trio generation failed: {e}")
+            return []
+
+    def set_scoring_profile(self, profile: str):
+        """
+        Set the scoring profile for trio evaluation.
+        
+        Args:
+            profile: One of "safe", "meta", "aggressive", "balanced"
+        """
+        valid_profiles = ["safe", "meta", "aggressive", "balanced"]
+        if profile in valid_profiles:
+            self.scoring_profile = profile
+            # Clear cached weights to recalculate with new profile
+            if hasattr(self, '_cached_base_weights'):
+                delattr(self, '_cached_base_weights')
+            if self.verbose:
+                print(f"[INFO] Scoring profile set to: {profile}")
+        else:
+            if self.verbose:
+                print(f"[WARNING] Invalid profile '{profile}'. Valid options: {valid_profiles}")
 
