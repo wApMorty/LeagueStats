@@ -21,8 +21,9 @@ class Parser:
         # Fullscreen mode (with Firefox exception configured in Komorebi)
         try:
             self.webdriver.fullscreen_window()
-        except:
+        except Exception as e:
             # Fallback to maximize if fullscreen not supported
+            print(f"[DEBUG] Fullscreen failed, falling back to maximize: {e}")
             self.webdriver.maximize_window()
 
         # Minimal delay for Firefox initialization
@@ -46,7 +47,8 @@ class Parser:
             cookie_button = self.webdriver.find_element(By.ID, "didomi-notice-agree-button")
             cookie_button.click()
             return
-        except:
+        except Exception:
+            # Strategy 1 failed, try next approach
             pass
 
         try:
@@ -62,9 +64,10 @@ class Parser:
                     cookie_button = self.webdriver.find_element(By.CSS_SELECTOR, selector)
                     cookie_button.click()
                     return
-                except:
+                except Exception:
                     continue
-        except:
+        except Exception:
+            # Strategy 2 failed, try next approach
             pass
 
         try:
@@ -79,9 +82,10 @@ class Parser:
                     cookie_button = self.webdriver.find_element(By.XPATH, xpath)
                     cookie_button.click()
                     return
-                except:
+                except Exception:
                     continue
-        except:
+        except Exception:
+            # Strategy 3 failed, try next approach
             pass
 
         # Strategy 4: Fallback to hardcoded coordinates (Bug #1 legacy)
@@ -96,7 +100,7 @@ class Parser:
                 }});
                 document.elementFromPoint({scraping_config.COOKIE_CLICK_X}, {scraping_config.COOKIE_CLICK_Y}).dispatchEvent(event);
             """)
-        except:
+        except Exception:
             # Final fallback to ActionChains
             actions = ActionChains(self.webdriver)
             actions.move_by_offset(scraping_config.COOKIE_CLICK_X, scraping_config.COOKIE_CLICK_Y).click().perform()
