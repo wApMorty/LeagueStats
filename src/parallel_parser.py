@@ -19,7 +19,7 @@ Usage:
     from src.db import Database
 
     db = Database("data/db.db")
-    parallel_parser = ParallelParser(max_workers=8)
+    parallel_parser = ParallelParser(max_workers=10)
 
     try:
         parallel_parser.parse_all_champions(db, champion_list)
@@ -63,12 +63,12 @@ class ParallelParser:
         executor (ThreadPoolExecutor): Thread pool for parallel execution
     """
 
-    def __init__(self, max_workers: int = 8, patch_version: str = None):
+    def __init__(self, max_workers: int = 10, patch_version: str = None):
         """Initialize parallel parser with worker pool.
 
         Args:
-            max_workers: Number of concurrent threads (default: 8)
-                        Recommended range: 6-10 for optimal I/O performance
+            max_workers: Number of concurrent threads (default: 10)
+                        Recommended range: 8-12 for optimal I/O performance
             patch_version: Optional patch version (e.g. "15.24"). If None, uses config.CURRENT_PATCH
         """
         from .config import config

@@ -23,12 +23,12 @@ def parse_all_champions_data(db: Database, parser: Parser) -> None:
     parser.close()
     db.close()
 
-def parse_all_champions_parallel(db: Database, max_workers: int = 8, patch_version: str = None) -> dict:
-    """Parse all champions using parallel scraping (80% faster).
+def parse_all_champions_parallel(db: Database, max_workers: int = 10, patch_version: str = None) -> dict:
+    """Parse all champions using parallel scraping (87% faster).
 
     Args:
         db: Database instance
-        max_workers: Number of concurrent threads (default: 8)
+        max_workers: Number of concurrent threads (default: 10)
         patch_version: Optional patch version (e.g. "15.24"). If None, uses config.CURRENT_PATCH
 
     Returns:
@@ -79,12 +79,12 @@ def parse_restricted_champions_by_role(db: Database, parser: Parser) -> None:
     parser.close()
     db.close()
 
-def parse_champions_by_role_parallel(db: Database, max_workers: int = 8, patch_version: str = None) -> dict:
-    """Parse champions by role using parallel scraping (80% faster).
+def parse_champions_by_role_parallel(db: Database, max_workers: int = 10, patch_version: str = None) -> dict:
+    """Parse champions by role using parallel scraping (87% faster).
 
     Args:
         db: Database instance
-        max_workers: Number of concurrent threads (default: 8)
+        max_workers: Number of concurrent threads (default: 10)
         patch_version: Optional patch version (e.g. "15.24"). If None, uses config.CURRENT_PATCH
 
     Returns:
