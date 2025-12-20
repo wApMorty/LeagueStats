@@ -1,0 +1,230 @@
+"""
+Shared fixtures for functional tests.
+
+These fixtures provide complete setup for end-to-end testing
+of UI functionalities and non-regression testing.
+"""
+
+import pytest
+import sqlite3
+import tempfile
+import os
+from pathlib import Path
+
+from src.db import Database
+from src.assistant import Assistant
+from src.pool_manager import PoolManager
+
+
+@pytest.fixture
+def temp_db():
+    """Create a temporary database with test data."""
+    # Create temporary database file
+    temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.db', delete=False)
+    temp_path = temp_file.name
+    temp_file.close()
+
+    # Initialize database
+    conn = sqlite3.connect(temp_path)
+    cursor = conn.cursor()
+
+    # Create schema
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS champions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL,
+            role TEXT
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS matchups (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            champ_id INTEGER,
+            enemy_id INTEGER,
+            winrate REAL,
+            pickrate REAL,
+            delta1 REAL,
+            delta2 REAL,
+            games INTEGER,
+            FOREIGN KEY (champ_id) REFERENCES champions(id),
+            FOREIGN KEY (enemy_id) REFERENCES champions(id)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS champion_scores (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL,
+            avg_delta2 REAL,
+            variance REAL,
+            coverage REAL,
+            peak_impact REAL,
+            volatility REAL,
+            target_ratio REAL
+        )
+    """)
+
+    # Insert test champions
+    test_champions = [
+        ('Aatrox', 'TOP'),
+        ('Ahri', 'MID'),
+        ('Jinx', 'ADC'),
+        ('Thresh', 'SUPPORT'),
+        ('Lee Sin', 'JUNGLE'),
+        ('Darius', 'TOP'),
+        ('Zed', 'MID'),
+        ('Vayne', 'ADC'),
+        ('Leona', 'SUPPORT'),
+        ('Jarvan IV', 'JUNGLE'),
+    ]
+
+    for champ_name, role in test_champions:
+        cursor.execute("INSERT INTO champions (name, role) VALUES (?, ?)", (champ_name, role))
+
+    # Insert test matchups (sample data)
+    matchups_data = [
+        # Aatrox matchups
+        (1, 6, 52.5, 150.0, 5.0, 2.5, 1000),  # Aatrox vs Darius
+        (1, 2, 48.0, 100.0, 3.0, -1.0, 800),  # Aatrox vs Ahri
+        # Ahri matchups
+        (2, 7, 50.0, 120.0, 4.0, 1.5, 900),   # Ahri vs Zed
+        (2, 1, 52.0, 100.0, -3.0, 1.0, 800),  # Ahri vs Aatrox
+        # Jinx matchups
+        (3, 8, 49.5, 180.0, 6.0, 1.8, 1200),  # Jinx vs Vayne
+        (3, 4, 51.0, 200.0, 7.0, 2.2, 1500),  # Jinx vs Thresh
+    ]
+
+    for champ_id, enemy_id, winrate, pickrate, delta1, delta2, games in matchups_data:
+        cursor.execute("""
+            INSERT INTO matchups (champ_id, enemy_id, winrate, pickrate, delta1, delta2, games)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (champ_id, enemy_id, winrate, pickrate, delta1, delta2, games))
+
+    # Insert test champion scores
+    scores_data = [
+        ('Aatrox', 1.5, 2.0, 0.6, 3.5, 2.1, 0.65),
+        ('Ahri', 1.2, 1.5, 0.7, 3.0, 1.6, 0.70),
+        ('Jinx', 1.8, 1.8, 0.65, 3.8, 1.9, 0.68),
+        ('Thresh', 0.8, 1.2, 0.75, 2.5, 1.3, 0.72),
+        ('Lee Sin', 2.0, 2.2, 0.55, 4.0, 2.3, 0.60),
+    ]
+
+    for name, avg_delta2, variance, coverage, peak_impact, volatility, target_ratio in scores_data:
+        cursor.execute("""
+            INSERT INTO champion_scores (name, avg_delta2, variance, coverage, peak_impact, volatility, target_ratio)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (name, avg_delta2, variance, coverage, peak_impact, volatility, target_ratio))
+
+    conn.commit()
+    conn.close()
+
+    yield temp_path
+
+    # Cleanup
+    try:
+        os.unlink(temp_path)
+    except Exception:
+        pass
+
+
+@pytest.fixture
+def db(temp_db):
+    """Database instance connected to temp database."""
+    database = Database(temp_db)
+    database.connect()  # Don't forget to connect!
+    yield database
+    if database.connection:
+        database.close()
+
+
+@pytest.fixture
+def assistant(db):
+    """Assistant instance with test database."""
+    # Assistant creates its own DB, so we need to replace it
+    assistant_instance = Assistant(verbose=False)
+
+    # Close the default DB and replace with our test DB
+    assistant_instance.db.close()
+    assistant_instance.db = db
+
+    # Reinitialize components with test DB
+    from src.analysis.scoring import ChampionScorer
+    from src.analysis.tier_list import TierListGenerator
+    from src.analysis.recommendations import RecommendationEngine
+    from src.analysis.team_analysis import TeamAnalyzer
+
+    assistant_instance.scorer = ChampionScorer(db, verbose=False)
+    assistant_instance.tier_list_gen = TierListGenerator(db, assistant_instance.scorer)
+    assistant_instance.recommender = RecommendationEngine(db, assistant_instance.scorer)
+    assistant_instance.team_analyzer = TeamAnalyzer(db, assistant_instance.scorer)
+
+    yield assistant_instance
+    # Don't close db here, it's closed by the db fixture
+
+
+@pytest.fixture
+def sample_champions():
+    """List of sample champion names for tests."""
+    return ['Aatrox', 'Ahri', 'Jinx', 'Thresh', 'Lee Sin', 'Darius', 'Zed', 'Vayne', 'Leona', 'Jarvan IV']
+
+
+@pytest.fixture
+def sample_pool(sample_champions):
+    """Sample champion pool for tests."""
+    return {
+        'name': 'Test Pool',
+        'champions': sample_champions[:5],  # First 5 champions
+        'description': 'Test pool for functional tests'
+    }
+
+
+@pytest.fixture
+def pool_manager(temp_db):
+    """Pool manager instance for testing pool operations."""
+    # Create temporary pools JSON file
+    temp_pools_file = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+    temp_pools_path = temp_pools_file.name
+    temp_pools_file.write('{}')  # Empty pools
+    temp_pools_file.close()
+
+    manager = PoolManager(temp_pools_path)
+    yield manager
+
+    # Cleanup
+    try:
+        os.unlink(temp_pools_path)
+    except Exception:
+        pass
+
+
+@pytest.fixture
+def sample_draft_state():
+    """Sample draft state for tournament coach tests."""
+    return {
+        'ally_team': ['Aatrox', 'Lee Sin', 'Ahri'],
+        'enemy_team': ['Darius', 'Jarvan IV', 'Zed'],
+        'banned_champions': ['Thresh', 'Leona'],
+        'champion_pool': ['Aatrox', 'Ahri', 'Jinx', 'Lee Sin', 'Vayne']
+    }
+
+
+@pytest.fixture
+def sample_matchups_data():
+    """Sample matchups data for validation tests."""
+    return [
+        {
+            'champion': 'Aatrox',
+            'enemy': 'Darius',
+            'winrate': 52.5,
+            'delta2': 2.5,
+            'games': 1000
+        },
+        {
+            'champion': 'Ahri',
+            'enemy': 'Zed',
+            'winrate': 50.0,
+            'delta2': 1.5,
+            'games': 900
+        },
+    ]
