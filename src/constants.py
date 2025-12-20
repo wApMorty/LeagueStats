@@ -171,7 +171,8 @@ CHAMPIONS_LIST = np.unique([
     "Diana",
     "Ambessa",
     "Mel",
-    "Yunara"
+    "Yunara",
+    "Zaahen"
 ])
 
 TOP_CHAMPIONS = [
@@ -219,7 +220,8 @@ TOP_CHAMPIONS = [
     "Yasuo",
     "Yone",
     "Yorick",
-    "Zac"
+    "Zac",
+    "Zaahen"
 ]
 
 JUNGLE_CHAMPIONS = [
@@ -341,6 +343,7 @@ ADC_CHAMPIONS = [
     "Varus",
     "Vayne",
     "Xayah",
+    "Yunara",
     "Zeri"
 ]
 
