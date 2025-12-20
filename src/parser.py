@@ -14,11 +14,98 @@ class Parser:
     def __init__(self) -> None:
         options = Options()
         options.binary_location = config.get_firefox_path()
+        # Add argument to start maximized (helps with window managers like Komorebi)
+        options.add_argument("--start-maximized")
         self.webdriver = webdriver.Firefox(options=options)
-        self.webdriver.maximize_window()
+
+        # Fullscreen mode (with Firefox exception configured in Komorebi)
+        try:
+            self.webdriver.fullscreen_window()
+        except Exception as e:
+            # Fallback to maximize if fullscreen not supported
+            print(f"[DEBUG] Fullscreen failed, falling back to maximize: {e}")
+            self.webdriver.maximize_window()
+
+        # Minimal delay for Firefox initialization
+        # NOTE: Komorebi should have Firefox in float_rules to avoid window manager interference
+        sleep(scraping_config.FIREFOX_STARTUP_DELAY)
 
     def close(self) -> None:
         self.webdriver.quit()
+
+    def _accept_cookies(self) -> None:
+        """Accept cookies banner using dynamic element detection.
+
+        Tries multiple strategies in order:
+        1. Find button by ID (didomi-notice-agree-button)
+        2. Find button by CSS selector (common patterns)
+        3. Find button by text content
+        4. Fallback to hardcoded coordinates (Bug #1 legacy method)
+        """
+        try:
+            # Strategy 1: Find by ID (most reliable)
+            cookie_button = self.webdriver.find_element(By.ID, "didomi-notice-agree-button")
+            cookie_button.click()
+            return
+        except Exception:
+            # Strategy 1 failed, try next approach
+            pass
+
+        try:
+            # Strategy 2: Find by CSS selector (button with specific text)
+            selectors = [
+                "button[aria-label*='agree' i]",
+                "button[aria-label*='accept' i]",
+                "button.didomi-button",
+                ".didomi-notice-agree-button"
+            ]
+            for selector in selectors:
+                try:
+                    cookie_button = self.webdriver.find_element(By.CSS_SELECTOR, selector)
+                    cookie_button.click()
+                    return
+                except Exception:
+                    continue
+        except Exception:
+            # Strategy 2 failed, try next approach
+            pass
+
+        try:
+            # Strategy 3: Find button by XPath with text content
+            xpath_patterns = [
+                "//button[contains(translate(text(), 'ACCEPT', 'accept'), 'accept')]",
+                "//button[contains(translate(text(), 'AGREE', 'agree'), 'agree')]",
+                "//button[contains(@class, 'agree')]"
+            ]
+            for xpath in xpath_patterns:
+                try:
+                    cookie_button = self.webdriver.find_element(By.XPATH, xpath)
+                    cookie_button.click()
+                    return
+                except Exception:
+                    continue
+        except Exception:
+            # Strategy 3 failed, try next approach
+            pass
+
+        # Strategy 4: Fallback to hardcoded coordinates (Bug #1 legacy)
+        try:
+            self.webdriver.execute_script(f"""
+                var event = new MouseEvent('click', {{
+                    view: window,
+                    bubbles: true,
+                    cancelable: true,
+                    clientX: {scraping_config.COOKIE_CLICK_X},
+                    clientY: {scraping_config.COOKIE_CLICK_Y}
+                }});
+                document.elementFromPoint({scraping_config.COOKIE_CLICK_X}, {scraping_config.COOKIE_CLICK_Y}).dispatchEvent(event);
+            """)
+        except Exception:
+            # Final fallback to ActionChains
+            actions = ActionChains(self.webdriver)
+            actions.move_by_offset(scraping_config.COOKIE_CLICK_X, scraping_config.COOKIE_CLICK_Y).click().perform()
+            actions = ActionChains(self.webdriver)
+            actions.move_by_offset(-scraping_config.COOKIE_CLICK_X, -scraping_config.COOKIE_CLICK_Y).perform()
 
     def get_matchup_data(self, champion: str, enemy: str) -> float :
         return self.get_matchup_data_on_patch(config.CURRENT_PATCH, champion, enemy)
@@ -58,10 +145,14 @@ class Parser:
     def get_champion_data(self, champion: str, lane: str = None) -> List[tuple]:
         return self.get_champion_data_on_patch(config.CURRENT_PATCH, champion, lane)
 
-    def get_champion_data_on_patch(self, patch: str, champion: str) -> List[tuple]:
+    def get_champion_data_on_patch(self, patch: str, champion: str, lane: str = None) -> List[tuple]:
         result = []
-        
-        url = f"https://lolalytics.com/lol/{champion}/build/?tier=diamond_plus&patch={patch}"
+
+        # Build URL with optional lane parameter
+        if lane:
+            url = f"https://lolalytics.com/lol/{champion}/build/?lane={lane}&tier=diamond_plus&patch={patch}"
+        else:
+            url = f"https://lolalytics.com/lol/{champion}/build/?tier=diamond_plus&patch={patch}"
 
         self.webdriver.get(url)
 
@@ -72,26 +163,7 @@ class Parser:
         sleep(scraping_config.SCROLL_DELAY)
         
         #region Accepting cookies
-        try:
-            # Use absolute positioning with JavaScript to avoid accumulation
-            # TODO (Tâche #4): Replace hardcoded coordinates with dynamic element detection
-            self.webdriver.execute_script(f"""
-                var event = new MouseEvent('click', {{
-                    view: window,
-                    bubbles: true,
-                    cancelable: true,
-                    clientX: {scraping_config.COOKIE_CLICK_X},
-                    clientY: {scraping_config.COOKIE_CLICK_Y}
-                }});
-                document.elementFromPoint({scraping_config.COOKIE_CLICK_X}, {scraping_config.COOKIE_CLICK_Y}).dispatchEvent(event);
-            """)
-        except:
-            # Fallback to ActionChains if JS fails
-            actions = ActionChains(self.webdriver)
-            actions.move_by_offset(scraping_config.COOKIE_CLICK_X, scraping_config.COOKIE_CLICK_Y).click().perform()
-
-            actions = ActionChains(self.webdriver)
-            actions.move_by_offset(-scraping_config.COOKIE_CLICK_X, -scraping_config.COOKIE_CLICK_Y).perform()
+        self._accept_cookies()
         #endregion
         
         for index in range (2, 7):
