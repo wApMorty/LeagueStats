@@ -81,7 +81,11 @@ class DraftMonitor:
             # Auto-select top pool by default
             self.current_pool = ROLE_POOLS["top"]
             safe_print(f"✅ Using pool: TOP ({', '.join(self.current_pool)})")
-        
+
+        # Performance: Warm cache for selected pool (eliminates SQL queries during draft)
+        if self.current_pool:
+            self.assistant.warm_cache(self.current_pool)
+
         self.is_monitoring = True
         print("[WATCH] Monitoring for champion select...")
         print("   (Start a game to see draft recommendations)")
@@ -572,9 +576,9 @@ class DraftMonitor:
                             print(f"[DEBUG] Skipping banned champion: {banned_name}")
                         continue
                         
-                    # Get champion name and matchups
+                    # Get champion name and matchups (cached for performance)
                     champion_name = self._get_display_name(champion_id)
-                    matchups = self.assistant.db.get_champion_matchups_by_name(champion_name)
+                    matchups = self.assistant.get_matchups_for_draft(champion_name)
                     if matchups and sum(m[5] for m in matchups) >= 500:  # Threshold for valid data
                         # Calculate score against enemy team using unified scoring method
                         score = self._calculate_score_against_team(matchups, enemy_picks, champion_name)
@@ -775,7 +779,7 @@ class DraftMonitor:
             scores = []
             for champion_id in champion_ids:
                 champion_name = self._get_display_name(champion_id)
-                matchups = self.assistant.db.get_champion_matchups_by_name(champion_name)
+                matchups = self.assistant.get_matchups_for_draft(champion_name)
                 if matchups and sum(m[5] for m in matchups) >= 500:  # Threshold for valid data
                     # Use blind pick scoring (empty enemy team)
                     score = self.assistant.score_against_team(matchups, [], champion_name)
@@ -931,9 +935,9 @@ class DraftMonitor:
                 
                 # Use the new normalized scoring system
                 enemy_names = [self._get_display_name(enemy_id) for enemy_id in enemy_picks]
-                
-                # Get champion matchups by name for assistant method
-                champion_matchups = self.assistant.db.get_champion_matchups_by_name(champion_name)
+
+                # Get champion matchups (cached for performance)
+                champion_matchups = self.assistant.get_matchups_for_draft(champion_name)
                 
                 if champion_matchups:
                     # Use assistant's new win advantage calculation
@@ -957,11 +961,11 @@ class DraftMonitor:
                     enemy_scores.append((champion_name, None, 0))  # Mark insufficient data
                     continue
                 
-                # Use the new normalized scoring system  
+                # Use the new normalized scoring system
                 ally_names = [self._get_display_name(ally_id) for ally_id in ally_picks]
-                
-                # Get champion matchups by name for assistant method
-                champion_matchups = self.assistant.db.get_champion_matchups_by_name(champion_name)
+
+                # Get champion matchups (cached for performance)
+                champion_matchups = self.assistant.get_matchups_for_draft(champion_name)
                 
                 if champion_matchups:
                     # Use assistant's new win advantage calculation
@@ -1080,6 +1084,8 @@ class DraftMonitor:
         if self.lcu:
             self.lcu.disconnect()
         if self.assistant:
+            # Clear cache to free memory
+            self.assistant.clear_cache()
             self.assistant.close()
         print("[PICK] Cleanup complete")
 

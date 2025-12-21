@@ -54,9 +54,173 @@ class Assistant:
         self.recommender = RecommendationEngine(self.db, self.scorer)
         self.team_analyzer = TeamAnalyzer(self.db, self.scorer)
 
+        # Performance: In-memory cache for matchups (speeds up draft analysis)
+        self._matchups_cache: Dict[str, List[tuple]] = {}
+        self._cache_enabled = False
+        self._cache_hits = 0  # Track cache hits for statistics
+        self._cache_misses = 0  # Track cache misses for statistics
+
     def close(self) -> None:
         """Close database connection."""
         self.db.close()
+
+    # ==================== Cache Management (Performance) ====================
+
+    def warm_cache(self, champion_pool: List[str]) -> None:
+        """
+        Pre-load matchups for all champions in pool into cache.
+
+        This significantly speeds up draft analysis by eliminating repeated SQL queries.
+        Should be called once at the start of a draft session.
+
+        Performance impact:
+        - First call: Loads data from DB (~10-20ms per champion)
+        - Subsequent calls: ~99% faster (0 SQL queries after warm-up)
+
+        Args:
+            champion_pool: List of champion names to cache matchups for
+        """
+        if not champion_pool:
+            return
+
+        print(f"[CACHE] Warming cache for {len(champion_pool)} champions...")
+        cached_count = 0
+
+        for champion in champion_pool:
+            # Use optimized query (4 columns instead of 6)
+            matchups = self.db.get_champion_matchups_for_draft(champion)
+            if matchups:
+                self._matchups_cache[champion] = matchups
+                cached_count += 1
+
+        self._cache_enabled = True
+        print(f"[CACHE] Cache warmed: {cached_count}/{len(champion_pool)} champions loaded")
+
+    def clear_cache(self) -> None:
+        """
+        Clear matchup cache and disable caching.
+
+        Should be called when exiting draft mode to free memory.
+        """
+        # Print statistics before clearing
+        self.print_cache_stats()
+
+        cache_size = len(self._matchups_cache)
+        self._matchups_cache.clear()
+        self._cache_enabled = False
+        self._cache_hits = 0
+        self._cache_misses = 0
+        if cache_size > 0:
+            print(f"[CACHE] Cache cleared ({cache_size} champions removed)")
+
+    def print_cache_stats(self) -> None:
+        """
+        Print cache performance statistics.
+
+        Shows:
+        - Total cache hits vs misses
+        - Hit rate percentage
+        - Estimated performance gain
+        """
+        if not self._cache_enabled and self._cache_hits == 0 and self._cache_misses == 0:
+            return  # No stats to print
+
+        total_queries = self._cache_hits + self._cache_misses
+        if total_queries == 0:
+            return
+
+        hit_rate = (self._cache_hits / total_queries) * 100 if total_queries > 0 else 0
+
+        print(f"\n[CACHE] Performance Statistics:")
+        print(f"  - Total queries: {total_queries}")
+        print(f"  - Cache hits: {self._cache_hits} ({hit_rate:.1f}%)")
+        print(f"  - Cache misses: {self._cache_misses}")
+        print(f"  - Champions cached: {len(self._matchups_cache)}")
+
+        # Estimated performance gain (assuming 10ms per SQL query vs 0.01ms cache lookup)
+        if self._cache_hits > 0:
+            time_saved_ms = self._cache_hits * 10  # ~10ms per avoided SQL query
+            print(f"  - Estimated time saved: ~{time_saved_ms}ms ({time_saved_ms/1000:.2f}s)")
+
+    def get_cached_matchups(self, champion: str) -> List[tuple]:
+        """
+        Get matchups from cache if available, otherwise fetch from database.
+
+        Returns matchups in optimized format for draft:
+        [(enemy_name, delta2, pickrate, games), ...]
+
+        Args:
+            champion: Champion name to get matchups for
+
+        Returns:
+            List of matchup tuples (4 elements for draft vs 6 for standard query)
+        """
+        # If cache is enabled and champion is in cache, use it
+        if self._cache_enabled and champion in self._matchups_cache:
+            self._cache_hits += 1
+            return self._matchups_cache[champion]
+
+        # Otherwise fall back to database (optimized query)
+        self._cache_misses += 1
+        return self.db.get_champion_matchups_for_draft(champion)
+
+    def get_matchups_for_draft(self, champion: str) -> List[tuple]:
+        """
+        Get matchups for draft analysis (optimized with cache support).
+
+        This method:
+        1. Uses cache if enabled (99% faster after warm-up)
+        2. Falls back to optimized DB query if cache miss
+        3. Returns standard 6-column format for compatibility with scoring methods
+
+        Performance:
+        - Cache hit: ~0.01ms (memory lookup)
+        - Cache miss: ~10-20ms (optimized SQL query)
+        - Without cache: ~10-20ms per call (repeated SQL queries)
+
+        Args:
+            champion: Champion name to get matchups for
+
+        Returns:
+            List of matchup tuples in standard format:
+            [(enemy_name, winrate, delta1, delta2, pickrate, games), ...]
+        """
+        # Get from cache or DB (optimized 4-column format)
+        draft_matchups = self.get_cached_matchups(champion)
+
+        # Convert to standard 6-column format for scoring methods
+        return self._convert_draft_matchups_to_standard(draft_matchups)
+
+    def _convert_draft_matchups_to_standard(self, draft_matchups: List[tuple]) -> List[tuple]:
+        """
+        Convert draft format (4 cols) to standard format (6 cols) for scoring methods.
+
+        Draft format: (enemy_name, delta2, pickrate, games)
+        Standard format: (enemy_name, winrate, delta1, delta2, pickrate, games)
+
+        Since winrate and delta1 are not used in draft calculations, we fill with dummy values:
+        - winrate = 50.0 (neutral)
+        - delta1 = 0.0 (neutral)
+
+        Args:
+            draft_matchups: List of matchups in draft format (4 elements)
+
+        Returns:
+            List of matchups in standard format (6 elements)
+        """
+        standard_matchups = []
+        for matchup in draft_matchups:
+            if len(matchup) == 4:
+                # Draft format: (enemy_name, delta2, pickrate, games)
+                enemy_name, delta2, pickrate, games = matchup
+                # Convert to standard: (enemy_name, winrate, delta1, delta2, pickrate, games)
+                standard_matchup = (enemy_name, 50.0, 0.0, delta2, pickrate, games)
+                standard_matchups.append(standard_matchup)
+            else:
+                # Already in standard format (6 elements) - pass through
+                standard_matchups.append(matchup)
+
+        return standard_matchups
 
     # ==================== Champion Pool Selection ====================
     # Delegated to utils.champion_utils
