@@ -40,15 +40,15 @@ def temp_db():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS matchups (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            champ_id INTEGER,
-            enemy_id INTEGER,
-            winrate REAL,
-            pickrate REAL,
-            delta1 REAL,
-            delta2 REAL,
-            games INTEGER,
-            FOREIGN KEY (champ_id) REFERENCES champions(id),
-            FOREIGN KEY (enemy_id) REFERENCES champions(id)
+            champion INTEGER NOT NULL,
+            enemy INTEGER NOT NULL,
+            winrate REAL NOT NULL,
+            delta1 REAL NOT NULL,
+            delta2 REAL NOT NULL,
+            pickrate REAL NOT NULL,
+            games INTEGER NOT NULL,
+            FOREIGN KEY (champion) REFERENCES champions(id) ON DELETE CASCADE,
+            FOREIGN KEY (enemy) REFERENCES champions(id) ON DELETE CASCADE
         )
     """)
 
@@ -83,23 +83,30 @@ def temp_db():
         cursor.execute("INSERT INTO champions (name, role) VALUES (?, ?)", (champ_name, role))
 
     # Insert test matchups (sample data)
+    # Schema: champion, enemy, winrate, delta1, delta2, pickrate, games
     matchups_data = [
         # Aatrox matchups
-        (1, 6, 52.5, 150.0, 5.0, 2.5, 1000),  # Aatrox vs Darius
-        (1, 2, 48.0, 100.0, 3.0, -1.0, 800),  # Aatrox vs Ahri
+        (1, 6, 52.5, 5.0, 2.5, 150.0, 1000),  # Aatrox vs Darius
+        (1, 2, 48.0, 3.0, -1.0, 100.0, 800),  # Aatrox vs Ahri
         # Ahri matchups
-        (2, 7, 50.0, 120.0, 4.0, 1.5, 900),   # Ahri vs Zed
-        (2, 1, 52.0, 100.0, -3.0, 1.0, 800),  # Ahri vs Aatrox
+        (2, 7, 50.0, 4.0, 1.5, 120.0, 900),   # Ahri vs Zed
+        (2, 1, 52.0, -3.0, 1.0, 100.0, 800),  # Ahri vs Aatrox
         # Jinx matchups
-        (3, 8, 49.5, 180.0, 6.0, 1.8, 1200),  # Jinx vs Vayne
-        (3, 4, 51.0, 200.0, 7.0, 2.2, 1500),  # Jinx vs Thresh
+        (3, 8, 49.5, 6.0, 1.8, 180.0, 1200),  # Jinx vs Vayne
+        (3, 4, 51.0, 7.0, 2.2, 200.0, 1500),  # Jinx vs Thresh
+        # Lee Sin matchups
+        (5, 10, 51.5, 4.5, 2.0, 160.0, 1100), # Lee Sin vs Jarvan
+        (5, 1, 49.0, 3.5, 1.0, 140.0, 950),   # Lee Sin vs Aatrox
+        # Thresh matchups
+        (4, 9, 50.5, 5.5, 1.8, 190.0, 1300),  # Thresh vs Leona
+        (4, 3, 49.0, 6.5, 2.1, 200.0, 1500),  # Thresh vs Jinx
     ]
 
-    for champ_id, enemy_id, winrate, pickrate, delta1, delta2, games in matchups_data:
+    for champion, enemy, winrate, delta1, delta2, pickrate, games in matchups_data:
         cursor.execute("""
-            INSERT INTO matchups (champ_id, enemy_id, winrate, pickrate, delta1, delta2, games)
+            INSERT INTO matchups (champion, enemy, winrate, delta1, delta2, pickrate, games)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (champ_id, enemy_id, winrate, pickrate, delta1, delta2, games))
+        """, (champion, enemy, winrate, delta1, delta2, pickrate, games))
 
     # Insert test champion scores
     scores_data = [
