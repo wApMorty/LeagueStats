@@ -4,8 +4,6 @@ Functional tests for Optimal Team Builder.
 Tests menu option 5 functionalities (simplified version).
 """
 
-import pytest
-
 
 class TestBanRecommendations:
     """Test ban recommendation functionality."""

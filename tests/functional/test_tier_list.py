@@ -91,16 +91,21 @@ class TestTierListGeneration:
         tier_list = assistant.generate_tier_list(champion_pool, analysis_type="blind_pick")
 
         # Assert
+        # Thresholds from src/config.py TierListConfig:
+        # S-Tier: >= 75.0, A-Tier: >= 50.0, B-Tier: >= 25.0, C-Tier: < 25.0
         for entry in tier_list:
             score = entry['score']
             tier = entry['tier']
 
-            # Verify tier matches score ranges (approximate thresholds)
+            # Verify tier matches score ranges from config
             if tier == 'S':
-                assert score >= 70, f"S tier should have score >= 70: {score}"
+                assert score >= 75.0, f"S tier should have score >= 75.0: {score}"
             elif tier == 'A':
-                assert 50 <= score < 70, f"A tier should have 50 <= score < 70: {score}"
-            # Note: Actual thresholds from config may differ, this is validation logic
+                assert 50.0 <= score < 75.0, f"A tier should have 50.0 <= score < 75.0: {score}"
+            elif tier == 'B':
+                assert 25.0 <= score < 50.0, f"B tier should have 25.0 <= score < 50.0: {score}"
+            elif tier == 'C':
+                assert score < 25.0, f"C tier should have score < 25.0: {score}"
 
     def test_empty_pool_returns_empty_list(self, assistant):
         """Test that empty champion pool returns empty list."""
