@@ -50,7 +50,10 @@ except Exception as e:
 
 from src.parallel_parser import ParallelParser
 from src.assistant import Assistant
-from src.constants import SOLOQ_POOL
+from src.db import Database
+from src.config import config
+from src.constants import CHAMPIONS_LIST
+from src.utils.champion_utils import normalize_champion_name_for_url
 
 
 class AutoUpdateLogger:
@@ -146,44 +149,56 @@ def main() -> int:
     logger.log("INFO", "="*80)
     logger.log("START", "Auto-update process started")
 
+    db = None
     parser = None
     assistant = None
 
     try:
-        # 1. Using rolling 14-day window (always update)
+        # 1. Initialize database
+        logger.log("INFO", "Initializing database...")
+        db_path = config.DATABASE_PATH
+        db = Database(db_path)
+        db.connect()
+        logger.log("SUCCESS", f"Database connected: {db_path}")
+
+        # 2. Using rolling 14-day window (always update)
         patch_version = "14"
         logger.log("INFO", f"Using patch version: {patch_version} (rolling 14-day window)")
 
-        # 2. Send start notification
+        # 3. Send start notification
         notifier.notify(
             "LeagueStats Coach",
             f"Mise à jour démarrée (patch {patch_version})..."
         )
 
-        # 3. Initialize parallel parser
+        # 4. Initialize parallel parser
         logger.log("INFO", f"Initializing ParallelParser (10 workers)...")
         parser = ParallelParser(max_workers=10, patch_version=patch_version)
         logger.log("SUCCESS", "ParallelParser initialized")
 
-        # 4. Parse SOLOQ_POOL champions (faster, ~5-10 min with parallel)
-        champion_count = len(SOLOQ_POOL)
+        # 5. Parse all champions (faster, ~12 min with parallel)
+        champion_count = len(CHAMPIONS_LIST)
         logger.log("INFO", f"Starting parallel scraping of {champion_count} champions...")
         logger.log("INFO", "Estimated time: ~12 minutes (background process)")
 
         start_time = datetime.now()
-        success_count, failed_count, duration = parser.parse_all_champions()
+        stats = parser.parse_all_champions(db, CHAMPIONS_LIST, normalize_champion_name_for_url)
         end_time = datetime.now()
+
+        success_count = stats.get('successful', 0)
+        failed_count = stats.get('failed', 0)
+        duration = stats.get('duration', 0)
 
         duration_min = duration / 60
         logger.log("SUCCESS", f"Scraping completed in {duration_min:.1f} minutes")
         logger.log("INFO", f"Champions parsed: {success_count}/{champion_count} succeeded, {failed_count} failed")
 
-        # 5. Close parser to free resources
+        # 6. Close parser to free resources
         parser.close()
         parser = None
         logger.log("INFO", "ParallelParser closed (Firefox drivers cleaned up)")
 
-        # 6. Recalculate champion scores
+        # 7. Recalculate champion scores
         logger.log("INFO", "Recalculating champion scores...")
         assistant = Assistant(verbose=False)
         assistant.calculate_global_scores()
@@ -191,7 +206,7 @@ def main() -> int:
         assistant = None
         logger.log("SUCCESS", "Champion scores recalculated")
 
-        # 7. Success notification
+        # 8. Success notification
         total_time = (end_time - start_time).total_seconds() / 60
         logger.log("SUCCESS", f"Auto-update completed successfully in {total_time:.1f} minutes")
         notifier.notify(
@@ -233,6 +248,13 @@ def main() -> int:
                 logger.log("INFO", "Assistant cleanup completed")
             except Exception as e:
                 logger.log("WARNING", f"Assistant cleanup failed: {e}")
+
+        if db:
+            try:
+                db.close()
+                logger.log("INFO", "Database connection closed")
+            except Exception as e:
+                logger.log("WARNING", f"Database cleanup failed: {e}")
 
 
 if __name__ == '__main__':
