@@ -5,7 +5,7 @@ This is the new modular version that delegates to specialized modules while
 maintaining backward compatibility with the original API.
 """
 
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from .db import Database
 from .config import config

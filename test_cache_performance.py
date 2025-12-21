@@ -87,7 +87,7 @@ def test_cache_performance():
     print(f"\n[NO CACHE] Querying {len(test_pool)} champions (cold)...")
     start_time = time.time()
     for champion in test_pool:
-        matchups = assistant.get_matchups_for_draft(champion)
+        _ = assistant.get_matchups_for_draft(champion)
     cold_time = (time.time() - start_time) * 1000
 
     print(f"  - Time: {cold_time:.2f}ms")
@@ -106,7 +106,7 @@ def test_cache_performance():
     print(f"\n[WITH CACHE] Querying {len(test_pool)} champions (warm)...")
     start_time = time.time()
     for champion in test_pool:
-        matchups = assistant.get_matchups_for_draft(champion)
+        _ = assistant.get_matchups_for_draft(champion)
     warm_time = (time.time() - start_time) * 1000
 
     print(f"  - Time: {warm_time:.2f}ms")
