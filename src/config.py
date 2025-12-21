@@ -58,7 +58,8 @@ class Config:
     BRAVE_PATH: str = os.getenv('BRAVE_PATH', r'C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe')
 
     # Scraping settings
-    CURRENT_PATCH: str = "15.17"
+    # "14" = 14 derniers jours (évite effets de bord lors de sortie de patch + pas besoin de mettre à jour)
+    CURRENT_PATCH: str = "14"
 
     # ========== Backward Compatibility Properties ==========
     # These redirect to config_constants.py for centralized management
