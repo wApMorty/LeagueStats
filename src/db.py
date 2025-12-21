@@ -376,20 +376,61 @@ class Database:
             cursor = self.connection.cursor()
             cursor.execute('SELECT name, id FROM champions')
             cache = {}
-            
+
             # Get all champions once
             all_champions = cursor.fetchall()
-            
+
             for name, champ_id in all_champions:
                 # Add official name (exact case) - now these are Riot keys like "DrMundo"
                 cache[name] = champ_id
                 # Add lowercase version for flexible matching
                 cache[name.lower()] = champ_id
-            
+
             return cache
         except Exception as e:
             print(f"[ERROR] Error building champion cache: {e}")
             return {}
+
+    def get_champion_matchups_for_draft(self, champion_name: str) -> List[tuple]:
+        """
+        Optimized query for draft analysis - returns only the columns needed for draft calculations.
+
+        This method returns 4 columns instead of 6 (33% reduction):
+        - enemy_name (str): Enemy champion name
+        - delta2 (float): Delta2 performance metric
+        - pickrate (float): Matchup pickrate percentage
+        - games (int): Number of games in sample
+
+        Columns NOT included (not used in draft):
+        - winrate: Only used in avg_winrate() which is never called during draft
+        - delta1: Only used in legacy generate_by_delta1() tier list method
+
+        Args:
+            champion_name: Name of the champion to get matchups for
+
+        Returns:
+            List of tuples: [(enemy_name, delta2, pickrate, games), ...]
+            Empty list if champion not found or no matchups
+        """
+        champ_id = self.get_champion_id(champion_name)
+        if champ_id is None:
+            return []
+
+        cursor = self.connection.cursor()
+        try:
+            # Optimized query: only 4 columns needed for draft analysis
+            cursor.execute("""
+                SELECT c.name, m.delta2, m.pickrate, m.games
+                FROM matchups m
+                JOIN champions c ON m.enemy = c.id
+                WHERE m.champion = ? AND m.pickrate > 0.5
+            """, (champ_id,))
+            result = cursor.fetchall()
+            # returns (enemy_name, delta2, pickrate, games)
+            return result
+        except Error as e:
+            print(f"The error '{e}' occurred")
+            return []
     
     def add_matchups_batch(self, matchup_data: List[tuple], champion_cache: Dict[str, int] = None) -> int:
         """
