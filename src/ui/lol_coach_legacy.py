@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 from src.draft_monitor import DraftMonitor
 from src.db import Database
 from src.parser import Parser
+from src.parallel_parser import ParallelParser
 from src.assistant import Assistant
 from src.constants import TOP_SOLOQ_POOL
 from src.config import config
@@ -278,9 +279,9 @@ def parse_match_statistics():
         print("[ERROR] Invalid option")
 
 def parse_champion_pool(patch_version=None):
-    """Parse match statistics for selected champion pool."""
-    print("[INFO] Champion Pool Statistics Parser")
-    
+    """Parse match statistics for selected champion pool using parallel scraping."""
+    print("[INFO] Champion Pool Statistics Parser (Parallel Mode)")
+
     # Enhanced pool selection
     selected_pool_info = _select_pool_for_parsing()
     if not selected_pool_info:
@@ -289,78 +290,73 @@ def parse_champion_pool(patch_version=None):
         pool_champions = TOP_SOLOQ_POOL
     else:
         pool_name, pool_champions = selected_pool_info
-    
+
     print(f"\n✅ Parsing statistics for: {pool_name}")
     print(f"🔧 Patch version: {patch_version or 'default'}")
     print(f"Champions to process: {', '.join(pool_champions)}")
-    print(f"This will take approximately {len(pool_champions)*0.5:.2f}-{len(pool_champions)*1:.2f} minutes...")
-    
+
+    # Updated time estimate for parallel scraping (80% faster)
+    sequential_time = len(pool_champions) * 0.75  # Average 45 seconds per champion
+    parallel_time = sequential_time * 0.2  # 80% improvement
+    print(f"This will take approximately {parallel_time:.1f} minutes with parallel scraping...")
+    print(f"(Sequential mode would take ~{sequential_time:.1f} minutes)")
+
+    if patch_version:
+        print(f"\n[INFO] Will scrape data for patch version: {patch_version}")
+
     confirm = input(f"\nProceed with parsing {len(pool_champions)} champions? (y/N): ").strip().lower()
     if confirm != 'y':
         print("[INFO] Parsing cancelled.")
         return
-    
+
     try:
         from src.config import config
         from src.constants import normalize_champion_name_for_url
+        import time
+
         db = Database(config.DATABASE_PATH)
-        parser = Parser()
-        
         db.connect()
-        
+
         # Ensure champions are up to date
         cursor = db.connection.cursor()
         cursor.execute("SELECT COUNT(*) FROM champions")
         champion_count = cursor.fetchone()[0]
-        
+
         if champion_count == 0:
             print("[INFO] No champions found, updating from Riot API first...")
             db.create_riot_champions_table()
             db.update_champions_from_riot_api()
-        
-        # Initialize matchups and champion_scores tables
+
+        # Initialize tables (clears old data)
         db.init_matchups_table()
         db.init_champion_scores_table()
-        
-        # Build champion cache once for much better performance
-        print("[INFO] Building champion cache for fast lookups...")
-        champion_cache = db.build_champion_cache()
-        print(f"[INFO] Cached {len(champion_cache)//2} champions")  # Divided by 2 because we store both cases
-        
-        print(f"\n[INFO] Parsing {len(pool_champions)} champions from {pool_name}...")
-        total_inserted = 0
-        processed = 0
-        
-        for champion in pool_champions:
-            processed += 1
-            print(f"  [{processed}/{len(pool_champions)}] Processing {champion}...")
-            
-            try:
-                # Collect all matchups for this champion
-                matchup_data = []
-                normalized_champion = normalize_champion_name_for_url(champion)
-                if patch_version:
-                    raw_matchups = parser.get_champion_data_on_patch(patch_version, normalized_champion, "top")
-                else:
-                    raw_matchups = parser.get_champion_data(normalized_champion, "top")
-                
-                for matchup in raw_matchups:
-                    enemy, winrate, d1, d2, pick, games = matchup
-                    matchup_data.append((champion, enemy, winrate, d1, d2, pick, games))
-                
-                if matchup_data:
-                    # Batch insert all matchups for this champion
-                    # (table was already cleared by init_matchups_table above)
-                    inserted = db.add_matchups_batch(matchup_data, champion_cache)
-                    total_inserted += inserted
-                    print(f"    → Inserted {inserted} matchups")
-                else:
-                    print(f"    → No matchups found")
-                    
-            except Exception as e:
-                print(f"  [WARNING] Error processing {champion}: {e}")
-        
-        parser.close()
+
+        # Use parallel scraping
+        from src.config_constants import scraping_config
+        start_time = time.time()
+        parallel_parser = ParallelParser(max_workers=scraping_config.DEFAULT_MAX_WORKERS, patch_version=patch_version)
+
+        print(f"\n[INFO] Starting parallel scraping with {scraping_config.DEFAULT_MAX_WORKERS} workers (patch {patch_version or config.CURRENT_PATCH})...")
+        stats = parallel_parser.parse_champions_by_role(
+            db,
+            pool_champions,
+            "top",
+            normalize_champion_name_for_url
+        )
+
+        parallel_parser.close()
+        duration = time.time() - start_time
+
+        # Display statistics
+        print("\n" + "="*60)
+        print("PARALLEL SCRAPING COMPLETED")
+        print("="*60)
+        print(f"Pool: {pool_name}")
+        print(f"Total champions: {stats['total']}")
+        print(f"Successful: {stats['success']}")
+        print(f"Failed: {stats['failed']}")
+        print(f"Duration: {duration:.1f}s ({duration/60:.1f}min)")
+        print("="*60)
 
         # Calculate global scores for tier lists
         print("\n[INFO] Calculating global champion scores for tier lists...")
@@ -369,85 +365,76 @@ def parse_champion_pool(patch_version=None):
         assistant = Assistant()
         champions_scored = assistant.calculate_global_scores()
         assistant.close()
-        print(f"[SUCCESS] SoloQ Pool statistics updated! ({processed} champions, {total_inserted} total matchups, {champions_scored} scored)")
-        
+        print(f"[SUCCESS] SoloQ Pool statistics updated! ({stats['success']} champions scraped, {champions_scored} scored)")
+
     except Exception as e:
         print(f"[ERROR] Parsing error: {e}")
+        import traceback
+        traceback.print_exc()
 
 def parse_all_champions(patch_version=None):
-    """Parse match statistics for all champions."""
-    print("[WARNING] Parsing ALL champions will take 30+ minutes!")
-    confirm = input("Are you sure you want to continue? (y/N): ").strip().lower()
-    
+    """Parse match statistics for all champions using parallel scraping."""
+    print("[INFO] Parsing ALL champions with parallel scraping (Parallel Mode)")
+    print("[INFO] Sequential mode: 30-60 minutes")
+    print("[INFO] Parallel mode: 6-8 minutes (80% faster)")
+
+    if patch_version:
+        print(f"\n[INFO] Will scrape data for patch version: {patch_version}")
+
+    confirm = input("\nAre you sure you want to continue? (y/N): ").strip().lower()
+
     if confirm != 'y':
         print("[INFO] Cancelled by user")
         return
-    
-    print("[INFO] Parsing ALL champion statistics...")
-    print(f"🔧 Patch version: {patch_version or 'default'}")
-    print("This will take approximately 30-60 minutes...")
-    
+
     try:
         from src.constants import CHAMPIONS_LIST, normalize_champion_name_for_url
         from src.config import config
+        import time
+
         db = Database(config.DATABASE_PATH)
-        parser = Parser()
-        
         db.connect()
-        
+
         # Ensure champions are up to date
         cursor = db.connection.cursor()
         cursor.execute("SELECT COUNT(*) FROM champions")
         champion_count = cursor.fetchone()[0]
-        
+
         if champion_count == 0:
             print("[INFO] No champions found, updating from Riot API first...")
             db.create_riot_champions_table()
             db.update_champions_from_riot_api()
-        
-        # Initialize tables
+
+        # Initialize tables (clears old data)
         db.init_matchups_table()
         db.init_champion_scores_table()
-        
-        # Build champion cache once for much better performance
-        print("[INFO] Building champion cache for fast lookups...")
-        champion_cache = db.build_champion_cache()
-        print(f"[INFO] Cached {len(champion_cache)//2} champions")
-        
+
+        # Use parallel scraping
+        from src.config_constants import scraping_config
+        start_time = time.time()
+        parallel_parser = ParallelParser(max_workers=scraping_config.DEFAULT_MAX_WORKERS, patch_version=patch_version)
+
+        print(f"\n[INFO] Starting parallel scraping with {scraping_config.DEFAULT_MAX_WORKERS} workers (patch {patch_version or config.CURRENT_PATCH})...")
         print(f"[INFO] Parsing {len(CHAMPIONS_LIST)} champions...")
-        total_inserted = 0
-        processed = 0
-        
-        for champion in CHAMPIONS_LIST:
-            processed += 1
-            print(f"  [{processed}/{len(CHAMPIONS_LIST)}] Processing {champion}...")
-            
-            try:
-                # Collect all matchups for this champion
-                matchup_data = []
-                normalized_champion = normalize_champion_name_for_url(champion)
-                if patch_version:
-                    raw_matchups = parser.get_champion_data_on_patch(patch_version, normalized_champion)
-                else:
-                    raw_matchups = parser.get_champion_data(normalized_champion)
-                
-                for matchup in raw_matchups:
-                    enemy, winrate, d1, d2, pick, games = matchup
-                    matchup_data.append((champion, enemy, winrate, d1, d2, pick, games))
-                
-                if matchup_data:
-                    # Batch insert all matchups for this champion
-                    # (table was already cleared by init_matchups_table above)
-                    inserted = db.add_matchups_batch(matchup_data, champion_cache)
-                    total_inserted += inserted
-                    print(f"    → Inserted {inserted} matchups")
-                else:
-                    print(f"    → No matchups found")
-                    
-            except Exception as e:
-                print(f"  [WARNING] Error processing {champion}: {e}")
-        
-        parser.close()
+
+        stats = parallel_parser.parse_all_champions(
+            db,
+            CHAMPIONS_LIST,
+            normalize_champion_name_for_url
+        )
+
+        parallel_parser.close()
+        duration = time.time() - start_time
+
+        # Display statistics
+        print("\n" + "="*60)
+        print("PARALLEL SCRAPING COMPLETED")
+        print("="*60)
+        print(f"Total champions: {stats['total']}")
+        print(f"Successful: {stats['success']}")
+        print(f"Failed: {stats['failed']}")
+        print(f"Duration: {duration:.1f}s ({duration/60:.1f}min)")
+        print("="*60)
 
         # Calculate global scores for tier lists
         print("\n[INFO] Calculating global champion scores for tier lists...")
@@ -456,10 +443,12 @@ def parse_all_champions(patch_version=None):
         assistant = Assistant()
         champions_scored = assistant.calculate_global_scores()
         assistant.close()
-        print(f"[SUCCESS] All champion statistics updated! ({processed} champions, {total_inserted} total matchups, {champions_scored} scored)")
-        
+        print(f"[SUCCESS] All champion statistics updated! ({stats['success']} champions scraped, {champions_scored} scored)")
+
     except Exception as e:
         print(f"[ERROR] Parsing error: {e}")
+        import traceback
+        traceback.print_exc()
 
 def run_champion_analysis():
     """Run champion analysis and tournament coaching."""
