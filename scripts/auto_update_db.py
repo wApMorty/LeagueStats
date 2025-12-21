@@ -48,10 +48,8 @@ except ImportError:
 except Exception as e:
     print(f"[WARNING] Could not set process priority: {e}")
 
-from src.db import Database
 from src.parallel_parser import ParallelParser
 from src.assistant import Assistant
-from src.config import config
 from src.constants import SOLOQ_POOL
 
 
@@ -133,84 +131,6 @@ class WindowsNotifier:
             print(f"[NOTIFICATION] {title}: {message}")
 
 
-class PatchVersionDetector:
-    """Detect current patch version from LoLalytics."""
-
-    def __init__(self, db: Database):
-        """
-        Initialize detector.
-
-        Args:
-            db: Database instance
-        """
-        self.db = db
-        self.cache_file = Path(project_root) / "data" / "last_patch.json"
-
-    def get_current_patch(self) -> str:
-        """
-        Get current patch from LoLalytics by scraping a single champion.
-
-        Returns:
-            Current patch version (e.g., "15.1")
-        """
-        # For now, use config.CURRENT_PATCH ("14" = 14 derniers jours)
-        # In future, could scrape LoLalytics to detect actual patch number
-        return config.CURRENT_PATCH
-
-    def get_last_known_patch(self) -> Optional[str]:
-        """
-        Get last known patch from cache file.
-
-        Returns:
-            Last known patch version or None if not cached
-        """
-        if not self.cache_file.exists():
-            return None
-
-        try:
-            with open(self.cache_file, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                return data.get('patch')
-        except Exception as e:
-            print(f"[WARNING] Could not read patch cache: {e}")
-            return None
-
-    def save_patch(self, patch: str) -> None:
-        """
-        Save patch version to cache file.
-
-        Args:
-            patch: Patch version to save
-        """
-        try:
-            self.cache_file.parent.mkdir(exist_ok=True)
-            with open(self.cache_file, 'w', encoding='utf-8') as f:
-                json.dump({
-                    'patch': patch,
-                    'updated_at': datetime.now().isoformat()
-                }, f, indent=2)
-        except Exception as e:
-            print(f"[WARNING] Could not save patch cache: {e}")
-
-    def is_new_patch(self) -> Tuple[bool, str, Optional[str]]:
-        """
-        Check if there's a new patch available.
-
-        Returns:
-            (is_new, current_patch, last_patch)
-        """
-        current = self.get_current_patch()
-        last = self.get_last_known_patch()
-
-        # If using "14" (rolling window), always update
-        if current == "14":
-            return (True, current, last)
-
-        # Otherwise, check if patch changed
-        is_new = (last is None) or (current != last)
-        return (is_new, current, last)
-
-
 def main() -> int:
     """
     Main auto-update function.
@@ -226,52 +146,26 @@ def main() -> int:
     logger.log("INFO", "="*80)
     logger.log("START", "Auto-update process started")
 
-    db = None
     parser = None
     assistant = None
 
     try:
-        # 1. Initialize database
-        logger.log("INFO", "Initializing database...")
-        db_path = config.DATABASE_PATH
-        db = Database(db_path)
-        db.connect()
-        logger.log("SUCCESS", f"Database connected: {db_path}")
+        # 1. Using rolling 14-day window (always update)
+        patch_version = "14"
+        logger.log("INFO", f"Using patch version: {patch_version} (rolling 14-day window)")
 
-        # 2. Check for new patch
-        logger.log("INFO", "Checking for new patch version...")
-        detector = PatchVersionDetector(db)
-        is_new, current_patch, last_patch = detector.is_new_patch()
-
-        if last_patch:
-            logger.log("INFO", f"Last known patch: {last_patch}")
-        logger.log("INFO", f"Current patch: {current_patch}")
-
-        if not is_new and current_patch != "14":
-            logger.log("SKIP", "No new patch detected, skipping update")
-            notifier.notify(
-                "LeagueStats Coach",
-                f"No update needed (patch {current_patch})"
-            )
-            return 0
-
-        if current_patch == "14":
-            logger.log("INFO", "Using rolling 14-day window (always update)")
-        else:
-            logger.log("SUCCESS", f"New patch detected: {last_patch} → {current_patch}")
-
-        # 3. Send start notification
+        # 2. Send start notification
         notifier.notify(
             "LeagueStats Coach",
-            f"Mise à jour démarrée (patch {current_patch})..."
+            f"Mise à jour démarrée (patch {patch_version})..."
         )
 
-        # 4. Initialize parallel parser
+        # 3. Initialize parallel parser
         logger.log("INFO", f"Initializing ParallelParser (10 workers)...")
-        parser = ParallelParser(db, max_workers=10, patch_version=current_patch)
+        parser = ParallelParser(max_workers=10, patch_version=patch_version)
         logger.log("SUCCESS", "ParallelParser initialized")
 
-        # 5. Parse SOLOQ_POOL champions (faster, ~5-10 min with parallel)
+        # 4. Parse SOLOQ_POOL champions (faster, ~5-10 min with parallel)
         champion_count = len(SOLOQ_POOL)
         logger.log("INFO", f"Starting parallel scraping of {champion_count} champions...")
         logger.log("INFO", "Estimated time: ~12 minutes (background process)")
@@ -284,12 +178,12 @@ def main() -> int:
         logger.log("SUCCESS", f"Scraping completed in {duration_min:.1f} minutes")
         logger.log("INFO", f"Champions parsed: {success_count}/{champion_count} succeeded, {failed_count} failed")
 
-        # 6. Close parser to free resources
+        # 5. Close parser to free resources
         parser.close()
         parser = None
         logger.log("INFO", "ParallelParser closed (Firefox drivers cleaned up)")
 
-        # 7. Recalculate champion scores
+        # 6. Recalculate champion scores
         logger.log("INFO", "Recalculating champion scores...")
         assistant = Assistant(verbose=False)
         assistant.calculate_global_scores()
@@ -297,11 +191,7 @@ def main() -> int:
         assistant = None
         logger.log("SUCCESS", "Champion scores recalculated")
 
-        # 8. Save patch version to cache
-        detector.save_patch(current_patch)
-        logger.log("SUCCESS", f"Patch version saved: {current_patch}")
-
-        # 9. Success notification
+        # 7. Success notification
         total_time = (end_time - start_time).total_seconds() / 60
         logger.log("SUCCESS", f"Auto-update completed successfully in {total_time:.1f} minutes")
         notifier.notify(
@@ -343,13 +233,6 @@ def main() -> int:
                 logger.log("INFO", "Assistant cleanup completed")
             except Exception as e:
                 logger.log("WARNING", f"Assistant cleanup failed: {e}")
-
-        if db:
-            try:
-                db.close()
-                logger.log("INFO", "Database connection closed")
-            except Exception as e:
-                logger.log("WARNING", f"Database cleanup failed: {e}")
 
 
 if __name__ == '__main__':
