@@ -1,0 +1,68 @@
+{
+  "comment": "Configuration for automatic database updates",
+  "version": "1.0",
+
+  "enabled": true,
+  "description": "Master switch for auto-update feature",
+
+  "scraping": {
+    "max_workers": 10,
+    "description": "Number of parallel workers (10 = optimized for i5-14600KF)",
+
+    "patch_version": "14",
+    "description_patch": "Patch version to scrape ('14' = rolling 14-day window, or specific like '15.1')",
+
+    "champion_pool": "SOLOQ_POOL",
+    "description_pool": "Which champion pool to scrape (SOLOQ_POOL, ALL_CHAMPIONS, or custom list)",
+
+    "timeout_minutes": 30,
+    "description_timeout": "Maximum execution time before script is killed (30min = safety margin for 12min execution)"
+  },
+
+  "notifications": {
+    "enabled": true,
+    "description": "Send Windows toast notifications",
+
+    "on_success": true,
+    "description_success": "Notify when update succeeds",
+
+    "on_failure": true,
+    "description_failure": "Notify when update fails",
+
+    "duration_seconds": 10,
+    "description_duration": "How long notifications stay visible"
+  },
+
+  "logging": {
+    "enabled": true,
+    "description": "Log all operations to file",
+
+    "log_dir": "logs",
+    "description_dir": "Directory for log files",
+
+    "log_file": "auto_update.log",
+    "description_file": "Log file name",
+
+    "max_log_size_mb": 10,
+    "description_size": "Maximum log file size before rotation (0 = no limit)"
+  },
+
+  "patch_detection": {
+    "force_update": false,
+    "description_force": "Always update even if no new patch (useful for rolling window '14')",
+
+    "cache_file": "data/last_patch.json",
+    "description_cache": "File to store last known patch version"
+  },
+
+  "advanced": {
+    "process_priority": "BELOW_NORMAL",
+    "description_priority": "Process priority (IDLE, BELOW_NORMAL, NORMAL, ABOVE_NORMAL, HIGH)",
+
+    "cleanup_old_data": false,
+    "description_cleanup": "Delete old matchup data before importing (WARNING: data loss if script fails)",
+
+    "recalculate_scores": true,
+    "description_scores": "Recalculate tier list scores after scraping"
+  }
+}
