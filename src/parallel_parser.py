@@ -33,6 +33,7 @@ from time import sleep
 from typing import List, Optional, Tuple
 import logging
 import threading
+import sys
 
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from tqdm import tqdm
@@ -51,6 +52,19 @@ logger = logging.getLogger(__name__)
 
 # Thread-local storage for parser instances (one parser per thread)
 thread_local = local()
+
+
+def _is_headless_mode() -> bool:
+    """
+    Detect if running in headless mode (pythonw.exe, Task Scheduler, etc.).
+    
+    In headless mode, sys.stdout is None, so tqdm progress bars should be disabled
+    to avoid crashes.
+    
+    Returns:
+        True if stdout is not available (headless mode), False otherwise
+    """
+    return sys.stdout is None or not hasattr(sys.stdout, 'write')
 
 
 class ParallelParser:
@@ -213,7 +227,13 @@ class ParallelParser:
         failed_count = 0
         total_champions = len(champion_names)
 
-        with tqdm(total=total_champions, desc="Scraping champions", unit="champ") as pbar:
+        # Disable tqdm in headless mode (pythonw.exe, Task Scheduler)
+        # to avoid AttributeError: 'NoneType' object has no attribute 'write'
+        disable_tqdm = _is_headless_mode()
+        if disable_tqdm:
+            logger.info("Headless mode detected - tqdm progress bar disabled")
+
+        with tqdm(total=total_champions, desc="Scraping champions", unit="champ", disable=disable_tqdm) as pbar:
             for future in as_completed(futures):
                 champion = futures[future]
                 try:
@@ -301,7 +321,12 @@ class ParallelParser:
         success_count = 0
         failed_count = 0
 
-        with tqdm(total=len(champion_list), desc=f"Scraping {lane}", unit="champ") as pbar:
+        # Disable tqdm in headless mode (pythonw.exe, Task Scheduler)
+        disable_tqdm = _is_headless_mode()
+        if disable_tqdm:
+            logger.info(f"Headless mode detected - tqdm progress bar disabled for {lane}")
+
+        with tqdm(total=len(champion_list), desc=f"Scraping {lane}", unit="champ", disable=disable_tqdm) as pbar:
             for future in as_completed(futures):
                 champion = futures[future]
                 try:
