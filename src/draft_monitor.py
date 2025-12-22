@@ -630,16 +630,23 @@ class DraftMonitor:
             if self._is_ban_phase(state) and self.auto_ban_hover:
                 self._handle_auto_ban_hover(state)
             
-            # Phase-specific advice
-            phase_advice = {
-                "PLANNING": "[PLAN] Think about team composition and ban priorities",
-                "BAN_PICK": "[BAN] Focus on banning enemy strengths",
-                "PICK": "[PICK] Time to secure your champion!",
-                "FINALIZATION": "[FINAL] Finalize runes and summoner spells"
-            }
-            
-            if state.phase in phase_advice:
-                print(f"\n[ADVICE] {phase_advice[state.phase]}")
+            # Phase-specific advice (dynamic based on actual game state)
+            advice = None
+            if state.phase == "PLANNING":
+                advice = "[PLAN] Think about team composition and ban priorities"
+            elif state.phase == "BAN_PICK":
+                # BAN_PICK phase includes both bans and picks - detect which we're in
+                if self._is_ban_phase(state):
+                    advice = "[BAN] Focus on banning enemy strengths"
+                else:
+                    advice = "[PICK] Time to secure your champion!"
+            elif state.phase == "PICK":
+                advice = "[PICK] Time to secure your champion!"
+            elif state.phase == "FINALIZATION":
+                advice = "[FINAL] Finalize runes and summoner spells"
+
+            if advice:
+                print(f"\n[ADVICE] {advice}")
                 
         except Exception as e:
             print(f"[WARNING] Error providing recommendations: {e}")
