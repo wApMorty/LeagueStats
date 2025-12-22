@@ -104,6 +104,7 @@ from .config_constants import analysis_config
 - **Thread-local storage**: ONE Parser instance per thread (reused for multiple champions)
 - **Retry mechanism**: Automatic exponential backoff with tenacity (3 attempts)
 - **Thread-safe writes**: All DB operations use `self.db_lock` for atomicity
+- **Headless mode**: Auto-detects pythonw.exe (Task Scheduler) and disables tqdm to prevent crashes
 
 ### Build System (PyInstaller)
 - **Entry point**: [lol_coach.py](../lol_coach.py) (NOT main.py)
@@ -213,6 +214,7 @@ git checkout -b feature/new-task origin/master
 6. **Test coverage**: Write tests BEFORE creating PR, not after
 7. **File size**: Keep modules under 500 lines (split into submodules if needed)
 8. **Config usage**: Check config_constants.py before hardcoding ANY value
+9. **tqdm in headless mode**: parallel_parser.py auto-detects pythonw.exe and disables progress bars
 
 ## Debugging & Logging
 
