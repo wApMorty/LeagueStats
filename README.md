@@ -19,6 +19,7 @@ python main.py
 - **Real-time Draft Coach** - Live recommendations during champion select with ban analysis
 - **Team Builder** - Find optimal champion trios/duos with holistic evaluation (17 advanced algorithms)
 - **Multi-Role Pools** - Support for top, support, jungle, mid, adc roles
+- **Auto-Update Database** - 🔄 **Automated daily updates** via Task Scheduler (zero manual maintenance)
 - **Parallel Web Scraping** - ⚡ **87% faster** data updates (12min vs 90-120min) with 10 concurrent workers
 - **Live Progress Tracking** - Real-time podium display during trio optimization
 - **Standalone Distribution** - Portable executable for any Windows PC
@@ -64,22 +65,33 @@ LeagueStats/
 ## Documentation
 
 - **User Guide:** `docs/CLAUDE.md`
-- **Architecture:** `docs/PROJECT_STRUCTURE.md` 
+- **Architecture:** `docs/PROJECT_STRUCTURE.md`
+- **Auto-Update Setup:** `docs/AUTO_UPDATE_SETUP.md` - Daily database automation
 - **Build Tools:** `build_app.py` and `create_package.py` scripts
 
 ## Database
 
 The application includes a complete database with:
-- **170 champions** (including Zaahen, Yunara) with current statistics
+- **172 champions** (including Zaahen, Yunara) with current statistics
 - **36,000+ matchup records** with win rates and performance metrics
 - **Role-specific pools** for targeted analysis
+- **Auto-updates daily** via Task Scheduler (3 AM default, zero maintenance)
 - **Parallel scraping** updates all data in **12 minutes** (87% faster than before)
 
 Database location: `data/db.db`
 
+**Setup auto-update**: See [docs/AUTO_UPDATE_SETUP.md](docs/AUTO_UPDATE_SETUP.md) for 3-step setup guide
+
 ## Recent Updates
 
-### Version 1.1.0-dev - Parallel Scraping & Advanced Analysis (2025-12-20)
+### Version 1.1.0-dev - Auto-Update & Performance (2025-12-22)
+
+**🔄 Automation Breakthrough:**
+- 🤖 **Auto-Update Database** - Daily automated updates via Task Scheduler
+- 🔕 **Background execution** - Low priority, no PC blocking
+- 🔔 **Windows notifications** - Success/failure alerts (win10toast)
+- 📊 **Detailed logging** - Full operation history in `logs/auto_update.log`
+- ⚙️ **3-step setup** - PowerShell wizard for Task Scheduler
 
 **🚀 Performance Breakthrough:**
 - ⚡ **Parallel web scraping** - 87% faster data updates (12min vs 90-120min)
@@ -92,7 +104,7 @@ Database location: `data/db.db`
 - 🏆 Live podium display during champion optimization
 - 🚫 Intelligent ban recommendations with reverse lookup strategy
 - 📈 Competitive draft simulation (blue/red side)
-- 🎮 170 champions supported (including new champions Zaahen, Yunara)
+- 🎮 172 champions supported (including new champions Zaahen, Yunara)
 
 **🧪 Quality & Maintainability:**
 - ✅ 89% test coverage on analysis module

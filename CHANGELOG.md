@@ -17,6 +17,15 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Features
 
+- **MAJOR**: Auto-Update Database system (Tâche #11, PR #14)
+  - **Automated daily updates** via Windows Task Scheduler (3 AM default)
+  - **Background execution** with BELOW_NORMAL priority (no PC blocking)
+  - **12-minute updates** using ParallelParser (10 workers)
+  - **Windows notifications** on success/failure (win10toast)
+  - **Detailed logging** to `logs/auto_update.log`
+  - **PowerShell setup wizard** (`setup_auto_update.ps1`)
+  - **Dry-run test script** (`test_auto_update.py`)
+  - **Zero manual maintenance** - Always up-to-date database
 - **MAJOR**: Restored 24 missing Assistant methods from refactoring (+902 lines)
   - 7 draft & competitive methods: `draft()`, `competitive_draft()`, `blind_pick()`, etc.
   - 14 holistic trio analysis methods: `find_optimal_trios_holistic()`, `_evaluate_trio_holistic()`, etc.
@@ -38,9 +47,14 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### 📦 Added
 
+- `scripts/auto_update_db.py` - Automated database update script (260 lines)
+- `scripts/setup_auto_update.ps1` - Task Scheduler setup wizard (202 lines)
+- `scripts/test_auto_update.py` - Dry-run test script (204 lines)
+- `docs/AUTO_UPDATE_SETUP.md` - Complete setup guide (397 lines)
 - `src/parallel_parser.py` - Parallel web scraping with ThreadPoolExecutor (389 lines)
 - Live podium display method in `src/assistant.py` (36 lines)
 - 24 restored methods in `src/assistant.py` (+902 lines total)
+- `win10toast>=0.9` dependency for Windows notifications
 
 ### 🔧 Changed
 
@@ -52,17 +66,21 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### 📊 Impact
 
+- **Automation**: Zero manual database maintenance (runs daily automatically)
 - **Performance**: 87% faster data updates (12min vs 90-120min)
 - **Completeness**: 54 total Assistant methods (vs 30 before restoration)
-- **User Experience**: Live progress tracking, real-time podium, cleaner output
-- **Reliability**: Automatic retries, thread-safe operations, dynamic configuration
+- **User Experience**: Live progress tracking, real-time podium, notifications
+- **Reliability**: Automatic retries, thread-safe operations, background execution
 - **Compatibility**: 100% backward compatible, all methods functional
 
 ### 🧪 Testing
 
+- Auto-update script successfully tested with 172 champions
+- Task Scheduler integration verified (3 AM daily execution)
+- Dry-run test script validates all components
 - Manual testing of parallel scraping with 10 workers
 - Verification of all 24 restored methods accessibility
-- Performance benchmarking: 12min for full champion pool (170 champions)
+- Performance benchmarking: 12min for full champion pool (172 champions)
 - Thread-safety validation with concurrent database writes
 
 ---
