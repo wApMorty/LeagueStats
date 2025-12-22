@@ -1944,24 +1944,95 @@ def search_pools(pool_manager):
         print("No pools found.")
 
 def show_pool_statistics(pool_manager):
-    """Show pool statistics."""
-    stats = pool_manager.get_pool_stats()
-    
-    print("\n" + "="*40)
+    """Show pool statistics - global or individual pool analysis."""
+    print("\n" + "="*50)
     print("POOL STATISTICS")
-    print("="*40)
-    print(f"Total pools: {stats['total_pools']}")
-    print(f"Custom pools: {stats['custom_pools']}")
-    print(f"System pools: {stats['system_pools']}")
-    
-    print("\nBy role:")
-    for key, value in stats.items():
-        if key.endswith('_pools') and not key.startswith(('total', 'custom', 'system')):
-            role = key.replace('_pools', '')
-            print(f"  {role.capitalize()}: {value}")
+    print("="*50)
+
+    menu = """
+Statistics Options:
+  1. Global pool statistics (counts by type/role)
+  2. Individual pool performance analysis
+  3. Back to pool management
+
+Choose an option (1-3): """
+
+    choice = input(menu).strip()
+
+    if choice == "1":
+        # Global statistics (original functionality)
+        stats = pool_manager.get_pool_stats()
+
+        print("\n" + "="*40)
+        print("GLOBAL POOL STATISTICS")
+        print("="*40)
+        print(f"Total pools: {stats['total_pools']}")
+        print(f"Custom pools: {stats['custom_pools']}")
+        print(f"System pools: {stats['system_pools']}")
+
+        print("\nBy role:")
+        for key, value in stats.items():
+            if key.endswith('_pools') and not key.startswith(('total', 'custom', 'system')):
+                role = key.replace('_pools', '')
+                print(f"  {role.capitalize()}: {value}")
+
+    elif choice == "2":
+        # Individual pool performance analysis (NEW)
+        show_individual_pool_statistics(pool_manager)
+
+    elif choice == "3":
+        return
+
+    else:
+        print("[ERROR] Invalid option. Please choose 1-3.")
+
+def show_individual_pool_statistics(pool_manager):
+    """Show detailed performance statistics for a specific champion pool."""
+    from src.analysis.pool_statistics import PoolStatisticsCalculator, format_pool_statistics
+    from src.assistant import Assistant
+    from src.utils.display import safe_print
+
+    # Select pool
+    pool = _select_pool_interactive(pool_manager, "Select pool for statistics")
+    if not pool:
+        return
+
+    safe_print(f"\n[INFO] Calculating statistics for pool: {pool.name}")
+    print("[INFO] This may take a moment...")
+
+    try:
+        # Initialize calculator
+        assistant = Assistant()
+        calculator = PoolStatisticsCalculator(assistant.db)
+
+        # Performance optimization: Warm cache before analysis (99% faster)
+        print("[INFO] Warming cache for performance...")
+        assistant.warm_cache(pool.champions)
+
+        # Calculate statistics
+        stats = calculator.calculate_pool_statistics(pool.name, pool.champions)
+
+        # Clear cache to free memory
+        assistant.clear_cache()
+
+        # Display formatted output
+        output = format_pool_statistics(stats)
+        print("\n" + output)
+
+        # Prompt to continue
+        input("\nPress Enter to continue...")
+
+        assistant.close()
+
+    except Exception as e:
+        print(f"[ERROR] Failed to calculate pool statistics: {e}")
+        import traceback
+        traceback.print_exc()
 
 def _select_pool_interactive(pool_manager, action_name="Select pool"):
     """Interactive pool selection with numbered choices."""
+    from src.utils.display import safe_print
+    
     pools = pool_manager.get_all_pools()
     if not pools:
         print("[ERROR] No pools found.")
@@ -1978,7 +2049,7 @@ def _select_pool_interactive(pool_manager, action_name="Select pool"):
     for name, pool in sorted(pools.items()):
         pool_list.append((name, pool))
         status = "🔧" if pool.created_by == "system" else "👤"
-        print(f"  {idx:>2}. {status} {name:<20} | {pool.role:<8} | {pool.size():>2} champs | {pool.description}")
+        safe_print(f"  {idx:>2}. {status} {name:<20} | {pool.role:<8} | {pool.size():>2} champs | {pool.description}")
         idx += 1
     
     try:

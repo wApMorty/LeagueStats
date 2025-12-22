@@ -36,6 +36,14 @@ All notable changes to LeagueStats Coach will be documented in this file.
   - Top 3 rankings with medals (🥇🥈🥉)
   - Progress bar with percentage and viable count
   - ANSI escape codes for in-place terminal updates
+- **Pool Statistics Viewer** (Tâche #5, PR #TBD)
+  - **Comprehensive statistical analysis** for champion pools
+  - **Distribution metrics**: mean, median, min, max, standard deviation, variance
+  - **Coverage analysis**: champions with/without sufficient data, percentage
+  - **Outlier detection**: champions with insufficient matchup data
+  - **Performance rankings**: Top 5 and Bottom 5 performers by avg_delta2
+  - **Integrated into Pool Manager** as Menu option 8
+  - **15 unit tests** with 100% pass rate
 - **New champions support**: Zaahen (TOP), Yunara (ADC)
 
 ### 🐛 Fixes
@@ -52,8 +60,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 - `scripts/test_auto_update.py` - Dry-run test script (204 lines)
 - `docs/AUTO_UPDATE_SETUP.md` - Complete setup guide (397 lines)
 - `src/parallel_parser.py` - Parallel web scraping with ThreadPoolExecutor (389 lines)
+- `src/analysis/pool_statistics.py` - Pool statistics calculator and formatter (271 lines)
 - Live podium display method in `src/assistant.py` (36 lines)
 - 24 restored methods in `src/assistant.py` (+902 lines total)
+- `tests/test_pool_statistics.py` - Unit tests for pool statistics (376 lines, 15 tests)
 - `win10toast>=0.9` dependency for Windows notifications
 
 ### 🔧 Changed
@@ -61,6 +71,7 @@ All notable changes to LeagueStats Coach will be documented in this file.
 - `src/assistant.py`: Added `Dict` to type imports
 - `src/assistant.py`: Refactored `_find_optimal_counterpick_duo()` to use live podium (117 lines)
 - `src/assistant.py`: Updated all methods to use dynamic DB queries instead of hardcoded constants
+- `src/ui/lol_coach_legacy.py`: Enhanced `show_pool_statistics()` with submenu for global vs individual analysis
 - `src/constants.py`: Added Zaahen and Yunara champion entries
 - `main.py`: Added `parse_all_champions_parallel()` and `parse_champions_by_role_parallel()` functions
 
@@ -82,6 +93,7 @@ All notable changes to LeagueStats Coach will be documented in this file.
 - Verification of all 24 restored methods accessibility
 - Performance benchmarking: 12min for full champion pool (172 champions)
 - Thread-safety validation with concurrent database writes
+- **Pool statistics**: 15 unit tests with 100% pass rate (113 total project tests)
 
 ---
 
