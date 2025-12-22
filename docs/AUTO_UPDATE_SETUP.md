@@ -106,47 +106,30 @@ LeagueStats/
 │   ├── auto_update_db.py           # Main auto-update script
 │   ├── setup_auto_update.ps1        # Task Scheduler setup
 │   └── test_auto_update.py          # Dry-run test script
-├── config/
-│   └── auto_update_config.json      # Configuration settings
 ├── logs/
 │   └── auto_update.log              # Operation logs
 └── data/
-    └── last_patch.json              # Patch version cache
+    └── db.db                         # Main database
 ```
 
 ---
 
 ## ⚙️ Configuration
 
-Edit `config/auto_update_config.json` to customize behavior:
+The auto-update script uses hardcoded settings optimized for most use cases:
 
-```json
-{
-  "scraping": {
-    "max_workers": 10,              // Parallel workers (10 = optimal for i5-14600KF)
-    "patch_version": "14",          // "14" = rolling 14-day window
-    "timeout_minutes": 30           // Max execution time
-  },
+**Default Settings**:
+- **Workers**: 10 parallel workers (optimal for i5-14600KF multi-core CPUs)
+- **Patch**: "14" (rolling 14-day window, always up-to-date)
+- **Schedule**: Daily at 3 AM (configured via `setup_auto_update.ps1`)
+- **Priority**: BELOW_NORMAL (background execution, no PC blocking)
+- **Notifications**: Enabled (Windows toast on success/failure)
+- **Logging**: Enabled (`logs/auto_update.log`)
 
-  "notifications": {
-    "enabled": true,                // Windows toast notifications
-    "on_success": true,             // Notify on success
-    "on_failure": true,             // Notify on failure
-    "duration_seconds": 10          // Notification display time
-  },
-
-  "logging": {
-    "enabled": true,                // Log to file
-    "log_dir": "logs",
-    "log_file": "auto_update.log"
-  }
-}
-```
-
-**Common customizations**:
+**To customize**:
 - **Change schedule time**: Re-run `setup_auto_update.ps1`
-- **Disable notifications**: Set `notifications.enabled` to `false`
-- **Change worker count**: Adjust `scraping.max_workers` (8-12 recommended)
+- **Disable notifications**: Modify `scripts/auto_update_db.py` line 144 (`enabled=False`)
+- **Change worker count**: Modify `scripts/auto_update_db.py` line 175 (`max_workers=10`)
 
 ---
 
