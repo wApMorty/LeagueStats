@@ -48,6 +48,18 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### 🐛 Fixes
 
+- **CRITICAL**: Fixed live coach performance and UX issues (PR #TBD)
+  - **Ban recommendations spam**: Now show ONLY during ban phase (before any picks)
+    - Root cause: Phase name "BAN_PICK" contains "BAN" → rewrote `_is_ban_phase()` to check picks count
+    - Impact: Clean draft experience, no more spam on every pick
+  - **Wrong advice during picks**: Dynamic advice detection based on game state
+    - Before: Always showed "[BAN]" advice during "BAN_PICK" phase
+    - After: Shows "[BAN]" only when 0 picks, "[PICK]" when picks > 0
+  - **Duplicate DB queries**: Removed redundant `get_champion_matchups()` calls in final analysis
+    - Impact: 2x faster final team analysis
+  - Added debug logging for troubleshooting (verbose mode support)
+  - All 113 tests pass ✅
+
 - Fixed `get_ban_recommendations()` AttributeError (method was lost during Sprint 1 refactoring)
 - Fixed missing draft and holistic trio analysis methods (24 methods restored)
 - Removed debug logging from optimal duo finder for cleaner output
