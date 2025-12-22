@@ -49,6 +49,13 @@ LeagueStats Coach est un outil d'analyse et de coaching pour League of Legends q
   - ✅ **87% performance improvement** (12min vs 90-120min)
   - ✅ Thread-safe database operations
   - ✅ Real-time progress tracking
+- Tâche #11: Auto-Update BD (Service Windows) ✅ **FAIT** (2025-12-22)
+  - ✅ Script auto-update avec ParallelParser (12min execution)
+  - ✅ Task Scheduler setup wizard (PowerShell)
+  - ✅ Background execution (BELOW_NORMAL priority)
+  - ✅ Windows toast notifications (win10toast)
+  - ✅ Detailed logging system
+  - ✅ **Zero maintenance** - Daily automated updates (3 AM)
 - Restauration méthodes Assistant ✅ **FAIT** (2025-12-20)
   - ✅ 24 méthodes manquantes restaurées (+902 lignes)
   - ✅ Live podium display pour optimisation
@@ -80,16 +87,25 @@ LeagueStats Coach est un outil d'analyse et de coaching pour League of Legends q
 ### 1. Avant de Commencer une Tâche
 
 ```bash
-# 1. Vérifier l'état du worktree
-git status
+# 1. S'assurer d'être sur master/main à jour
+git fetch origin
+git checkout clean-workspace  # ou master selon worktree
+git pull origin master
 
-# 2. Créer une feature branch depuis la branche actuelle
-git checkout -b feature/task-name
+# 2. TOUJOURS créer feature branch DEPUIS MASTER
+git checkout -b feature/task-name origin/master
+
+# ❌ MAUVAIS - Créer depuis autre branche
+git checkout feature/old-task
+git checkout -b feature/new-task  # ❌ Contient commits de old-task!
+
+# ✅ BON - Toujours depuis master
+git checkout -b feature/new-task origin/master  # ✅ Propre!
 
 # Exemples:
-# git checkout -b feature/refactor-monolithic-files
-# git checkout -b feature/database-migrations
-# git checkout -b feature/parallel-scraping
+# git checkout -b feature/refactor-monolithic-files origin/master
+# git checkout -b feature/database-migrations origin/master
+# git checkout -b feature/parallel-scraping origin/master
 ```
 
 ### 2. Pendant le Développement
@@ -117,16 +133,82 @@ git add tests/test_scoring.py
 git commit -m "Test: Add unit tests for scoring algorithms"
 ```
 
-### 3. Code Review Process
+### 3. Avant de Créer la PR (Checklist Obligatoire)
+
+**🔴 ÉTAPES CRITIQUES - À FAIRE SYSTÉMATIQUEMENT**:
+
+**A. Tests pour les nouvelles fonctionnalités**:
+```bash
+# 1. Écrire tests pour TOUTE nouvelle fonctionnalité
+# - Tests unitaires pour fonctions/méthodes
+# - Tests d'intégration si nécessaire
+# - Tests de régression si correction de bug
+
+# 2. Ajouter les tests
+git add tests/test_nouvelle_feature.py
+git commit -m "✅ Test: Add tests for nouvelle_feature (X tests, Y% coverage)"
+```
+
+**B. Validation des tests**:
+```bash
+# 1. Lancer TOUS les tests du projet
+pytest tests/ -v
+
+# 2. Vérifier couverture (optionnel mais recommandé)
+pytest tests/ --cov=src --cov-report=term
+
+# 3. Compiler tous les fichiers Python
+python -m py_compile src/**/*.py scripts/**/*.py
+
+# ❌ Si un test échoue → CORRIGER avant PR
+# ✅ Tous les tests doivent passer avant de continuer
+```
+
+**C. Mise à jour documentation**:
+```bash
+# 1. Mettre à jour CHANGELOG.md
+# - Ajouter nouvelle feature dans section appropriée
+# - Documenter changements breaking si applicable
+
+# 2. Mettre à jour README.md si nécessaire
+# - Nouvelles features visibles utilisateur
+# - Nouvelles dépendances
+# - Changements d'usage
+
+# 3. Mettre à jour docs/ si nécessaire
+# - Guides d'utilisation
+# - Documentation technique
+
+# 4. Commiter documentation
+git add CHANGELOG.md README.md docs/
+git commit -m "📝 Docs: Update documentation for nouvelle_feature"
+```
+
+**D. Vérification finale**:
+```bash
+# 1. Relire tous les commits
+git log --oneline origin/master..HEAD
+
+# 2. Vérifier qu'aucun fichier n'est oublié
+git status
+
+# 3. S'assurer que la branche est à jour
+git fetch origin
+git rebase origin/master  # Si conflits, les résoudre
+
+# 4. Push de la feature branch
+git push -u origin feature/task-name
+```
+
+### 4. Code Review Process
 
 **IMPORTANT**: Toujours demander validation avant de merge
 
 **Étapes**:
-1. ✅ Terminer la tâche sur feature branch
-2. ✅ S'assurer que tous les tests passent
-3. ✅ Créer un résumé des changements pour l'utilisateur
-4. ✅ **ATTENDRE VALIDATION** de l'utilisateur
-5. ✅ Merger uniquement après approbation
+1. ✅ **Checklist "Avant de Créer la PR" complétée** (section 3)
+2. ✅ Créer un résumé des changements pour l'utilisateur
+3. ✅ **ATTENDRE VALIDATION** de l'utilisateur
+4. ✅ Merger uniquement après approbation
 
 **Template de Code Review**:
 ```markdown
@@ -286,6 +368,56 @@ def test_weighted_average_calculation(scorer, insert_matchup):
 - `src/analysis/recommendations.py`: **65%** (60 statements, 21 missed - draft_simple legacy)
 
 **Documentation**: [tests/README.md](tests/README.md) (à créer si besoin)
+
+### Tests de Régression (Bug Fix Tests)
+
+**🔴 RÈGLE CRITIQUE**: Pour chaque bug remonté par l'utilisateur et corrigé, **TOUJOURS** créer un test automatisé qui vérifie que ce bug ne revient jamais.
+
+**Workflow**:
+1. ✅ L'utilisateur remonte un bug avec message d'erreur/logs
+2. ✅ Analyser et corriger le bug
+3. ✅ **OBLIGATOIRE**: Créer un test de régression qui reproduit le bug
+4. ✅ Vérifier que le test échoue AVANT le fix (prouve qu'il détecte le bug)
+5. ✅ Vérifier que le test passe APRÈS le fix
+6. ✅ Committer le fix ET le test ensemble
+
+**Exemple de test de régression**:
+```python
+def test_parse_all_champions_stats_dict_keys():
+    """Regression test: stats dict must use 'success' key, not 'successful'.
+
+    Bug: auto_update_db.py used stats.get('successful') but ParallelParser
+    returned 'success', causing "0/172 succeeded" false reporting.
+
+    Fixed in: PR #14 commit 980048d
+    """
+    db = Database(":memory:")
+    db.connect()
+    parser = ParallelParser(max_workers=1)
+
+    # Mock minimal scraping
+    stats = parser.parse_all_champions(db, normalize_champion_name_for_url)
+
+    # Assert correct keys exist
+    assert 'success' in stats, "stats dict must contain 'success' key"
+    assert 'failed' in stats, "stats dict must contain 'failed' key"
+    assert 'total' in stats, "stats dict must contain 'total' key"
+    assert 'duration' in stats, "stats dict must contain 'duration' key"
+
+    # Assert old incorrect key doesn't exist
+    assert 'successful' not in stats, "stats dict must NOT contain 'successful' key (typo)"
+```
+
+**Bénéfices**:
+- ✅ **Prévention**: Empêche régression du même bug
+- ✅ **Documentation**: Le test documente le bug et sa correction
+- ✅ **Confiance**: Garantit que les corrections restent valides
+- ✅ **Refactoring safe**: Permet refactoring sans crainte de casser anciens fixes
+
+**Localisation des tests**:
+- Tests de régression → `tests/regression/` (nouveau dossier)
+- Nommer fichiers: `test_regression_<issue_number>_<description>.py`
+- Exemple: `test_regression_pr14_stats_dict_keys.py`
 
 ---
 
@@ -710,16 +842,19 @@ python -m alembic upgrade head --sql
 
 ### TOUJOURS
 
-1. ✅ **Feature branch** pour chaque tâche
+1. ✅ **Feature branch DEPUIS MASTER** (`git checkout -b feature/name origin/master`)
 2. ✅ **Commits atomiques** et fréquents
-3. ✅ **Code review** AVANT tout merge
-4. ✅ **Validation utilisateur** explicite requise
-5. ✅ **Tests** avant de demander validation
-6. ✅ **Requêtes SQL paramétrées** (sécurité)
-7. ✅ **config_constants.py** pour valeurs hardcodées
-8. ✅ **Type hints** sur fonctions publiques
-9. ✅ **Docstrings** sur classes et méthodes
-10. ✅ **Backward compatibility** lors refactoring
+3. ✅ **Tests pour nouvelles fonctionnalités** (unitaires + intégration si besoin)
+4. ✅ **Test de régression** pour chaque bug corrigé (OBLIGATOIRE)
+5. ✅ **Tous les tests passent** avant PR (`pytest tests/ -v`)
+6. ✅ **Documentation mise à jour** (CHANGELOG.md, README.md, docs/)
+7. ✅ **Code review** AVANT tout merge
+8. ✅ **Validation utilisateur** explicite requise
+9. ✅ **Requêtes SQL paramétrées** (sécurité)
+10. ✅ **config_constants.py** pour valeurs hardcodées
+11. ✅ **Type hints** sur fonctions publiques
+12. ✅ **Docstrings** sur classes et méthodes
+13. ✅ **Backward compatibility** lors refactoring
 
 ### JAMAIS
 
@@ -769,11 +904,17 @@ Avant de soumettre code review, vérifier:
   - [x] **Performance**: 87% amélioration (12min vs 90-120min)
   - [x] Thread-safe database operations
   - [x] Real-time progress tracking
+- [x] Tâche #11: Auto-Update BD (Service Windows) ✅ **FAIT** (2025-12-22)
+  - [x] Script auto-update avec ParallelParser (12min)
+  - [x] Task Scheduler setup wizard (PowerShell)
+  - [x] Background execution (BELOW_NORMAL priority)
+  - [x] Windows toast notifications
+  - [x] Detailed logging system
+  - [x] **Zero maintenance** - Daily automated updates (3 AM)
 - [x] Restauration méthodes Assistant ✅ **FAIT** (2025-12-20)
   - [x] 24 méthodes manquantes restaurées
   - [x] Live podium display
   - [x] 54 méthodes total
-- [ ] Tâche #11: Auto-update BD (Service Windows) ✅ **DÉBLOQUÉ** (Tâche #4 terminée)
 - [ ] Tâche #5: Pool statistics viewer
 - [ ] Tâche #14: Migration SQLAlchemy ORM (optionnel)
 - [ ] Tâche #10: CI/CD Pipeline (GitHub Actions)

@@ -54,7 +54,7 @@ from src.parallel_parser import ParallelParser
 from src.assistant import Assistant
 from src.db import Database
 from src.config import config
-from src.constants import CHAMPIONS_LIST, normalize_champion_name_for_url
+from src.constants import normalize_champion_name_for_url
 
 
 class AutoUpdateLogger:
@@ -177,22 +177,22 @@ def main() -> int:
         parser = ParallelParser(max_workers=10, patch_version=patch_version)
         logger.log("SUCCESS", "ParallelParser initialized")
 
-        # 5. Parse all champions (faster, ~12 min with parallel)
-        champion_count = len(CHAMPIONS_LIST)
-        logger.log("INFO", f"Starting parallel scraping of {champion_count} champions...")
+        # 5. Parse all champions (dynamically from Riot API, ~12 min with parallel)
+        logger.log("INFO", "Starting parallel scraping of champions from Riot API...")
         logger.log("INFO", "Estimated time: ~12 minutes (background process)")
 
         start_time = datetime.now()
-        stats = parser.parse_all_champions(db, CHAMPIONS_LIST, normalize_champion_name_for_url)
+        stats = parser.parse_all_champions(db, normalize_champion_name_for_url)
         end_time = datetime.now()
 
         success_count = stats.get('success', 0)
         failed_count = stats.get('failed', 0)
+        total_count = stats.get('total', 0)
         duration = stats.get('duration', 0)
 
         duration_min = duration / 60
         logger.log("SUCCESS", f"Scraping completed in {duration_min:.1f} minutes")
-        logger.log("INFO", f"Champions parsed: {success_count}/{champion_count} succeeded, {failed_count} failed")
+        logger.log("INFO", f"Champions parsed: {success_count}/{total_count} succeeded, {failed_count} failed")
 
         # 6. Close parser to free resources
         parser.close()
