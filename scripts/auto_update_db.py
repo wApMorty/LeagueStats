@@ -52,8 +52,7 @@ from src.parallel_parser import ParallelParser
 from src.assistant import Assistant
 from src.db import Database
 from src.config import config
-from src.constants import CHAMPIONS_LIST
-from src.utils.champion_utils import normalize_champion_name_for_url
+from src.constants import CHAMPIONS_LIST, normalize_champion_name_for_url
 
 
 class AutoUpdateLogger:
