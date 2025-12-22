@@ -186,7 +186,7 @@ def main() -> int:
         stats = parser.parse_all_champions(db, CHAMPIONS_LIST, normalize_champion_name_for_url)
         end_time = datetime.now()
 
-        success_count = stats.get('successful', 0)
+        success_count = stats.get('success', 0)
         failed_count = stats.get('failed', 0)
         duration = stats.get('duration', 0)
 
