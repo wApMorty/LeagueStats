@@ -164,14 +164,15 @@ class ParallelParser:
     def parse_all_champions(
         self,
         db: Database,
-        champion_list: List[str],
         normalize_func
     ) -> dict:
         """Parse all champions in parallel with progress tracking.
 
+        Champions list is dynamically retrieved from Riot API, ensuring
+        new champions are automatically included without code updates.
+
         Args:
             db: Database instance (must be connected)
-            champion_list: List of champion names to scrape
             normalize_func: Function to normalize champion names for URLs
 
         Returns:
@@ -179,8 +180,6 @@ class ParallelParser:
         """
         import time
         start_time = time.time()
-
-        logger.info(f"Starting parallel scraping of {len(champion_list)} champions")
 
         # Initialize database tables (use Alembic-compatible schema)
         # Note: init_champion_table() is deprecated and breaks Alembic migrations
@@ -194,6 +193,10 @@ class ParallelParser:
 
         db.init_matchups_table()
 
+        # Get champion list dynamically from database (populated by Riot API)
+        champion_names = list(db.get_all_champion_names().values())
+        logger.info(f"Starting parallel scraping of {len(champion_names)} champions from Riot API")
+
         # Create thread pool and submit tasks
         self.executor = ThreadPoolExecutor(max_workers=self.max_workers)
         futures = {
@@ -202,14 +205,15 @@ class ParallelParser:
                 champion,
                 normalize_func
             ): champion
-            for champion in champion_list
+            for champion in champion_names
         }
 
         # Track progress with tqdm
         success_count = 0
         failed_count = 0
+        total_champions = len(champion_names)
 
-        with tqdm(total=len(champion_list), desc="Scraping champions", unit="champ") as pbar:
+        with tqdm(total=total_champions, desc="Scraping champions", unit="champ") as pbar:
             for future in as_completed(futures):
                 champion = futures[future]
                 try:
@@ -227,12 +231,12 @@ class ParallelParser:
         stats = {
             'success': success_count,
             'failed': failed_count,
-            'total': len(champion_list),
+            'total': total_champions,
             'duration': duration
         }
 
         logger.info(
-            f"Scraping completed: {success_count}/{len(champion_list)} succeeded, "
+            f"Scraping completed: {success_count}/{total_champions} succeeded, "
             f"{failed_count} failed, duration: {duration:.1f}s ({duration/60:.1f}min)"
         )
 

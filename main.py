@@ -26,6 +26,9 @@ def parse_all_champions_data(db: Database, parser: Parser) -> None:
 def parse_all_champions_parallel(db: Database, max_workers: int = 10, patch_version: str = None) -> dict:
     """Parse all champions using parallel scraping (87% faster).
 
+    Champions list is dynamically retrieved from Riot API, ensuring
+    new champions are automatically included without code updates.
+
     Args:
         db: Database instance
         max_workers: Number of concurrent threads (default: 10)
@@ -40,7 +43,6 @@ def parse_all_champions_parallel(db: Database, max_workers: int = 10, patch_vers
     try:
         stats = parallel_parser.parse_all_champions(
             db,
-            CHAMPIONS_LIST,
             normalize_champion_name_for_url
         )
         return stats

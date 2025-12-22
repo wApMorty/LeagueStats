@@ -415,11 +415,10 @@ def parse_all_champions(patch_version=None):
         parallel_parser = ParallelParser(max_workers=scraping_config.DEFAULT_MAX_WORKERS, patch_version=patch_version)
 
         print(f"\n[INFO] Starting parallel scraping with {scraping_config.DEFAULT_MAX_WORKERS} workers (patch {patch_version or config.CURRENT_PATCH})...")
-        print(f"[INFO] Parsing {len(CHAMPIONS_LIST)} champions...")
+        print(f"[INFO] Parsing champions from Riot API...")
 
         stats = parallel_parser.parse_all_champions(
             db,
-            CHAMPIONS_LIST,
             normalize_champion_name_for_url
         )
 
@@ -427,6 +426,8 @@ def parse_all_champions(patch_version=None):
         duration = time.time() - start_time
 
         # Display statistics
+        total_count = stats.get('total', 0)
+        print(f"[INFO] Parsed {total_count} champions from Riot API")
         print("\n" + "="*60)
         print("PARALLEL SCRAPING COMPLETED")
         print("="*60)
