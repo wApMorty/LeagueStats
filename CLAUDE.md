@@ -49,6 +49,13 @@ LeagueStats Coach est un outil d'analyse et de coaching pour League of Legends q
   - ✅ **87% performance improvement** (12min vs 90-120min)
   - ✅ Thread-safe database operations
   - ✅ Real-time progress tracking
+- Tâche #11: Auto-Update BD (Service Windows) ✅ **FAIT** (2025-12-22)
+  - ✅ Script auto-update avec ParallelParser (12min execution)
+  - ✅ Task Scheduler setup wizard (PowerShell)
+  - ✅ Background execution (BELOW_NORMAL priority)
+  - ✅ Windows toast notifications (win10toast)
+  - ✅ Detailed logging system
+  - ✅ **Zero maintenance** - Daily automated updates (3 AM)
 - Restauration méthodes Assistant ✅ **FAIT** (2025-12-20)
   - ✅ 24 méthodes manquantes restaurées (+902 lignes)
   - ✅ Live podium display pour optimisation
@@ -897,11 +904,17 @@ Avant de soumettre code review, vérifier:
   - [x] **Performance**: 87% amélioration (12min vs 90-120min)
   - [x] Thread-safe database operations
   - [x] Real-time progress tracking
+- [x] Tâche #11: Auto-Update BD (Service Windows) ✅ **FAIT** (2025-12-22)
+  - [x] Script auto-update avec ParallelParser (12min)
+  - [x] Task Scheduler setup wizard (PowerShell)
+  - [x] Background execution (BELOW_NORMAL priority)
+  - [x] Windows toast notifications
+  - [x] Detailed logging system
+  - [x] **Zero maintenance** - Daily automated updates (3 AM)
 - [x] Restauration méthodes Assistant ✅ **FAIT** (2025-12-20)
   - [x] 24 méthodes manquantes restaurées
   - [x] Live podium display
   - [x] 54 méthodes total
-- [ ] Tâche #11: Auto-update BD (Service Windows) ✅ **DÉBLOQUÉ** (Tâche #4 terminée)
 - [ ] Tâche #5: Pool statistics viewer
 - [ ] Tâche #14: Migration SQLAlchemy ORM (optionnel)
 - [ ] Tâche #10: CI/CD Pipeline (GitHub Actions)
