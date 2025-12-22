@@ -21,6 +21,8 @@ def run_draft_coach(
         auto_ban_hover: Auto-hover ban recommendations
         open_onetricks: Open champion pages on draft completion
     """
+    # TEMPORARY DEBUG: Force verbose mode to True
+    verbose = True
     print("[INFO] Starting Real-time Draft Coach...")
     print("Make sure League of Legends client is running and start a game!")
     if auto_hover:
