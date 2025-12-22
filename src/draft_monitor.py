@@ -665,31 +665,25 @@ class DraftMonitor:
     def _is_ban_phase(self, state: DraftState) -> bool:
         """
         Check if we are currently in an active ban phase.
-        
+
         This method checks multiple conditions:
-        1. Phase name contains 'BAN'
-        2. Current actor exists (someone is supposed to act)
-        3. We haven't reached the maximum number of bans yet
-        
+        1. We have 0 picks (ban phase is before any picks)
+        2. We haven't reached the maximum number of bans yet
+
         Returns:
             True if currently in an active ban phase, False otherwise
         """
         if not state.phase:
             return False
-        
-        # Check if phase name indicates banning
-        phase_upper = state.phase.upper()
-        if "BAN" not in phase_upper:
+
+        # Key insight: Ban phase happens BEFORE any picks
+        # If there are any picks, we're in pick phase (even if phase name is "BAN_PICK")
+        total_picks = len(state.ally_picks) + len(state.enemy_picks)
+        if total_picks > 0:
+            if self.verbose:
+                print(f"[DEBUG] Not ban phase: {total_picks} picks already made")
             return False
-        
-        # Additional check: make sure we're not in a pure pick phase
-        if "PICK" in phase_upper and "BAN" not in phase_upper:
-            return False
-        
-        # Check if someone is supposed to act (there's a current actor)
-        if not state.current_actor:
-            return False
-        
+
         # Check if we haven't exceeded typical ban limits
         # In most draft modes, each team gets 5 bans (10 total)
         total_bans = len(state.ally_bans) + len(state.enemy_bans)
@@ -697,10 +691,10 @@ class DraftMonitor:
             if self.verbose:
                 print(f"[DEBUG] Ban phase check: Max bans reached ({total_bans}/10)")
             return False
-        
+
         if self.verbose:
-            print(f"[DEBUG] Ban phase detected: Phase='{state.phase}', Actor={state.current_actor}, Bans={total_bans}/10")
-        
+            print(f"[DEBUG] Ban phase detected: Phase='{state.phase}', Picks={total_picks}, Bans={total_bans}/10")
+
         return True
     
     def _should_show_bans(self, state: DraftState) -> bool:
