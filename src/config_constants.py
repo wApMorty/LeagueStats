@@ -120,9 +120,19 @@ class XPathConfig:
     MATCHUP_ROW_BASE: str = "/html/body/main/div[6]/div[1]/div[{index}]/div[2]/div"
 
 
+@dataclass
+class PoolStatisticsConfig:
+    """Configuration for pool statistics analysis."""
+
+    # Minimum thresholds for data quality in pool statistics
+    MIN_GAMES_THRESHOLD: int = 100  # Minimum total games for sufficient data
+    MIN_PICKRATE: float = 0.5  # Minimum pickrate % for matchup inclusion
+
+
 # Global configuration instances
 scraping_config = ScrapingConfig()
 analysis_config = AnalysisConfig()
 draft_config = DraftConfig()
 ui_config = UIConfig()
 xpath_config = XPathConfig()
+pool_stats_config = PoolStatisticsConfig()

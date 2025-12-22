@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from statistics import mean, median, stdev, variance
 from ..db import Database
 from ..analysis.scoring import ChampionScorer
+from ..config_constants import pool_stats_config
 
 
 @dataclass
@@ -54,16 +55,16 @@ class PoolStatistics:
 class PoolStatisticsCalculator:
     """Calculates statistics for champion pools."""
 
-    def __init__(self, db: Database, min_games_threshold: int = 100):
+    def __init__(self, db: Database, min_games_threshold: int = None):
         """Initialize calculator.
 
         Args:
             db: Database instance (must be connected)
-            min_games_threshold: Minimum games required for sufficient data
+            min_games_threshold: Minimum games required for sufficient data (default: from config)
         """
         self.db = db
         self.scorer = ChampionScorer(db, verbose=False)
-        self.min_games_threshold = min_games_threshold
+        self.min_games_threshold = min_games_threshold or pool_stats_config.MIN_GAMES_THRESHOLD
 
     def calculate_champion_stats(self, champion_name: str) -> Optional[ChampionStats]:
         """Calculate statistics for a single champion.
