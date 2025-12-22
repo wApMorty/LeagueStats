@@ -927,6 +927,7 @@ class Assistant:
         """
         Get ban recommendations against a specific champion pool using reverse lookup.
 
+        OPTIMIZED: Uses cached matchup data to avoid thousands of DB queries.
         For each potential enemy pick, finds your BEST response from your pool.
         Prioritizes banning enemies where even your best response is insufficient.
 
@@ -935,65 +936,57 @@ class Assistant:
             num_bans: Number of ban recommendations to return
 
         Returns:
-            List of tuples (enemy_name, threat_score, best_response_delta2)
+            List of tuples (enemy_name, threat_score, matchups_found)
             Sorted by threat_score (descending)
         """
-        from .config import config
+        from .config_constants import analysis_config
 
-        # Get all potential enemies from database
-        all_potential_enemies = set()
+        # Build enemy threat map: enemy_name -> {best_delta2, pickrate, matchups_count}
+        enemy_threats = {}
+
+        # Iterate through our pool's CACHED matchups (no DB queries!)
         for our_champion in champion_pool:
-            try:
-                matchups = self.db.get_champion_matchups_by_name(our_champion)
-                for enemy_name, winrate, delta1, delta2, pickrate, games in matchups:
-                    if pickrate >= config.MIN_PICKRATE and games >= config.MIN_MATCHUP_GAMES:
-                        all_potential_enemies.add(enemy_name)
-            except Exception as e:
-                if self.verbose:
-                    print(f"Error getting enemies for {our_champion}: {e}")
+            # Use cached matchups in optimized 4-column format (already loaded by warm_cache)
+            matchups = self.get_cached_matchups(our_champion)
+
+            if not matchups:
                 continue
 
-        ban_candidates = []
+            # Process each enemy matchup
+            for matchup in matchups:
+                # Matchup format: (enemy_name, delta2, pickrate, games)
+                enemy_name, delta2, pickrate, games = matchup
 
-        # For each potential enemy, find our best response
-        for enemy_champion in all_potential_enemies:
-            best_response_delta2 = -float('inf')
-            best_response_champion = None
-            enemy_pickrate = 0.0
-            matchups_found = 0
-
-            # Check all our champions against this enemy
-            for our_champion in champion_pool:
-                try:
-                    delta2 = self.db.get_matchup_delta2(our_champion, enemy_champion)
-
-                    if delta2 is not None:
-                        matchups_found += 1
-
-                        # Track the best response we have
-                        if delta2 > best_response_delta2:
-                            best_response_delta2 = delta2
-                            best_response_champion = our_champion
-
-                        # Also get pickrate data for this enemy (approximate from one of our matchups)
-                        if enemy_pickrate == 0.0:
-                            try:
-                                matchups = self.db.get_champion_matchups_by_name(our_champion)
-                                for enemy_name, winrate, delta1, d2, pickrate, games in matchups:
-                                    if enemy_name == enemy_champion:
-                                        enemy_pickrate = pickrate
-                                        break
-                            except:
-                                pass
-
-                except Exception as e:
-                    if self.verbose:
-                        print(f"Error checking {our_champion} vs {enemy_champion}: {e}")
+                # Skip low-quality matchups
+                if pickrate < analysis_config.MIN_PICKRATE or games < analysis_config.MIN_MATCHUP_GAMES:
                     continue
 
-            # Skip if no valid matchups found
-            if best_response_champion is None or matchups_found == 0:
-                continue
+                # Initialize enemy entry if new
+                if enemy_name not in enemy_threats:
+                    enemy_threats[enemy_name] = {
+                        'best_delta2': delta2,
+                        'pickrate': pickrate,
+                        'matchups_count': 1
+                    }
+                else:
+                    # Update with better response if found
+                    if delta2 > enemy_threats[enemy_name]['best_delta2']:
+                        enemy_threats[enemy_name]['best_delta2'] = delta2
+
+                    # Average pickrate across matchups
+                    enemy_threats[enemy_name]['pickrate'] = max(
+                        enemy_threats[enemy_name]['pickrate'],
+                        pickrate
+                    )
+                    enemy_threats[enemy_name]['matchups_count'] += 1
+
+        # Convert to ban candidates with threat scoring
+        ban_candidates = []
+
+        for enemy_name, threat_data in enemy_threats.items():
+            best_response_delta2 = threat_data['best_delta2']
+            enemy_pickrate = threat_data['pickrate']
+            matchups_found = threat_data['matchups_count']
 
             # Calculate threat score: Higher score = enemy should be banned
             # Key insight: If even our BEST response has negative delta2, this enemy is very threatening
@@ -1014,18 +1007,16 @@ class Assistant:
             )
 
             ban_candidates.append((
-                enemy_champion,
+                enemy_name,
                 combined_threat,
-                best_response_delta2,
-                best_response_champion,
                 matchups_found
             ))
 
         # Sort by combined threat (descending)
         ban_candidates.sort(key=lambda x: x[1], reverse=True)
 
-        # Return in clean format: (enemy, threat_score, best_response_delta2)
-        return [(name, threat, best_delta2) for name, threat, best_delta2, _, _ in ban_candidates[:num_bans]]
+        # Return top N bans in format: (enemy_name, threat_score, matchups_found)
+        return ban_candidates[:num_bans]
 
     # ==================== Draft & Competitive Methods ====================
 
