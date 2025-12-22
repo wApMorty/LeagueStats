@@ -579,7 +579,7 @@ class DraftMonitor:
                     # Get champion name and matchups (cached for performance)
                     champion_name = self._get_display_name(champion_id)
                     matchups = self.assistant.get_matchups_for_draft(champion_name)
-                    if matchups and sum(m[5] for m in matchups) >= 500:  # Threshold for valid data
+                    if matchups and sum(m[3] for m in matchups) >= 500:  # Threshold for valid data (m[3] = games)
                         # Calculate score against enemy team using unified scoring method
                         score = self._calculate_score_against_team(matchups, enemy_picks, champion_name)
                         scores.append((champion_id, score))
@@ -780,7 +780,7 @@ class DraftMonitor:
             for champion_id in champion_ids:
                 champion_name = self._get_display_name(champion_id)
                 matchups = self.assistant.get_matchups_for_draft(champion_name)
-                if matchups and sum(m[5] for m in matchups) >= 500:  # Threshold for valid data
+                if matchups and sum(m[3] for m in matchups) >= 500:  # Threshold for valid data (m[3] = games)
                     # Use blind pick scoring (empty enemy team)
                     score = self.assistant.score_against_team(matchups, [], champion_name)
                     scores.append((champion_name, score))
@@ -926,25 +926,19 @@ class DraftMonitor:
             champion_name = self._get_display_name(champion_id)
             
             try:
-                # Get matchups for this champion
-                matchups = self.assistant.db.get_champion_matchups(champion_id)
-                
-                if not matchups or sum(m[5] for m in matchups) < 500:
+                # Get champion matchups (cached for performance) - uses optimized 4-column format
+                champion_matchups = self.assistant.get_matchups_for_draft(champion_name)
+
+                if not champion_matchups or sum(m[3] for m in champion_matchups) < 500:  # m[3] = games
                     ally_scores.append((champion_name, None, 0))  # Mark insufficient data
                     continue
-                
+
                 # Use the new normalized scoring system
                 enemy_names = [self._get_display_name(enemy_id) for enemy_id in enemy_picks]
 
-                # Get champion matchups (cached for performance)
-                champion_matchups = self.assistant.get_matchups_for_draft(champion_name)
-                
-                if champion_matchups:
-                    # Use assistant's new win advantage calculation
-                    win_advantage = self.assistant.score_against_team(champion_matchups, enemy_names, champion_name)
-                    ally_scores.append((champion_name, win_advantage, len(enemy_picks)))
-                else:
-                    ally_scores.append((champion_name, None, 0))
+                # Use assistant's new win advantage calculation
+                win_advantage = self.assistant.score_against_team(champion_matchups, enemy_names, champion_name)
+                ally_scores.append((champion_name, win_advantage, len(enemy_picks)))
                 
             except Exception as e:
                 ally_scores.append((champion_name, None, 0))  # Mark error
@@ -954,25 +948,19 @@ class DraftMonitor:
             champion_name = self._get_display_name(champion_id)
             
             try:
-                # Get matchups for this champion
-                matchups = self.assistant.db.get_champion_matchups(champion_id)
-                
-                if not matchups or sum(m[5] for m in matchups) < 500:
+                # Get champion matchups (cached for performance) - uses optimized 4-column format
+                champion_matchups = self.assistant.get_matchups_for_draft(champion_name)
+
+                if not champion_matchups or sum(m[3] for m in champion_matchups) < 500:  # m[3] = games
                     enemy_scores.append((champion_name, None, 0))  # Mark insufficient data
                     continue
-                
+
                 # Use the new normalized scoring system
                 ally_names = [self._get_display_name(ally_id) for ally_id in ally_picks]
 
-                # Get champion matchups (cached for performance)
-                champion_matchups = self.assistant.get_matchups_for_draft(champion_name)
-                
-                if champion_matchups:
-                    # Use assistant's new win advantage calculation
-                    win_advantage = self.assistant.score_against_team(champion_matchups, ally_names, champion_name)
-                    enemy_scores.append((champion_name, win_advantage, len(ally_picks)))
-                else:
-                    enemy_scores.append((champion_name, None, 0))
+                # Use assistant's new win advantage calculation
+                win_advantage = self.assistant.score_against_team(champion_matchups, ally_names, champion_name)
+                enemy_scores.append((champion_name, win_advantage, len(ally_picks)))
                 
             except Exception as e:
                 enemy_scores.append((champion_name, None, 0))  # Mark error

@@ -25,16 +25,34 @@ class ChampionScorer:
         """
         Filter matchups with sufficient pick rate and games data.
 
+        Supports two tuple formats:
+        - 6-column format: (enemy_id, winrate, delta1, delta2, pickrate, games) - from get_champion_matchups_by_name()
+        - 4-column format: (enemy_name, delta2, pickrate, games) - from get_matchups_for_draft()
+
         Args:
             matchups: List of matchup tuples
 
         Returns:
             Filtered list of valid matchups
         """
-        return [
-            m for m in matchups
-            if m[4] >= analysis_config.MIN_PICKRATE and m[5] >= analysis_config.MIN_MATCHUP_GAMES
-        ]
+        if not matchups:
+            return []
+
+        # Auto-detect format based on tuple length
+        tuple_len = len(matchups[0])
+
+        if tuple_len == 4:
+            # 4-column format: (enemy_name, delta2, pickrate, games)
+            return [
+                m for m in matchups
+                if m[2] >= analysis_config.MIN_PICKRATE and m[3] >= analysis_config.MIN_MATCHUP_GAMES
+            ]
+        else:
+            # 6-column format: (enemy_id, winrate, delta1, delta2, pickrate, games)
+            return [
+                m for m in matchups
+                if m[4] >= analysis_config.MIN_PICKRATE and m[5] >= analysis_config.MIN_MATCHUP_GAMES
+            ]
 
     def avg_delta1(self, matchups: List[tuple]) -> float:
         """
@@ -58,6 +76,10 @@ class ChampionScorer:
         """
         Calculate weighted average delta2 from valid matchups.
 
+        Supports two tuple formats:
+        - 6-column format: (enemy_id, winrate, delta1, delta2, pickrate, games)
+        - 4-column format: (enemy_name, delta2, pickrate, games)
+
         Args:
             matchups: List of matchup tuples
 
@@ -67,10 +89,22 @@ class ChampionScorer:
         valid_matchups = self.filter_valid_matchups(matchups)
         if not valid_matchups:
             return 0.0
-        total_weight = sum(m[4] for m in valid_matchups)
-        if total_weight == 0:
-            return 0.0
-        return sum(m[3] * m[4] for m in valid_matchups) / total_weight
+
+        # Auto-detect format based on tuple length
+        tuple_len = len(valid_matchups[0])
+
+        if tuple_len == 4:
+            # 4-column format: (enemy_name, delta2, pickrate, games)
+            total_weight = sum(m[2] for m in valid_matchups)  # pickrate at index 2
+            if total_weight == 0:
+                return 0.0
+            return sum(m[1] * m[2] for m in valid_matchups) / total_weight  # delta2 at index 1
+        else:
+            # 6-column format: (enemy_id, winrate, delta1, delta2, pickrate, games)
+            total_weight = sum(m[4] for m in valid_matchups)  # pickrate at index 4
+            if total_weight == 0:
+                return 0.0
+            return sum(m[3] * m[4] for m in valid_matchups) / total_weight  # delta2 at index 3
 
     def avg_winrate(self, matchups: List[tuple]) -> float:
         """
@@ -147,11 +181,21 @@ class ChampionScorer:
         matchup_count = 0
         remaining_matchups = matchups.copy()
 
+        # Auto-detect format based on tuple length
+        if matchups:
+            tuple_len = len(matchups[0])
+            # Determine delta2 index based on format
+            # 4-column format: (enemy_name, delta2, pickrate, games) - delta2 at index 1
+            # 6-column format: (enemy_id, winrate, delta1, delta2, pickrate, games) - delta2 at index 3
+            delta2_idx = 1 if tuple_len == 4 else 3
+        else:
+            delta2_idx = 3  # Default to 6-column format
+
         # Calculate delta2 for known matchups
         for enemy in team:
             for i, matchup in enumerate(remaining_matchups):
                 if matchup[0].lower() == enemy.lower():
-                    delta2 = matchup[3]
+                    delta2 = matchup[delta2_idx]
                     total_delta2 += delta2
                     matchup_count += 1
                     remaining_matchups.pop(i)
