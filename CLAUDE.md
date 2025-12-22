@@ -287,6 +287,56 @@ def test_weighted_average_calculation(scorer, insert_matchup):
 
 **Documentation**: [tests/README.md](tests/README.md) (à créer si besoin)
 
+### Tests de Régression (Bug Fix Tests)
+
+**🔴 RÈGLE CRITIQUE**: Pour chaque bug remonté par l'utilisateur et corrigé, **TOUJOURS** créer un test automatisé qui vérifie que ce bug ne revient jamais.
+
+**Workflow**:
+1. ✅ L'utilisateur remonte un bug avec message d'erreur/logs
+2. ✅ Analyser et corriger le bug
+3. ✅ **OBLIGATOIRE**: Créer un test de régression qui reproduit le bug
+4. ✅ Vérifier que le test échoue AVANT le fix (prouve qu'il détecte le bug)
+5. ✅ Vérifier que le test passe APRÈS le fix
+6. ✅ Committer le fix ET le test ensemble
+
+**Exemple de test de régression**:
+```python
+def test_parse_all_champions_stats_dict_keys():
+    """Regression test: stats dict must use 'success' key, not 'successful'.
+
+    Bug: auto_update_db.py used stats.get('successful') but ParallelParser
+    returned 'success', causing "0/172 succeeded" false reporting.
+
+    Fixed in: PR #14 commit 980048d
+    """
+    db = Database(":memory:")
+    db.connect()
+    parser = ParallelParser(max_workers=1)
+
+    # Mock minimal scraping
+    stats = parser.parse_all_champions(db, normalize_champion_name_for_url)
+
+    # Assert correct keys exist
+    assert 'success' in stats, "stats dict must contain 'success' key"
+    assert 'failed' in stats, "stats dict must contain 'failed' key"
+    assert 'total' in stats, "stats dict must contain 'total' key"
+    assert 'duration' in stats, "stats dict must contain 'duration' key"
+
+    # Assert old incorrect key doesn't exist
+    assert 'successful' not in stats, "stats dict must NOT contain 'successful' key (typo)"
+```
+
+**Bénéfices**:
+- ✅ **Prévention**: Empêche régression du même bug
+- ✅ **Documentation**: Le test documente le bug et sa correction
+- ✅ **Confiance**: Garantit que les corrections restent valides
+- ✅ **Refactoring safe**: Permet refactoring sans crainte de casser anciens fixes
+
+**Localisation des tests**:
+- Tests de régression → `tests/regression/` (nouveau dossier)
+- Nommer fichiers: `test_regression_<issue_number>_<description>.py`
+- Exemple: `test_regression_pr14_stats_dict_keys.py`
+
 ---
 
 ## 🔀 Conventions Git
@@ -715,11 +765,12 @@ python -m alembic upgrade head --sql
 3. ✅ **Code review** AVANT tout merge
 4. ✅ **Validation utilisateur** explicite requise
 5. ✅ **Tests** avant de demander validation
-6. ✅ **Requêtes SQL paramétrées** (sécurité)
-7. ✅ **config_constants.py** pour valeurs hardcodées
-8. ✅ **Type hints** sur fonctions publiques
-9. ✅ **Docstrings** sur classes et méthodes
-10. ✅ **Backward compatibility** lors refactoring
+6. ✅ **Test de régression** pour chaque bug corrigé (OBLIGATOIRE)
+7. ✅ **Requêtes SQL paramétrées** (sécurité)
+8. ✅ **config_constants.py** pour valeurs hardcodées
+9. ✅ **Type hints** sur fonctions publiques
+10. ✅ **Docstrings** sur classes et méthodes
+11. ✅ **Backward compatibility** lors refactoring
 
 ### JAMAIS
 
