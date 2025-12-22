@@ -48,6 +48,14 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### 🐛 Fixes
 
+- **CRITICAL**: Fixed 20-30 second delays in draft monitor with large pools (19+ champions)
+  - **Root cause**: Tuple index mismatch between optimized 4-column format and legacy 6-column format
+  - **Impact**: Draft monitor now responds instantly again (< 1 second per update)
+  - Fixed `draft_monitor.py`: Corrected `m[5]` → `m[3]` for games column in 4-column tuples
+  - Fixed `scoring.py`: Added auto-detection of tuple format (4 vs 6 columns)
+  - Removed duplicate database queries (performance optimization)
+  - All 113 tests pass ✅
+
 - Fixed `get_ban_recommendations()` AttributeError (method was lost during Sprint 1 refactoring)
 - Fixed missing draft and holistic trio analysis methods (24 methods restored)
 - Removed debug logging from optimal duo finder for cleaner output
