@@ -34,19 +34,21 @@ from typing import Optional, Tuple
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-# Set process priority to BELOW_NORMAL to avoid blocking PC
-try:
-    import psutil
-    p = psutil.Process(os.getpid())
-    if sys.platform == 'win32':
-        p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
-    else:
-        p.nice(10)  # Unix: lower priority (0=normal, 19=lowest)
-    print("[PRIORITY] Process priority set to BELOW_NORMAL (background execution)")
-except ImportError:
-    print("[WARNING] psutil not available, running at normal priority")
-except Exception as e:
-    print(f"[WARNING] Could not set process priority: {e}")
+# Set process priority to BELOW_NORMAL to avoid blocking PC (only when run as main)
+def _set_process_priority():
+    """Set process priority to BELOW_NORMAL for background execution."""
+    try:
+        import psutil
+        p = psutil.Process(os.getpid())
+        if sys.platform == 'win32':
+            p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
+        else:
+            p.nice(10)  # Unix: lower priority (0=normal, 19=lowest)
+        print("[PRIORITY] Process priority set to BELOW_NORMAL (background execution)")
+    except ImportError:
+        print("[WARNING] psutil not available, running at normal priority")
+    except Exception as e:
+        print(f"[WARNING] Could not set process priority: {e}")
 
 from src.parallel_parser import ParallelParser
 from src.assistant import Assistant
@@ -257,5 +259,6 @@ def main() -> int:
 
 
 if __name__ == '__main__':
+    _set_process_priority()
     exit_code = main()
     sys.exit(exit_code)

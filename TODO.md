@@ -17,7 +17,7 @@
 |---|-------|------------|------------|-----|----------|--------|
 | **2** | **Extraction valeurs hardcodées** | **8** | **3** | **2.67** | 🔴 | ✅ **FAIT** |
 | **4** | **Web Scraping parallèle** | **13** | **8** | **1.63** | 🟡 | ✅ **FAIT** |
-| **11** | **Auto-Update BD (Service Windows)** | **13** | **8** | **1.63** | 🟡 | ❌ ✅ **DÉBLOQUÉ** |
+| **11** | **Auto-Update BD (Service Windows)** | **13** | **8** | **1.63** | 🟡 | 🟡 **EN COURS** |
 | **5** | **Pool Statistics Viewer** | **5** | **3** | **1.67** | 🟡 | ❌ |
 | **10** | **CI/CD Pipeline** | **8** | **5** | **1.60** | 🟢 | ❌ |
 | **1** | **Refactoring fichiers monolithiques** | **13** ⬆️ | **13** | **1.00** | 🔴🔴🔴 | ✅ **FAIT** |

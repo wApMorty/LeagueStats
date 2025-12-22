@@ -22,8 +22,8 @@ from pathlib import Path
 # Set UTF-8 encoding for console output
 if sys.platform == 'win32':
     import codecs
-    sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
-    sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
+    sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'backslashreplace')
+    sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'backslashreplace')
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
