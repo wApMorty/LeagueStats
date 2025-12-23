@@ -549,13 +549,10 @@ class DraftMonitor:
             if self.verbose:
                 print(f"[DEBUG] _provide_recommendations called: Phase='{state.phase}', Enemies={len(enemy_picks)}, Allies={len(ally_picks)}")
 
+            # Skip recommendations if draft hasn't started yet (bans already shown in initial hover)
             if not enemy_picks and not ally_picks:
-                print(f"\n[COACH] COACH SAYS: Draft just started - prepare your champion pool!")
-                # Show ban recommendations only if we're actually in a ban phase
-                if self._is_ban_phase(state):
-                    if self.verbose:
-                        print(f"[DEBUG] Showing ban recommendations (ban phase)")
-                    self._show_ban_recommendations_draft()
+                if self.verbose:
+                    print(f"[DEBUG] Waiting for picks to start (bans already shown at start)")
                 return
             
             # Use existing coach logic
@@ -763,7 +760,8 @@ class DraftMonitor:
     def _do_initial_hover(self):
         """Do initial hover with the best champion from the pool when entering champion select."""
         try:
-            print(f"\n[INITIAL] Entering champion select - showing your best champion from pool!")
+            print(f"\n[INITIAL] 🎮 Champion select started - Preparing your strategy!")
+            print("="*80)
             
             # Get best champion from current pool (first champion as fallback)
             if not self.current_pool:
@@ -774,8 +772,21 @@ class DraftMonitor:
             # Calculate best champion from pool using smart analysis
             initial_champion = self._get_best_champion_from_pool()
             
-            self._auto_hover_champion(initial_champion, "Initial hover")
+            # Show the recommended blind pick
+            print(f"\n[PICK] 🎯 BEST BLIND PICK FROM YOUR POOL:")
+            print(f"  ✅ {initial_champion}")
+            print(f"  💡 If you're first pick, this is your safest choice!")
+            
+            # Auto-hover the champion
+            self._auto_hover_champion(initial_champion, "Best blind pick")
             self.last_recommendation = initial_champion
+            
+            # Show ban recommendations immediately
+            self._show_ban_recommendations_draft()
+            
+            print("\n" + "="*80)
+            print("[INFO] Waiting for draft to begin...")
+            print("="*80)
             
         except Exception as e:
             if self.verbose:
