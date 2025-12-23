@@ -14,6 +14,13 @@ All notable changes to LeagueStats Coach will be documented in this file.
   - Real-time progress tracking with tqdm progress bars
   - Komorebi window manager integration with fullscreen mode
   - Dynamic cookie acceptance (fixes hardcoded coordinates bug)
+- **MAJOR**: Pre-calculated ban recommendations system (PR #TBD)
+  - **Instant ban suggestions** during draft - no more 5-10 second calculation delays
+  - Database-backed storage of ban recommendations for all custom pools
+  - Automatic updates during data parsing (both manual and auto-update)
+  - Fallback to real-time calculation if pre-calculated data unavailable
+  - Optimized for pools of 10-20 champions (typical custom pools)
+  - System pools excluded (too large for meaningful ban calculations)
 
 ### ✨ Features
 

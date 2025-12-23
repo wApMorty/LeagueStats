@@ -51,6 +51,7 @@ class DraftMonitor:
         self.is_monitoring = False
         self.verbose = verbose
         self.current_pool = SOLOQ_POOL  # Default pool
+        self.pool_name = None  # Pool name for pre-calculated ban lookups
         self.auto_select_pool = auto_select_pool
         self.auto_hover = auto_hover
         self.auto_accept_queue = auto_accept_queue
@@ -79,6 +80,7 @@ class DraftMonitor:
             self.current_pool = self._select_champion_pool_interactive()
         else:
             # Auto-select top pool by default
+            self.pool_name = "All Top Champions"  # System pool name
             self.current_pool = ROLE_POOLS["top"]
             safe_print(f"✅ Using pool: TOP ({', '.join(self.current_pool)})")
 
@@ -276,19 +278,33 @@ class DraftMonitor:
             
             if self.verbose:
                 print(f"[DEBUG] It's our ban turn! Getting recommendations for pool size {len(self.current_pool)}")
-            
-            # Get ban recommendations for our pool
-            ban_recommendations = self.assistant.get_ban_recommendations(self.current_pool, num_bans=3)
-            
+
+            # Try to get pre-calculated bans from database first (fast)
+            ban_recommendations = None
+            if hasattr(self, 'pool_name') and self.pool_name:
+                ban_recommendations = self.assistant.db.get_pool_ban_recommendations(self.pool_name, limit=3)
+                if ban_recommendations and self.verbose:
+                    print(f"[DEBUG] Using pre-calculated bans from database for pool '{self.pool_name}'")
+
+            # Fallback to real-time calculation if no pre-calculated data
+            if not ban_recommendations:
+                if self.verbose:
+                    print(f"[DEBUG] No pre-calculated bans found, calculating in real-time...")
+                ban_recommendations = self.assistant.get_ban_recommendations(self.current_pool, num_bans=3)
+
             if not ban_recommendations:
                 print("[DEBUG] No ban recommendations available")
                 return
-            
+
             if self.verbose:
                 print(f"[DEBUG] Got {len(ban_recommendations)} ban recommendations")
-            
+
             # Get the top ban recommendation
-            top_ban, threat_score, matchup_count = ban_recommendations[0]
+            # Handle both pre-calculated format (5 values) and real-time format (3 values)
+            top_ban_data = ban_recommendations[0]
+            top_ban = top_ban_data[0]
+            threat_score = top_ban_data[1]
+            matchup_count = top_ban_data[2] if len(top_ban_data) > 2 else 0
             
             if self.verbose:
                 print(f"[DEBUG] Top ban recommendation: {top_ban} (threat: {threat_score:.2f})")
@@ -812,18 +828,29 @@ class DraftMonitor:
         try:
             print(f"\n[BANS] 🛡️ STRATEGIC BAN RECOMMENDATIONS")
             print("-" * 50)
-            
-            ban_recommendations = self.assistant.get_ban_recommendations(self.current_pool, num_bans=3)
-            
+
+            # Try to get pre-calculated bans from database first (fast)
+            ban_recommendations = None
+            if hasattr(self, 'pool_name') and self.pool_name:
+                ban_recommendations = self.assistant.db.get_pool_ban_recommendations(self.pool_name, limit=3)
+                if ban_recommendations and self.verbose:
+                    print(f"[DEBUG] Using pre-calculated bans from database for pool '{self.pool_name}'")
+
+            # Fallback to real-time calculation if no pre-calculated data
+            if not ban_recommendations:
+                if self.verbose:
+                    print(f"[DEBUG] No pre-calculated bans found, calculating in real-time...")
+                ban_recommendations = self.assistant.get_ban_recommendations(self.current_pool, num_bans=3)
+
             if ban_recommendations:
                 print(f"Consider banning these threats to your pool:")
-                for i, (enemy, threat_score, matchup_count) in enumerate(ban_recommendations, 1):
+                for i, (enemy, threat_score, matchup_count, *_) in enumerate(ban_recommendations, 1):
                     print(f"  {i}. {enemy:<12} | Threat: {threat_score:>5.2f} | Counters {matchup_count}/{len(self.current_pool)} of your champions")
                 print(f"💡 These champions have good matchups against your pool")
             else:
                 if self.verbose:
                     print(f"⚠️ No ban data available for your pool")
-                    
+
         except Exception as e:
             if self.verbose:
                 print(f"[WARNING] Error showing ban recommendations: {e}")
@@ -833,24 +860,29 @@ class DraftMonitor:
         try:
             if not state.enemy_picks:
                 return
-            
+
             print(f"\n[ADAPTIVE BANS] 🎯 TARGETED BAN RECOMMENDATIONS")
             print("-" * 50)
-            
+
             # Get enemy champion names
             enemy_names = [self._get_display_name(champ_id) for champ_id in state.enemy_picks]
             print(f"Enemy team has: {', '.join(enemy_names)}")
-            
-            # Get adaptive ban recommendations based on enemy comp
-            # This could be enhanced to consider synergies, but for now show general threats
-            ban_recommendations = self.assistant.get_ban_recommendations(self.current_pool, num_bans=3)
-            
+
+            # Try to get pre-calculated bans from database first (fast)
+            ban_recommendations = None
+            if hasattr(self, 'pool_name') and self.pool_name:
+                ban_recommendations = self.assistant.db.get_pool_ban_recommendations(self.pool_name, limit=3)
+
+            # Fallback to real-time calculation if no pre-calculated data
+            if not ban_recommendations:
+                ban_recommendations = self.assistant.get_ban_recommendations(self.current_pool, num_bans=3)
+
             if ban_recommendations:
                 print(f"Priority bans to deny enemy synergies:")
-                for i, (enemy, threat_score, matchup_count) in enumerate(ban_recommendations[:3], 1):
+                for i, (enemy, threat_score, *_) in enumerate(ban_recommendations[:3], 1):
                     print(f"  {i}. {enemy:<12} | Threat: {threat_score:>5.2f}")
                 print(f"💡 Focus on champions that synergize with their picks")
-            
+
         except Exception as e:
             if self.verbose:
                 print(f"[WARNING] Error showing adaptive ban recommendations: {e}")
@@ -886,21 +918,27 @@ class DraftMonitor:
                 if 1 <= choice <= len(pool_list):
                     selected_name, selected_pool = pool_list[choice - 1]
                     safe_print(f"✅ Using pool: {selected_name} ({', '.join(selected_pool.champions)})")
+                    # Store pool name for pre-calculated ban lookups
+                    self.pool_name = selected_name
                     return selected_pool.champions
                 elif choice == idx:
-                    # Fallback to assistant's method
+                    # Fallback to assistant's method (no pool_name)
+                    self.pool_name = None
                     return self.assistant.select_champion_pool()
                 else:
                     print("[WARNING] Invalid choice, using default TOP pool")
+                    self.pool_name = "All Top Champions"  # System pool name
                     return ROLE_POOLS["top"]
                     
             except (ValueError, IndexError):
                 print("[WARNING] Invalid input, using default TOP pool")
+                self.pool_name = "All Top Champions"
                 return ROLE_POOLS["top"]
-                
+
         except Exception as e:
             print(f"[WARNING] Pool selection error: {e}")
             print("Falling back to legacy pool selection...")
+            self.pool_name = None
             return self.assistant.select_champion_pool()
     
     def _calculate_final_scores(self, ally_picks: List[int], enemy_picks: List[int]):

@@ -260,6 +260,32 @@ class ParallelParser:
             f"{failed_count} failed, duration: {duration:.1f}s ({duration/60:.1f}min)"
         )
 
+        # Pre-calculate ban recommendations for custom pools
+        logger.info("Pre-calculating ban recommendations for custom pools...")
+        try:
+            from ..assistant import Assistant
+            assistant = Assistant(db, verbose=False)
+            ban_results = assistant.precalculate_all_custom_pool_bans()
+
+            total_pools = len(ban_results)
+            successful_pools = sum(1 for count in ban_results.values() if count > 0)
+            total_bans = sum(ban_results.values())
+
+            logger.info(
+                f"Ban pre-calculation completed: {successful_pools}/{total_pools} pools, "
+                f"{total_bans} total recommendations"
+            )
+
+            stats['ban_precalc'] = {
+                'pools_processed': total_pools,
+                'pools_successful': successful_pools,
+                'total_recommendations': total_bans
+            }
+        except Exception as e:
+            logger.error(f"Failed to pre-calculate ban recommendations: {e}")
+            import traceback
+            traceback.print_exc()
+
         return stats
 
     def parse_champions_by_role(
