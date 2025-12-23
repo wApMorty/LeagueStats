@@ -14,16 +14,27 @@ All notable changes to LeagueStats Coach will be documented in this file.
   - Real-time progress tracking with tqdm progress bars
   - Komorebi window manager integration with fullscreen mode
   - Dynamic cookie acceptance (fixes hardcoded coordinates bug)
-- **MAJOR**: Pre-calculated ban recommendations system (PR #TBD)
+- **MAJOR**: Pre-calculated ban recommendations system (PR #19)
   - **Instant ban suggestions** during draft - no more 5-10 second calculation delays
   - Database-backed storage of ban recommendations for all custom pools
   - Automatic updates during data parsing (both manual and auto-update)
   - Fallback to real-time calculation if pre-calculated data unavailable
   - Optimized for pools of 10-20 champions (typical custom pools)
   - System pools excluded (too large for meaningful ban calculations)
+- **Live Coach cache system** for instant draft recommendations
+  - Warm cache at draft start eliminates SQL queries during picks (99% faster)
+  - In-memory storage of all champion matchups from selected pool
+  - Cache statistics tracking (hits/misses) for performance monitoring
+  - Automatic cache clear on draft exit to free memory
 
 ### ✨ Features
 
+- **MAJOR**: Proactive Draft Start UX (PR #19)
+  - **Immediate strategy display** - Best blind pick + ban recommendations shown at game start
+  - **No waiting** - Information appears before ban/pick phases begin
+  - **Clear guidance** - "If you're first pick, this is your safest choice!"
+  - **Adaptive recommendations** - Updates dynamically when enemy picks appear
+  - **Better preparation** - Players can plan strategy from the very start
 - **MAJOR**: Auto-Update Database system (Tâche #11, PR #14)
   - **Automated daily updates** via Windows Task Scheduler (3 AM default)
   - **Background execution** with BELOW_NORMAL priority (no PC blocking)
