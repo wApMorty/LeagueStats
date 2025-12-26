@@ -112,21 +112,50 @@ class PoolManager:
         else:
             print(f"[INFO] No custom pools file found at {self.pools_file}")
     
-    def save_custom_pools(self):
-        """Save custom pools to JSON file."""
+    def save_custom_pools(self, recalculate_bans: bool = True):
+        """Save custom pools to JSON file and optionally recalculate ban recommendations.
+
+        Args:
+            recalculate_bans: If True, automatically recalculate ban recommendations for all custom pools
+
+        Returns:
+            bool: True if save successful, False otherwise
+        """
         try:
             custom_pools = [
-                asdict(pool) for pool in self.pools.values() 
+                asdict(pool) for pool in self.pools.values()
                 if pool.created_by == "user"
             ]
-            
+
             # Créer le répertoire parent si nécessaire
             os.makedirs(os.path.dirname(self.pools_file), exist_ok=True)
-            
+
             with open(self.pools_file, 'w', encoding='utf-8') as f:
                 json.dump({"custom_pools": custom_pools}, f, indent=2, ensure_ascii=False)
-            
+
             print(f"[INFO] Saved {len(custom_pools)} custom pools to {self.pools_file}")
+
+            # Recalculate ban recommendations after successful save
+            if recalculate_bans and len(custom_pools) > 0:
+                print(f"[INFO] Recalculating ban recommendations for {len(custom_pools)} custom pools...")
+                try:
+                    from .assistant import Assistant
+                    from .db import Database
+
+                    # Use default database path
+                    db = Database("data/db.db")
+                    db.connect()
+                    assistant = Assistant(verbose=False)
+
+                    ban_results = assistant.precalculate_all_custom_pool_bans()
+                    successful_pools = sum(1 for count in ban_results.values() if count > 0)
+                    total_bans = sum(ban_results.values())
+
+                    print(f"[SUCCESS] Recalculated {total_bans} ban recommendations for {successful_pools}/{len(custom_pools)} pools")
+                except Exception as e:
+                    print(f"[WARNING] Failed to recalculate ban recommendations: {e}")
+                    # Don't fail the save operation if ban recalculation fails
+
             return True
         except Exception as e:
             print(f"[ERROR] Failed to save custom pools to {self.pools_file}: {e}")
