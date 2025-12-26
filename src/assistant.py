@@ -420,7 +420,7 @@ class Assistant:
 
                 champions_scored += 1
                 if self.verbose:
-                    print(f"  ✓ {champion}: avg_delta2={avg_delta2:.3f}, variance={variance:.3f}, coverage={coverage:.3f}")
+                    print(f"  [OK] {champion}: avg_delta2={avg_delta2:.3f}, variance={variance:.3f}, coverage={coverage:.3f}")
 
             except Exception as e:
                 print(f"  [ERROR] {champion}: {e}")
@@ -1181,10 +1181,10 @@ class Assistant:
                     # Get count of saved bans
                     saved_count = len(self.db.get_pool_ban_recommendations(pool_name, limit=999))
                     results[pool_name] = saved_count
-                    print(f"  ✓ {pool_name}: {saved_count} bans calculated")
+                    print(f"  [OK] {pool_name}: {saved_count} bans calculated")
                 else:
                     results[pool_name] = 0
-                    print(f"  ✗ {pool_name}: Failed")
+                    print(f"  [FAIL] {pool_name}: Failed")
 
             print(f"[SUCCESS] Pre-calculated bans for {len(results)} custom pools")
             return results
