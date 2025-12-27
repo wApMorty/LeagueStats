@@ -121,15 +121,24 @@ class ChampionScorer:
         champion_name: str = None
     ) -> float:
         """
-        Calculate advantage against a team composition using base winrate + delta2.
+        Calculate bidirectional advantage against a team composition.
+
+        Combines two perspectives for more accurate predictions:
+        1. Our advantage: How well our champion performs vs enemy team (from our matchup data)
+        2. Opponent advantage: How well enemy team performs vs us (from their matchup data)
+
+        Net advantage = our_advantage - opponent_advantage
+
+        This accounts for asymmetric matchups where delta2 is not symmetric
+        (e.g., Aatrox vs Darius may differ from Darius vs Aatrox).
 
         Args:
-            matchups: List of matchup data tuples
+            matchups: List of matchup data tuples for our champion
             team: Enemy team composition
-            champion_name: Name of our champion (for accurate base winrate calculation)
+            champion_name: Name of our champion (required for bidirectional calculation)
 
         Returns:
-            Expected advantage in percentage points (positive = favorable)
+            Net advantage in percentage points (positive = favorable for us)
         """
         if not champion_name:
             # Can't calculate accurately without champion name, return 0
@@ -139,10 +148,11 @@ class ChampionScorer:
 
         # Use logistic transformation for delta2 to advantage conversion
         if not team:
-            # Pure blind pick scenario
+            # Pure blind pick scenario - no opponent perspective available
             avg_delta2_val = self.avg_delta2(matchups)
             return self.delta2_to_win_advantage(avg_delta2_val, champion_name)
 
+        # STEP 1: Calculate OUR advantage (our champion vs enemy team)
         total_delta2 = 0
         matchup_count = 0
         remaining_matchups = matchups.copy()
@@ -164,12 +174,34 @@ class ChampionScorer:
             total_delta2 += blind_picks * avg_delta2_val
             matchup_count += blind_picks
 
-        # Convert average delta2 to advantage using logistic transformation
+        # Convert average delta2 to advantage
         if matchup_count == 0:
             return 0.0  # No data available
+
+        our_avg_delta2 = total_delta2 / matchup_count
+        our_advantage = self.delta2_to_win_advantage(our_avg_delta2, champion_name)
+
+        # STEP 2: Calculate OPPONENT advantage (enemy team vs our champion)
+        opponent_deltas = []
+        for enemy in team:
+            # Query enemy's perspective: their delta2 vs our champion
+            enemy_delta2 = self.db.get_matchup_delta2(enemy, champion_name)
+            if enemy_delta2 is not None:
+                opponent_deltas.append(enemy_delta2)
+
+        # Calculate average opponent advantage (simple mean, not weighted)
+        if opponent_deltas:
+            opponent_avg_delta2 = sum(opponent_deltas) / len(opponent_deltas)
+            opponent_advantage = self.delta2_to_win_advantage(opponent_avg_delta2, champion_name)
         else:
-            avg_delta2_val = total_delta2 / matchup_count
-            return self.delta2_to_win_advantage(avg_delta2_val, champion_name)
+            # No opponent data - graceful degradation to unidirectional
+            opponent_advantage = 0.0
+
+        # STEP 3: Combine perspectives for net advantage
+        net_advantage = our_advantage - opponent_advantage
+
+        # Apply conservative bounds
+        return max(-10.0, min(10.0, net_advantage))
 
     def calculate_team_winrate(self, individual_winrates: List[float]) -> dict:
         """
