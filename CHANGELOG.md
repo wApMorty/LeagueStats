@@ -63,6 +63,14 @@ All notable changes to LeagueStats Coach will be documented in this file.
   - **Integrated into Pool Manager** as Menu option 8
   - **15 unit tests** with 100% pass rate
 - **New champions support**: Zaahen (TOP), Yunara (ADC)
+- **Bidirectional advantage calculation** in draft coach (Tâche #TBD, PR #TBD)
+  - **More accurate predictions** accounting for matchup asymmetry
+  - Combines two perspectives: our advantage vs their advantage
+  - Formula: `net_advantage = our_advantage - opponent_advantage`
+  - Handles asymmetric delta2 (e.g., Aatrox vs Darius ≠ Darius vs Aatrox)
+  - Graceful degradation when opponent data missing (treats as neutral)
+  - **8 unit tests** with 100% pass rate
+  - **Zero breaking changes** - seamlessly integrated into existing scoring
 
 ### 🐛 Fixes
 
