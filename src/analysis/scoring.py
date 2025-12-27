@@ -165,7 +165,9 @@ class ChampionScorer:
         if not champion_name:
             # Can't calculate accurately without champion name, return 0
             if self.verbose:
-                print("[WARNING] score_against_team called without champion_name, returning neutral advantage")
+                print("[WARNING] score_against_team() called without champion_name parameter")
+                print("[WARNING] Cannot calculate bidirectional advantage - returning 0.0 (neutral)")
+                print("[ACTION] Pass champion_name parameter to enable bidirectional calculation")
             return 0.0
 
         # Use logistic transformation for delta2 to advantage conversion
@@ -228,8 +230,9 @@ class ChampionScorer:
 
             # Log if we had partial data
             if missing_enemies and self.verbose:
-                print(f"[WARNING] Missing enemy matchup data for {champion_name} vs {missing_enemies}")
-                print(f"[WARNING] Using {len(enemy_perspective_deltas)}/{len(team)} enemy matchups for calculation")
+                print(f"[WARNING] Missing enemy matchup data: {champion_name} vs {missing_enemies}")
+                print(f"[INFO] Using {len(enemy_perspective_deltas)}/{len(team)} enemy matchups for calculation")
+                print(f"[ACTION] Update database to include matchup data for missing enemies")
         else:
             # No enemy data - graceful degradation to unidirectional
             # Design decision: Treat missing enemy advantage as neutral (0.0)
@@ -237,7 +240,8 @@ class ChampionScorer:
             # This means we trust only OUR perspective when enemy data is missing.
             if self.verbose:
                 print(f"[WARNING] No enemy matchup data found for {champion_name} vs {team}")
-                print(f"[WARNING] Degrading to unidirectional calculation (enemy advantage = 0)")
+                print(f"[INFO] Degrading to unidirectional calculation (enemy advantage = 0)")
+                print(f"[ACTION] Scrape enemy champion data or update database to enable bidirectional calculation")
             enemy_advantage_against_us = 0.0
 
         # STEP 3: Combine perspectives for net advantage
