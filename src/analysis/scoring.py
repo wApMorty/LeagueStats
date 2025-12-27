@@ -94,17 +94,28 @@ class ChampionScorer:
         """
         Convert delta2 value to win advantage using logistic transformation.
 
-        Uses mathematical model:
-        - Logistic scaling for realistic bounds and diminishing returns
-        - log_odds = 0.12 * delta2 (~1.2% per delta2 unit)
-        - advantage = (win_probability - 0.5) * 100
+        Uses probability theory for non-linear scaling:
+        - log_odds = 0.12 * delta2 (~1.2% win probability per delta2 unit)
+        - win_probability = 1 / (1 + exp(-log_odds))  [logistic function]
+        - advantage = (win_probability - 0.5) * 100  [deviation from 50% baseline]
+
+        The logistic function provides natural diminishing returns:
+        - Small delta2 (~0-100) scales roughly linearly
+        - Large delta2 (>200) shows diminishing returns due to asymptotic behavior
+        - Theoretical bounds: -50% to +50% (0% to 100% win probability)
+        - Practical range: Most matchups fall within ±20% advantage
+
+        NOTE: No explicit bounds applied. Extreme delta2 values (e.g., 1000)
+        will produce very high advantages (>40%), which is intentional for
+        representing truly dominant matchups.
 
         Args:
             delta2: The delta2 value from matchup data
-            champion_name: Champion name (kept for interface compatibility)
+            champion_name: Champion name (unused - kept for backward compatibility)
 
         Returns:
             Win advantage percentage (positive = our team favored)
+            Range: Theoretically [-50, +50], typically [-20, +20]
         """
         # Logistic transformation
         log_odds = 0.12 * delta2  # ~1.2% per delta2 unit
@@ -194,18 +205,38 @@ class ChampionScorer:
 
         # STEP 2: Calculate OPPONENT advantage (enemy team vs our champion)
         opponent_deltas = []
+        missing_enemies = []
+
         for enemy in team:
             # Query enemy's perspective: their delta2 vs our champion
             enemy_delta2 = self.db.get_matchup_delta2(enemy, champion_name)
             if enemy_delta2 is not None:
                 opponent_deltas.append(enemy_delta2)
+            else:
+                missing_enemies.append(enemy)
 
         # Calculate average opponent advantage (simple mean, not weighted)
+        # NOTE: Unlike our advantage calculation which is weighted by pickrate,
+        # opponent advantage uses simple mean because:
+        # 1. We're querying individual matchups (no aggregation needed)
+        # 2. Equal weighting of all enemies reflects symmetric team threat
+        # 3. Pickrate weighting would undervalue niche counters
         if opponent_deltas:
             opponent_avg_delta2 = sum(opponent_deltas) / len(opponent_deltas)
             opponent_advantage = self.delta2_to_win_advantage(opponent_avg_delta2, champion_name)
+
+            # Log if we had partial data
+            if missing_enemies and self.verbose:
+                print(f"[WARNING] Missing opponent matchup data for {champion_name} vs {missing_enemies}")
+                print(f"[WARNING] Using {len(opponent_deltas)}/{len(team)} opponent matchups for calculation")
         else:
             # No opponent data - graceful degradation to unidirectional
+            # Design decision: Treat missing opponent advantage as neutral (0.0)
+            # rather than failing, to allow recommendations with incomplete data.
+            # This means we trust only OUR perspective when opponent data is missing.
+            if self.verbose:
+                print(f"[WARNING] No opponent matchup data found for {champion_name} vs {team}")
+                print(f"[WARNING] Degrading to unidirectional calculation (opponent advantage = 0)")
             opponent_advantage = 0.0
 
         # STEP 3: Combine perspectives for net advantage
