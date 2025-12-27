@@ -988,9 +988,13 @@ class Assistant:
                                     print(f"[WARNING] Failed to get pickrate for {enemy_champion}: {e}")
                                 # enemy_pickrate remains 0.0 as fallback
 
+                except (AttributeError, TypeError) as e:
+                    # Specific errors we expect: bad champion names, DB not initialized
+                    print(f"[ERROR] Invalid matchup check {our_champion} vs {enemy_champion}: {e}")
+                    continue
                 except Exception as e:
-                    if self.verbose:
-                        print(f"Error checking {our_champion} vs {enemy_champion}: {e}")
+                    # Unexpected errors - always log for debugging
+                    print(f"[ERROR] Unexpected error checking {our_champion} vs {enemy_champion}: {e}")
                     continue
 
             # Skip if no valid matchups found

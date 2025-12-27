@@ -137,15 +137,15 @@ class ChampionScorer:
         1. Our advantage: How well our champion performs vs enemy team (from our matchup data)
            - Calculated with blind pick dilution: (sum_known_delta2 + blind_picks * avg_delta2) / 5
            - Weighted average by pickrate for known matchups
-        2. Opponent advantage: How well enemy team performs vs us (from their matchup data)
+        2. Enemy advantage: How well enemy team performs vs us (from their matchup data)
            - Calculated as simple mean: sum(enemy_delta2_vs_us) / len(known_enemies)
            - Only includes enemies with reverse matchup data (missing data excluded from average)
 
-        Net advantage = our_advantage - opponent_advantage
+        Net advantage = our_advantage - enemy_advantage_against_us
 
         IMPORTANT: The two calculations are asymmetric:
         - Our advantage accounts for all 5 enemy slots (blind picks filled with avg_delta2)
-        - Opponent advantage only includes enemies with data (graceful degradation)
+        - Enemy advantage only includes enemies with data (graceful degradation)
 
         This accounts for matchup asymmetry where delta2(A→B) ≠ delta2(B→A).
 
@@ -158,9 +158,9 @@ class ChampionScorer:
             Net advantage in percentage points (positive = favorable for us)
 
         Edge cases:
-            - Empty team (blind pick): Returns our avg_delta2 advantage (no opponent perspective)
+            - Empty team (blind pick): Returns our avg_delta2 advantage (no enemy perspective)
             - Missing champion_name: Returns 0.0 (cannot calculate bidirectional without it)
-            - Missing opponent data: Treats opponent_advantage as 0.0 (unidirectional fallback)
+            - Missing enemy data: Treats enemy_advantage_against_us as 0.0 (unidirectional fallback)
         """
         if not champion_name:
             # Can't calculate accurately without champion name, return 0
@@ -170,7 +170,7 @@ class ChampionScorer:
 
         # Use logistic transformation for delta2 to advantage conversion
         if not team:
-            # Pure blind pick scenario - no opponent perspective available
+            # Pure blind pick scenario - no enemy perspective available
             avg_delta2_val = self.avg_delta2(matchups)
             return self.delta2_to_win_advantage(avg_delta2_val, champion_name)
 
@@ -203,44 +203,46 @@ class ChampionScorer:
         our_avg_delta2 = total_delta2 / matchup_count
         our_advantage = self.delta2_to_win_advantage(our_avg_delta2, champion_name)
 
-        # STEP 2: Calculate OPPONENT advantage (enemy team vs our champion)
-        opponent_deltas = []
+        # STEP 2: Calculate ENEMY advantage (enemy team's perspective vs our champion)
+        # This is how strong the enemies think THEY are against us
+        enemy_perspective_deltas = []
         missing_enemies = []
 
         for enemy in team:
             # Query enemy's perspective: their delta2 vs our champion
             enemy_delta2 = self.db.get_matchup_delta2(enemy, champion_name)
             if enemy_delta2 is not None:
-                opponent_deltas.append(enemy_delta2)
+                enemy_perspective_deltas.append(enemy_delta2)
             else:
                 missing_enemies.append(enemy)
 
-        # Calculate average opponent advantage (simple mean, not weighted)
+        # Calculate average enemy advantage against us (simple mean, not weighted)
         # NOTE: Unlike our advantage calculation which is weighted by pickrate,
-        # opponent advantage uses simple mean because:
+        # enemy advantage uses simple mean because:
         # 1. We're querying individual matchups (no aggregation needed)
         # 2. Equal weighting of all enemies reflects symmetric team threat
         # 3. Pickrate weighting would undervalue niche counters
-        if opponent_deltas:
-            opponent_avg_delta2 = sum(opponent_deltas) / len(opponent_deltas)
-            opponent_advantage = self.delta2_to_win_advantage(opponent_avg_delta2, champion_name)
+        if enemy_perspective_deltas:
+            enemy_avg_delta2_against_us = sum(enemy_perspective_deltas) / len(enemy_perspective_deltas)
+            enemy_advantage_against_us = self.delta2_to_win_advantage(enemy_avg_delta2_against_us, champion_name)
 
             # Log if we had partial data
             if missing_enemies and self.verbose:
-                print(f"[WARNING] Missing opponent matchup data for {champion_name} vs {missing_enemies}")
-                print(f"[WARNING] Using {len(opponent_deltas)}/{len(team)} opponent matchups for calculation")
+                print(f"[WARNING] Missing enemy matchup data for {champion_name} vs {missing_enemies}")
+                print(f"[WARNING] Using {len(enemy_perspective_deltas)}/{len(team)} enemy matchups for calculation")
         else:
-            # No opponent data - graceful degradation to unidirectional
-            # Design decision: Treat missing opponent advantage as neutral (0.0)
+            # No enemy data - graceful degradation to unidirectional
+            # Design decision: Treat missing enemy advantage as neutral (0.0)
             # rather than failing, to allow recommendations with incomplete data.
-            # This means we trust only OUR perspective when opponent data is missing.
+            # This means we trust only OUR perspective when enemy data is missing.
             if self.verbose:
-                print(f"[WARNING] No opponent matchup data found for {champion_name} vs {team}")
-                print(f"[WARNING] Degrading to unidirectional calculation (opponent advantage = 0)")
-            opponent_advantage = 0.0
+                print(f"[WARNING] No enemy matchup data found for {champion_name} vs {team}")
+                print(f"[WARNING] Degrading to unidirectional calculation (enemy advantage = 0)")
+            enemy_advantage_against_us = 0.0
 
         # STEP 3: Combine perspectives for net advantage
-        net_advantage = our_advantage - opponent_advantage
+        # Net = how much WE counter them - how much THEY counter us
+        net_advantage = our_advantage - enemy_advantage_against_us
 
         return net_advantage
 

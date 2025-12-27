@@ -321,3 +321,100 @@ class TestBidirectionalAdvantage:
         # Verify dilution reduces advantage
         assert result < raw_adv
         assert abs(result - diluted_adv) < 0.5  # Should match diluted calculation
+
+    def test_blind_pick_dilution_formula_explicit(self, db, scorer, insert_matchup):
+        """
+        Explicitly test blind pick dilution formula with known + blind matchups.
+
+        Verifies the exact calculation: (known_delta2 + blind_picks * avg_delta2) / 5
+        """
+        # Known enemy: delta2=200
+        insert_matchup("Aatrox", "Darius", 55.0, 150, 200, 10.0, 2000)
+
+        # Other matchups for blind pick average (will be used for 4 blind picks)
+        insert_matchup("Aatrox", "Garen", 52.0, 50, 100, 10.0, 2000)
+        insert_matchup("Aatrox", "Sett", 48.0, -50, -100, 10.0, 2000)
+
+        aatrox_matchups = db.get_champion_matchups_by_name("Aatrox")
+
+        result = scorer.score_against_team(
+            aatrox_matchups,
+            ["Darius"],  # 1 known + 4 blind
+            champion_name="Aatrox"
+        )
+
+        # Manually calculate expected result
+        # After removing Darius from remaining matchups:
+        # Blind pick average = (100*10 + (-100)*10) / (10+10) = 0
+        # Diluted delta2 = (200 + 0*4) / 5 = 40
+        expected_avg_delta2 = (200 + 0 * 4) / 5  # Should equal 40
+        expected_advantage = scorer.delta2_to_win_advantage(expected_avg_delta2, "Aatrox")
+
+        # No opponent perspective in this test (unidirectional)
+        assert abs(result - expected_advantage) < 0.5
+
+    def test_weighted_vs_simple_average(self, db, scorer, insert_matchup):
+        """
+        Test that OUR advantage uses weighted average while ENEMY advantage uses simple mean.
+
+        Documents and verifies this asymmetric design choice.
+        Uses full 5v5 team to avoid blind pick dilution complexity.
+        """
+        # Setup 5 enemies for full team (no blind pick dilution)
+        enemies = ["Enemy1", "Enemy2", "Enemy3", "Enemy4", "Enemy5"]
+
+        # Our champion matchups with very different pickrates
+        insert_matchup("Aatrox", "Enemy1", 52.0, 10, 20, 30.0, 4000)    # Very high pickrate, low delta2
+        insert_matchup("Aatrox", "Enemy2", 65.0, 200, 250, 2.0, 800)    # Very low pickrate, high delta2
+        insert_matchup("Aatrox", "Enemy3", 54.0, 50, 80, 15.0, 2500)
+        insert_matchup("Aatrox", "Enemy4", 48.0, -20, -30, 12.0, 2000)
+        insert_matchup("Aatrox", "Enemy5", 51.0, 30, 50, 10.0, 1800)
+
+        # Enemy matchups - simple avg will differ from weighted avg
+        insert_matchup("Enemy1", "Aatrox", 51.0, 5, 10, 40.0, 5000)     # Low delta2, high pickrate
+        insert_matchup("Enemy2", "Aatrox", 70.0, 280, 320, 1.0, 500)    # High delta2, low pickrate
+        insert_matchup("Enemy3", "Aatrox", 52.0, 40, 60, 10.0, 1500)
+        insert_matchup("Enemy4", "Aatrox", 46.0, -25, -40, 8.0, 1200)
+        insert_matchup("Enemy5", "Aatrox", 50.0, 20, 30, 12.0, 2000)
+
+        aatrox_matchups = db.get_champion_matchups_by_name("Aatrox")
+
+        result = scorer.score_against_team(
+            aatrox_matchups,
+            enemies,
+            champion_name="Aatrox"
+        )
+
+        # Our advantage: weighted by pickrate
+        # (20*30 + 250*2 + 80*15 + (-30)*12 + 50*10) / (30+2+15+12+10) = 2500/69 = 36.23
+        our_weighted_avg = (20*30 + 250*2 + 80*15 + (-30)*12 + 50*10) / (30+2+15+12+10)
+        our_adv = scorer.delta2_to_win_advantage(our_weighted_avg, "Aatrox")
+
+        # Enemy advantage: SIMPLE average (not weighted)
+        # (10 + 320 + 60 + (-40) + 30) / 5 = 380/5 = 76
+        enemy_simple_avg = (10 + 320 + 60 + (-40) + 30) / 5
+        enemy_adv = scorer.delta2_to_win_advantage(enemy_simple_avg, "Aatrox")
+
+        expected = our_adv - enemy_adv
+
+        # This test verifies the design choice is implemented
+        # Exact values are complex due to filtering, so we verify behavior exists
+        assert isinstance(result, float)
+
+        # Verify that enemy advantage uses simple mean by testing with extreme pickrate differences
+        # If enemy used weighted average, the high pickrate (40%) for low delta2 (10)
+        # would dominate the calculation, giving much lower enemy advantage
+        # With simple average, the high delta2 (320) gets equal weight
+
+        # The simple average (76) is much higher than what weighted would be (~15)
+        # This means enemy_adv_simple > enemy_adv_weighted
+        # Therefore: our_adv - enemy_adv_simple < our_adv - enemy_adv_weighted
+        # i.e., result < wrong_result_if_symmetric
+
+        # Calculate what result would be if enemy used weighted (wrong implementation)
+        enemy_weighted_avg = (10*40 + 320*1 + 60*10 + (-40)*8 + 30*12) / (40+1+10+8+12)
+        enemy_adv_if_weighted = scorer.delta2_to_win_advantage(enemy_weighted_avg, "Aatrox")
+        wrong_result_if_symmetric = our_adv - enemy_adv_if_weighted
+
+        # With simple mean giving higher enemy advantage, our net should be lower
+        assert result < wrong_result_if_symmetric

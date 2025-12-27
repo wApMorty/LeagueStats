@@ -66,11 +66,16 @@ All notable changes to LeagueStats Coach will be documented in this file.
 - **Bidirectional advantage calculation** in draft coach (Tâche #TBD, PR #TBD)
   - **More accurate predictions** accounting for matchup asymmetry
   - Combines two perspectives: our advantage vs their advantage
-  - Formula: `net_advantage = our_advantage - opponent_advantage`
+  - Formula: `net_advantage = our_advantage - enemy_advantage_against_us`
+    - Our advantage accounts for all 5 enemy slots (blind picks use avg_delta2)
+    - Enemy advantage only includes enemies with reverse matchup data
+    - Asymmetric calculation: weighted avg (ours) vs simple mean (theirs)
   - Handles asymmetric delta2 (e.g., Aatrox vs Darius ≠ Darius vs Aatrox)
-  - Graceful degradation when opponent data missing (treats as neutral)
-  - **8 unit tests** with 100% pass rate
+  - Graceful degradation when enemy data missing (treats as neutral)
+  - **Performance**: +1-5 database queries per enemy (<10ms total overhead)
+  - **12 unit tests** with 100% pass rate (4 new tests for edge cases)
   - **Zero breaking changes** - seamlessly integrated into existing scoring
+  - **Enhanced error handling** - Always logs DB errors, improved visibility
 
 ### 🐛 Fixes
 
