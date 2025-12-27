@@ -214,3 +214,110 @@ class TestBidirectionalAdvantage:
         )
 
         assert result == 0.0
+
+    def test_opponent_data_respects_pickrate_filter(self, db, scorer, insert_matchup):
+        """Test that opponent data below pickrate threshold is ignored."""
+        # Aatrox has valid matchup
+        insert_matchup("Aatrox", "Darius", 52.0, 100, 150, 5.0, 2000)
+
+        # Darius has low pickrate matchup (below 0.5% threshold)
+        insert_matchup("Darius", "Aatrox", 51.0, 50, 80, 0.4, 2000)
+
+        aatrox_matchups = db.get_champion_matchups_by_name("Aatrox")
+
+        result = scorer.score_against_team(
+            aatrox_matchups,
+            ["Darius"],
+            champion_name="Aatrox"
+        )
+
+        # Should use only our advantage (opponent data filtered out due to low pickrate)
+        # With 1 known + 4 blind: (150+0*4)/5 = 30
+        our_diluted_advantage = scorer.delta2_to_win_advantage(30, "Aatrox")
+        # Opponent advantage should be 0 (filtered out)
+        assert abs(result - our_diluted_advantage) < 0.5
+
+    def test_opponent_data_respects_games_filter(self, db, scorer, insert_matchup):
+        """Test that opponent data below games threshold is ignored."""
+        # Aatrox has valid matchup
+        insert_matchup("Aatrox", "Garen", 54.0, 120, 180, 8.0, 2500)
+
+        # Garen has insufficient games (below 200 threshold)
+        insert_matchup("Garen", "Aatrox", 52.0, 60, 100, 5.0, 150)
+
+        aatrox_matchups = db.get_champion_matchups_by_name("Aatrox")
+
+        result = scorer.score_against_team(
+            aatrox_matchups,
+            ["Garen"],
+            champion_name="Aatrox"
+        )
+
+        # Should use only our advantage (opponent data filtered out due to insufficient games)
+        # With 1 known + 4 blind: (180+0*4)/5 = 36
+        our_diluted_advantage = scorer.delta2_to_win_advantage(36, "Aatrox")
+        # Opponent advantage should be 0 (filtered out)
+        assert abs(result - our_diluted_advantage) < 0.5
+
+    def test_bidirectional_uses_subtraction_not_addition(self, db, scorer, insert_matchup):
+        """
+        CRITICAL: Verify opponent advantage is SUBTRACTED, not added.
+
+        This negative test ensures the formula is implemented correctly.
+        """
+        # Aatrox heavily favored (high positive delta2)
+        insert_matchup("Aatrox", "Teemo", 60.0, 400, 500, 10.0, 2000)
+
+        # Teemo also thinks they're favored (asymmetric data - both can't be right!)
+        insert_matchup("Teemo", "Aatrox", 55.0, 200, 250, 10.0, 2000)
+
+        aatrox_matchups = db.get_champion_matchups_by_name("Aatrox")
+
+        result = scorer.score_against_team(
+            aatrox_matchups,
+            ["Teemo"],
+            champion_name="Aatrox"
+        )
+
+        # Calculate expected values
+        # Our advantage: (500+0*4)/5 = 100
+        our_adv = scorer.delta2_to_win_advantage(100, "Aatrox")
+        # Opponent advantage: 250 (no dilution)
+        opp_adv = scorer.delta2_to_win_advantage(250, "Teemo")
+
+        # CRITICAL: Must be subtraction (our - opp), NOT addition
+        expected_net = our_adv - opp_adv
+        assert abs(result - expected_net) < 0.5
+
+        # Verify it's NOT addition (would be very high and positive)
+        wrong_addition = our_adv + opp_adv
+        assert abs(result - wrong_addition) > 10.0  # Should NOT be addition
+
+    def test_blind_pick_dilution_reduces_advantage(self, db, scorer, insert_matchup):
+        """
+        Negative test: Verify blind pick dilution actually reduces our advantage.
+
+        Ensures formula doesn't accidentally amplify instead of dilute.
+        """
+        # Strong matchup vs known enemy
+        insert_matchup("Aatrox", "Darius", 60.0, 400, 500, 10.0, 2000)
+
+        # No reverse matchup (unidirectional scenario)
+
+        aatrox_matchups = db.get_champion_matchups_by_name("Aatrox")
+
+        result = scorer.score_against_team(
+            aatrox_matchups,
+            ["Darius"],  # 1 known + 4 blind
+            champion_name="Aatrox"
+        )
+
+        # Diluted advantage: (500+0*4)/5 = 100
+        diluted_adv = scorer.delta2_to_win_advantage(100, "Aatrox")
+
+        # Undiluted (raw) advantage: 500
+        raw_adv = scorer.delta2_to_win_advantage(500, "Aatrox")
+
+        # Verify dilution reduces advantage
+        assert result < raw_adv
+        assert abs(result - diluted_adv) < 0.5  # Should match diluted calculation
