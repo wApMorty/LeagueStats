@@ -983,8 +983,10 @@ class Assistant:
                                     if enemy_name == enemy_champion:
                                         enemy_pickrate = pickrate
                                         break
-                            except:
-                                pass
+                            except Exception as e:
+                                if self.verbose:
+                                    print(f"[WARNING] Failed to get pickrate for {enemy_champion}: {e}")
+                                # enemy_pickrate remains 0.0 as fallback
 
                 except Exception as e:
                     if self.verbose:

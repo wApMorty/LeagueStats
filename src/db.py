@@ -562,8 +562,8 @@ class Database:
                 return None
 
         except Exception as e:
-            if hasattr(self, 'verbose') and self.verbose:
-                print(f"[DEBUG] Error getting matchup {champion_name} vs {enemy_name}: {e}")
+            # Always log database errors - these are unexpected and need visibility
+            print(f"[ERROR] Database error getting matchup {champion_name} vs {enemy_name}: {e}")
             return None
 
     # ========== Champion Scores Methods ==========

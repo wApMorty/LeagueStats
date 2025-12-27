@@ -106,13 +106,12 @@ class ChampionScorer:
         Returns:
             Win advantage percentage (positive = our team favored)
         """
-        # Logistic transformation for realistic bounds
+        # Logistic transformation
         log_odds = 0.12 * delta2  # ~1.2% per delta2 unit
         win_probability = 1 / (1 + math.exp(-log_odds))
         advantage = (win_probability - 0.5) * 100  # Percentage points from 50% baseline
 
-        # Apply conservative bounds (-10% to +10%)
-        return max(-10.0, min(10.0, advantage))
+        return advantage
 
     def score_against_team(
         self,
@@ -125,20 +124,32 @@ class ChampionScorer:
 
         Combines two perspectives for more accurate predictions:
         1. Our advantage: How well our champion performs vs enemy team (from our matchup data)
+           - Calculated with blind pick dilution: (sum_known_delta2 + blind_picks * avg_delta2) / 5
+           - Weighted average by pickrate for known matchups
         2. Opponent advantage: How well enemy team performs vs us (from their matchup data)
+           - Calculated as simple mean: sum(enemy_delta2_vs_us) / len(known_enemies)
+           - Only includes enemies with reverse matchup data (missing data excluded from average)
 
         Net advantage = our_advantage - opponent_advantage
 
-        This accounts for asymmetric matchups where delta2 is not symmetric
-        (e.g., Aatrox vs Darius may differ from Darius vs Aatrox).
+        IMPORTANT: The two calculations are asymmetric:
+        - Our advantage accounts for all 5 enemy slots (blind picks filled with avg_delta2)
+        - Opponent advantage only includes enemies with data (graceful degradation)
+
+        This accounts for matchup asymmetry where delta2(A→B) ≠ delta2(B→A).
 
         Args:
             matchups: List of matchup data tuples for our champion
-            team: Enemy team composition
-            champion_name: Name of our champion (required for bidirectional calculation)
+            team: Enemy team composition (may be partial, e.g., [1-5] enemies)
+            champion_name: Name of our champion (required for reverse matchup lookup)
 
         Returns:
             Net advantage in percentage points (positive = favorable for us)
+
+        Edge cases:
+            - Empty team (blind pick): Returns our avg_delta2 advantage (no opponent perspective)
+            - Missing champion_name: Returns 0.0 (cannot calculate bidirectional without it)
+            - Missing opponent data: Treats opponent_advantage as 0.0 (unidirectional fallback)
         """
         if not champion_name:
             # Can't calculate accurately without champion name, return 0
@@ -200,8 +211,7 @@ class ChampionScorer:
         # STEP 3: Combine perspectives for net advantage
         net_advantage = our_advantage - opponent_advantage
 
-        # Apply conservative bounds
-        return max(-10.0, min(10.0, net_advantage))
+        return net_advantage
 
     def calculate_team_winrate(self, individual_winrates: List[float]) -> dict:
         """
