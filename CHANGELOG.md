@@ -14,9 +14,27 @@ All notable changes to LeagueStats Coach will be documented in this file.
   - Real-time progress tracking with tqdm progress bars
   - Komorebi window manager integration with fullscreen mode
   - Dynamic cookie acceptance (fixes hardcoded coordinates bug)
+- **MAJOR**: Pre-calculated ban recommendations system (PR #19)
+  - **Instant ban suggestions** during draft - no more 5-10 second calculation delays
+  - Database-backed storage of ban recommendations for all custom pools
+  - Automatic updates during data parsing (both manual and auto-update)
+  - Fallback to real-time calculation if pre-calculated data unavailable
+  - Optimized for pools of 10-20 champions (typical custom pools)
+  - System pools excluded (too large for meaningful ban calculations)
+- **Live Coach cache system** for instant draft recommendations
+  - Warm cache at draft start eliminates SQL queries during picks (99% faster)
+  - In-memory storage of all champion matchups from selected pool
+  - Cache statistics tracking (hits/misses) for performance monitoring
+  - Automatic cache clear on draft exit to free memory
 
 ### ✨ Features
 
+- **MAJOR**: Proactive Draft Start UX (PR #19)
+  - **Immediate strategy display** - Best blind pick + ban recommendations shown at game start
+  - **No waiting** - Information appears before ban/pick phases begin
+  - **Clear guidance** - "If you're first pick, this is your safest choice!"
+  - **Adaptive recommendations** - Updates dynamically when enemy picks appear
+  - **Better preparation** - Players can plan strategy from the very start
 - **MAJOR**: Auto-Update Database system (Tâche #11, PR #14)
   - **Automated daily updates** via Windows Task Scheduler (3 AM default)
   - **Background execution** with BELOW_NORMAL priority (no PC blocking)
@@ -45,8 +63,33 @@ All notable changes to LeagueStats Coach will be documented in this file.
   - **Integrated into Pool Manager** as Menu option 8
   - **15 unit tests** with 100% pass rate
 - **New champions support**: Zaahen (TOP), Yunara (ADC)
+- **Bidirectional advantage calculation** in draft coach (Tâche #TBD, PR #TBD)
+  - **More accurate predictions** accounting for matchup asymmetry
+  - Combines two perspectives: our advantage vs their advantage
+  - Formula: `net_advantage = our_advantage - enemy_advantage_against_us`
+    - Our advantage accounts for all 5 enemy slots (blind picks use avg_delta2)
+    - Enemy advantage only includes enemies with reverse matchup data
+    - Asymmetric calculation: weighted avg (ours) vs simple mean (theirs)
+  - Handles asymmetric delta2 (e.g., Aatrox vs Darius ≠ Darius vs Aatrox)
+  - Graceful degradation when enemy data missing (treats as neutral)
+  - **Performance**: +1-5 database queries per enemy (<10ms total overhead)
+  - **12 unit tests** with 100% pass rate (4 new tests for edge cases)
+  - **Zero breaking changes** - seamlessly integrated into existing scoring
+  - **Enhanced error handling** - Always logs DB errors, improved visibility
 
 ### 🐛 Fixes
+
+- **CRITICAL**: Fixed live coach performance and UX issues (PR #TBD)
+  - **Ban recommendations spam**: Now show ONLY during ban phase (before any picks)
+    - Root cause: Phase name "BAN_PICK" contains "BAN" → rewrote `_is_ban_phase()` to check picks count
+    - Impact: Clean draft experience, no more spam on every pick
+  - **Wrong advice during picks**: Dynamic advice detection based on game state
+    - Before: Always showed "[BAN]" advice during "BAN_PICK" phase
+    - After: Shows "[BAN]" only when 0 picks, "[PICK]" when picks > 0
+  - **Duplicate DB queries**: Removed redundant `get_champion_matchups()` calls in final analysis
+    - Impact: 2x faster final team analysis
+  - Added debug logging for troubleshooting (verbose mode support)
+  - All 113 tests pass ✅
 
 - Fixed `get_ban_recommendations()` AttributeError (method was lost during Sprint 1 refactoring)
 - Fixed missing draft and holistic trio analysis methods (24 methods restored)

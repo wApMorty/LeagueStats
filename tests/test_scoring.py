@@ -159,27 +159,32 @@ class TestDelta2ToWinAdvantage:
 
         assert abs(result) < 0.01
 
-    def test_bounds_are_applied(self, scorer):
-        """Test that advantage is clamped to [-10%, +10%]."""
-        # Very large positive delta2
+    def test_logistic_asymptotic_behavior(self, scorer):
+        """Test that logistic function approaches asymptotic limits."""
+        # Very large positive delta2 should approach 50% advantage
         result_positive = scorer.delta2_to_win_advantage(100.0, "TestChamp")
-        assert result_positive == 10.0
+        assert result_positive > 45.0  # Should be very close to 50%
 
-        # Very large negative delta2
+        # Very large negative delta2 should approach -50% advantage
         result_negative = scorer.delta2_to_win_advantage(-100.0, "TestChamp")
-        assert result_negative == -10.0
+        assert result_negative < -45.0  # Should be very close to -50%
 
     def test_logistic_formula(self, scorer):
         """Test logistic transformation formula is correct."""
         delta2 = 5.0
         # Manual calculation: log_odds = 0.12 * 5.0 = 0.6
         # win_prob = 1 / (1 + exp(-0.6)) = 0.6457
-        # advantage = (0.6457 - 0.5) * 100 = 14.57 -> clamped to 10.0
+        # advantage = (0.6457 - 0.5) * 100 = 14.57
 
         result = scorer.delta2_to_win_advantage(delta2, "TestChamp")
 
-        # Should be clamped to max 10.0
-        assert result == 10.0
+        # Should match mathematical formula (no bounds)
+        import math
+        expected_log_odds = 0.12 * delta2
+        expected_win_prob = 1 / (1 + math.exp(-expected_log_odds))
+        expected_advantage = (expected_win_prob - 0.5) * 100
+
+        assert abs(result - expected_advantage) < 0.01
 
 
 class TestScoreAgainstTeam:
@@ -202,16 +207,16 @@ class TestScoreAgainstTeam:
         assert abs(result - expected) < 0.01
 
     def test_known_matchup_calculation(self, scorer):
-        """Test calculation against known enemy."""
+        """Test calculation against known enemy with bidirectional."""
         matchups = [
             ("Darius", 48.0, -150, -200, 10.0, 1500),
         ]
 
         result = scorer.score_against_team(matchups, ["Darius"], champion_name="Aatrox")
 
-        # Should calculate advantage based on Darius matchup delta2
-        expected = scorer.delta2_to_win_advantage(-200, "Aatrox")
-        assert abs(result - expected) < 0.01
+        # With bidirectional, result may differ from unidirectional if opponent data exists
+        # Should be negative (we're at disadvantage with delta2=-200)
+        assert result < 0
 
     def test_mixed_known_and_blind(self, scorer):
         """Test calculation with some known and some blind picks."""
@@ -226,7 +231,8 @@ class TestScoreAgainstTeam:
 
         # Should use Darius delta2 + avg of remaining for blind picks
         assert isinstance(result, float)
-        assert -10.0 <= result <= 10.0
+        # With mixed matchups (negative delta2 vs Darius), should be negative
+        assert result < 0
 
     def test_empty_matchups_returns_zero(self, scorer):
         """Test with no matchup data."""

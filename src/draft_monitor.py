@@ -51,6 +51,7 @@ class DraftMonitor:
         self.is_monitoring = False
         self.verbose = verbose
         self.current_pool = SOLOQ_POOL  # Default pool
+        self.pool_name = None  # Pool name for pre-calculated ban lookups
         self.auto_select_pool = auto_select_pool
         self.auto_hover = auto_hover
         self.auto_accept_queue = auto_accept_queue
@@ -79,6 +80,7 @@ class DraftMonitor:
             self.current_pool = self._select_champion_pool_interactive()
         else:
             # Auto-select top pool by default
+            self.pool_name = "All Top Champions"  # System pool name
             self.current_pool = ROLE_POOLS["top"]
             safe_print(f"✅ Using pool: TOP ({', '.join(self.current_pool)})")
 
@@ -276,19 +278,33 @@ class DraftMonitor:
             
             if self.verbose:
                 print(f"[DEBUG] It's our ban turn! Getting recommendations for pool size {len(self.current_pool)}")
-            
-            # Get ban recommendations for our pool
-            ban_recommendations = self.assistant.get_ban_recommendations(self.current_pool, num_bans=3)
-            
+
+            # Try to get pre-calculated bans from database first (fast)
+            ban_recommendations = None
+            if hasattr(self, 'pool_name') and self.pool_name:
+                ban_recommendations = self.assistant.db.get_pool_ban_recommendations(self.pool_name, limit=3)
+                if ban_recommendations and self.verbose:
+                    print(f"[DEBUG] Using pre-calculated bans from database for pool '{self.pool_name}'")
+
+            # Fallback to real-time calculation if no pre-calculated data
+            if not ban_recommendations:
+                if self.verbose:
+                    print(f"[DEBUG] No pre-calculated bans found, calculating in real-time...")
+                ban_recommendations = self.assistant.get_ban_recommendations(self.current_pool, num_bans=3)
+
             if not ban_recommendations:
                 print("[DEBUG] No ban recommendations available")
                 return
-            
+
             if self.verbose:
                 print(f"[DEBUG] Got {len(ban_recommendations)} ban recommendations")
-            
+
             # Get the top ban recommendation
-            top_ban, threat_score, matchup_count = ban_recommendations[0]
+            # Handle both pre-calculated format (5 values) and real-time format (3 values)
+            top_ban_data = ban_recommendations[0]
+            top_ban = top_ban_data[0]
+            threat_score = top_ban_data[1]
+            matchup_count = top_ban_data[2] if len(top_ban_data) > 2 else 0
             
             if self.verbose:
                 print(f"[DEBUG] Top ban recommendation: {top_ban} (threat: {threat_score:.2f})")
@@ -529,12 +545,14 @@ class DraftMonitor:
         try:
             enemy_picks = state.enemy_picks
             ally_picks = state.ally_picks
-            
+
+            if self.verbose:
+                print(f"[DEBUG] _provide_recommendations called: Phase='{state.phase}', Enemies={len(enemy_picks)}, Allies={len(ally_picks)}")
+
+            # Skip recommendations if draft hasn't started yet (bans already shown in initial hover)
             if not enemy_picks and not ally_picks:
-                print(f"\n[COACH] COACH SAYS: Draft just started - prepare your champion pool!")
-                # Show ban recommendations only if we're actually in a ban phase
-                if self._is_ban_phase(state):
-                    self._show_ban_recommendations_draft()
+                if self.verbose:
+                    print(f"[DEBUG] Waiting for picks to start (bans already shown at start)")
                 return
             
             # Use existing coach logic
@@ -625,16 +643,23 @@ class DraftMonitor:
             if self._is_ban_phase(state) and self.auto_ban_hover:
                 self._handle_auto_ban_hover(state)
             
-            # Phase-specific advice
-            phase_advice = {
-                "PLANNING": "[PLAN] Think about team composition and ban priorities",
-                "BAN_PICK": "[BAN] Focus on banning enemy strengths",
-                "PICK": "[PICK] Time to secure your champion!",
-                "FINALIZATION": "[FINAL] Finalize runes and summoner spells"
-            }
-            
-            if state.phase in phase_advice:
-                print(f"\n[ADVICE] {phase_advice[state.phase]}")
+            # Phase-specific advice (dynamic based on actual game state)
+            advice = None
+            if state.phase == "PLANNING":
+                advice = "[PLAN] Think about team composition and ban priorities"
+            elif state.phase == "BAN_PICK":
+                # BAN_PICK phase includes both bans and picks - detect which we're in
+                if self._is_ban_phase(state):
+                    advice = "[BAN] Focus on banning enemy strengths"
+                else:
+                    advice = "[PICK] Time to secure your champion!"
+            elif state.phase == "PICK":
+                advice = "[PICK] Time to secure your champion!"
+            elif state.phase == "FINALIZATION":
+                advice = "[FINAL] Finalize runes and summoner spells"
+
+            if advice:
+                print(f"\n[ADVICE] {advice}")
                 
         except Exception as e:
             print(f"[WARNING] Error providing recommendations: {e}")
@@ -660,31 +685,25 @@ class DraftMonitor:
     def _is_ban_phase(self, state: DraftState) -> bool:
         """
         Check if we are currently in an active ban phase.
-        
+
         This method checks multiple conditions:
-        1. Phase name contains 'BAN'
-        2. Current actor exists (someone is supposed to act)
-        3. We haven't reached the maximum number of bans yet
-        
+        1. We have 0 picks (ban phase is before any picks)
+        2. We haven't reached the maximum number of bans yet
+
         Returns:
             True if currently in an active ban phase, False otherwise
         """
         if not state.phase:
             return False
-        
-        # Check if phase name indicates banning
-        phase_upper = state.phase.upper()
-        if "BAN" not in phase_upper:
+
+        # Key insight: Ban phase happens BEFORE any picks
+        # If there are any picks, we're in pick phase (even if phase name is "BAN_PICK")
+        total_picks = len(state.ally_picks) + len(state.enemy_picks)
+        if total_picks > 0:
+            if self.verbose:
+                print(f"[DEBUG] Not ban phase: {total_picks} picks already made")
             return False
-        
-        # Additional check: make sure we're not in a pure pick phase
-        if "PICK" in phase_upper and "BAN" not in phase_upper:
-            return False
-        
-        # Check if someone is supposed to act (there's a current actor)
-        if not state.current_actor:
-            return False
-        
+
         # Check if we haven't exceeded typical ban limits
         # In most draft modes, each team gets 5 bans (10 total)
         total_bans = len(state.ally_bans) + len(state.enemy_bans)
@@ -692,10 +711,10 @@ class DraftMonitor:
             if self.verbose:
                 print(f"[DEBUG] Ban phase check: Max bans reached ({total_bans}/10)")
             return False
-        
+
         if self.verbose:
-            print(f"[DEBUG] Ban phase detected: Phase='{state.phase}', Actor={state.current_actor}, Bans={total_bans}/10")
-        
+            print(f"[DEBUG] Ban phase detected: Phase='{state.phase}', Picks={total_picks}, Bans={total_bans}/10")
+
         return True
     
     def _should_show_bans(self, state: DraftState) -> bool:
@@ -741,7 +760,8 @@ class DraftMonitor:
     def _do_initial_hover(self):
         """Do initial hover with the best champion from the pool when entering champion select."""
         try:
-            print(f"\n[INITIAL] Entering champion select - showing your best champion from pool!")
+            print(f"\n[INITIAL] 🎮 Champion select started - Preparing your strategy!")
+            print("="*80)
             
             # Get best champion from current pool (first champion as fallback)
             if not self.current_pool:
@@ -752,8 +772,21 @@ class DraftMonitor:
             # Calculate best champion from pool using smart analysis
             initial_champion = self._get_best_champion_from_pool()
             
-            self._auto_hover_champion(initial_champion, "Initial hover")
+            # Show the recommended blind pick
+            print(f"\n[PICK] 🎯 BEST BLIND PICK FROM YOUR POOL:")
+            print(f"  ✅ {initial_champion}")
+            print(f"  💡 If you're first pick, this is your safest choice!")
+            
+            # Auto-hover the champion
+            self._auto_hover_champion(initial_champion, "Best blind pick")
             self.last_recommendation = initial_champion
+            
+            # Show ban recommendations immediately
+            self._show_ban_recommendations_draft()
+            
+            print("\n" + "="*80)
+            print("[INFO] Waiting for draft to begin...")
+            print("="*80)
             
         except Exception as e:
             if self.verbose:
@@ -806,18 +839,29 @@ class DraftMonitor:
         try:
             print(f"\n[BANS] 🛡️ STRATEGIC BAN RECOMMENDATIONS")
             print("-" * 50)
-            
-            ban_recommendations = self.assistant.get_ban_recommendations(self.current_pool, num_bans=3)
-            
+
+            # Try to get pre-calculated bans from database first (fast)
+            ban_recommendations = None
+            if hasattr(self, 'pool_name') and self.pool_name:
+                ban_recommendations = self.assistant.db.get_pool_ban_recommendations(self.pool_name, limit=3)
+                if ban_recommendations and self.verbose:
+                    print(f"[DEBUG] Using pre-calculated bans from database for pool '{self.pool_name}'")
+
+            # Fallback to real-time calculation if no pre-calculated data
+            if not ban_recommendations:
+                if self.verbose:
+                    print(f"[DEBUG] No pre-calculated bans found, calculating in real-time...")
+                ban_recommendations = self.assistant.get_ban_recommendations(self.current_pool, num_bans=3)
+
             if ban_recommendations:
                 print(f"Consider banning these threats to your pool:")
-                for i, (enemy, threat_score, matchup_count) in enumerate(ban_recommendations, 1):
+                for i, (enemy, threat_score, matchup_count, *_) in enumerate(ban_recommendations, 1):
                     print(f"  {i}. {enemy:<12} | Threat: {threat_score:>5.2f} | Counters {matchup_count}/{len(self.current_pool)} of your champions")
                 print(f"💡 These champions have good matchups against your pool")
             else:
                 if self.verbose:
                     print(f"⚠️ No ban data available for your pool")
-                    
+
         except Exception as e:
             if self.verbose:
                 print(f"[WARNING] Error showing ban recommendations: {e}")
@@ -827,24 +871,29 @@ class DraftMonitor:
         try:
             if not state.enemy_picks:
                 return
-            
+
             print(f"\n[ADAPTIVE BANS] 🎯 TARGETED BAN RECOMMENDATIONS")
             print("-" * 50)
-            
+
             # Get enemy champion names
             enemy_names = [self._get_display_name(champ_id) for champ_id in state.enemy_picks]
             print(f"Enemy team has: {', '.join(enemy_names)}")
-            
-            # Get adaptive ban recommendations based on enemy comp
-            # This could be enhanced to consider synergies, but for now show general threats
-            ban_recommendations = self.assistant.get_ban_recommendations(self.current_pool, num_bans=3)
-            
+
+            # Try to get pre-calculated bans from database first (fast)
+            ban_recommendations = None
+            if hasattr(self, 'pool_name') and self.pool_name:
+                ban_recommendations = self.assistant.db.get_pool_ban_recommendations(self.pool_name, limit=3)
+
+            # Fallback to real-time calculation if no pre-calculated data
+            if not ban_recommendations:
+                ban_recommendations = self.assistant.get_ban_recommendations(self.current_pool, num_bans=3)
+
             if ban_recommendations:
                 print(f"Priority bans to deny enemy synergies:")
-                for i, (enemy, threat_score, matchup_count) in enumerate(ban_recommendations[:3], 1):
+                for i, (enemy, threat_score, *_) in enumerate(ban_recommendations[:3], 1):
                     print(f"  {i}. {enemy:<12} | Threat: {threat_score:>5.2f}")
                 print(f"💡 Focus on champions that synergize with their picks")
-            
+
         except Exception as e:
             if self.verbose:
                 print(f"[WARNING] Error showing adaptive ban recommendations: {e}")
@@ -880,21 +929,27 @@ class DraftMonitor:
                 if 1 <= choice <= len(pool_list):
                     selected_name, selected_pool = pool_list[choice - 1]
                     safe_print(f"✅ Using pool: {selected_name} ({', '.join(selected_pool.champions)})")
+                    # Store pool name for pre-calculated ban lookups
+                    self.pool_name = selected_name
                     return selected_pool.champions
                 elif choice == idx:
-                    # Fallback to assistant's method
+                    # Fallback to assistant's method (no pool_name)
+                    self.pool_name = None
                     return self.assistant.select_champion_pool()
                 else:
                     print("[WARNING] Invalid choice, using default TOP pool")
+                    self.pool_name = "All Top Champions"  # System pool name
                     return ROLE_POOLS["top"]
                     
             except (ValueError, IndexError):
                 print("[WARNING] Invalid input, using default TOP pool")
+                self.pool_name = "All Top Champions"
                 return ROLE_POOLS["top"]
-                
+
         except Exception as e:
             print(f"[WARNING] Pool selection error: {e}")
             print("Falling back to legacy pool selection...")
+            self.pool_name = None
             return self.assistant.select_champion_pool()
     
     def _calculate_final_scores(self, ally_picks: List[int], enemy_picks: List[int]):
@@ -926,25 +981,22 @@ class DraftMonitor:
             champion_name = self._get_display_name(champion_id)
             
             try:
-                # Get matchups for this champion
-                matchups = self.assistant.db.get_champion_matchups(champion_id)
-                
-                if not matchups or sum(m[5] for m in matchups) < 500:
+                # Get champion matchups (cached for performance) - uses 6-column format
+                champion_matchups = self.assistant.get_matchups_for_draft(champion_name)
+
+                if not champion_matchups or sum(m[5] for m in champion_matchups) < 500:  # m[5] = games in 6-column format
+                    if self.verbose:
+                        total_games = sum(m[5] for m in champion_matchups) if champion_matchups else 0
+                        print(f"[DEBUG] {champion_name}: Insufficient data (games={total_games}, need >=500)")
                     ally_scores.append((champion_name, None, 0))  # Mark insufficient data
                     continue
-                
+
                 # Use the new normalized scoring system
                 enemy_names = [self._get_display_name(enemy_id) for enemy_id in enemy_picks]
 
-                # Get champion matchups (cached for performance)
-                champion_matchups = self.assistant.get_matchups_for_draft(champion_name)
-                
-                if champion_matchups:
-                    # Use assistant's new win advantage calculation
-                    win_advantage = self.assistant.score_against_team(champion_matchups, enemy_names, champion_name)
-                    ally_scores.append((champion_name, win_advantage, len(enemy_picks)))
-                else:
-                    ally_scores.append((champion_name, None, 0))
+                # Use assistant's new win advantage calculation
+                win_advantage = self.assistant.score_against_team(champion_matchups, enemy_names, champion_name)
+                ally_scores.append((champion_name, win_advantage, len(enemy_picks)))
                 
             except Exception as e:
                 ally_scores.append((champion_name, None, 0))  # Mark error
@@ -954,25 +1006,22 @@ class DraftMonitor:
             champion_name = self._get_display_name(champion_id)
             
             try:
-                # Get matchups for this champion
-                matchups = self.assistant.db.get_champion_matchups(champion_id)
-                
-                if not matchups or sum(m[5] for m in matchups) < 500:
+                # Get champion matchups (cached for performance) - uses 6-column format
+                champion_matchups = self.assistant.get_matchups_for_draft(champion_name)
+
+                if not champion_matchups or sum(m[5] for m in champion_matchups) < 500:  # m[5] = games in 6-column format
+                    if self.verbose:
+                        total_games = sum(m[5] for m in champion_matchups) if champion_matchups else 0
+                        print(f"[DEBUG] {champion_name}: Insufficient data (games={total_games}, need >=500)")
                     enemy_scores.append((champion_name, None, 0))  # Mark insufficient data
                     continue
-                
+
                 # Use the new normalized scoring system
                 ally_names = [self._get_display_name(ally_id) for ally_id in ally_picks]
 
-                # Get champion matchups (cached for performance)
-                champion_matchups = self.assistant.get_matchups_for_draft(champion_name)
-                
-                if champion_matchups:
-                    # Use assistant's new win advantage calculation
-                    win_advantage = self.assistant.score_against_team(champion_matchups, ally_names, champion_name)
-                    enemy_scores.append((champion_name, win_advantage, len(ally_picks)))
-                else:
-                    enemy_scores.append((champion_name, None, 0))
+                # Use assistant's new win advantage calculation
+                win_advantage = self.assistant.score_against_team(champion_matchups, ally_names, champion_name)
+                enemy_scores.append((champion_name, win_advantage, len(ally_picks)))
                 
             except Exception as e:
                 enemy_scores.append((champion_name, None, 0))  # Mark error
