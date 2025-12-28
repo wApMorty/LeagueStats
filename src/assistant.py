@@ -873,8 +873,8 @@ class Assistant:
 
                 # Worst matchups (bottom 5, but only show negatives)
                 worst_matchups = [
-                    m for m in valid_matchups[-10:] if m.winrate < 0
-                ]  # Only negative deltas
+                    m for m in valid_matchups[-10:] if m[1] < 0
+                ]  # Only negative deltas (m[1] = delta2)
                 worst_matchups = sorted(worst_matchups, key=lambda x: x[1])[:5]  # Worst 5
 
                 if worst_matchups:
