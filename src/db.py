@@ -1,8 +1,9 @@
 import sqlite3
 from sqlite3 import Error
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Union
 import requests
 from .constants import CHAMPIONS_LIST
+from .models import Matchup, MatchupDraft
 
 
 class Database:
@@ -217,8 +218,32 @@ class Database:
             print(f"The error '{e}' occurred")
             return []
 
-    def get_champion_matchups_by_name(self, champion_name: str) -> List[tuple]:
-        """Get matchups for a champion by name with enemy names included."""
+    def get_champion_matchups_by_name(
+        self,
+        champion_name: str,
+        as_dataclass: bool = True
+    ) -> Union[List[Matchup], List[tuple]]:
+        """Get matchups for a champion by name with enemy names included.
+
+        Args:
+            champion_name: Name of the champion to get matchups for
+            as_dataclass: If True, return Matchup objects. If False, return tuples.
+                         Default True for new code. Use False for backward compatibility.
+
+        Returns:
+            List of Matchup objects or tuples (enemy_name, winrate, delta1, delta2, pickrate, games)
+
+        Example:
+            >>> # New way (dataclass - readable attributes)
+            >>> matchups = db.get_champion_matchups_by_name("Jinx")
+            >>> for m in matchups:
+            ...     print(f"{m.enemy_name}: {m.winrate}% WR, {m.delta2} delta2")
+
+            >>> # Old way (tuples - for backward compatibility)
+            >>> matchups = db.get_champion_matchups_by_name("Jinx", as_dataclass=False)
+            >>> for m in matchups:
+            ...     print(f"{m[0]}: {m[1]}% WR, {m[3]} delta2")
+        """
         champ_id = self.get_champion_id(champion_name)
         if champ_id is None:
             return []
@@ -236,26 +261,31 @@ class Database:
                 (champ_id,),
             )
             result = cursor.fetchall()
-            # returns (enemy_name, winrate, delta1, delta2, pickrate, games)
-            return result
+
+            # Convert to dataclasses if requested (default)
+            if as_dataclass:
+                return [Matchup.from_tuple(row) for row in result]
+            else:
+                # Backward compatibility: return tuples
+                return result
         except Error as e:
             print(f"The error '{e}' occurred")
             return []
 
     def get_champion_base_winrate(self, champion_name: str) -> float:
         """Calculate champion base winrate from all matchup data using weighted average."""
-        matchups = self.get_champion_matchups_by_name(champion_name)
+        matchups = self.get_champion_matchups_by_name(champion_name)  # Returns Matchup objects by default
         if not matchups:
             return 50.0  # Default to 50% if no data
 
         total_weighted_winrate = 0.0
         total_weight = 0.0
 
-        for enemy_name, winrate, delta1, delta2, pickrate, games in matchups:
+        for matchup in matchups:
             # Use games as weight (more games = more reliable data)
             # Could also use pickrate or combination of both
-            weight = games
-            total_weighted_winrate += winrate * weight
+            weight = matchup.games
+            total_weighted_winrate += matchup.winrate * weight
             total_weight += weight
 
         if total_weight == 0:
@@ -452,7 +482,11 @@ class Database:
             print(f"[ERROR] Error building champion cache: {e}")
             return {}
 
-    def get_champion_matchups_for_draft(self, champion_name: str) -> List[tuple]:
+    def get_champion_matchups_for_draft(
+        self,
+        champion_name: str,
+        as_dataclass: bool = True
+    ) -> Union[List[MatchupDraft], List[tuple]]:
         """
         Optimized query for draft analysis - returns only the columns needed for draft calculations.
 
@@ -468,10 +502,23 @@ class Database:
 
         Args:
             champion_name: Name of the champion to get matchups for
+            as_dataclass: If True, return MatchupDraft objects. If False, return tuples.
+                         Default True for new code. Use False for backward compatibility.
 
         Returns:
-            List of tuples: [(enemy_name, delta2, pickrate, games), ...]
+            List of MatchupDraft objects or tuples: [(enemy_name, delta2, pickrate, games), ...]
             Empty list if champion not found or no matchups
+
+        Example:
+            >>> # New way (dataclass - readable attributes)
+            >>> matchups = db.get_champion_matchups_for_draft("Jinx")
+            >>> for m in matchups:
+            ...     print(f"{m.enemy_name}: {m.delta2} delta2, {m.games} games")
+
+            >>> # Old way (tuples - for backward compatibility)
+            >>> matchups = db.get_champion_matchups_for_draft("Jinx", as_dataclass=False)
+            >>> for m in matchups:
+            ...     print(f"{m[0]}: {m[1]} delta2, {m[3]} games")
         """
         champ_id = self.get_champion_id(champion_name)
         if champ_id is None:
@@ -490,8 +537,13 @@ class Database:
                 (champ_id,),
             )
             result = cursor.fetchall()
-            # returns (enemy_name, delta2, pickrate, games)
-            return result
+
+            # Convert to dataclasses if requested (default)
+            if as_dataclass:
+                return [MatchupDraft.from_tuple(row) for row in result]
+            else:
+                # Backward compatibility: return tuples
+                return result
         except Error as e:
             print(f"The error '{e}' occurred")
             return []
