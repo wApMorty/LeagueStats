@@ -45,7 +45,7 @@ jobs:
       # Pylint: Code quality (enforced threshold)
       - name: Lint with pylint
         run: |
-          pylint src/ --fail-under=8.0 --output-format=colorized
+          pylint src/ --fail-under=8.0
 
       # Mypy: Type checking (gradual enforcement)
       - name: Type check with mypy

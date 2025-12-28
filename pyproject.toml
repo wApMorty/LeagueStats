@@ -34,6 +34,7 @@ disable = [
     "C0114",  # missing-module-docstring (incremental adoption)
     "C0115",  # missing-class-docstring (incremental adoption)
     "C0116",  # missing-function-docstring (incremental adoption)
+    "C0301",  # line-too-long (Black handles formatting)
     "R0913",  # Too many arguments (common in DB operations)
     "W0212",  # Protected access (needed for testing)
 ]
