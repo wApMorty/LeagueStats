@@ -6,6 +6,7 @@ from ..db import Database
 from ..constants import TOP_LIST, JUNGLE_LIST, MID_LIST, ADC_LIST, SUPPORT_LIST
 from ..config_constants import analysis_config
 from .scoring import ChampionScorer
+from ..models import Matchup
 
 
 class TierListGenerator:
@@ -37,7 +38,7 @@ class TierListGenerator:
         scores = []
         for champion in champion_list:
             matchups = self.db.get_champion_matchups_by_name(champion)
-            if sum(m[5] for m in matchups) < self.min_games:
+            if sum(m.games for m in matchups) < self.min_games:
                 continue  # Skip this champion but continue processing others
             score = self.scorer.avg_delta1(matchups)
             scores.append((champion, score))
@@ -57,7 +58,7 @@ class TierListGenerator:
         scores = []
         for champion in champion_list:
             matchups = self.db.get_champion_matchups_by_name(champion)
-            if sum(m[5] for m in matchups) < self.min_games:
+            if sum(m.games for m in matchups) < self.min_games:
                 continue  # Skip this champion but continue processing others
             score = self.scorer.avg_delta2(matchups)
             scores.append((champion, score))
