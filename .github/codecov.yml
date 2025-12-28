@@ -1,0 +1,24 @@
+# Codecov Configuration
+# https://docs.codecov.io/docs/codecov-yaml
+
+codecov:
+  require_ci_to_pass: yes
+  notify:
+    wait_for_ci: yes
+
+coverage:
+  status:
+    project:
+      default:
+        target: 89%
+        threshold: 1%  # Allow 1% drop
+        if_ci_failed: error
+    patch:
+      default:
+        target: 80%  # New code should be well-tested
+        if_ci_failed: error
+
+comment:
+  layout: "header, diff, files"
+  behavior: default
+  require_changes: false

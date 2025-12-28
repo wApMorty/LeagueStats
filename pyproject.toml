@@ -1,0 +1,76 @@
+# LeagueStats Coach - Quality Tools Configuration
+# Generated: 2025-12-28 (Tâche #10: CI/CD Pipeline)
+
+[tool.black]
+line-length = 100
+target-version = ['py313']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+  | alembic/versions  # Auto-generated migrations
+)/
+'''
+
+[tool.pylint.main]
+fail-under = 8.0
+ignore = [".git", "__pycache__", "build", "dist", "alembic/versions"]
+jobs = 4
+
+[tool.pylint.format]
+max-line-length = 100
+
+[tool.pylint.messages_control]
+disable = [
+    "C0103",  # Invalid name (allow short names in tests)
+    "C0114",  # missing-module-docstring (incremental adoption)
+    "C0115",  # missing-class-docstring (incremental adoption)
+    "C0116",  # missing-function-docstring (incremental adoption)
+    "R0913",  # Too many arguments (common in DB operations)
+    "W0212",  # Protected access (needed for testing)
+]
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+check_untyped_defs = true
+disallow_untyped_defs = false  # Gradual typing
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+    "--cov=src",
+    "--cov-report=term-missing",
+    "--cov-report=xml",
+    "--cov-fail-under=89",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "benchmark: marks tests as performance benchmarks",
+]
+
+[tool.bandit]
+exclude_dirs = ["tests", "alembic/versions"]
+skips = ["B101"]  # Skip assert warnings in tests
