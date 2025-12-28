@@ -61,7 +61,7 @@ class RecommendationEngine:
         ally_team: List[str],
         nb_results: int,
         champion_pool: Optional[List[str]] = None,
-        banned_champions: Optional[List[str]] = None
+        banned_champions: Optional[List[str]] = None,
     ) -> List[tuple]:
         """
         Calculate champion recommendations and display top results.

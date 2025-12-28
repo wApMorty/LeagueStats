@@ -48,7 +48,9 @@ def validate_champion_name(name: str) -> Optional[str]:
         return None
 
 
-def validate_champion_data(db: Database, champion: str, min_games: int = None) -> Tuple[bool, int, int, float]:
+def validate_champion_data(
+    db: Database, champion: str, min_games: int = None
+) -> Tuple[bool, int, int, float]:
     """
     Validate if a champion has sufficient data in database.
 
@@ -80,8 +82,8 @@ def validate_champion_data(db: Database, champion: str, min_games: int = None) -
 
         # Consider champion viable if has enough data
         has_sufficient_data = (
-            matchup_count >= 5 and  # At least 5 matchups
-            total_games >= min_games  # At least MIN_GAMES total games
+            matchup_count >= 5  # At least 5 matchups
+            and total_games >= min_games  # At least MIN_GAMES total games
         )
 
         return (has_sufficient_data, matchup_count, total_games, avg_delta2)
@@ -91,7 +93,9 @@ def validate_champion_data(db: Database, champion: str, min_games: int = None) -
         return (False, 0, 0, 0.0)
 
 
-def validate_champion_pool(db: Database, champion_pool: List[str], min_games: int = None) -> Tuple[List[str], Dict]:
+def validate_champion_pool(
+    db: Database, champion_pool: List[str], min_games: int = None
+) -> Tuple[List[str], Dict]:
     """
     Validate entire champion pool and return viable champions.
 
@@ -112,15 +116,17 @@ def validate_champion_pool(db: Database, champion_pool: List[str], min_games: in
         has_data, matchups, games, delta2 = validate_champion_data(db, champion, min_games)
 
         validation_report[champion] = {
-            'has_data': has_data,
-            'matchups': matchups,
-            'total_games': games,
-            'avg_delta2': delta2
+            "has_data": has_data,
+            "matchups": matchups,
+            "total_games": games,
+            "avg_delta2": delta2,
         }
 
         if has_data:
             viable_champions.append(champion)
-            safe_print(f"  ✅ {champion}: {matchups} matchups, {games} total games, {delta2:.2f} avg delta2")
+            safe_print(
+                f"  ✅ {champion}: {matchups} matchups, {games} total games, {delta2:.2f} avg delta2"
+            )
         else:
             safe_print(f"  ❌ {champion}: Insufficient data ({matchups} matchups, {games} games)")
 
@@ -178,13 +184,26 @@ def select_extended_champion_pool() -> List[str]:
     print()
 
     pool_options = {
-        "1": "top", "top": "top",
-        "2": "support", "support": "support", "supp": "support",
-        "3": "jungle", "jungle": "jungle", "jgl": "jungle",
-        "4": "mid", "mid": "mid", "middle": "mid",
-        "5": "adc", "adc": "adc", "bot": "adc",
-        "6": "multi-role", "multi": "multi-role", "multi-role": "multi-role",
-        "7": "all-roles", "all": "all-roles", "all-roles": "all-roles"
+        "1": "top",
+        "top": "top",
+        "2": "support",
+        "support": "support",
+        "supp": "support",
+        "3": "jungle",
+        "jungle": "jungle",
+        "jgl": "jungle",
+        "4": "mid",
+        "mid": "mid",
+        "middle": "mid",
+        "5": "adc",
+        "adc": "adc",
+        "bot": "adc",
+        "6": "multi-role",
+        "multi": "multi-role",
+        "multi-role": "multi-role",
+        "7": "all-roles",
+        "all": "all-roles",
+        "all-roles": "all-roles",
     }
 
     while True:
@@ -200,7 +219,9 @@ def select_extended_champion_pool() -> List[str]:
                 print()
                 return selected_pool
             else:
-                print("❌ Invalid choice. Use 1-7 or role names (top, support, jungle, mid, adc, multi-role, all-roles)")
+                print(
+                    "❌ Invalid choice. Use 1-7 or role names (top, support, jungle, mid, adc, multi-role, all-roles)"
+                )
 
         except (EOFError, KeyboardInterrupt):
             print("\nUsing default extended pool (top)")

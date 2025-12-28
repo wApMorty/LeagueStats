@@ -1,5 +1,10 @@
 # League Stats Coach
 
+[![CI/CD Pipeline](https://github.com/pj35/LeagueStats/actions/workflows/ci.yml/badge.svg)](https://github.com/pj35/LeagueStats/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/pj35/LeagueStats/graph/badge.svg)](https://codecov.io/gh/pj35/LeagueStats)
+[![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
 Advanced draft coaching and champion analysis tool for League of Legends.
 
 ## Quick Start

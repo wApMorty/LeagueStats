@@ -45,8 +45,7 @@ from .config_constants import scraping_config
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(threadName)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(threadName)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -57,14 +56,14 @@ thread_local = local()
 def _is_headless_mode() -> bool:
     """
     Detect if running in headless mode (pythonw.exe, Task Scheduler, etc.).
-    
+
     In headless mode, sys.stdout is None, so tqdm progress bars should be disabled
     to avoid crashes.
-    
+
     Returns:
         True if stdout is not available (headless mode), False otherwise
     """
-    return sys.stdout is None or not hasattr(sys.stdout, 'write')
+    return sys.stdout is None or not hasattr(sys.stdout, "write")
 
 
 class ParallelParser:
@@ -93,7 +92,9 @@ class ParallelParser:
         self.db_lock = Lock()
         self.executor: Optional[ThreadPoolExecutor] = None
 
-        logger.info(f"ParallelParser initialized with {max_workers} workers, patch={self.patch_version}")
+        logger.info(
+            f"ParallelParser initialized with {max_workers} workers, patch={self.patch_version}"
+        )
 
     def _get_parser(self) -> Parser:
         """Get or create a Parser instance for current thread.
@@ -105,7 +106,7 @@ class ParallelParser:
             Parser: Thread-local parser instance with dedicated webdriver
         """
         # Check if this thread already has a parser
-        if not hasattr(thread_local, 'parser'):
+        if not hasattr(thread_local, "parser"):
             # Create new parser for this thread (first time only)
             thread_local.parser = Parser()
             self.parsers.append(thread_local.parser)
@@ -117,12 +118,10 @@ class ParallelParser:
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=10),
         retry=retry_if_exception_type((WebDriverException, TimeoutException)),
-        reraise=True
+        reraise=True,
     )
     def _scrape_champion_with_retry(
-        self,
-        champion: str,
-        normalize_func
+        self, champion: str, normalize_func
     ) -> List[Tuple[str, float, float, float, float, int]]:
         """Scrape champion data with automatic retry on failure.
 
@@ -145,7 +144,9 @@ class ParallelParser:
         try:
             normalized_champion = normalize_func(champion)
             matchups = parser.get_champion_data_on_patch(self.patch_version, normalized_champion)
-            logger.info(f"Successfully scraped {champion} (patch {self.patch_version}): {len(matchups)} matchups")
+            logger.info(
+                f"Successfully scraped {champion} (patch {self.patch_version}): {len(matchups)} matchups"
+            )
             return champion, matchups
         except (WebDriverException, TimeoutException) as e:
             logger.warning(f"Retry triggered for {champion}: {e}")
@@ -155,10 +156,7 @@ class ParallelParser:
             return champion, []
 
     def _write_matchups_thread_safe(
-        self,
-        db: Database,
-        champion: str,
-        matchups: List[Tuple]
+        self, db: Database, champion: str, matchups: List[Tuple]
     ) -> None:
         """Write matchup data to database with thread-safe locking.
 
@@ -175,11 +173,7 @@ class ParallelParser:
             except Exception as e:
                 logger.error(f"Database write error for {champion}: {e}")
 
-    def parse_all_champions(
-        self,
-        db: Database,
-        normalize_func
-    ) -> dict:
+    def parse_all_champions(self, db: Database, normalize_func) -> dict:
         """Parse all champions in parallel with progress tracking.
 
         Champions list is dynamically retrieved from Riot API, ensuring
@@ -193,6 +187,7 @@ class ParallelParser:
             dict: Statistics with keys 'success', 'failed', 'total', 'duration'
         """
         import time
+
         start_time = time.time()
 
         # Initialize database tables (use Alembic-compatible schema)
@@ -215,9 +210,7 @@ class ParallelParser:
         self.executor = ThreadPoolExecutor(max_workers=self.max_workers)
         futures = {
             self.executor.submit(
-                self._scrape_champion_with_retry,
-                champion,
-                normalize_func
+                self._scrape_champion_with_retry, champion, normalize_func
             ): champion
             for champion in champion_names
         }
@@ -233,7 +226,9 @@ class ParallelParser:
         if disable_tqdm:
             logger.info("Headless mode detected - tqdm progress bar disabled")
 
-        with tqdm(total=total_champions, desc="Scraping champions", unit="champ", disable=disable_tqdm) as pbar:
+        with tqdm(
+            total=total_champions, desc="Scraping champions", unit="champ", disable=disable_tqdm
+        ) as pbar:
             for future in as_completed(futures):
                 champion = futures[future]
                 try:
@@ -249,10 +244,10 @@ class ParallelParser:
         duration = time.time() - start_time
 
         stats = {
-            'success': success_count,
-            'failed': failed_count,
-            'total': total_champions,
-            'duration': duration
+            "success": success_count,
+            "failed": failed_count,
+            "total": total_champions,
+            "duration": duration,
         }
 
         logger.info(
@@ -264,6 +259,7 @@ class ParallelParser:
         logger.info("Pre-calculating ban recommendations for custom pools...")
         try:
             from ..assistant import Assistant
+
             assistant = Assistant(db, verbose=False)
             ban_results = assistant.precalculate_all_custom_pool_bans()
 
@@ -276,24 +272,21 @@ class ParallelParser:
                 f"{total_bans} total recommendations"
             )
 
-            stats['ban_precalc'] = {
-                'pools_processed': total_pools,
-                'pools_successful': successful_pools,
-                'total_recommendations': total_bans
+            stats["ban_precalc"] = {
+                "pools_processed": total_pools,
+                "pools_successful": successful_pools,
+                "total_recommendations": total_bans,
             }
         except Exception as e:
             logger.error(f"Failed to pre-calculate ban recommendations: {e}")
             import traceback
+
             traceback.print_exc()
 
         return stats
 
     def parse_champions_by_role(
-        self,
-        db: Database,
-        champion_list: List[str],
-        lane: str,
-        normalize_func
+        self, db: Database, champion_list: List[str], lane: str, normalize_func
     ) -> dict:
         """Parse champions for a specific role/lane in parallel.
 
@@ -307,6 +300,7 @@ class ParallelParser:
             dict: Statistics with keys 'success', 'failed', 'total', 'duration'
         """
         import time
+
         start_time = time.time()
 
         logger.info(f"Starting parallel scraping of {len(champion_list)} champions for {lane}")
@@ -331,16 +325,19 @@ class ParallelParser:
             parser = self._get_parser()
             try:
                 normalized_champion = normalize_func(champion)
-                matchups = parser.get_champion_data_on_patch(self.patch_version, normalized_champion, lane)
-                logger.info(f"Successfully scraped {champion} ({lane}, patch {self.patch_version}): {len(matchups)} matchups")
+                matchups = parser.get_champion_data_on_patch(
+                    self.patch_version, normalized_champion, lane
+                )
+                logger.info(
+                    f"Successfully scraped {champion} ({lane}, patch {self.patch_version}): {len(matchups)} matchups"
+                )
                 return champion, matchups
             except Exception as e:
                 logger.error(f"Error scraping {champion} ({lane}): {e}")
                 return champion, []
 
         futures = {
-            self.executor.submit(scrape_with_lane, champion): champion
-            for champion in champion_list
+            self.executor.submit(scrape_with_lane, champion): champion for champion in champion_list
         }
 
         # Track progress with tqdm
@@ -352,7 +349,9 @@ class ParallelParser:
         if disable_tqdm:
             logger.info(f"Headless mode detected - tqdm progress bar disabled for {lane}")
 
-        with tqdm(total=len(champion_list), desc=f"Scraping {lane}", unit="champ", disable=disable_tqdm) as pbar:
+        with tqdm(
+            total=len(champion_list), desc=f"Scraping {lane}", unit="champ", disable=disable_tqdm
+        ) as pbar:
             for future in as_completed(futures):
                 champion = futures[future]
                 try:
@@ -368,11 +367,11 @@ class ParallelParser:
         duration = time.time() - start_time
 
         stats = {
-            'success': success_count,
-            'failed': failed_count,
-            'total': len(champion_list),
-            'lane': lane,
-            'duration': duration
+            "success": success_count,
+            "failed": failed_count,
+            "total": len(champion_list),
+            "lane": lane,
+            "duration": duration,
         }
 
         logger.info(

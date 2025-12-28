@@ -14,10 +14,10 @@ class TestFilterValidMatchups:
         low_pickrate = (
             "TestChamp",
             50.0,  # winrate
-            0,     # delta1
-            0,     # delta2
+            0,  # delta1
+            0,  # delta2
             analysis_config.MIN_PICKRATE - 0.1,  # Below threshold
-            1000   # games
+            1000,  # games
         )
         matchups = [low_pickrate] + sample_matchups
 
@@ -34,7 +34,7 @@ class TestFilterValidMatchups:
             0,
             0,
             10.0,  # Good pickrate
-            analysis_config.MIN_MATCHUP_GAMES - 1  # Below threshold
+            analysis_config.MIN_MATCHUP_GAMES - 1,  # Below threshold
         )
         matchups = [low_games] + sample_matchups
 
@@ -123,7 +123,7 @@ class TestAvgWinrate:
         """Test correct weighted average by pickrate."""
         matchups = [
             ("Champ1", 52.0, 0, 0, 12.0, 1200),  # winrate=52, weight=12
-            ("Champ2", 48.0, 0, 0, 8.0, 800),    # winrate=48, weight=8
+            ("Champ2", 48.0, 0, 0, 8.0, 800),  # winrate=48, weight=8
         ]
         # Expected: (52*12 + 48*8) / (12+8) = 1008 / 20 = 50.4
 
@@ -180,6 +180,7 @@ class TestDelta2ToWinAdvantage:
 
         # Should match mathematical formula (no bounds)
         import math
+
         expected_log_odds = 0.12 * delta2
         expected_win_prob = 1 / (1 + math.exp(-expected_log_odds))
         expected_advantage = (expected_win_prob - 0.5) * 100

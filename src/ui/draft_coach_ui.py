@@ -9,7 +9,7 @@ def run_draft_coach(
     auto_hover: bool = False,
     auto_accept_queue: bool = False,
     auto_ban_hover: bool = False,
-    open_onetricks: Optional[bool] = None
+    open_onetricks: Optional[bool] = None,
 ) -> None:
     """
     Run the real-time draft coach.
@@ -40,7 +40,7 @@ def run_draft_coach(
             auto_hover=auto_hover,
             auto_accept_queue=auto_accept_queue,
             auto_ban_hover=auto_ban_hover,
-            open_onetricks=open_onetricks
+            open_onetricks=open_onetricks,
         )
         monitor.start_monitoring()
     except KeyboardInterrupt:
@@ -49,4 +49,5 @@ def run_draft_coach(
         print(f"[ERROR] Draft coach error: {e}")
         if verbose:
             import traceback
+
             traceback.print_exc()

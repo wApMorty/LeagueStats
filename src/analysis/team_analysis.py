@@ -57,18 +57,18 @@ class TeamAnalyzer:
         team2_stats = self.scorer.calculate_team_winrate(winrates2)
 
         # Normalize team winrates to ensure they sum to 100%
-        total_winrate = team1_stats['team_winrate'] + team2_stats['team_winrate']
+        total_winrate = team1_stats["team_winrate"] + team2_stats["team_winrate"]
         if total_winrate > 0:
-            team1_normalized = (team1_stats['team_winrate'] / total_winrate) * 100.0
-            team2_normalized = (team2_stats['team_winrate'] / total_winrate) * 100.0
+            team1_normalized = (team1_stats["team_winrate"] / total_winrate) * 100.0
+            team2_normalized = (team2_stats["team_winrate"] / total_winrate) * 100.0
         else:
             team1_normalized = team2_normalized = 50.0  # Fallback for edge case
 
         # Update stats with normalized values
-        team1_stats['raw_winrate'] = team1_stats['team_winrate']
-        team2_stats['raw_winrate'] = team2_stats['team_winrate']
-        team1_stats['team_winrate'] = team1_normalized
-        team2_stats['team_winrate'] = team2_normalized
+        team1_stats["raw_winrate"] = team1_stats["team_winrate"]
+        team2_stats["raw_winrate"] = team2_stats["team_winrate"]
+        team1_stats["team_winrate"] = team1_normalized
+        team2_stats["team_winrate"] = team2_normalized
 
         # Display results
         print("=" * 60)
@@ -79,7 +79,9 @@ class TeamAnalyzer:
             print(f"{champion:<15} | {advantage:+5.2f}% advantage ({winrate:.1f}% winrate)")
 
         print("-" * 40)
-        safe_print(f"🎯 Team Winrate: {team1_stats['team_winrate']:.1f}% (raw: {team1_stats['raw_winrate']:.1f}%)")
+        safe_print(
+            f"🎯 Team Winrate: {team1_stats['team_winrate']:.1f}% (raw: {team1_stats['raw_winrate']:.1f}%)"
+        )
 
         print("=" * 60)
         safe_print(f"🔴 TEAM 2 ANALYSIS:")
@@ -89,14 +91,18 @@ class TeamAnalyzer:
             print(f"{champion:<15} | {advantage:+5.2f}% advantage ({winrate:.1f}% winrate)")
 
         print("-" * 40)
-        safe_print(f"🎯 Team Winrate: {team2_stats['team_winrate']:.1f}% (raw: {team2_stats['raw_winrate']:.1f}%)")
+        safe_print(
+            f"🎯 Team Winrate: {team2_stats['team_winrate']:.1f}% (raw: {team2_stats['raw_winrate']:.1f}%)"
+        )
 
         # Matchup prediction
         print("=" * 60)
         safe_print(f"📊 MATCHUP PREDICTION:")
-        team_diff = team1_stats['team_winrate'] - team2_stats['team_winrate']
+        team_diff = team1_stats["team_winrate"] - team2_stats["team_winrate"]
 
-        print(f"Team 1 vs Team 2: {team1_stats['team_winrate']:.1f}% vs {team2_stats['team_winrate']:.1f}%")
+        print(
+            f"Team 1 vs Team 2: {team1_stats['team_winrate']:.1f}% vs {team2_stats['team_winrate']:.1f}%"
+        )
         print(f"Expected advantage: {team_diff:+.1f}% for Team 1")
 
         # Confidence level based on magnitude
