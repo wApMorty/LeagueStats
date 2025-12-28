@@ -19,6 +19,7 @@ from ..config_constants import pool_stats_config
 @dataclass
 class ChampionStats:
     """Statistics for a single champion."""
+
     name: str
     avg_delta2: float
     num_matchups: int
@@ -29,6 +30,7 @@ class ChampionStats:
 @dataclass
 class PoolStatistics:
     """Aggregated statistics for a champion pool."""
+
     pool_name: str
     pool_size: int
     champion_stats: List[ChampionStats]
@@ -88,7 +90,7 @@ class PoolStatisticsCalculator:
                 avg_delta2=0.0,
                 num_matchups=0,
                 total_games=0,
-                has_sufficient_data=False
+                has_sufficient_data=False,
             )
 
         # Filter valid matchups (sufficient data)
@@ -108,14 +110,10 @@ class PoolStatisticsCalculator:
             avg_delta2=avg_d2,
             num_matchups=len(valid_matchups),
             total_games=total_games,
-            has_sufficient_data=has_sufficient_data
+            has_sufficient_data=has_sufficient_data,
         )
 
-    def calculate_pool_statistics(
-        self,
-        pool_name: str,
-        champion_list: List[str]
-    ) -> PoolStatistics:
+    def calculate_pool_statistics(self, pool_name: str, champion_list: List[str]) -> PoolStatistics:
         """Calculate comprehensive statistics for a champion pool.
 
         Args:
@@ -156,8 +154,7 @@ class PoolStatisticsCalculator:
         champions_with_data_count = len(champs_with_data)
         champions_without_data_count = len(champion_stats) - champions_with_data_count
         coverage_percentage = (
-            (champions_with_data_count / len(champion_stats) * 100)
-            if champion_stats else 0.0
+            (champions_with_data_count / len(champion_stats) * 100) if champion_stats else 0.0
         )
         total_matchups = sum(cs.num_matchups for cs in champion_stats)
         total_games = sum(cs.total_games for cs in champion_stats)
@@ -180,7 +177,7 @@ class PoolStatisticsCalculator:
             coverage_percentage=coverage_percentage,
             total_matchups=total_matchups,
             total_games=total_games,
-            outliers=outliers
+            outliers=outliers,
         )
 
 

@@ -25,16 +25,19 @@ def temp_db(tmp_path):
     cursor = conn.cursor()
 
     # Champions table
-    cursor.execute("""
+    cursor.execute(
+        """
         CREATE TABLE IF NOT EXISTS champions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT UNIQUE NOT NULL,
             role TEXT
         )
-    """)
+    """
+    )
 
     # Matchups table - using production schema column names
-    cursor.execute("""
+    cursor.execute(
+        """
         CREATE TABLE IF NOT EXISTS matchups (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             champion INTEGER NOT NULL,
@@ -48,7 +51,8 @@ def temp_db(tmp_path):
             FOREIGN KEY (champion) REFERENCES champions(id),
             FOREIGN KEY (enemy) REFERENCES champions(id)
         )
-    """)
+    """
+    )
 
     conn.commit()
     conn.close()
@@ -118,10 +122,7 @@ def sample_champions(db):
 
     cursor = db.connection.cursor()
     for champ in champions:
-        cursor.execute(
-            "INSERT OR IGNORE INTO champions (name, role) VALUES (?, ?)",
-            (champ, "top")
-        )
+        cursor.execute("INSERT OR IGNORE INTO champions (name, role) VALUES (?, ?)", (champ, "top"))
     db.connection.commit()
 
     return champions
@@ -138,6 +139,7 @@ def insert_matchup(db):
     Returns:
         Function that accepts (champion, enemy, winrate, delta1, delta2, pickrate, games)
     """
+
     def _insert(champion, enemy, winrate, delta1, delta2, pickrate, games):
         """Insert matchup using champion names, creating champions if needed."""
         cursor = db.connection.cursor()
@@ -154,10 +156,13 @@ def insert_matchup(db):
         enemy_id = cursor.fetchone()[0]
 
         # Insert matchup - using production schema column names (champion, enemy)
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO matchups (champion, enemy, winrate, delta1, delta2, pickrate, games)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (champion_id, enemy_id, winrate, delta1, delta2, pickrate, games))
+        """,
+            (champion_id, enemy_id, winrate, delta1, delta2, pickrate, games),
+        )
 
         db.connection.commit()
 

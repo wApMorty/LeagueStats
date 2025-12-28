@@ -17,12 +17,32 @@ def safe_print(text: str) -> None:
         # Fallback: replace emojis with text equivalents
         fallback_text = text
         emoji_map = {
-            '✅': 'OK', '❌': 'ERROR', '⚠️': 'WARNING', '🎯': 'TARGET',
-            '📊': 'STATS', '🔸': '-', '🟢': 'GREEN', '🟡': 'YELLOW',
-            '🟠': 'ORANGE', '🔴': 'RED', '💡': 'TIPS', '📈': 'TREND',
-            '🛡️': 'SHIELD', '🥇': '1st', '🥈': '2nd', '🥉': '3rd',
-            '🎮': 'GAME', '➖': '-', '─': '-', '═': '=', '•': '*', '→': '>',
-            '⚔️': '[SWORD]', '💥': '[BOOM]', '≥': '>=', '⭐': '*'
+            "✅": "OK",
+            "❌": "ERROR",
+            "⚠️": "WARNING",
+            "🎯": "TARGET",
+            "📊": "STATS",
+            "🔸": "-",
+            "🟢": "GREEN",
+            "🟡": "YELLOW",
+            "🟠": "ORANGE",
+            "🔴": "RED",
+            "💡": "TIPS",
+            "📈": "TREND",
+            "🛡️": "SHIELD",
+            "🥇": "1st",
+            "🥈": "2nd",
+            "🥉": "3rd",
+            "🎮": "GAME",
+            "➖": "-",
+            "─": "-",
+            "═": "=",
+            "•": "*",
+            "→": ">",
+            "⚔️": "[SWORD]",
+            "💥": "[BOOM]",
+            "≥": ">=",
+            "⭐": "*",
         }
         for emoji, replacement in emoji_map.items():
             fallback_text = fallback_text.replace(emoji, replacement)

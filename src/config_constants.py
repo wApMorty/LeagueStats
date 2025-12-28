@@ -6,6 +6,7 @@ Centralized configuration for all hardcoded values across the application.
 from dataclasses import dataclass, field
 from typing import Dict
 
+
 @dataclass
 class ScrapingConfig:
     """Configuration for web scraping operations."""
@@ -46,12 +47,14 @@ class AnalysisConfig:
     MIN_MATCHUP_GAMES: int = 200  # Minimum games for matchup reliability
 
     # Tier thresholds (0-100 scale)
-    TIER_THRESHOLDS: Dict[str, float] = field(default_factory=lambda: {
-        'S': 75.0,  # S-Tier: 75-100
-        'A': 50.0,  # A-Tier: 50-75
-        'B': 25.0,  # B-Tier: 25-50
-        'C': 0.0    # C-Tier: 0-25
-    })
+    TIER_THRESHOLDS: Dict[str, float] = field(
+        default_factory=lambda: {
+            "S": 75.0,  # S-Tier: 75-100
+            "A": 50.0,  # A-Tier: 50-75
+            "B": 25.0,  # B-Tier: 25-50
+            "C": 0.0,  # C-Tier: 0-25
+        }
+    )
 
     # Blind Pick scoring weights (must sum to 1.0)
     BLIND_AVG_WEIGHT: float = 0.5  # Average performance
@@ -113,8 +116,8 @@ class XPathConfig:
     """XPath selectors for web scraping (LoLalytics)."""
 
     # Matchup data paths
-    WINRATE_XPATH: str = '/html/body/main/div[5]/div[1]/div[2]/div[3]/div/div/div[1]/div[1]/text()'
-    GAMES_XPATH: str = '/html/body/main/div[5]/div[1]/div[2]/div[3]/div/div/div[2]/div[1]/text()'
+    WINRATE_XPATH: str = "/html/body/main/div[5]/div[1]/div[2]/div[3]/div/div/div[1]/div[1]/text()"
+    GAMES_XPATH: str = "/html/body/main/div[5]/div[1]/div[2]/div[3]/div/div/div[2]/div[1]/text()"
 
     # Matchup row base path
     MATCHUP_ROW_BASE: str = "/html/body/main/div[6]/div[1]/div[{index}]/div[2]/div"

@@ -90,7 +90,9 @@ class TierListGenerator:
             return []
         return self.generate_by_delta2(champion_list)
 
-    def generate_tier_list(self, champion_pool: List[str], analysis_type: str = "blind_pick", verbose: bool = False) -> List[dict]:
+    def generate_tier_list(
+        self, champion_pool: List[str], analysis_type: str = "blind_pick", verbose: bool = False
+    ) -> List[dict]:
         """
         Generate a tier list for a champion pool using pre-computed global scores.
 
@@ -129,34 +131,34 @@ class TierListGenerator:
 
         # Extract global ranges for normalization
         all_metrics = {
-            'avg_delta2': [],
-            'variance': [],
-            'coverage': [],
-            'peak_impact': [],
-            'volatility': [],
-            'target_ratio': []
+            "avg_delta2": [],
+            "variance": [],
+            "coverage": [],
+            "peak_impact": [],
+            "volatility": [],
+            "target_ratio": [],
         }
 
         for row in all_scores_data:
             # row = (name, avg_delta2, variance, coverage, peak_impact, volatility, target_ratio)
-            all_metrics['avg_delta2'].append(row[1])
-            all_metrics['variance'].append(row[2])
-            all_metrics['coverage'].append(row[3])
-            all_metrics['peak_impact'].append(row[4])
-            all_metrics['volatility'].append(row[5])
-            all_metrics['target_ratio'].append(row[6])
+            all_metrics["avg_delta2"].append(row[1])
+            all_metrics["variance"].append(row[2])
+            all_metrics["coverage"].append(row[3])
+            all_metrics["peak_impact"].append(row[4])
+            all_metrics["volatility"].append(row[5])
+            all_metrics["target_ratio"].append(row[6])
 
         # Calculate global ranges
-        min_delta2_global = min(all_metrics['avg_delta2'])
-        max_delta2_global = max(all_metrics['avg_delta2'])
-        min_variance_global = min(all_metrics['variance'])
-        max_variance_global = max(all_metrics['variance'])
-        min_coverage_global = min(all_metrics['coverage'])
-        max_coverage_global = max(all_metrics['coverage'])
-        min_peak_impact_global = min(all_metrics['peak_impact'])
-        max_peak_impact_global = max(all_metrics['peak_impact'])
-        min_target_ratio_global = min(all_metrics['target_ratio'])
-        max_target_ratio_global = max(all_metrics['target_ratio'])
+        min_delta2_global = min(all_metrics["avg_delta2"])
+        max_delta2_global = max(all_metrics["avg_delta2"])
+        min_variance_global = min(all_metrics["variance"])
+        max_variance_global = max(all_metrics["variance"])
+        min_coverage_global = min(all_metrics["coverage"])
+        max_coverage_global = max(all_metrics["coverage"])
+        min_peak_impact_global = min(all_metrics["peak_impact"])
+        max_peak_impact_global = max(all_metrics["peak_impact"])
+        min_target_ratio_global = min(all_metrics["target_ratio"])
+        max_target_ratio_global = max(all_metrics["target_ratio"])
 
         # Avoid division by zero
         if max_delta2_global == min_delta2_global:
@@ -182,8 +184,12 @@ class TierListGenerator:
             if analysis_type == "blind_pick":
                 print(f"  Coverage: {min_coverage_global:.3f} to {max_coverage_global:.3f}")
             elif analysis_type == "counter_pick":
-                print(f"  Peak Impact: {min_peak_impact_global:.3f} to {max_peak_impact_global:.3f}")
-                print(f"  Target Ratio: {min_target_ratio_global:.3f} to {max_target_ratio_global:.3f}")
+                print(
+                    f"  Peak Impact: {min_peak_impact_global:.3f} to {max_peak_impact_global:.3f}"
+                )
+                print(
+                    f"  Target Ratio: {min_target_ratio_global:.3f} to {max_target_ratio_global:.3f}"
+                )
 
         # Step 2: Get scores from database and calculate normalized scores
         results = []
@@ -200,63 +206,75 @@ class TierListGenerator:
             # Calculate normalized score based on analysis type
             if analysis_type == "blind_pick":
                 # Normalize components
-                avg_perf_norm = (scores['avg_delta2'] - min_delta2_global) / (max_delta2_global - min_delta2_global)
+                avg_perf_norm = (scores["avg_delta2"] - min_delta2_global) / (
+                    max_delta2_global - min_delta2_global
+                )
                 avg_perf_norm = max(0.0, min(1.0, avg_perf_norm))
 
-                variance_norm = (scores['variance'] - min_variance_global) / (max_variance_global - min_variance_global)
+                variance_norm = (scores["variance"] - min_variance_global) / (
+                    max_variance_global - min_variance_global
+                )
                 variance_norm = max(0.0, min(1.0, variance_norm))
                 stability = 1.0 - variance_norm  # Invert: low variance = high stability
 
-                coverage_norm = (scores['coverage'] - min_coverage_global) / (max_coverage_global - min_coverage_global)
+                coverage_norm = (scores["coverage"] - min_coverage_global) / (
+                    max_coverage_global - min_coverage_global
+                )
                 coverage_norm = max(0.0, min(1.0, coverage_norm))
 
                 # Calculate final score
                 normalized_score = (
-                    avg_perf_norm * tierlist_config.BLIND_AVG_WEIGHT +
-                    stability * tierlist_config.BLIND_STABILITY_WEIGHT +
-                    coverage_norm * tierlist_config.BLIND_COVERAGE_WEIGHT
+                    avg_perf_norm * tierlist_config.BLIND_AVG_WEIGHT
+                    + stability * tierlist_config.BLIND_STABILITY_WEIGHT
+                    + coverage_norm * tierlist_config.BLIND_COVERAGE_WEIGHT
                 )
                 final_score = normalized_score * 100
 
                 # Build metrics dict for display
                 metrics = {
-                    'final_score': final_score,
-                    'avg_performance_norm': avg_perf_norm,
-                    'avg_delta2_raw': scores['avg_delta2'],
-                    'stability': stability,
-                    'variance': scores['variance'],
-                    'coverage_norm': coverage_norm,
-                    'coverage_raw': scores['coverage']
+                    "final_score": final_score,
+                    "avg_performance_norm": avg_perf_norm,
+                    "avg_delta2_raw": scores["avg_delta2"],
+                    "stability": stability,
+                    "variance": scores["variance"],
+                    "coverage_norm": coverage_norm,
+                    "coverage_raw": scores["coverage"],
                 }
 
             elif analysis_type == "counter_pick":
                 # Normalize components
-                peak_impact_norm = (scores['peak_impact'] - min_peak_impact_global) / (max_peak_impact_global - min_peak_impact_global)
+                peak_impact_norm = (scores["peak_impact"] - min_peak_impact_global) / (
+                    max_peak_impact_global - min_peak_impact_global
+                )
                 peak_impact_norm = max(0.0, min(1.0, peak_impact_norm))
 
-                volatility_norm = (scores['volatility'] - min_variance_global) / (max_variance_global - min_variance_global)
+                volatility_norm = (scores["volatility"] - min_variance_global) / (
+                    max_variance_global - min_variance_global
+                )
                 volatility_norm = max(0.0, min(1.0, volatility_norm))
 
-                target_ratio_norm = (scores['target_ratio'] - min_target_ratio_global) / (max_target_ratio_global - min_target_ratio_global)
+                target_ratio_norm = (scores["target_ratio"] - min_target_ratio_global) / (
+                    max_target_ratio_global - min_target_ratio_global
+                )
                 target_ratio_norm = max(0.0, min(1.0, target_ratio_norm))
 
                 # Calculate final score
                 normalized_score = (
-                    peak_impact_norm * tierlist_config.COUNTER_PEAK_WEIGHT +
-                    volatility_norm * tierlist_config.COUNTER_VOLATILITY_WEIGHT +
-                    target_ratio_norm * tierlist_config.COUNTER_TARGETS_WEIGHT
+                    peak_impact_norm * tierlist_config.COUNTER_PEAK_WEIGHT
+                    + volatility_norm * tierlist_config.COUNTER_VOLATILITY_WEIGHT
+                    + target_ratio_norm * tierlist_config.COUNTER_TARGETS_WEIGHT
                 )
                 final_score = normalized_score * 100
 
                 # Build metrics dict for display
                 metrics = {
-                    'final_score': final_score,
-                    'peak_impact_norm': peak_impact_norm,
-                    'peak_impact_raw': scores['peak_impact'],
-                    'volatility_norm': volatility_norm,
-                    'variance': scores['volatility'],
-                    'target_ratio_norm': target_ratio_norm,
-                    'target_ratio_raw': scores['target_ratio']
+                    "final_score": final_score,
+                    "peak_impact_norm": peak_impact_norm,
+                    "peak_impact_raw": scores["peak_impact"],
+                    "volatility_norm": volatility_norm,
+                    "variance": scores["volatility"],
+                    "target_ratio_norm": target_ratio_norm,
+                    "target_ratio_raw": scores["target_ratio"],
                 }
 
             else:
@@ -272,14 +290,11 @@ class TierListGenerator:
             else:
                 tier = "C"
 
-            results.append({
-                'champion': champion,
-                'tier': tier,
-                'score': final_score,
-                'metrics': metrics
-            })
+            results.append(
+                {"champion": champion, "tier": tier, "score": final_score, "metrics": metrics}
+            )
 
         # Sort by score (descending)
-        results.sort(key=lambda x: x['score'], reverse=True)
+        results.sort(key=lambda x: x["score"], reverse=True)
 
         return results

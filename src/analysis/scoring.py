@@ -32,7 +32,8 @@ class ChampionScorer:
             Filtered list of valid matchups
         """
         return [
-            m for m in matchups
+            m
+            for m in matchups
             if m[4] >= analysis_config.MIN_PICKRATE and m[5] >= analysis_config.MIN_MATCHUP_GAMES
         ]
 
@@ -125,10 +126,7 @@ class ChampionScorer:
         return advantage
 
     def score_against_team(
-        self,
-        matchups: List[tuple],
-        team: List[str],
-        champion_name: str = None
+        self, matchups: List[tuple], team: List[str], champion_name: str = None
     ) -> float:
         """
         Calculate bidirectional advantage against a team composition.
@@ -166,7 +164,9 @@ class ChampionScorer:
             # Can't calculate accurately without champion name, return 0
             if self.verbose:
                 print("[WARNING] score_against_team() called without champion_name parameter")
-                print("[WARNING] Cannot calculate bidirectional advantage - returning 0.0 (neutral)")
+                print(
+                    "[WARNING] Cannot calculate bidirectional advantage - returning 0.0 (neutral)"
+                )
                 print("[ACTION] Pass champion_name parameter to enable bidirectional calculation")
             return 0.0
 
@@ -225,13 +225,19 @@ class ChampionScorer:
         # 2. Equal weighting of all enemies reflects symmetric team threat
         # 3. Pickrate weighting would undervalue niche counters
         if enemy_perspective_deltas:
-            enemy_avg_delta2_against_us = sum(enemy_perspective_deltas) / len(enemy_perspective_deltas)
-            enemy_advantage_against_us = self.delta2_to_win_advantage(enemy_avg_delta2_against_us, champion_name)
+            enemy_avg_delta2_against_us = sum(enemy_perspective_deltas) / len(
+                enemy_perspective_deltas
+            )
+            enemy_advantage_against_us = self.delta2_to_win_advantage(
+                enemy_avg_delta2_against_us, champion_name
+            )
 
             # Log if we had partial data
             if missing_enemies and self.verbose:
                 print(f"[WARNING] Missing enemy matchup data: {champion_name} vs {missing_enemies}")
-                print(f"[INFO] Using {len(enemy_perspective_deltas)}/{len(team)} enemy matchups for calculation")
+                print(
+                    f"[INFO] Using {len(enemy_perspective_deltas)}/{len(team)} enemy matchups for calculation"
+                )
                 print(f"[ACTION] Update database to include matchup data for missing enemies")
         else:
             # No enemy data - graceful degradation to unidirectional
@@ -241,7 +247,9 @@ class ChampionScorer:
             if self.verbose:
                 print(f"[WARNING] No enemy matchup data found for {champion_name} vs {team}")
                 print(f"[INFO] Degrading to unidirectional calculation (enemy advantage = 0)")
-                print(f"[ACTION] Scrape enemy champion data or update database to enable bidirectional calculation")
+                print(
+                    f"[ACTION] Scrape enemy champion data or update database to enable bidirectional calculation"
+                )
             enemy_advantage_against_us = 0.0
 
         # STEP 3: Combine perspectives for net advantage
@@ -266,7 +274,7 @@ class ChampionScorer:
             dict with 'team_winrate', 'individual_winrates'
         """
         if not individual_winrates:
-            return {'team_winrate': 50.0, 'individual_winrates': []}
+            return {"team_winrate": 50.0, "individual_winrates": []}
 
         # Clamp individual winrates to realistic bounds
         clamped_winrates = []
@@ -289,7 +297,4 @@ class ChampionScorer:
         # Apply conservative bounds (extreme team winrates are unrealistic)
         team_winrate = max(25.0, min(75.0, team_winrate))
 
-        return {
-            'team_winrate': team_winrate,
-            'individual_winrates': clamped_winrates
-        }
+        return {"team_winrate": team_winrate, "individual_winrates": clamped_winrates}

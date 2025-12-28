@@ -28,11 +28,7 @@ class TestBidirectionalAdvantage:
         aatrox_matchups = db.get_champion_matchups_by_name("Aatrox")
 
         # Calculate bidirectional advantage for Aatrox vs Darius
-        result = scorer.score_against_team(
-            aatrox_matchups,
-            ["Darius"],
-            champion_name="Aatrox"
-        )
+        result = scorer.score_against_team(aatrox_matchups, ["Darius"], champion_name="Aatrox")
 
         # With blind pick dilution: our_avg_delta2 = 100/5 = 20
         our_diluted_adv = scorer.delta2_to_win_advantage(20, "Aatrox")
@@ -62,11 +58,7 @@ class TestBidirectionalAdvantage:
 
         aatrox_matchups = db.get_champion_matchups_by_name("Aatrox")
 
-        result = scorer.score_against_team(
-            aatrox_matchups,
-            ["Teemo"],
-            champion_name="Aatrox"
-        )
+        result = scorer.score_against_team(aatrox_matchups, ["Teemo"], champion_name="Aatrox")
 
         # Our advantage (no bounds)
         our_adv = scorer.delta2_to_win_advantage(300, "Aatrox")
@@ -94,9 +86,7 @@ class TestBidirectionalAdvantage:
         aatrox_matchups = db.get_champion_matchups_by_name("Aatrox")
 
         result = scorer.score_against_team(
-            aatrox_matchups,
-            ["Darius", "Garen", "Sett"],
-            champion_name="Aatrox"
+            aatrox_matchups, ["Darius", "Garen", "Sett"], champion_name="Aatrox"
         )
 
         # With mixed matchups (some favorable, some not), result should be moderate
@@ -117,11 +107,7 @@ class TestBidirectionalAdvantage:
 
         aatrox_matchups = db.get_champion_matchups_by_name("Aatrox")
 
-        result = scorer.score_against_team(
-            aatrox_matchups,
-            ["NewChampion"],
-            champion_name="Aatrox"
-        )
+        result = scorer.score_against_team(aatrox_matchups, ["NewChampion"], champion_name="Aatrox")
 
         # Should be: our_advantage - 0 (no opponent data)
         # Result should be positive (we have favorable matchup)
@@ -149,9 +135,7 @@ class TestBidirectionalAdvantage:
 
         # Should not crash with partial opponent data
         result = scorer.score_against_team(
-            aatrox_matchups,
-            ["Darius", "Garen", "Yasuo"],
-            champion_name="Aatrox"
+            aatrox_matchups, ["Darius", "Garen", "Yasuo"], champion_name="Aatrox"
         )
 
         # Result should be a valid float
@@ -172,11 +156,7 @@ class TestBidirectionalAdvantage:
         aatrox_matchups = db.get_champion_matchups_by_name("Aatrox")
 
         # Empty team = blind pick
-        result = scorer.score_against_team(
-            aatrox_matchups,
-            [],
-            champion_name="Aatrox"
-        )
+        result = scorer.score_against_team(aatrox_matchups, [], champion_name="Aatrox")
 
         # Should use weighted average (by pickrate)
         # Weighted avg = (100*10 + 200*15) / (10+15) = 160
@@ -195,11 +175,7 @@ class TestBidirectionalAdvantage:
 
         aatrox_matchups = db.get_champion_matchups_by_name("Aatrox")
 
-        result = scorer.score_against_team(
-            aatrox_matchups,
-            ["Teemo"],
-            champion_name="Aatrox"
-        )
+        result = scorer.score_against_team(aatrox_matchups, ["Teemo"], champion_name="Aatrox")
 
         # With extreme values and no bounds, result should be very high
         assert isinstance(result, float)
@@ -207,11 +183,7 @@ class TestBidirectionalAdvantage:
 
     def test_no_champion_name_returns_zero(self, db, scorer, sample_matchups):
         """Test that missing champion_name returns 0 (existing behavior)."""
-        result = scorer.score_against_team(
-            sample_matchups,
-            ["Darius"],
-            champion_name=None
-        )
+        result = scorer.score_against_team(sample_matchups, ["Darius"], champion_name=None)
 
         assert result == 0.0
 
@@ -225,11 +197,7 @@ class TestBidirectionalAdvantage:
 
         aatrox_matchups = db.get_champion_matchups_by_name("Aatrox")
 
-        result = scorer.score_against_team(
-            aatrox_matchups,
-            ["Darius"],
-            champion_name="Aatrox"
-        )
+        result = scorer.score_against_team(aatrox_matchups, ["Darius"], champion_name="Aatrox")
 
         # Should use only our advantage (opponent data filtered out due to low pickrate)
         # With 1 known + 4 blind: (150+0*4)/5 = 30
@@ -247,11 +215,7 @@ class TestBidirectionalAdvantage:
 
         aatrox_matchups = db.get_champion_matchups_by_name("Aatrox")
 
-        result = scorer.score_against_team(
-            aatrox_matchups,
-            ["Garen"],
-            champion_name="Aatrox"
-        )
+        result = scorer.score_against_team(aatrox_matchups, ["Garen"], champion_name="Aatrox")
 
         # Should use only our advantage (opponent data filtered out due to insufficient games)
         # With 1 known + 4 blind: (180+0*4)/5 = 36
@@ -273,11 +237,7 @@ class TestBidirectionalAdvantage:
 
         aatrox_matchups = db.get_champion_matchups_by_name("Aatrox")
 
-        result = scorer.score_against_team(
-            aatrox_matchups,
-            ["Teemo"],
-            champion_name="Aatrox"
-        )
+        result = scorer.score_against_team(aatrox_matchups, ["Teemo"], champion_name="Aatrox")
 
         # Calculate expected values
         # Our advantage: (500+0*4)/5 = 100
@@ -307,9 +267,7 @@ class TestBidirectionalAdvantage:
         aatrox_matchups = db.get_champion_matchups_by_name("Aatrox")
 
         result = scorer.score_against_team(
-            aatrox_matchups,
-            ["Darius"],  # 1 known + 4 blind
-            champion_name="Aatrox"
+            aatrox_matchups, ["Darius"], champion_name="Aatrox"  # 1 known + 4 blind
         )
 
         # Diluted advantage: (500+0*4)/5 = 100
@@ -338,9 +296,7 @@ class TestBidirectionalAdvantage:
         aatrox_matchups = db.get_champion_matchups_by_name("Aatrox")
 
         result = scorer.score_against_team(
-            aatrox_matchups,
-            ["Darius"],  # 1 known + 4 blind
-            champion_name="Aatrox"
+            aatrox_matchups, ["Darius"], champion_name="Aatrox"  # 1 known + 4 blind
         )
 
         # Manually calculate expected result
@@ -364,30 +320,32 @@ class TestBidirectionalAdvantage:
         enemies = ["Enemy1", "Enemy2", "Enemy3", "Enemy4", "Enemy5"]
 
         # Our champion matchups with very different pickrates
-        insert_matchup("Aatrox", "Enemy1", 52.0, 10, 20, 30.0, 4000)    # Very high pickrate, low delta2
-        insert_matchup("Aatrox", "Enemy2", 65.0, 200, 250, 2.0, 800)    # Very low pickrate, high delta2
+        insert_matchup(
+            "Aatrox", "Enemy1", 52.0, 10, 20, 30.0, 4000
+        )  # Very high pickrate, low delta2
+        insert_matchup(
+            "Aatrox", "Enemy2", 65.0, 200, 250, 2.0, 800
+        )  # Very low pickrate, high delta2
         insert_matchup("Aatrox", "Enemy3", 54.0, 50, 80, 15.0, 2500)
         insert_matchup("Aatrox", "Enemy4", 48.0, -20, -30, 12.0, 2000)
         insert_matchup("Aatrox", "Enemy5", 51.0, 30, 50, 10.0, 1800)
 
         # Enemy matchups - simple avg will differ from weighted avg
-        insert_matchup("Enemy1", "Aatrox", 51.0, 5, 10, 40.0, 5000)     # Low delta2, high pickrate
-        insert_matchup("Enemy2", "Aatrox", 70.0, 280, 320, 1.0, 500)    # High delta2, low pickrate
+        insert_matchup("Enemy1", "Aatrox", 51.0, 5, 10, 40.0, 5000)  # Low delta2, high pickrate
+        insert_matchup("Enemy2", "Aatrox", 70.0, 280, 320, 1.0, 500)  # High delta2, low pickrate
         insert_matchup("Enemy3", "Aatrox", 52.0, 40, 60, 10.0, 1500)
         insert_matchup("Enemy4", "Aatrox", 46.0, -25, -40, 8.0, 1200)
         insert_matchup("Enemy5", "Aatrox", 50.0, 20, 30, 12.0, 2000)
 
         aatrox_matchups = db.get_champion_matchups_by_name("Aatrox")
 
-        result = scorer.score_against_team(
-            aatrox_matchups,
-            enemies,
-            champion_name="Aatrox"
-        )
+        result = scorer.score_against_team(aatrox_matchups, enemies, champion_name="Aatrox")
 
         # Our advantage: weighted by pickrate
         # (20*30 + 250*2 + 80*15 + (-30)*12 + 50*10) / (30+2+15+12+10) = 2500/69 = 36.23
-        our_weighted_avg = (20*30 + 250*2 + 80*15 + (-30)*12 + 50*10) / (30+2+15+12+10)
+        our_weighted_avg = (20 * 30 + 250 * 2 + 80 * 15 + (-30) * 12 + 50 * 10) / (
+            30 + 2 + 15 + 12 + 10
+        )
         our_adv = scorer.delta2_to_win_advantage(our_weighted_avg, "Aatrox")
 
         # Enemy advantage: SIMPLE average (not weighted)
@@ -412,7 +370,9 @@ class TestBidirectionalAdvantage:
         # i.e., result < wrong_result_if_symmetric
 
         # Calculate what result would be if enemy used weighted (wrong implementation)
-        enemy_weighted_avg = (10*40 + 320*1 + 60*10 + (-40)*8 + 30*12) / (40+1+10+8+12)
+        enemy_weighted_avg = (10 * 40 + 320 * 1 + 60 * 10 + (-40) * 8 + 30 * 12) / (
+            40 + 1 + 10 + 8 + 12
+        )
         enemy_adv_if_weighted = scorer.delta2_to_win_advantage(enemy_weighted_avg, "Aatrox")
         wrong_result_if_symmetric = our_adv - enemy_adv_if_weighted
 

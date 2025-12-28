@@ -24,15 +24,18 @@ def temp_db(tmp_path):
     cursor = conn.cursor()
 
     # Create schema
-    cursor.execute("""
+    cursor.execute(
+        """
         CREATE TABLE IF NOT EXISTS champions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT UNIQUE NOT NULL,
             role TEXT
         )
-    """)
+    """
+    )
 
-    cursor.execute("""
+    cursor.execute(
+        """
         CREATE TABLE IF NOT EXISTS matchups (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             champion INTEGER NOT NULL,
@@ -45,9 +48,11 @@ def temp_db(tmp_path):
             FOREIGN KEY (champion) REFERENCES champions(id) ON DELETE CASCADE,
             FOREIGN KEY (enemy) REFERENCES champions(id) ON DELETE CASCADE
         )
-    """)
+    """
+    )
 
-    cursor.execute("""
+    cursor.execute(
+        """
         CREATE TABLE IF NOT EXISTS champion_scores (
             id INTEGER PRIMARY KEY,
             avg_delta2 REAL,
@@ -58,20 +63,21 @@ def temp_db(tmp_path):
             target_ratio REAL,
             FOREIGN KEY (id) REFERENCES champions(id) ON DELETE CASCADE
         )
-    """)
+    """
+    )
 
     # Insert test champions
     test_champions = [
-        ('Aatrox', 'TOP'),
-        ('Ahri', 'MID'),
-        ('Jinx', 'ADC'),
-        ('Thresh', 'SUPPORT'),
-        ('Lee Sin', 'JUNGLE'),
-        ('Darius', 'TOP'),
-        ('Zed', 'MID'),
-        ('Vayne', 'ADC'),
-        ('Leona', 'SUPPORT'),
-        ('Jarvan IV', 'JUNGLE'),
+        ("Aatrox", "TOP"),
+        ("Ahri", "MID"),
+        ("Jinx", "ADC"),
+        ("Thresh", "SUPPORT"),
+        ("Lee Sin", "JUNGLE"),
+        ("Darius", "TOP"),
+        ("Zed", "MID"),
+        ("Vayne", "ADC"),
+        ("Leona", "SUPPORT"),
+        ("Jarvan IV", "JUNGLE"),
     ]
 
     for champ_name, role in test_champions:
@@ -82,36 +88,39 @@ def temp_db(tmp_path):
     # Note: pickrate is a percentage (0.5-100.0 range per config_constants.py)
     matchups_data = [
         # Aatrox matchups
-        (1, 6, 52.5, 5.0, 2.5, 15.0, 1000),   # Aatrox vs Darius
-        (1, 2, 48.0, 3.0, -1.0, 10.0, 800),   # Aatrox vs Ahri
+        (1, 6, 52.5, 5.0, 2.5, 15.0, 1000),  # Aatrox vs Darius
+        (1, 2, 48.0, 3.0, -1.0, 10.0, 800),  # Aatrox vs Ahri
         # Ahri matchups
-        (2, 7, 50.0, 4.0, 1.5, 12.0, 900),    # Ahri vs Zed
-        (2, 1, 52.0, -3.0, 1.0, 10.0, 800),   # Ahri vs Aatrox
+        (2, 7, 50.0, 4.0, 1.5, 12.0, 900),  # Ahri vs Zed
+        (2, 1, 52.0, -3.0, 1.0, 10.0, 800),  # Ahri vs Aatrox
         # Jinx matchups
-        (3, 8, 49.5, 6.0, 1.8, 18.0, 1200),   # Jinx vs Vayne
-        (3, 4, 51.0, 7.0, 2.2, 20.0, 1500),   # Jinx vs Thresh
+        (3, 8, 49.5, 6.0, 1.8, 18.0, 1200),  # Jinx vs Vayne
+        (3, 4, 51.0, 7.0, 2.2, 20.0, 1500),  # Jinx vs Thresh
         # Lee Sin matchups
         (5, 10, 51.5, 4.5, 2.0, 16.0, 1100),  # Lee Sin vs Jarvan
-        (5, 1, 49.0, 3.5, 1.0, 14.0, 950),    # Lee Sin vs Aatrox
+        (5, 1, 49.0, 3.5, 1.0, 14.0, 950),  # Lee Sin vs Aatrox
         # Thresh matchups
-        (4, 9, 50.5, 5.5, 1.8, 19.0, 1300),   # Thresh vs Leona
-        (4, 3, 49.0, 6.5, 2.1, 20.0, 1500),   # Thresh vs Jinx
+        (4, 9, 50.5, 5.5, 1.8, 19.0, 1300),  # Thresh vs Leona
+        (4, 3, 49.0, 6.5, 2.1, 20.0, 1500),  # Thresh vs Jinx
     ]
 
     for champion, enemy, winrate, delta1, delta2, pickrate, games in matchups_data:
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO matchups (champion, enemy, winrate, delta1, delta2, pickrate, games)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (champion, enemy, winrate, delta1, delta2, pickrate, games))
+        """,
+            (champion, enemy, winrate, delta1, delta2, pickrate, games),
+        )
 
     # Insert test champion scores
     # Schema uses id as primary key (foreign key to champions.id), not name
     scores_data = [
-        ('Aatrox', 1.5, 2.0, 0.6, 3.5, 2.1, 0.65),
-        ('Ahri', 1.2, 1.5, 0.7, 3.0, 1.6, 0.70),
-        ('Jinx', 1.8, 1.8, 0.65, 3.8, 1.9, 0.68),
-        ('Thresh', 0.8, 1.2, 0.75, 2.5, 1.3, 0.72),
-        ('Lee Sin', 2.0, 2.2, 0.55, 4.0, 2.3, 0.60),
+        ("Aatrox", 1.5, 2.0, 0.6, 3.5, 2.1, 0.65),
+        ("Ahri", 1.2, 1.5, 0.7, 3.0, 1.6, 0.70),
+        ("Jinx", 1.8, 1.8, 0.65, 3.8, 1.9, 0.68),
+        ("Thresh", 0.8, 1.2, 0.75, 2.5, 1.3, 0.72),
+        ("Lee Sin", 2.0, 2.2, 0.55, 4.0, 2.3, 0.60),
     ]
 
     for name, avg_delta2, variance, coverage, peak_impact, volatility, target_ratio in scores_data:
@@ -120,10 +129,13 @@ def temp_db(tmp_path):
         result = cursor.fetchone()
         if result:
             champ_id = result[0]
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT INTO champion_scores (id, avg_delta2, variance, coverage, peak_impact, volatility, target_ratio)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (champ_id, avg_delta2, variance, coverage, peak_impact, volatility, target_ratio))
+            """,
+                (champ_id, avg_delta2, variance, coverage, peak_impact, volatility, target_ratio),
+            )
 
     conn.commit()
     conn.close()
@@ -173,16 +185,27 @@ def assistant(db):
 @pytest.fixture
 def sample_champions():
     """List of sample champion names for tests."""
-    return ['Aatrox', 'Ahri', 'Jinx', 'Thresh', 'Lee Sin', 'Darius', 'Zed', 'Vayne', 'Leona', 'Jarvan IV']
+    return [
+        "Aatrox",
+        "Ahri",
+        "Jinx",
+        "Thresh",
+        "Lee Sin",
+        "Darius",
+        "Zed",
+        "Vayne",
+        "Leona",
+        "Jarvan IV",
+    ]
 
 
 @pytest.fixture
 def sample_pool(sample_champions):
     """Sample champion pool for tests."""
     return {
-        'name': 'Test Pool',
-        'champions': sample_champions[:5],  # First 5 champions
-        'description': 'Test pool for functional tests'
+        "name": "Test Pool",
+        "champions": sample_champions[:5],  # First 5 champions
+        "description": "Test pool for functional tests",
     }
 
 

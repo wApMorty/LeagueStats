@@ -9,7 +9,7 @@ from src.analysis.pool_statistics import (
     PoolStatisticsCalculator,
     ChampionStats,
     PoolStatistics,
-    format_pool_statistics
+    format_pool_statistics,
 )
 
 
@@ -55,26 +55,27 @@ def sample_pool_data(db, insert_matchup):
 
     # Get champion IDs for reference (optional, not used in tests)
     ids = {}
-    for name in ['Champion1', 'Champion2', 'Champion3', 'Champion4']:
+    for name in ["Champion1", "Champion2", "Champion3", "Champion4"]:
         cursor.execute("SELECT id FROM champions WHERE name = ?", (name,))
         result = cursor.fetchone()
         if result:
             ids[name] = result[0]
 
     return {
-        'champion_names': ['Champion1', 'Champion2', 'Champion3', 'Champion4'],
-        'champion_ids': ids
+        "champion_names": ["Champion1", "Champion2", "Champion3", "Champion4"],
+        "champion_ids": ids,
     }
 
 
 # === UNIT TESTS - ChampionStats Calculation ===
 
+
 def test_calculate_champion_stats_strong_performer(calculator, sample_pool_data):
     """Test calculating stats for champion with good performance."""
-    stats = calculator.calculate_champion_stats('Champion1')
+    stats = calculator.calculate_champion_stats("Champion1")
 
     assert stats is not None
-    assert stats.name == 'Champion1'
+    assert stats.name == "Champion1"
     assert stats.num_matchups == 3
     assert stats.total_games == 700
     assert stats.has_sufficient_data is True
@@ -83,10 +84,10 @@ def test_calculate_champion_stats_strong_performer(calculator, sample_pool_data)
 
 def test_calculate_champion_stats_weak_performer(calculator, sample_pool_data):
     """Test calculating stats for champion with poor performance."""
-    stats = calculator.calculate_champion_stats('Champion2')
+    stats = calculator.calculate_champion_stats("Champion2")
 
     assert stats is not None
-    assert stats.name == 'Champion2'
+    assert stats.name == "Champion2"
     assert stats.num_matchups == 2
     assert stats.total_games == 500
     assert stats.has_sufficient_data is True
@@ -95,10 +96,10 @@ def test_calculate_champion_stats_weak_performer(calculator, sample_pool_data):
 
 def test_calculate_champion_stats_insufficient_data(calculator, sample_pool_data):
     """Test calculating stats for champion with insufficient data."""
-    stats = calculator.calculate_champion_stats('Champion3')
+    stats = calculator.calculate_champion_stats("Champion3")
 
     assert stats is not None
-    assert stats.name == 'Champion3'
+    assert stats.name == "Champion3"
     assert stats.num_matchups == 0  # Filtered out by min_games_threshold
     assert stats.total_games == 50
     assert stats.has_sufficient_data is False
@@ -107,10 +108,10 @@ def test_calculate_champion_stats_insufficient_data(calculator, sample_pool_data
 
 def test_calculate_champion_stats_no_data(calculator, sample_pool_data):
     """Test calculating stats for champion with no matchups."""
-    stats = calculator.calculate_champion_stats('Champion4')
+    stats = calculator.calculate_champion_stats("Champion4")
 
     assert stats is not None
-    assert stats.name == 'Champion4'
+    assert stats.name == "Champion4"
     assert stats.num_matchups == 0
     assert stats.total_games == 0
     assert stats.has_sufficient_data is False
@@ -119,17 +120,18 @@ def test_calculate_champion_stats_no_data(calculator, sample_pool_data):
 
 def test_calculate_champion_stats_nonexistent(calculator, db):
     """Test calculating stats for non-existent champion."""
-    stats = calculator.calculate_champion_stats('NonExistentChampion')
+    stats = calculator.calculate_champion_stats("NonExistentChampion")
 
     assert stats is None
 
 
 # === UNIT TESTS - PoolStatistics Calculation ===
 
+
 def test_calculate_pool_statistics_complete_pool(calculator, sample_pool_data):
     """Test calculating comprehensive pool statistics."""
     pool_name = "Test Pool"
-    champion_list = sample_pool_data['champion_names']
+    champion_list = sample_pool_data["champion_names"]
 
     stats = calculator.calculate_pool_statistics(pool_name, champion_list)
 
@@ -158,8 +160,8 @@ def test_calculate_pool_statistics_complete_pool(calculator, sample_pool_data):
 
     # Outliers (champions without sufficient data)
     assert len(stats.outliers) == 2
-    assert 'Champion3' in stats.outliers
-    assert 'Champion4' in stats.outliers
+    assert "Champion3" in stats.outliers
+    assert "Champion4" in stats.outliers
 
 
 def test_calculate_pool_statistics_empty_pool(calculator, db):
@@ -206,10 +208,11 @@ def test_calculate_pool_statistics_single_champion(calculator, db, insert_matchu
 
 # === UNIT TESTS - Output Formatting ===
 
+
 def test_format_pool_statistics_output_structure(calculator, sample_pool_data):
     """Test that formatted output contains expected sections."""
     pool_name = "Test Pool"
-    champion_list = sample_pool_data['champion_names']
+    champion_list = sample_pool_data["champion_names"]
 
     stats = calculator.calculate_pool_statistics(pool_name, champion_list)
     output = format_pool_statistics(stats)
@@ -255,13 +258,14 @@ def test_format_pool_statistics_no_outliers(calculator, db, insert_matchup):
 
 # === INTEGRATION TESTS ===
 
+
 def test_pool_statistics_integration_workflow(calculator, sample_pool_data):
     """Integration test: Full workflow from champion stats to formatted output."""
     pool_name = "Integration Test Pool"
-    champion_list = sample_pool_data['champion_names']
+    champion_list = sample_pool_data["champion_names"]
 
     # Step 1: Calculate individual champion stats
-    champ1_stats = calculator.calculate_champion_stats('Champion1')
+    champ1_stats = calculator.calculate_champion_stats("Champion1")
     assert champ1_stats.has_sufficient_data is True
 
     # Step 2: Calculate pool statistics
@@ -289,7 +293,7 @@ def test_pool_statistics_min_games_threshold_boundary(db, insert_matchup):
     # But needs >= MIN_MATCHUP_GAMES (200) to be valid matchup, so use 200
     insert_matchup("Boundary", "Enemy1", 55.0, 100.0, 150.0, 10.0, 200)
 
-    stats = calculator.calculate_champion_stats('Boundary')
+    stats = calculator.calculate_champion_stats("Boundary")
 
     # Should have sufficient data (total_games >= threshold AND valid_matchups > 0)
     assert stats.has_sufficient_data is True
@@ -300,21 +304,21 @@ def test_pool_statistics_min_games_threshold_boundary(db, insert_matchup):
 def test_pool_statistics_dataclass_immutability(calculator, sample_pool_data):
     """Test that dataclasses are properly constructed and accessible."""
     pool_name = "Test Pool"
-    champion_list = sample_pool_data['champion_names']
+    champion_list = sample_pool_data["champion_names"]
 
     stats = calculator.calculate_pool_statistics(pool_name, champion_list)
 
     # Verify all dataclass fields are accessible
-    assert hasattr(stats, 'pool_name')
-    assert hasattr(stats, 'pool_size')
-    assert hasattr(stats, 'champion_stats')
-    assert hasattr(stats, 'avg_delta2_mean')
-    assert hasattr(stats, 'coverage_percentage')
-    assert hasattr(stats, 'outliers')
+    assert hasattr(stats, "pool_name")
+    assert hasattr(stats, "pool_size")
+    assert hasattr(stats, "champion_stats")
+    assert hasattr(stats, "avg_delta2_mean")
+    assert hasattr(stats, "coverage_percentage")
+    assert hasattr(stats, "outliers")
 
     # Verify champion_stats are ChampionStats instances
     for champ_stat in stats.champion_stats:
         assert isinstance(champ_stat, ChampionStats)
-        assert hasattr(champ_stat, 'name')
-        assert hasattr(champ_stat, 'avg_delta2')
-        assert hasattr(champ_stat, 'has_sufficient_data')
+        assert hasattr(champ_stat, "name")
+        assert hasattr(champ_stat, "avg_delta2")
+        assert hasattr(champ_stat, "has_sufficient_data")

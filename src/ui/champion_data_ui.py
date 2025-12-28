@@ -7,9 +7,9 @@ from ..assistant import Assistant
 
 def update_champion_data() -> None:
     """Update champion data with submenu."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("CHAMPION DATA MANAGEMENT")
-    print("="*60)
+    print("=" * 60)
     print("\nOptions:")
     print("1. Update Champion List        - Fetch latest champions from Riot API")
     print("2. Recalculate Champion Scores - Rebuild tier list scores from existing data")
@@ -56,14 +56,14 @@ def update_champion_list_from_riot() -> None:
 def recalculate_champion_scores() -> None:
     """Recalculate champion scores for tier lists from existing matchup data."""
     print("\n[INFO] Recalculating Champion Scores for Tier Lists")
-    print("="*60)
+    print("=" * 60)
     print("\nThis will recalculate all champion scores from existing matchup data.")
     print("Useful after modifying tier list configuration or thresholds.")
     print("\nNote: This does NOT fetch new data from the web.")
     print("      Use 'Parse Match Statistics' to update matchup data first.")
 
     confirm = input("\nProceed with score calculation? (y/n): ").strip().lower()
-    if confirm != 'y':
+    if confirm != "y":
         print("[INFO] Cancelled")
         return
 
@@ -102,4 +102,5 @@ def recalculate_champion_scores() -> None:
     except Exception as e:
         print(f"[ERROR] Calculation error: {e}")
         import traceback
+
         traceback.print_exc()
