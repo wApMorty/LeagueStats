@@ -165,14 +165,14 @@ class Assistant:
         self._cache_misses += 1
         return self.db.get_champion_matchups_for_draft(champion)
 
-    def get_matchups_for_draft(self, champion: str) -> List[tuple]:
+    def get_matchups_for_draft(self, champion: str) -> List[Matchup]:
         """
         Get matchups for draft analysis (optimized with cache support).
 
         This method:
         1. Uses cache if enabled (99% faster after warm-up)
         2. Falls back to optimized DB query if cache miss
-        3. Returns standard 6-column format for compatibility with scoring methods
+        3. Returns Matchup objects for compatibility with scoring methods
 
         Performance:
         - Cache hit: ~0.01ms (memory lookup)
@@ -183,47 +183,50 @@ class Assistant:
             champion: Champion name to get matchups for
 
         Returns:
-            List of matchup tuples in standard format:
-            [(enemy_name, winrate, delta1, delta2, pickrate, games), ...]
+            List of Matchup objects with complete statistics
         """
         # Get from cache or DB (optimized 4-column format)
         draft_matchups = self.get_cached_matchups(champion)
 
-        # Convert to standard 6-column format for scoring methods
+        # Convert to Matchup objects for scoring methods
         return self._convert_draft_matchups_to_standard(draft_matchups)
 
-    def _convert_draft_matchups_to_standard(self, draft_matchups: List[tuple]) -> List[tuple]:
+    def _convert_draft_matchups_to_standard(self, draft_matchups: List) -> List[Matchup]:
         """
-        Convert draft format (4 cols) to standard format (6 cols) for scoring methods.
+        Convert draft format (4 cols) to Matchup objects for scoring methods.
 
-        Draft format: (enemy_name, delta2, pickrate, games)
-        Standard format: (enemy_name, winrate, delta1, delta2, pickrate, games)
+        Draft format: MatchupDraft(enemy_name, delta2, pickrate, games)
+        Standard format: Matchup(enemy_name, winrate, delta1, delta2, pickrate, games)
 
         Since winrate and delta1 are not used in draft calculations, we fill with dummy values:
         - winrate = 50.0 (neutral)
         - delta1 = 0.0 (neutral)
 
         Args:
-            draft_matchups: List of matchups in draft format (4 elements)
+            draft_matchups: List of MatchupDraft objects or tuples (4 elements)
 
         Returns:
-            List of matchups in standard format (6 elements)
+            List of Matchup objects
         """
         standard_matchups = []
         for matchup in draft_matchups:
             if isinstance(matchup, MatchupDraft):
-                # MatchupDraft object: (enemy_name, delta2, pickrate, games)
-                # Convert to standard: (enemy_name, winrate, delta1, delta2, pickrate, games)
-                standard_matchup = (matchup.enemy_name, 50.0, 0.0, matchup.delta2, matchup.pickrate, matchup.games)
-                standard_matchups.append(standard_matchup)
+                # MatchupDraft object - use built-in to_matchup() method
+                standard_matchups.append(matchup.to_matchup())
             elif isinstance(matchup, tuple) and len(matchup) == 4:
                 # Draft format tuple: (enemy_name, delta2, pickrate, games)
                 enemy_name, delta2, pickrate, games = matchup
-                # Convert to standard: (enemy_name, winrate, delta1, delta2, pickrate, games)
-                standard_matchup = (enemy_name, 50.0, 0.0, delta2, pickrate, games)
+                # Convert to Matchup object
+                standard_matchup = Matchup(enemy_name, 50.0, 0.0, delta2, pickrate, games)
                 standard_matchups.append(standard_matchup)
+            elif isinstance(matchup, Matchup):
+                # Already a Matchup object - pass through
+                standard_matchups.append(matchup)
+            elif isinstance(matchup, tuple) and len(matchup) == 6:
+                # Legacy 6-tuple format - convert to Matchup
+                standard_matchups.append(Matchup.from_tuple(matchup))
             else:
-                # Already in standard format (6 elements) - pass through
+                # Unknown format - try to pass through
                 standard_matchups.append(matchup)
 
         return standard_matchups
