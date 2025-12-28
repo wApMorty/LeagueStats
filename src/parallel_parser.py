@@ -258,7 +258,7 @@ class ParallelParser:
         # Pre-calculate ban recommendations for custom pools
         logger.info("Pre-calculating ban recommendations for custom pools...")
         try:
-            from ..assistant import Assistant
+            from .assistant import Assistant
 
             assistant = Assistant(db, verbose=False)
             ban_results = assistant.precalculate_all_custom_pool_bans()
