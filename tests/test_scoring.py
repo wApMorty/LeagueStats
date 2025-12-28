@@ -3,6 +3,7 @@
 import pytest
 from src.analysis.scoring import ChampionScorer
 from src.config_constants import analysis_config
+from src.models import Matchup
 
 
 class TestFilterValidMatchups:
@@ -11,13 +12,13 @@ class TestFilterValidMatchups:
     def test_filters_low_pickrate(self, scorer, sample_matchups):
         """Test that matchups with low pickrate are filtered out."""
         # Create matchup with pickrate below threshold
-        low_pickrate = (
-            "TestChamp",
-            50.0,  # winrate
-            0,  # delta1
-            0,  # delta2
-            analysis_config.MIN_PICKRATE - 0.1,  # Below threshold
-            1000,  # games
+        low_pickrate = Matchup(
+            enemy_name="TestChamp",
+            winrate=50.0,
+            delta1=0,
+            delta2=0,
+            pickrate=analysis_config.MIN_PICKRATE - 0.1,  # Below threshold
+            games=1000
         )
         matchups = [low_pickrate] + sample_matchups
 
@@ -28,13 +29,13 @@ class TestFilterValidMatchups:
 
     def test_filters_low_games(self, scorer, sample_matchups):
         """Test that matchups with insufficient games are filtered out."""
-        low_games = (
-            "TestChamp",
-            50.0,
-            0,
-            0,
-            10.0,  # Good pickrate
-            analysis_config.MIN_MATCHUP_GAMES - 1,  # Below threshold
+        low_games = Matchup(
+            enemy_name="TestChamp",
+            winrate=50.0,
+            delta1=0,
+            delta2=0,
+            pickrate=10.0,  # Good pickrate
+            games=analysis_config.MIN_MATCHUP_GAMES - 1  # Below threshold
         )
         matchups = [low_games] + sample_matchups
 
@@ -61,8 +62,8 @@ class TestAvgDelta1:
     def test_weighted_average_calculation(self, scorer):
         """Test correct weighted average by pickrate."""
         matchups = [
-            ("Champ1", 50.0, 100.0, 0, 10.0, 1000),  # delta1=100, weight=10
-            ("Champ2", 50.0, 200.0, 0, 20.0, 1000),  # delta1=200, weight=20
+            Matchup("Champ1", 50.0, 100.0, 0, 10.0, 1000),  # delta1=100, weight=10
+            Matchup("Champ2", 50.0, 200.0, 0, 20.0, 1000),  # delta1=200, weight=20
         ]
         # Expected: (100*10 + 200*20) / (10+20) = 5000 / 30 = 166.67
 
@@ -72,7 +73,7 @@ class TestAvgDelta1:
 
     def test_single_matchup(self, scorer):
         """Test average with single matchup."""
-        matchups = [("Champ1", 50.0, 150.0, 0, 10.0, 1000)]
+        matchups = [Matchup("Champ1", 50.0, 150.0, 0, 10.0, 1000)]
 
         result = scorer.avg_delta1(matchups)
 
@@ -87,7 +88,7 @@ class TestAvgDelta1:
     def test_zero_total_weight_returns_zero(self, scorer):
         """Test that zero total weight returns 0."""
         # All matchups below pickrate threshold
-        matchups = [("Champ1", 50.0, 100.0, 0, 0.1, 1000)]
+        matchups = [Matchup("Champ1", 50.0, 100.0, 0, 0.1, 1000)]
 
         result = scorer.avg_delta1(matchups)
 
@@ -100,8 +101,8 @@ class TestAvgDelta2:
     def test_weighted_average_calculation(self, scorer):
         """Test correct weighted average by pickrate."""
         matchups = [
-            ("Champ1", 50.0, 0, 150.0, 15.0, 1500),  # delta2=150, weight=15
-            ("Champ2", 50.0, 0, 250.0, 10.0, 1000),  # delta2=250, weight=10
+            Matchup("Champ1", 50.0, 0, 150.0, 15.0, 1500),  # delta2=150, weight=15
+            Matchup("Champ2", 50.0, 0, 250.0, 10.0, 1000),  # delta2=250, weight=10
         ]
         # Expected: (150*15 + 250*10) / (15+10) = 4750 / 25 = 190
 
@@ -122,8 +123,8 @@ class TestAvgWinrate:
     def test_weighted_average_calculation(self, scorer):
         """Test correct weighted average by pickrate."""
         matchups = [
-            ("Champ1", 52.0, 0, 0, 12.0, 1200),  # winrate=52, weight=12
-            ("Champ2", 48.0, 0, 0, 8.0, 800),  # winrate=48, weight=8
+            Matchup("Champ1", 52.0, 0, 0, 12.0, 1200),  # winrate=52, weight=12
+            Matchup("Champ2", 48.0, 0, 0, 8.0, 800),  # winrate=48, weight=8
         ]
         # Expected: (52*12 + 48*8) / (12+8) = 1008 / 20 = 50.4
 
@@ -210,7 +211,7 @@ class TestScoreAgainstTeam:
     def test_known_matchup_calculation(self, scorer):
         """Test calculation against known enemy with bidirectional."""
         matchups = [
-            ("Darius", 48.0, -150, -200, 10.0, 1500),
+            Matchup("Darius", 48.0, -150, -200, 10.0, 1500),
         ]
 
         result = scorer.score_against_team(matchups, ["Darius"], champion_name="Aatrox")
@@ -222,9 +223,9 @@ class TestScoreAgainstTeam:
     def test_mixed_known_and_blind(self, scorer):
         """Test calculation with some known and some blind picks."""
         matchups = [
-            ("Darius", 48.0, -150, -200, 10.0, 1500),
-            ("Garen", 52.0, 100, 150, 12.0, 2000),
-            ("Teemo", 45.0, -300, -400, 5.0, 800),
+            Matchup("Darius", 48.0, -150, -200, 10.0, 1500),
+            Matchup("Garen", 52.0, 100, 150, 12.0, 2000),
+            Matchup("Teemo", 45.0, -300, -400, 5.0, 800),
         ]
 
         # Enemy team: Darius known, 4 blind picks
