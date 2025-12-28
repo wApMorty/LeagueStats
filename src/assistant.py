@@ -10,7 +10,7 @@ from typing import Dict, List, Optional
 from .db import Database
 from .config import config
 from .config_constants import analysis_config
-from .models import Matchup
+from .models import Matchup, MatchupDraft
 
 # Import specialized modules
 from .analysis.scoring import ChampionScorer
@@ -211,8 +211,13 @@ class Assistant:
         """
         standard_matchups = []
         for matchup in draft_matchups:
-            if len(matchup) == 4:
-                # Draft format: (enemy_name, delta2, pickrate, games)
+            if isinstance(matchup, MatchupDraft):
+                # MatchupDraft object: (enemy_name, delta2, pickrate, games)
+                # Convert to standard: (enemy_name, winrate, delta1, delta2, pickrate, games)
+                standard_matchup = (matchup.enemy_name, 50.0, 0.0, matchup.delta2, matchup.pickrate, matchup.games)
+                standard_matchups.append(standard_matchup)
+            elif isinstance(matchup, tuple) and len(matchup) == 4:
+                # Draft format tuple: (enemy_name, delta2, pickrate, games)
                 enemy_name, delta2, pickrate, games = matchup
                 # Convert to standard: (enemy_name, winrate, delta1, delta2, pickrate, games)
                 standard_matchup = (enemy_name, 50.0, 0.0, delta2, pickrate, games)
