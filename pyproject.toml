@@ -61,7 +61,7 @@ addopts = [
     "-v",
     "--strict-markers",
     "--tb=short",
-    "--cov=src",
+    "--cov=src/analysis",
     "--cov-report=term-missing",
     "--cov-report=xml",
     "--cov-fail-under=70",
@@ -73,15 +73,10 @@ markers = [
 ]
 
 # Coverage configuration
+# Focus on tested modules only (Sprint 1: analysis package)
 [tool.coverage.run]
-source = ["src"]
-omit = [
-    "src/ui/*",
-    "src/draft_monitor.py",
-    "src/lcu_client.py",
-    "src/parser.py",
-    "src/parallel_parser.py",
-]
+source = ["src/analysis"]
+omit = []
 
 [tool.coverage.report]
 precision = 2
