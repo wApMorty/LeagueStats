@@ -365,7 +365,7 @@ class Assistant:
 
         for champion in all_champions:
             try:
-                matchups = self.db.get_champion_matchups_by_name(champion)
+                matchups = self.db.get_champion_matchups_by_name(champion, as_dataclass=False)
                 if not matchups:
                     if self.verbose:
                         print(f"  [SKIP] {champion}: No matchups found")
@@ -523,7 +523,7 @@ class Assistant:
 
                     for our_champion in trio:
                         try:
-                            matchups = self.db.get_champion_matchups_by_name(our_champion)
+                            matchups = self.db.get_champion_matchups_by_name(our_champion, as_dataclass=False)
                             if not matchups:
                                 continue
 
@@ -849,7 +849,7 @@ class Assistant:
             role = "BLIND PICK" if i == 0 else f"COUNTERPICK #{i}"
 
             try:
-                matchups = self.db.get_champion_matchups_by_name(champion)
+                matchups = self.db.get_champion_matchups_by_name(champion, as_dataclass=False)
                 if not matchups:
                     continue
 
@@ -910,7 +910,7 @@ class Assistant:
 
             for our_champion in trio:
                 try:
-                    matchups = self.db.get_champion_matchups_by_name(our_champion)
+                    matchups = self.db.get_champion_matchups_by_name(our_champion, as_dataclass=False)
 
                     for matchup in matchups:
                         if matchup[0].lower() == enemy_champion.lower():
@@ -1011,7 +1011,7 @@ class Assistant:
         all_potential_enemies = set()
         for our_champion in champion_pool:
             try:
-                matchups = self.db.get_champion_matchups_by_name(our_champion)
+                matchups = self.db.get_champion_matchups_by_name(our_champion, as_dataclass=False)
                 for enemy_name, winrate, delta1, delta2, pickrate, games in matchups:
                     if pickrate >= config.MIN_PICKRATE and games >= config.MIN_MATCHUP_GAMES:
                         all_potential_enemies.add(enemy_name)
@@ -1045,7 +1045,7 @@ class Assistant:
                         # Also get pickrate data for this enemy (approximate from one of our matchups)
                         if enemy_pickrate == 0.0:
                             try:
-                                matchups = self.db.get_champion_matchups_by_name(our_champion)
+                                matchups = self.db.get_champion_matchups_by_name(our_champion, as_dataclass=False)
                                 for enemy_name, winrate, delta1, d2, pickrate, games in matchups:
                                     if enemy_name == enemy_champion:
                                         enemy_pickrate = pickrate
@@ -1137,7 +1137,7 @@ class Assistant:
             all_potential_enemies = set()
             for our_champion in champion_pool:
                 try:
-                    matchups = self.db.get_champion_matchups_by_name(our_champion)
+                    matchups = self.db.get_champion_matchups_by_name(our_champion, as_dataclass=False)
                     for enemy_name, winrate, delta1, delta2, pickrate, games in matchups:
                         if pickrate >= config.MIN_PICKRATE and games >= config.MIN_MATCHUP_GAMES:
                             all_potential_enemies.add(enemy_name)
@@ -1171,7 +1171,7 @@ class Assistant:
                             # Get pickrate data for this enemy
                             if enemy_pickrate == 0.0:
                                 try:
-                                    matchups = self.db.get_champion_matchups_by_name(our_champion)
+                                    matchups = self.db.get_champion_matchups_by_name(our_champion, as_dataclass=False)
                                     for (
                                         enemy_name,
                                         winrate,
@@ -1314,7 +1314,7 @@ class Assistant:
             all_potential_enemies = set()
             for our_champion in champion_pool:
                 try:
-                    matchups = self.db.get_champion_matchups_by_name(our_champion)
+                    matchups = self.db.get_champion_matchups_by_name(our_champion, as_dataclass=False)
                     for enemy_name, winrate, delta1, delta2, pickrate, games in matchups:
                         if pickrate >= config.MIN_PICKRATE and games >= config.MIN_MATCHUP_GAMES:
                             all_potential_enemies.add(enemy_name)
@@ -1348,7 +1348,7 @@ class Assistant:
                             # Get pickrate data for this enemy
                             if enemy_pickrate == 0.0:
                                 try:
-                                    matchups = self.db.get_champion_matchups_by_name(our_champion)
+                                    matchups = self.db.get_champion_matchups_by_name(our_champion, as_dataclass=False)
                                     for (
                                         enemy_name,
                                         winrate,
@@ -1512,7 +1512,7 @@ class Assistant:
 
         for champion in champion_pool:
             if champion not in enemy_team and champion not in ally_team:
-                matchups = self.db.get_champion_matchups_by_name(champion)
+                matchups = self.db.get_champion_matchups_by_name(champion, as_dataclass=False)
                 if sum(m[5] for m in matchups) < config.MIN_GAMES_COMPETITIVE:
                     continue
                 score = self.score_against_team(matchups, enemy_team)
@@ -1942,7 +1942,7 @@ class Assistant:
             for enemy, (delta2, _) in enemy_coverage.items():
                 try:
                     # Get pickrate for this enemy champion
-                    enemy_matchups = self.db.get_champion_matchups_by_name(enemy)
+                    enemy_matchups = self.db.get_champion_matchups_by_name(enemy, as_dataclass=False)
                     if not enemy_matchups:
                         continue
 
@@ -2040,7 +2040,7 @@ class Assistant:
                     # Get individual matchups for the trio
                     matchups = []
                     for champion in trio:
-                        champ_matchups = self.db.get_champion_matchups_by_name(champion)
+                        champ_matchups = self.db.get_champion_matchups_by_name(champion, as_dataclass=False)
                         if champ_matchups:
                             matchups.append(champ_matchups)
 
@@ -2258,7 +2258,7 @@ class Assistant:
             # Filter champions that have data in database
             valid_champions = []
             for champion in sample_champions:
-                matchups = self.db.get_champion_matchups_by_name(champion)
+                matchups = self.db.get_champion_matchups_by_name(champion, as_dataclass=False)
                 if matchups and len(matchups) > 10:  # Ensure sufficient data
                     valid_champions.append(champion)
 
