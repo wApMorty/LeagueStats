@@ -25,7 +25,8 @@ class Database:
             print(f"The error '{e}' occurred")
 
     def close(self) -> None:
-        self.connection.close()
+        if self.connection is not None:
+            self.connection.close()
 
     def create_database_indexes(self) -> None:
         """Create database indexes for performance optimization."""
