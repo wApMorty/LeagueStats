@@ -71,12 +71,12 @@ def validate_champion_data(
             return (False, 0, 0, 0.0)
 
         matchup_count = len(matchups)
-        total_games = sum(m[5] for m in matchups)  # games are at index 5
+        total_games = sum(m.games for m in matchups)
 
         # Calculate avg_delta2
-        valid_matchups = [m for m in matchups if m[5] >= analysis_config.MIN_MATCHUP_GAMES]
+        valid_matchups = [m for m in matchups if m.games >= analysis_config.MIN_MATCHUP_GAMES]
         if valid_matchups:
-            avg_delta2 = sum(m[3] for m in valid_matchups) / len(valid_matchups)
+            avg_delta2 = sum(m.delta2 for m in valid_matchups) / len(valid_matchups)
         else:
             avg_delta2 = 0.0
 
