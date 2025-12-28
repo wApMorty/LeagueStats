@@ -1327,7 +1327,7 @@ class Assistant:
 
             # For each potential enemy, find our best response
             for enemy_champion in all_potential_enemies:
-                best_response_delta2 = -float('inf')
+                best_response_delta2 = -float("inf")
                 best_response_champion = None
                 enemy_pickrate = 0.0
                 matchups_found = 0
@@ -1349,7 +1349,14 @@ class Assistant:
                             if enemy_pickrate == 0.0:
                                 try:
                                     matchups = self.db.get_champion_matchups_by_name(our_champion)
-                                    for enemy_name, winrate, delta1, d2, pickrate, games in matchups:
+                                    for (
+                                        enemy_name,
+                                        winrate,
+                                        delta1,
+                                        d2,
+                                        pickrate,
+                                        games,
+                                    ) in matchups:
                                         if enemy_name == enemy_champion:
                                             enemy_pickrate = pickrate
                                             break
@@ -1371,18 +1378,18 @@ class Assistant:
                 coverage_bonus = min(matchups_found / len(champion_pool), 1.0)
 
                 combined_threat = (
-                    base_threat * 0.7 +
-                    pickrate_weight * 0.2 +
-                    coverage_bonus * 10.0 * 0.1
+                    base_threat * 0.7 + pickrate_weight * 0.2 + coverage_bonus * 10.0 * 0.1
                 )
 
-                ban_candidates.append((
-                    enemy_champion,
-                    combined_threat,
-                    best_response_delta2,
-                    best_response_champion,
-                    matchups_found
-                ))
+                ban_candidates.append(
+                    (
+                        enemy_champion,
+                        combined_threat,
+                        best_response_delta2,
+                        best_response_champion,
+                        matchups_found,
+                    )
+                )
 
             # Save to database
             saved = self.db.save_pool_ban_recommendations(pool_name, ban_candidates)
@@ -1422,15 +1429,16 @@ class Assistant:
 
             # Process only custom pools (skip system pools)
             custom_pools = {
-                name: pool for name, pool in all_pools.items()
-                if pool.created_by == "user"
+                name: pool for name, pool in all_pools.items() if pool.created_by == "user"
             }
 
             if not custom_pools:
                 print("[INFO] No custom pools found - nothing to pre-calculate")
                 return results
 
-            print(f"[INFO] Pre-calculating ban recommendations for {len(custom_pools)} custom pools...")
+            print(
+                f"[INFO] Pre-calculating ban recommendations for {len(custom_pools)} custom pools..."
+            )
 
             for pool_name, pool in custom_pools.items():
                 if self.verbose:
@@ -1453,6 +1461,7 @@ class Assistant:
         except Exception as e:
             print(f"[ERROR] Failed to pre-calculate custom pool bans: {e}")
             import traceback
+
             traceback.print_exc()
             return results
 
