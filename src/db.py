@@ -840,7 +840,7 @@ class Database:
                 WHERE pool_name = ?
                 ORDER BY threat_score DESC
                 LIMIT ?
-            """,
+                """,
                 (pool_name, limit),
             )
 
@@ -858,7 +858,7 @@ class Database:
                 """
                 SELECT COUNT(*) FROM pool_ban_recommendations
                 WHERE pool_name = ?
-            """,
+                """,
                 (pool_name,),
             )
             count = cursor.fetchone()[0]
