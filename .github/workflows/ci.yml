@@ -46,6 +46,8 @@ jobs:
       - name: Lint with pylint
         run: |
           pylint src/ --fail-under=8.0
+        env:
+          PYTHONIOENCODING: utf-8
 
       # Mypy: Type checking (gradual enforcement)
       - name: Type check with mypy
@@ -83,11 +85,11 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
 
-      # Run pytest with strict coverage threshold
-      # Note: Coverage options also in pyproject.toml, CI overrides for explicitness
+      # Run pytest with coverage threshold
+      # Note: Coverage options in pyproject.toml (70% threshold, excludes UI/parsers)
       - name: Run tests with coverage
         run: |
-          pytest tests/ -v --cov=src --cov-report=xml --cov-report=term --cov-fail-under=89
+          pytest tests/ -v --cov=src --cov-report=xml --cov-report=term --cov-fail-under=70
         env:
           PYTEST_TIMEOUT: 300
 

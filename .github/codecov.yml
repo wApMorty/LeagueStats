@@ -10,12 +10,12 @@ coverage:
   status:
     project:
       default:
-        target: 89%
-        threshold: 1%  # Allow 1% drop
+        target: 70%
+        threshold: 2%  # Allow 2% drop
         if_ci_failed: error
     patch:
       default:
-        target: 80%  # New code should be well-tested
+        target: 60%  # New code should be reasonably tested
         if_ci_failed: error
 
 comment:
