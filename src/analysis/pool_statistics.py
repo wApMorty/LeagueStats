@@ -14,6 +14,7 @@ from statistics import mean, median, stdev, variance
 from ..db import Database
 from ..analysis.scoring import ChampionScorer
 from ..config_constants import pool_stats_config
+from ..models import Matchup
 
 
 @dataclass
@@ -77,13 +78,12 @@ class PoolStatisticsCalculator:
         Returns:
             ChampionStats object, or None if champion not found
         """
-        # Get champion ID
-        champion_id = self.db.get_champion_id(champion_name)
-        if not champion_id:
+        # Verify champion exists
+        if not self.db.get_champion_id(champion_name):
             return None
 
         # Get all matchups for this champion
-        matchups = self.db.get_champion_matchups(champion_id)
+        matchups = self.db.get_champion_matchups_by_name(champion_name)
         if not matchups:
             return ChampionStats(
                 name=champion_name,
@@ -100,7 +100,7 @@ class PoolStatisticsCalculator:
         avg_d2 = self.scorer.avg_delta2(valid_matchups) if valid_matchups else 0.0
 
         # Calculate total games
-        total_games = sum(m[5] for m in matchups)  # games column (index 5)
+        total_games = sum(m.games for m in matchups)
 
         # Determine if champion has sufficient data
         has_sufficient_data = total_games >= self.min_games_threshold and len(valid_matchups) > 0
