@@ -2,6 +2,39 @@
 
 All notable changes to LeagueStats Coach will be documented in this file.
 
+## [Unreleased]
+
+### 🐛 Fixes
+
+- **CRITICAL**: Fixed auto-update scraping failure in Task Scheduler (PR #TBD)
+  - **Root cause**: `pythonw.exe` (Task Scheduler) cannot launch GUI Firefox windows
+  - **Impact**: Auto-update was deleting database (DROP TABLE matchups) without scraping new data
+  - **Logs showed**: `0/172 champions succeeded, 172 failed` daily since 2025-12-23
+  - **Solution**: Implemented headless mode for Firefox WebDriver
+    - Added `headless` parameter to `Parser` class (default: False)
+    - Added `headless` parameter to `ParallelParser` class (default: False)
+    - Set `headless=True` in `scripts/auto_update_db.py` for Task Scheduler execution
+    - Firefox now runs with `--headless` flag in background mode (no GUI)
+    - All DOM operations (clicks, scrolls, scraping) work identically in headless
+  - **Backward compatible**: Manual scraping still uses GUI mode (headless=False)
+  - **Enhanced logging**:
+    - Added failure rate calculation and warnings
+    - Full traceback for first scraping failure (debugging aid)
+    - Exception type included in error messages
+
+### 🔧 Changed
+
+- `src/parser.py`: Added `headless` parameter to `__init__()` (27 lines modified)
+- `src/parallel_parser.py`: Propagate `headless` to Parser instances (8 lines modified)
+- `scripts/auto_update_db.py`: Enable headless mode + enhanced error reporting (13 lines modified)
+
+### 📊 Impact
+
+- **Auto-update reliability**: Fixed 100% failure rate (0/172 → expected 172/172)
+- **Task Scheduler compatibility**: Now works correctly with pythonw.exe
+- **Data integrity**: Database no longer left empty after failed updates
+- **Backward compatibility**: 100% - existing code works without changes
+
 ## [1.1.0] - 2025-12-29
 
 **🎉 RELEASE MAJEURE - Sprints 1 & 2 Complétés**
