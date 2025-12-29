@@ -25,7 +25,7 @@
 | **9** | **Migrations Base de Données (Alembic)** | **8** ⬆️ | **5** | **1.60** | 🔴 | ✅ **FAIT** |
 | **14** | **Migration Dataclass Immutables** | **5** | **5** | **1.00** | 🟡 | ✅ **FAIT** |
 | **12** | **Architecture Client-Serveur + Web App** | **21** | **34** | **0.62** | 🟢 | ❌ |
-| **7** | **Support Multi-Plateformes** | **5** | **8** | **0.63** | 🟢 | ❌ |
+| ~~**7**~~ | ~~**Support Multi-Plateformes**~~ | ~~**5**~~ | ~~**8**~~ | ~~**0.63**~~ | ~~🟢~~ | ❌ **ANNULÉE** |
 | **6** | **Interface Graphique (GUI)** | **13** | **21** | **0.62** | 🟢 | ❌ |
 | **8** | **Internationalisation (i18n)** | **3** | **5** | **0.60** | 🟢 | ❌ |
 
@@ -1133,45 +1133,40 @@ if __name__ == '__main__':
 
 ---
 
-### Tâche #7: Support Multi-Plateformes
-**Status**: ❌ Not started
-**Effort**: 2-3 jours (16-24h)
+### ~~Tâche #7: Support Multi-Plateformes~~ ❌ **ANNULÉE**
+**Status**: ❌ **ANNULÉE** (2025-12-29)
+**Raison**: Non pertinente - Efforts disproportionnés par rapport à la valeur réelle
 
-**Scores Fibonacci**:
+**Scores Fibonacci** (initiaux):
 - 📈 **Plus-value**: **5** (portabilité, mais users Windows majoritaires)
 - 🔧 **Difficulté**: **8** (modéré - tests sur chaque OS)
 - 🎯 **ROI**: **0.63**
 
-**Pourquoi ce score**:
-- **Plus-value = 5**: Users LoL majoritairement Windows, Linux/Mac minoritaires
-- **Difficulté = 8**: Tests sur 3 OS, paths différents, PyInstaller configs
+**Pourquoi annulée**:
 
-**Cibles**: Linux, macOS
+1. **League of Legends est Windows-only**
+   - Le client LoL officiel ne tourne pas sur Linux/macOS
+   - La feature principale (LCU draft monitor) est donc Windows-only par design
+   - Même avec un code portable, l'utilisation principale reste limitée à Windows
 
-**Défis**:
-- Détection de navigateur multi-plateformes
-- Paths différents (Windows `C:\` vs Unix `/home`)
-- PyInstaller configs par OS
-- Tests sur chaque plateforme
+2. **Le code est déjà majoritairement portable**
+   - Python 3.13+, SQLite, Selenium sont cross-platform par nature
+   - Les parties analyse/tier lists/optimizer fonctionnent déjà sur Linux
+   - Seules les features liées au client LoL nécessitent Windows
 
-**Exemple code multi-plateforme**:
-```python
-import platform
-import os
+3. **Chemins hardcodés sont une pratique acceptable**
+   - Valeurs par défaut raisonnables dans `config.py`
+   - Overridables par variables d'environnement (`FIREFOX_PATH`, `BRAVE_PATH`)
+   - Chemins d'installation standard et documentés
+   - Pragmatique pour 99% des utilisateurs
 
-def get_browser_path():
-    """Get browser executable path for current OS."""
-    system = platform.system()
+4. **Population utilisateur LoL = Windows**
+   - Quasi-totalité des joueurs LoL sur Windows
+   - Marché Linux/macOS pour LoL négligeable
+   - Effort de portage ne correspond pas à la demande
 
-    if system == 'Windows':
-        return r'C:\Program Files\Mozilla Firefox\firefox.exe'
-    elif system == 'Darwin':  # macOS
-        return '/Applications/Firefox.app/Contents/MacOS/firefox'
-    elif system == 'Linux':
-        return '/usr/bin/firefox'
-    else:
-        raise OSError(f"Unsupported OS: {system}")
-```
+**Conclusion**:
+Tâche **surévaluée** et **non pertinente** - Le projet est déjà suffisamment portable pour les cas d'usage réels. Les quelques spécificités Windows sont justifiées par le contexte (client LoL Windows-only)
 
 ---
 
