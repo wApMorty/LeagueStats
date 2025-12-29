@@ -76,24 +76,28 @@ class ParallelParser:
         executor (ThreadPoolExecutor): Thread pool for parallel execution
     """
 
-    def __init__(self, max_workers: int = 10, patch_version: str = None):
+    def __init__(self, max_workers: int = 10, patch_version: str = None, headless: bool = False):
         """Initialize parallel parser with worker pool.
 
         Args:
             max_workers: Number of concurrent threads (default: 10)
                         Recommended range: 8-12 for optimal I/O performance
             patch_version: Optional patch version (e.g. "15.24"). If None, uses config.CURRENT_PATCH
+            headless: If True, run Firefox in headless mode (no GUI).
+                     Essential for Task Scheduler, pythonw.exe, or CI/CD.
+                     Default: False (normal GUI mode).
         """
         from .config import config
 
         self.max_workers = max_workers
         self.patch_version = patch_version or config.CURRENT_PATCH
+        self.headless = headless
         self.parsers: List[Parser] = []
         self.db_lock = Lock()
         self.executor: Optional[ThreadPoolExecutor] = None
 
         logger.info(
-            f"ParallelParser initialized with {max_workers} workers, patch={self.patch_version}"
+            f"ParallelParser initialized with {max_workers} workers, patch={self.patch_version}, headless={headless}"
         )
 
     def _get_parser(self) -> Parser:
@@ -108,9 +112,9 @@ class ParallelParser:
         # Check if this thread already has a parser
         if not hasattr(thread_local, "parser"):
             # Create new parser for this thread (first time only)
-            thread_local.parser = Parser()
+            thread_local.parser = Parser(headless=self.headless)
             self.parsers.append(thread_local.parser)
-            logger.info(f"Created new parser for {threading.current_thread().name}")
+            logger.info(f"Created new parser for {threading.current_thread().name} (headless={self.headless})")
 
         return thread_local.parser
 
