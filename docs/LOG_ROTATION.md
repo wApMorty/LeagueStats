@@ -12,7 +12,8 @@ Le système de log rotation empêche le fichier `logs/auto_update.log` de deveni
 
 ```powershell
 # En tant qu'Administrateur
-cd C:\Users\pj35\.claude-worktrees\LeagueStats\inspiring-rhodes
+# Navigate to your LeagueStats project directory
+cd C:\path\to\LeagueStats\inspiring-rhodes
 .\scripts\setup_log_rotation.ps1
 ```
 
