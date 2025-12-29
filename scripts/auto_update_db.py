@@ -55,16 +55,67 @@ from src.assistant import Assistant
 from src.db import Database
 from src.config import config
 from src.constants import normalize_champion_name_for_url
+from src.error_ids import ERR_LOG_001, ERR_LOG_002
 
 
 class AutoUpdateLogger:
-    """Simple logger for auto-update operations."""
+    """
+    Simple logger for auto-update operations with write capability testing.
+
+    Attributes:
+        _write_test_failures: Class-level counter for consecutive write failures
+        _max_write_failures: Maximum allowed consecutive failures before aborting
+    """
+
+    # Class-level counters for write test failures
+    _write_test_failures = 0
+    _max_write_failures = 3
 
     def __init__(self, log_dir: str = "logs"):
         """Initialize logger with log directory."""
         self.log_dir = Path(project_root) / log_dir
         self.log_dir.mkdir(exist_ok=True)
         self.log_file = self.log_dir / "auto_update.log"
+
+    def test_write_capability(self) -> bool:
+        """
+        Test if log file is writable.
+
+        Returns:
+            True if write successful, False otherwise
+
+        Raises:
+            RuntimeError: If max consecutive failures exceeded
+        """
+        try:
+            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            test_entry = f"[{timestamp}] INFO: Log write test\n"
+
+            with open(self.log_file, 'a', encoding='utf-8') as f:
+                f.write(test_entry)
+
+            # Reset counter on success
+            AutoUpdateLogger._write_test_failures = 0
+            return True
+
+        except Exception as e:
+            AutoUpdateLogger._write_test_failures += 1
+
+            error_msg = (
+                f"Fatal: Unable to write to log file after "
+                f"{AutoUpdateLogger._max_write_failures} attempts. "
+                f"Check file permissions and disk space."
+            )
+
+            if AutoUpdateLogger._write_test_failures >= AutoUpdateLogger._max_write_failures:
+                # Use stderr if available, otherwise raise
+                if hasattr(sys, 'stderr') and sys.stderr is not None:
+                    print(error_msg, file=sys.stderr)
+                    print(f"Last error: {e}", file=sys.stderr)
+
+                raise RuntimeError(error_msg) from e
+
+            return False
 
     def log(self, level: str, message: str) -> None:
         """
@@ -178,12 +229,29 @@ def main() -> int:
     logging.getLogger('src').setLevel(logging.INFO)
 
     # Console handler only if stdout exists (not pythonw.exe)
-    if sys.stdout is not None:
+    # More robust check for pythonw.exe: hasattr() prevents AttributeError
+    if hasattr(sys, 'stdout') and sys.stdout is not None:
         console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setLevel(logging.INFO)
         console_formatter = logging.Formatter('%(levelname)s: %(message)s')
         console_handler.setFormatter(console_formatter)
         root_logger.addHandler(console_handler)
+    else:
+        # Running in pythonw.exe mode (no console output)
+        logger.log("WARNING", "Running in pythonw.exe mode - no console output")
+
+        # CRITICAL: Test log write capability BEFORE proceeding
+        # If we can't write logs in headless mode, we're blind
+        if not logger.test_write_capability():
+            # Fatal: Unable to log in headless mode
+            ERR_LOG_002.log(
+                logging.getLogger(__name__),
+                "Unable to write to log file in pythonw.exe mode - aborting",
+                exc_info=True
+            )
+            sys.exit(1)
+
+        logger.log("SUCCESS", "Log write test passed - proceeding with auto-update")
 
     logger.log("INFO", "="*80)
     logger.log("INFO", "LeagueStats Coach - Auto-Update Database")
