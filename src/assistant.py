@@ -1478,6 +1478,11 @@ class Assistant:
         trio_combinations = list(itertools.combinations(viable_champions, 3))
         print(f"Evaluating {len(trio_combinations)} trio combinations...")
 
+        # Step 2.5: Preload ALL matchups for performance (single DB query instead of 147K+)
+        print("Loading matchup data... ", end="", flush=True)
+        matchup_cache = self.db.get_all_matchups_bulk()
+        print(f"✅ Loaded {len(matchup_cache):,} matchups")
+
         trio_rankings = []
 
         # Set the scoring profile for this analysis
@@ -1497,7 +1502,7 @@ class Assistant:
             bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]'
         ):
             try:
-                trio_score = self._evaluate_trio_holistic(trio)
+                trio_score = self._evaluate_trio_holistic(trio, matchup_cache)
                 trio_rankings.append(
                     {
                         "trio": trio,
@@ -1538,13 +1543,18 @@ class Assistant:
 
         return trio_rankings[:num_results]
 
-    def _evaluate_trio_holistic(self, trio: tuple) -> dict:
+    def _evaluate_trio_holistic(self, trio: tuple, matchup_cache: dict) -> dict:
         """
         Evaluate a trio of champions using holistic scoring with reverse lookup.
 
-        Uses efficient reverse lookup to avoid duplicate matchups and improve performance.
+        Uses efficient reverse lookup with preloaded matchup cache for performance.
 
-        Returns dict with individual scores and total score.
+        Args:
+            trio: Tuple of 3 champion names
+            matchup_cache: Dict mapping (champion, enemy) -> delta2 (preloaded)
+
+        Returns:
+            dict with individual scores and total score
         """
         champion1, champion2, champion3 = trio
         trio_list = [champion1, champion2, champion3]
@@ -1561,7 +1571,9 @@ class Assistant:
             # For this enemy, check which champion in our trio counters it best
             for our_champion in trio_list:
                 try:
-                    delta2 = self.db.get_matchup_delta2(our_champion, enemy_champion)
+                    # Use cache instead of DB query (99%+ speedup)
+                    cache_key = (our_champion.lower(), enemy_champion.lower())
+                    delta2 = matchup_cache.get(cache_key)
 
                     if delta2 is not None and delta2 > best_delta2:
                         best_delta2 = delta2
@@ -1580,7 +1592,7 @@ class Assistant:
 
         # Calculate individual scores using the reverse-lookup data
         coverage_score = self._calculate_coverage_score(enemy_coverage, all_enemies)
-        balance_score = self._calculate_balance_score_reverse(trio_list, enemy_coverage)
+        balance_score = self._calculate_balance_score_reverse(trio_list, enemy_coverage, matchup_cache)
         consistency_score = self._calculate_consistency_score_reverse(trio_list, enemy_coverage)
         meta_score = self._calculate_meta_score(enemy_coverage)
 
@@ -1615,13 +1627,16 @@ class Assistant:
 
         return min(100.0, (total_coverage / max_possible) * 100)
 
-    def _calculate_balance_score_reverse(self, trio_list: List[str], enemy_coverage: dict) -> float:
+    def _calculate_balance_score_reverse(
+        self, trio_list: List[str], enemy_coverage: dict, matchup_cache: dict
+    ) -> float:
         """
         Calculate diversity of matchup profiles using reverse lookup data.
 
         Args:
             trio_list: List of champion names in the trio
             enemy_coverage: Dict mapping enemy -> (delta2, best_counter)
+            matchup_cache: Preloaded matchup cache for performance
 
         Returns:
             Balance score 0-100 (higher = more balanced, fewer shared weaknesses)
@@ -1634,7 +1649,9 @@ class Assistant:
                 # Check each champion individually against this enemy
                 for our_champion in trio_list:
                     try:
-                        delta2 = self.db.get_matchup_delta2(our_champion, enemy)
+                        # Use cache instead of DB query
+                        cache_key = (our_champion.lower(), enemy.lower())
+                        delta2 = matchup_cache.get(cache_key)
 
                         # If this champion struggles against this enemy (negative delta2)
                         if delta2 is not None and delta2 < -2.0:
