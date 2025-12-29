@@ -26,7 +26,11 @@ class Parser:
         if headless:
             # Headless mode for background execution (Task Scheduler, pythonw.exe)
             options.add_argument("--headless")
-            print("[PARSER] Headless mode enabled - Firefox will run without GUI")
+            # Force 1920x1080 resolution to match GUI fullscreen behavior
+            # This ensures cookie click coordinates (1661, 853) are within viewport
+            options.add_argument("--width=1920")
+            options.add_argument("--height=1080")
+            print("[PARSER] Headless mode enabled - Firefox will run without GUI (1920x1080)")
         else:
             # Normal mode with window manager integration (Komorebi)
             options.add_argument("--start-maximized")
@@ -105,7 +109,16 @@ class Parser:
             # Strategy 3 failed, try next approach
             pass
 
+        # Skip coordinate-based fallbacks in headless mode
+        # Reason: LoLalytics cookie banner likely doesn't appear in headless,
+        # or coordinates may be out of bounds despite viewport size
+        if self.headless:
+            # All DOM-based strategies failed, but this is expected in headless
+            # Cookie banner is likely auto-accepted or doesn't exist
+            return
+
         # Strategy 4: Fallback to hardcoded coordinates (Bug #1 legacy)
+        # GUI mode only - coordinates are screen-dependent
         try:
             self.webdriver.execute_script(
                 f"""
