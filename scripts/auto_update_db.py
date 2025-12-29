@@ -145,10 +145,43 @@ def main() -> int:
     logger = AutoUpdateLogger()
     notifier = WindowsNotifier(enabled=True)
 
+    # Configure Python logging to capture ALL logs (including parallel_parser.py)
+    # This is critical for pythonw.exe where stdout/stderr don't exist
+    import logging
+    log_dir = Path(project_root) / "logs"
+    log_dir.mkdir(exist_ok=True)
+    log_file = log_dir / "auto_update.log"
+
+    # Configure root logger to write to file
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG)
+
+    # Remove existing handlers to avoid duplicates
+    root_logger.handlers.clear()
+
+    # File handler for all logs
+    file_handler = logging.FileHandler(log_file, mode='a', encoding='utf-8')
+    file_handler.setLevel(logging.DEBUG)
+    file_formatter = logging.Formatter(
+        '[%(asctime)s] %(name)s - %(levelname)s: %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    file_handler.setFormatter(file_formatter)
+    root_logger.addHandler(file_handler)
+
+    # Console handler only if stdout exists (not pythonw.exe)
+    if sys.stdout is not None:
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setLevel(logging.INFO)
+        console_formatter = logging.Formatter('%(levelname)s: %(message)s')
+        console_handler.setFormatter(console_formatter)
+        root_logger.addHandler(console_handler)
+
     logger.log("INFO", "="*80)
     logger.log("INFO", "LeagueStats Coach - Auto-Update Database")
     logger.log("INFO", "="*80)
     logger.log("START", "Auto-update process started")
+    logger.log("INFO", f"Python logging configured - all logs will be written to {log_file}")
 
     db = None
     parser = None
@@ -264,6 +297,13 @@ def main() -> int:
                 logger.log("INFO", "Database connection closed")
             except Exception as e:
                 logger.log("WARNING", f"Database cleanup failed: {e}")
+
+        # Cleanup logging handlers to avoid resource leaks
+        import logging
+        root_logger = logging.getLogger()
+        for handler in root_logger.handlers[:]:
+            handler.close()
+            root_logger.removeHandler(handler)
 
 
 if __name__ == '__main__':
