@@ -65,7 +65,7 @@ function Write-RotationLog {
     param([string]$Message, [string]$Level = "INFO")
 
     $Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $LogEntry = "[$Timestamp] $Level: $Message"
+    $LogEntry = "[$Timestamp] ${Level}: $Message"
 
     # Write to console
     Write-Host $LogEntry
