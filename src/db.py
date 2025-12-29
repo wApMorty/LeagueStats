@@ -696,6 +696,47 @@ class Database:
             print(f"[ERROR] Database error getting matchup {champion_name} vs {enemy_name}: {e}")
             return None
 
+    def get_all_matchups_bulk(self) -> dict:
+        """
+        Load ALL valid matchups in a single SQL query for caching.
+
+        Returns dict mapping (champion_name, enemy_name) -> delta2 value.
+        Only includes matchups meeting quality thresholds (pickrate >= 0.5%, games >= 200).
+
+        This is much faster than calling get_matchup_delta2() repeatedly.
+        Use this for bulk operations like holistic optimizer.
+
+        Returns:
+            Dict with keys as tuples (champion_name, enemy_name) and values as delta2 floats
+        """
+        try:
+            cursor = self.connection.cursor()
+
+            # Load all valid matchups in one query
+            cursor.execute(
+                """
+                SELECT c1.name, c2.name, m.delta2
+                FROM matchups m
+                JOIN champions c1 ON m.champion = c1.id
+                JOIN champions c2 ON m.enemy = c2.id
+                WHERE m.pickrate >= 0.5
+                AND m.games >= 200
+            """
+            )
+
+            # Build cache dictionary
+            matchup_cache = {}
+            for champion_name, enemy_name, delta2 in cursor.fetchall():
+                # Normalize to lowercase for case-insensitive lookup
+                key = (champion_name.lower(), enemy_name.lower())
+                matchup_cache[key] = float(delta2)
+
+            return matchup_cache
+
+        except Exception as e:
+            print(f"[ERROR] Failed to load bulk matchups: {e}")
+            return {}
+
     # ========== Champion Scores Methods ==========
 
     def save_champion_scores(
