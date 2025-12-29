@@ -32,50 +32,63 @@ class Database:
 
     def create_database_indexes(self) -> None:
         """Create database indexes for performance optimization."""
-        print("[INFO] Creating database indexes for performance optimization...")
         cursor = self.connection.cursor()
 
         try:
+            # Get existing indexes
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='index'")
+            existing_indexes = {row[0] for row in cursor.fetchall()}
+
             # Check if tables exist before creating indexes
             cursor.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('champions', 'matchups')"
             )
             existing_tables = {row[0] for row in cursor.fetchall()}
 
+            created_indexes = []
+
             if "champions" in existing_tables:
                 # Index on champions.name for faster name lookups
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_champions_name ON champions(name)")
-                print("[INFO]   - Created index: idx_champions_name")
+                if "idx_champions_name" not in existing_indexes:
+                    cursor.execute("CREATE INDEX idx_champions_name ON champions(name)")
+                    created_indexes.append("idx_champions_name")
 
             if "matchups" in existing_tables:
                 # Indexes on matchups table for faster queries
-                cursor.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_matchups_champion ON matchups(champion)"
-                )
-                print("[INFO]   - Created index: idx_matchups_champion")
+                if "idx_matchups_champion" not in existing_indexes:
+                    cursor.execute("CREATE INDEX idx_matchups_champion ON matchups(champion)")
+                    created_indexes.append("idx_matchups_champion")
 
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_matchups_enemy ON matchups(enemy)")
-                print("[INFO]   - Created index: idx_matchups_enemy")
+                if "idx_matchups_enemy" not in existing_indexes:
+                    cursor.execute("CREATE INDEX idx_matchups_enemy ON matchups(enemy)")
+                    created_indexes.append("idx_matchups_enemy")
 
-                cursor.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_matchups_pickrate ON matchups(pickrate)"
-                )
-                print("[INFO]   - Created index: idx_matchups_pickrate")
+                if "idx_matchups_pickrate" not in existing_indexes:
+                    cursor.execute("CREATE INDEX idx_matchups_pickrate ON matchups(pickrate)")
+                    created_indexes.append("idx_matchups_pickrate")
 
                 # Composite index for common query pattern (champion + pickrate filter)
-                cursor.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_matchups_champion_pickrate ON matchups(champion, pickrate)"
-                )
-                print("[INFO]   - Created index: idx_matchups_champion_pickrate")
+                if "idx_matchups_champion_pickrate" not in existing_indexes:
+                    cursor.execute(
+                        "CREATE INDEX idx_matchups_champion_pickrate ON matchups(champion, pickrate)"
+                    )
+                    created_indexes.append("idx_matchups_champion_pickrate")
 
                 # Composite index for reverse lookups (enemy + pickrate)
-                cursor.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_matchups_enemy_pickrate ON matchups(enemy, pickrate)"
-                )
-                print("[INFO]   - Created index: idx_matchups_enemy_pickrate")
+                if "idx_matchups_enemy_pickrate" not in existing_indexes:
+                    cursor.execute(
+                        "CREATE INDEX idx_matchups_enemy_pickrate ON matchups(enemy, pickrate)"
+                    )
+                    created_indexes.append("idx_matchups_enemy_pickrate")
 
             self.connection.commit()
-            print("[INFO] Database indexes created successfully")
+
+            # Only log if indexes were actually created
+            if created_indexes:
+                print("[INFO] Created database indexes for performance optimization:")
+                for idx_name in created_indexes:
+                    print(f"[INFO]   - {idx_name}")
+
         except Error as e:
             print(f"[WARNING] Error creating indexes: {e}")
 
