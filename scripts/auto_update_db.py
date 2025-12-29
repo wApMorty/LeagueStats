@@ -172,10 +172,10 @@ def main() -> int:
             f"Mise à jour démarrée (patch {patch_version})..."
         )
 
-        # 4. Initialize parallel parser
-        logger.log("INFO", f"Initializing ParallelParser (10 workers)...")
-        parser = ParallelParser(max_workers=10, patch_version=patch_version)
-        logger.log("SUCCESS", "ParallelParser initialized")
+        # 4. Initialize parallel parser with headless mode
+        logger.log("INFO", f"Initializing ParallelParser (10 workers, headless mode)...")
+        parser = ParallelParser(max_workers=10, patch_version=patch_version, headless=True)
+        logger.log("SUCCESS", "ParallelParser initialized in headless mode (no GUI)")
 
         # 5. Parse all champions (dynamically from Riot API, ~12 min with parallel)
         logger.log("INFO", "Starting parallel scraping of champions from Riot API...")
