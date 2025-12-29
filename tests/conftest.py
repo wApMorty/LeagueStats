@@ -5,6 +5,7 @@ import sqlite3
 
 from src.db import Database
 from src.analysis.scoring import ChampionScorer
+from src.models import Matchup
 
 
 @pytest.fixture
@@ -96,14 +97,14 @@ def sample_matchups():
     """
     Return sample matchup data for testing.
 
-    Format: (enemy_name, winrate, delta1, delta2, pickrate, games)
+    Format: Matchup objects (enemy_name, winrate, delta1, delta2, pickrate, games)
     """
     return [
-        ("Darius", 48.5, -150, -200, 8.5, 1500),
-        ("Garen", 52.0, 100, 150, 12.3, 2000),
-        ("Teemo", 45.0, -300, -400, 5.2, 800),
-        ("Malphite", 55.5, 250, 300, 10.1, 1800),
-        ("Sett", 50.0, 0, 50, 7.8, 1200),
+        Matchup("Darius", 48.5, -150, -200, 8.5, 1500),
+        Matchup("Garen", 52.0, 100, 150, 12.3, 2000),
+        Matchup("Teemo", 45.0, -300, -400, 5.2, 800),
+        Matchup("Malphite", 55.5, 250, 300, 10.1, 1800),
+        Matchup("Sett", 50.0, 0, 50, 7.8, 1200),
     ]
 
 

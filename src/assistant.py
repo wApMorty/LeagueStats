@@ -6,10 +6,12 @@ maintaining backward compatibility with the original API.
 """
 
 from typing import Dict, List, Optional
+from tqdm import tqdm
 
 from .db import Database
 from .config import config
 from .config_constants import analysis_config
+from .models import Matchup, MatchupDraft
 
 # Import specialized modules
 from .analysis.scoring import ChampionScorer
@@ -164,14 +166,14 @@ class Assistant:
         self._cache_misses += 1
         return self.db.get_champion_matchups_for_draft(champion)
 
-    def get_matchups_for_draft(self, champion: str) -> List[tuple]:
+    def get_matchups_for_draft(self, champion: str) -> List[Matchup]:
         """
         Get matchups for draft analysis (optimized with cache support).
 
         This method:
         1. Uses cache if enabled (99% faster after warm-up)
         2. Falls back to optimized DB query if cache miss
-        3. Returns standard 6-column format for compatibility with scoring methods
+        3. Returns Matchup objects for compatibility with scoring methods
 
         Performance:
         - Cache hit: ~0.01ms (memory lookup)
@@ -182,42 +184,50 @@ class Assistant:
             champion: Champion name to get matchups for
 
         Returns:
-            List of matchup tuples in standard format:
-            [(enemy_name, winrate, delta1, delta2, pickrate, games), ...]
+            List of Matchup objects with complete statistics
         """
         # Get from cache or DB (optimized 4-column format)
         draft_matchups = self.get_cached_matchups(champion)
 
-        # Convert to standard 6-column format for scoring methods
+        # Convert to Matchup objects for scoring methods
         return self._convert_draft_matchups_to_standard(draft_matchups)
 
-    def _convert_draft_matchups_to_standard(self, draft_matchups: List[tuple]) -> List[tuple]:
+    def _convert_draft_matchups_to_standard(self, draft_matchups: List) -> List[Matchup]:
         """
-        Convert draft format (4 cols) to standard format (6 cols) for scoring methods.
+        Convert draft format (4 cols) to Matchup objects for scoring methods.
 
-        Draft format: (enemy_name, delta2, pickrate, games)
-        Standard format: (enemy_name, winrate, delta1, delta2, pickrate, games)
+        Draft format: MatchupDraft(enemy_name, delta2, pickrate, games)
+        Standard format: Matchup(enemy_name, winrate, delta1, delta2, pickrate, games)
 
         Since winrate and delta1 are not used in draft calculations, we fill with dummy values:
         - winrate = 50.0 (neutral)
         - delta1 = 0.0 (neutral)
 
         Args:
-            draft_matchups: List of matchups in draft format (4 elements)
+            draft_matchups: List of MatchupDraft objects or tuples (4 elements)
 
         Returns:
-            List of matchups in standard format (6 elements)
+            List of Matchup objects
         """
         standard_matchups = []
         for matchup in draft_matchups:
-            if len(matchup) == 4:
-                # Draft format: (enemy_name, delta2, pickrate, games)
+            if isinstance(matchup, MatchupDraft):
+                # MatchupDraft object - use built-in to_matchup() method
+                standard_matchups.append(matchup.to_matchup())
+            elif isinstance(matchup, tuple) and len(matchup) == 4:
+                # Draft format tuple: (enemy_name, delta2, pickrate, games)
                 enemy_name, delta2, pickrate, games = matchup
-                # Convert to standard: (enemy_name, winrate, delta1, delta2, pickrate, games)
-                standard_matchup = (enemy_name, 50.0, 0.0, delta2, pickrate, games)
+                # Convert to Matchup object
+                standard_matchup = Matchup(enemy_name, 50.0, 0.0, delta2, pickrate, games)
                 standard_matchups.append(standard_matchup)
+            elif isinstance(matchup, Matchup):
+                # Already a Matchup object - pass through
+                standard_matchups.append(matchup)
+            elif isinstance(matchup, tuple) and len(matchup) == 6:
+                # Legacy 6-tuple format - convert to Matchup
+                standard_matchups.append(Matchup.from_tuple(matchup))
             else:
-                # Already in standard format (6 elements) - pass through
+                # Unknown format - try to pass through
                 standard_matchups.append(matchup)
 
         return standard_matchups
@@ -380,27 +390,29 @@ class Assistant:
                 # Calculate raw metrics
                 avg_delta2 = self.avg_delta2(matchups)
 
-                delta2_values = [m[3] for m in valid_matchups]
+                delta2_values = [m.delta2 for m in valid_matchups]
                 variance = statistics.variance(delta2_values) if len(delta2_values) > 1 else 0.0
 
                 # Coverage (blind pick metric)
                 decent_weight = sum(
-                    m[4] for m in matchups if m[3] > tierlist_config.DECENT_MATCHUP_THRESHOLD
+                    m.pickrate
+                    for m in matchups
+                    if m.delta2 > tierlist_config.DECENT_MATCHUP_THRESHOLD
                 )
-                total_weight = sum(m[4] for m in matchups)
+                total_weight = sum(m.pickrate for m in matchups)
                 coverage = decent_weight / total_weight if total_weight > 0 else 0.0
 
                 # Peak impact (counter pick metric)
                 excellent_impact = sum(
-                    m[3] * m[4]
+                    m.delta2 * m.pickrate
                     for m in matchups
-                    if m[3] > tierlist_config.EXCELLENT_MATCHUP_THRESHOLD
+                    if m.delta2 > tierlist_config.EXCELLENT_MATCHUP_THRESHOLD
                 )
                 good_impact = sum(
-                    m[3] * m[4]
+                    m.delta2 * m.pickrate
                     for m in matchups
                     if tierlist_config.GOOD_MATCHUP_THRESHOLD
-                    < m[3]
+                    < m.delta2
                     <= tierlist_config.EXCELLENT_MATCHUP_THRESHOLD
                 )
                 peak_impact = excellent_impact + good_impact * 0.5
@@ -410,7 +422,9 @@ class Assistant:
 
                 # Target ratio (counter pick metric)
                 viable_weight = sum(
-                    m[4] for m in matchups if m[3] > tierlist_config.GOOD_MATCHUP_THRESHOLD
+                    m.pickrate
+                    for m in matchups
+                    if m.delta2 > tierlist_config.GOOD_MATCHUP_THRESHOLD
                 )
                 target_ratio = viable_weight / total_weight if total_weight > 0 else 0.0
 
@@ -529,9 +543,9 @@ class Assistant:
 
                             # Find the specific matchup against this enemy
                             for matchup in matchups:
-                                if matchup[0].lower() == enemy_champion.lower():
-                                    if matchup[3] > best_counter_score:  # delta2 is at index 3
-                                        best_counter_score = matchup[3]
+                                if matchup.enemy_name.lower() == enemy_champion.lower():
+                                    if matchup.delta2 > best_counter_score:
+                                        best_counter_score = matchup.delta2
                                     break
                         except Exception as e:
                             continue  # Skip silently for cleaner output
@@ -855,7 +869,7 @@ class Assistant:
 
                 # Find best and worst matchups
                 valid_matchups = [
-                    (m[0], m[3]) for m in matchups if m[5] >= 200
+                    (m.enemy_name, m.delta2) for m in matchups if m.games >= 200
                 ]  # enemy, delta2, min 200 games
                 valid_matchups.sort(key=lambda x: x[1], reverse=True)  # Sort by delta2
 
@@ -872,7 +886,7 @@ class Assistant:
 
                 # Worst matchups (bottom 5, but only show negatives)
                 worst_matchups = [
-                    m for m in valid_matchups[-10:] if m[1] < 0
+                    m for m in valid_matchups[-10:] if m.winrate < 0
                 ]  # Only negative deltas
                 worst_matchups = sorted(worst_matchups, key=lambda x: x[1])[:5]  # Worst 5
 
@@ -913,12 +927,17 @@ class Assistant:
                     matchups = self.db.get_champion_matchups_by_name(our_champion)
 
                     for matchup in matchups:
-                        if matchup[0].lower() == enemy_champion.lower():
-                            if matchup[3] > best_delta2:  # delta2 better
-                                best_delta2 = matchup[3]
+                        if matchup.enemy_name.lower() == enemy_champion.lower():
+                            if matchup.delta2 > best_delta2:  # delta2 better
+                                best_delta2 = matchup.delta2
                                 best_counter = our_champion
                             break
-                except:
+                except Exception as e:
+                    # Log database errors - these indicate data quality issues
+                    if self.verbose:
+                        print(
+                            f"[ERROR] Failed to get matchup for {our_champion} vs {enemy_champion}: {e}"
+                        )
                     continue
 
             if best_counter:
@@ -1012,9 +1031,9 @@ class Assistant:
         for our_champion in champion_pool:
             try:
                 matchups = self.db.get_champion_matchups_by_name(our_champion)
-                for enemy_name, winrate, delta1, delta2, pickrate, games in matchups:
-                    if pickrate >= config.MIN_PICKRATE and games >= config.MIN_MATCHUP_GAMES:
-                        all_potential_enemies.add(enemy_name)
+                for m in matchups:
+                    if m.pickrate >= config.MIN_PICKRATE and m.games >= config.MIN_MATCHUP_GAMES:
+                        all_potential_enemies.add(m.enemy_name)
             except Exception as e:
                 if self.verbose:
                     print(f"Error getting enemies for {our_champion}: {e}")
@@ -1046,9 +1065,9 @@ class Assistant:
                         if enemy_pickrate == 0.0:
                             try:
                                 matchups = self.db.get_champion_matchups_by_name(our_champion)
-                                for enemy_name, winrate, delta1, d2, pickrate, games in matchups:
-                                    if enemy_name == enemy_champion:
-                                        enemy_pickrate = pickrate
+                                for m in matchups:
+                                    if m.enemy_name == enemy_champion:
+                                        enemy_pickrate = m.pickrate
                                         break
                             except Exception as e:
                                 if self.verbose:
@@ -1138,9 +1157,12 @@ class Assistant:
             for our_champion in champion_pool:
                 try:
                     matchups = self.db.get_champion_matchups_by_name(our_champion)
-                    for enemy_name, winrate, delta1, delta2, pickrate, games in matchups:
-                        if pickrate >= config.MIN_PICKRATE and games >= config.MIN_MATCHUP_GAMES:
-                            all_potential_enemies.add(enemy_name)
+                    for m in matchups:
+                        if (
+                            m.pickrate >= config.MIN_PICKRATE
+                            and m.games >= config.MIN_MATCHUP_GAMES
+                        ):
+                            all_potential_enemies.add(m.enemy_name)
                 except Exception as e:
                     if self.verbose:
                         print(f"[DEBUG] Error getting enemies for {our_champion}: {e}")
@@ -1172,195 +1194,16 @@ class Assistant:
                             if enemy_pickrate == 0.0:
                                 try:
                                     matchups = self.db.get_champion_matchups_by_name(our_champion)
-                                    for (
-                                        enemy_name,
-                                        winrate,
-                                        delta1,
-                                        d2,
-                                        pickrate,
-                                        games,
-                                    ) in matchups:
-                                        if enemy_name == enemy_champion:
-                                            enemy_pickrate = pickrate
+                                    for m in matchups:
+                                        if m.enemy_name == enemy_champion:
+                                            enemy_pickrate = m.pickrate
                                             break
-                                except:
-                                    pass
-
-                    except Exception as e:
-                        if self.verbose:
-                            print(f"[DEBUG] Error checking {our_champion} vs {enemy_champion}: {e}")
-                        continue
-
-                # Skip if no valid matchups found
-                if best_response_champion is None or matchups_found == 0:
-                    continue
-
-                # Calculate threat score
-                base_threat = -best_response_delta2
-                pickrate_weight = max(enemy_pickrate, 1.0)
-                coverage_bonus = min(matchups_found / len(champion_pool), 1.0)
-
-                combined_threat = (
-                    base_threat * 0.7 + pickrate_weight * 0.2 + coverage_bonus * 10.0 * 0.1
-                )
-
-                ban_candidates.append(
-                    (
-                        enemy_champion,
-                        combined_threat,
-                        best_response_delta2,
-                        best_response_champion,
-                        matchups_found,
-                    )
-                )
-
-            # Save to database
-            saved = self.db.save_pool_ban_recommendations(pool_name, ban_candidates)
-
-            if self.verbose:
-                print(f"[INFO] Pre-calculated {saved} ban recommendations for pool '{pool_name}'")
-
-            return saved > 0
-
-        except Exception as e:
-            print(f"[ERROR] Failed to pre-calculate bans for {pool_name}: {e}")
-            return False
-
-    def precalculate_all_custom_pool_bans(self) -> Dict[str, int]:
-        """
-        Pre-calculate ban recommendations for all custom (user-created) pools.
-
-        System pools are skipped because they're too large for meaningful ban calculations
-        and aren't typically used for draft.
-
-        Returns:
-            Dictionary mapping pool names to number of bans calculated
-        """
-        from .pool_manager import PoolManager
-
-        results = {}
-
-        try:
-            # Load pool manager
-            pool_manager = PoolManager()
-
-            # Get all pools
-            all_pools = pool_manager.get_all_pools()
-
-            if self.verbose:
-                print(f"[INFO] Found {len(all_pools)} total pools")
-
-            # Process only custom pools (skip system pools)
-            custom_pools = {
-                name: pool for name, pool in all_pools.items() if pool.created_by == "user"
-            }
-
-            if not custom_pools:
-                print("[INFO] No custom pools found - nothing to pre-calculate")
-                return results
-
-            print(
-                f"[INFO] Pre-calculating ban recommendations for {len(custom_pools)} custom pools..."
-            )
-
-            for pool_name, pool in custom_pools.items():
-                if self.verbose:
-                    print(f"[INFO] Processing pool: {pool_name} ({len(pool.champions)} champions)")
-
-                success = self.precalculate_pool_bans(pool_name, pool.champions)
-
-                if success:
-                    # Get count of saved bans
-                    saved_count = len(self.db.get_pool_ban_recommendations(pool_name, limit=999))
-                    results[pool_name] = saved_count
-                    print(f"  [OK] {pool_name}: {saved_count} bans calculated")
-                else:
-                    results[pool_name] = 0
-                    print(f"  [FAIL] {pool_name}: Failed")
-
-            print(f"[SUCCESS] Pre-calculated bans for {len(results)} custom pools")
-            return results
-
-        except Exception as e:
-            print(f"[ERROR] Failed to pre-calculate custom pool bans: {e}")
-            import traceback
-
-            traceback.print_exc()
-            return results
-
-    def precalculate_pool_bans(self, pool_name: str, champion_pool: List[str]) -> bool:
-        """
-        Pre-calculate and store ban recommendations for a champion pool in database.
-
-        This method calculates ban recommendations once and stores them in the database
-        for fast retrieval during draft. Should be called during data updates.
-
-        Args:
-            pool_name: Name of the champion pool
-            champion_pool: List of champion names in the pool
-
-        Returns:
-            True if successful, False otherwise
-        """
-        from .config import config
-
-        if not champion_pool:
-            if self.verbose:
-                print(f"[DEBUG] Empty champion pool: {pool_name}")
-            return False
-
-        try:
-            # Get all potential enemies from database
-            all_potential_enemies = set()
-            for our_champion in champion_pool:
-                try:
-                    matchups = self.db.get_champion_matchups_by_name(our_champion)
-                    for enemy_name, winrate, delta1, delta2, pickrate, games in matchups:
-                        if pickrate >= config.MIN_PICKRATE and games >= config.MIN_MATCHUP_GAMES:
-                            all_potential_enemies.add(enemy_name)
-                except Exception as e:
-                    if self.verbose:
-                        print(f"[DEBUG] Error getting enemies for {our_champion}: {e}")
-                    continue
-
-            ban_candidates = []
-
-            # For each potential enemy, find our best response
-            for enemy_champion in all_potential_enemies:
-                best_response_delta2 = -float("inf")
-                best_response_champion = None
-                enemy_pickrate = 0.0
-                matchups_found = 0
-
-                # Check all our champions against this enemy
-                for our_champion in champion_pool:
-                    try:
-                        delta2 = self.db.get_matchup_delta2(our_champion, enemy_champion)
-
-                        if delta2 is not None:
-                            matchups_found += 1
-
-                            # Track the best response we have
-                            if delta2 > best_response_delta2:
-                                best_response_delta2 = delta2
-                                best_response_champion = our_champion
-
-                            # Get pickrate data for this enemy
-                            if enemy_pickrate == 0.0:
-                                try:
-                                    matchups = self.db.get_champion_matchups_by_name(our_champion)
-                                    for (
-                                        enemy_name,
-                                        winrate,
-                                        delta1,
-                                        d2,
-                                        pickrate,
-                                        games,
-                                    ) in matchups:
-                                        if enemy_name == enemy_champion:
-                                            enemy_pickrate = pickrate
-                                            break
-                                except:
+                                except Exception as e:
+                                    # Failed to get pickrate - use 0.0 (already set)
+                                    if self.verbose:
+                                        print(
+                                            f"[DEBUG] Failed to get pickrate for {enemy_champion}: {e}"
+                                        )
                                     pass
 
                     except Exception as e:
@@ -1513,7 +1356,7 @@ class Assistant:
         for champion in champion_pool:
             if champion not in enemy_team and champion not in ally_team:
                 matchups = self.db.get_champion_matchups_by_name(champion)
-                if sum(m[5] for m in matchups) < config.MIN_GAMES_COMPETITIVE:
+                if sum(m.games for m in matchups) < config.MIN_GAMES_COMPETITIVE:
                     continue
                 score = self.score_against_team(matchups, enemy_team)
                 scores.append((str(champion), score))
@@ -1646,6 +1489,11 @@ class Assistant:
         trio_combinations = list(itertools.combinations(viable_champions, 3))
         print(f"Evaluating {len(trio_combinations)} trio combinations...")
 
+        # Step 2.5: Preload ALL matchups for performance (single DB query instead of 147K+)
+        print("Loading matchup data... ", end="", flush=True)
+        matchup_cache = self.db.get_all_matchups_bulk()
+        print(f"✅ Loaded {len(matchup_cache):,} matchups")
+
         trio_rankings = []
 
         # Set the scoring profile for this analysis
@@ -1654,9 +1502,18 @@ class Assistant:
             print(f"[INFO] Using scoring profile: {profile}")
 
         # Step 3: Evaluate each trio holistically
-        for trio in trio_combinations:
+        failed_trios = 0
+        successful_trios = 0
+
+        # Add progress bar with ETA to show execution isn't frozen
+        for trio in tqdm(
+            trio_combinations,
+            desc="Evaluating trios",
+            unit="trio",
+            bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]",
+        ):
             try:
-                trio_score = self._evaluate_trio_holistic(trio)
+                trio_score = self._evaluate_trio_holistic(trio, matchup_cache)
                 trio_rankings.append(
                     {
                         "trio": trio,
@@ -1668,26 +1525,50 @@ class Assistant:
                         "enemy_coverage": trio_score["enemy_coverage"],
                     }
                 )
+                successful_trios += 1
             except Exception as e:
+                # ALWAYS log trio evaluation failures - not just in verbose mode
+                print(f"\n[ERROR] Failed to evaluate trio {trio}: {e}")
                 if self.verbose:
-                    print(f"Error evaluating trio {trio}: {e}")
+                    import traceback
+
+                    traceback.print_exc()
+                failed_trios += 1
                 continue
 
+        # Summary after completion
+        print(f"\n✅ Analysis complete: {successful_trios} successful, {failed_trios} failed")
+
+        if failed_trios > 0:
+            failure_rate = (failed_trios / len(trio_combinations)) * 100
+            print(
+                f"⚠️  WARNING: {failure_rate:.1f}% failure rate ({failed_trios}/{len(trio_combinations)} trios)"
+            )
+
         if not trio_rankings:
-            raise ValueError("No viable trios found after evaluation")
+            raise ValueError(
+                f"No viable trios found after evaluation. "
+                f"{failed_trios} trios failed, {successful_trios} succeeded. "
+                f"Check database health and error messages above."
+            )
 
         # Step 4: Sort by total score
         trio_rankings.sort(key=lambda x: x["total_score"], reverse=True)
 
         return trio_rankings[:num_results]
 
-    def _evaluate_trio_holistic(self, trio: tuple) -> dict:
+    def _evaluate_trio_holistic(self, trio: tuple, matchup_cache: dict) -> dict:
         """
         Evaluate a trio of champions using holistic scoring with reverse lookup.
 
-        Uses efficient reverse lookup to avoid duplicate matchups and improve performance.
+        Uses efficient reverse lookup with preloaded matchup cache for performance.
 
-        Returns dict with individual scores and total score.
+        Args:
+            trio: Tuple of 3 champion names
+            matchup_cache: Dict mapping (champion, enemy) -> delta2 (preloaded)
+
+        Returns:
+            dict with individual scores and total score
         """
         champion1, champion2, champion3 = trio
         trio_list = [champion1, champion2, champion3]
@@ -1704,7 +1585,9 @@ class Assistant:
             # For this enemy, check which champion in our trio counters it best
             for our_champion in trio_list:
                 try:
-                    delta2 = self.db.get_matchup_delta2(our_champion, enemy_champion)
+                    # Use cache instead of DB query (99%+ speedup)
+                    cache_key = (our_champion.lower(), enemy_champion.lower())
+                    delta2 = matchup_cache.get(cache_key)
 
                     if delta2 is not None and delta2 > best_delta2:
                         best_delta2 = delta2
@@ -1723,7 +1606,9 @@ class Assistant:
 
         # Calculate individual scores using the reverse-lookup data
         coverage_score = self._calculate_coverage_score(enemy_coverage, all_enemies)
-        balance_score = self._calculate_balance_score_reverse(trio_list, enemy_coverage)
+        balance_score = self._calculate_balance_score_reverse(
+            trio_list, enemy_coverage, matchup_cache
+        )
         consistency_score = self._calculate_consistency_score_reverse(trio_list, enemy_coverage)
         meta_score = self._calculate_meta_score(enemy_coverage)
 
@@ -1758,13 +1643,16 @@ class Assistant:
 
         return min(100.0, (total_coverage / max_possible) * 100)
 
-    def _calculate_balance_score_reverse(self, trio_list: List[str], enemy_coverage: dict) -> float:
+    def _calculate_balance_score_reverse(
+        self, trio_list: List[str], enemy_coverage: dict, matchup_cache: dict
+    ) -> float:
         """
         Calculate diversity of matchup profiles using reverse lookup data.
 
         Args:
             trio_list: List of champion names in the trio
             enemy_coverage: Dict mapping enemy -> (delta2, best_counter)
+            matchup_cache: Preloaded matchup cache for performance
 
         Returns:
             Balance score 0-100 (higher = more balanced, fewer shared weaknesses)
@@ -1777,7 +1665,9 @@ class Assistant:
                 # Check each champion individually against this enemy
                 for our_champion in trio_list:
                     try:
-                        delta2 = self.db.get_matchup_delta2(our_champion, enemy)
+                        # Use cache instead of DB query
+                        cache_key = (our_champion.lower(), enemy.lower())
+                        delta2 = matchup_cache.get(cache_key)
 
                         # If this champion struggles against this enemy (negative delta2)
                         if delta2 is not None and delta2 < -2.0:
@@ -1861,10 +1751,10 @@ class Assistant:
 
             for i, matchups in enumerate(all_matchups):
                 weaknesses = []
-                for enemy, winrate, delta1, delta2, pickrate, games in matchups:
-                    if pickrate >= config.MIN_PICKRATE and games >= config.MIN_MATCHUP_GAMES:
-                        if delta2 < -2.0:  # Significantly negative matchup
-                            weaknesses.append(enemy)
+                for m in matchups:
+                    if m.pickrate >= config.MIN_PICKRATE and m.games >= config.MIN_MATCHUP_GAMES:
+                        if m.delta2 < -2.0:  # Significantly negative matchup
+                            weaknesses.append(m.enemy_name)
                 champion_weaknesses.append(set(weaknesses))
 
             # Calculate overlap in weaknesses (lower overlap = better balance)
@@ -1884,7 +1774,13 @@ class Assistant:
             balance_ratio = 1 - (shared_weaknesses / total_weaknesses)
             return balance_ratio * 100
 
-        except:
+        except Exception as e:
+            # ALWAYS log calculation failures - these indicate bugs or data issues
+            print(f"[ERROR] Balance score calculation failed for trio {trio}: {e}")
+            if self.verbose:
+                import traceback
+
+                traceback.print_exc()
             return 50.0  # Neutral score on error
 
     def _calculate_consistency_score(self, trio: tuple, all_matchups: List[List]) -> float:
@@ -1893,9 +1789,9 @@ class Assistant:
             all_scores = []
 
             for matchups in all_matchups:
-                for enemy, winrate, delta1, delta2, pickrate, games in matchups:
-                    if pickrate >= config.MIN_PICKRATE and games >= config.MIN_MATCHUP_GAMES:
-                        all_scores.append(delta2)
+                for m in matchups:
+                    if m.pickrate >= config.MIN_PICKRATE and m.games >= config.MIN_MATCHUP_GAMES:
+                        all_scores.append(m.delta2)
 
             if not all_scores:
                 return 0.0
@@ -1916,7 +1812,13 @@ class Assistant:
 
             return consistency * 0.6 + avg_performance * 0.4
 
-        except:
+        except Exception as e:
+            # ALWAYS log calculation failures - these indicate bugs or data issues
+            print(f"[ERROR] Consistency score calculation failed for trio {trio}: {e}")
+            if self.verbose:
+                import traceback
+
+                traceback.print_exc()
             return 50.0
 
     def _calculate_meta_score(self, enemy_coverage: dict) -> float:
@@ -1947,11 +1849,9 @@ class Assistant:
                         continue
 
                     # Calculate average pickrate for this champion
-                    # Each matchup has: (enemy_id, winrate, delta1, delta2, pickrate, games)
+                    # Each matchup is a Matchup object with: enemy_name, winrate, delta1, delta2, pickrate, games
                     pickrates = [
-                        matchup[4]
-                        for matchup in enemy_matchups
-                        if len(matchup) > 4 and matchup[4] > 0
+                        matchup.pickrate for matchup in enemy_matchups if matchup.pickrate > 0
                     ]
 
                     if not pickrates:
@@ -2003,11 +1903,14 @@ class Assistant:
         for i, matchups in enumerate(matchups_list):
             champion_name = f"Champion{i+1}"  # Fallback name, should be passed properly
 
-            for enemy, winrate, delta1, delta2, pickrate, games in matchups:
-                if pickrate >= config.MIN_PICKRATE and games >= config.MIN_MATCHUP_GAMES:
-                    all_enemies.add(enemy)
-                    if enemy not in enemy_coverage or delta2 > enemy_coverage[enemy][0]:
-                        enemy_coverage[enemy] = (delta2, champion_name)
+            for m in matchups:
+                if m.pickrate >= config.MIN_PICKRATE and m.games >= config.MIN_MATCHUP_GAMES:
+                    all_enemies.add(m.enemy_name)
+                    if (
+                        m.enemy_name not in enemy_coverage
+                        or m.delta2 > enemy_coverage[m.enemy_name][0]
+                    ):
+                        enemy_coverage[m.enemy_name] = (m.delta2, champion_name)
 
         return enemy_coverage
 
@@ -2053,12 +1956,12 @@ class Assistant:
                     # Get all enemies for coverage calculation
                     all_enemies = set()
                     for matchup_list in matchups:
-                        for enemy, winrate, delta1, delta2, pickrate, games in matchup_list:
+                        for m in matchup_list:
                             if (
-                                pickrate >= config.MIN_PICKRATE
-                                and games >= config.MIN_MATCHUP_GAMES
+                                m.pickrate >= config.MIN_PICKRATE
+                                and m.games >= config.MIN_MATCHUP_GAMES
                             ):
-                                all_enemies.add(enemy)
+                                all_enemies.add(m.enemy_name)
 
                     metric_scores["coverage"].append(
                         self._calculate_coverage_score(enemy_coverage, all_enemies)

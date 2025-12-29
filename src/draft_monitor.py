@@ -649,7 +649,9 @@ class DraftMonitor:
                     # Get champion name and matchups (cached for performance)
                     champion_name = self._get_display_name(champion_id)
                     matchups = self.assistant.get_matchups_for_draft(champion_name)
-                    if matchups and sum(m[5] for m in matchups) >= 500:  # Threshold for valid data
+                    if (
+                        matchups and sum(m.games for m in matchups) >= 500
+                    ):  # Threshold for valid data
                         # Calculate score against enemy team using unified scoring method
                         score = self._calculate_score_against_team(
                             matchups, enemy_picks, champion_name
@@ -872,7 +874,7 @@ class DraftMonitor:
             for champion_id in champion_ids:
                 champion_name = self._get_display_name(champion_id)
                 matchups = self.assistant.get_matchups_for_draft(champion_name)
-                if matchups and sum(m[5] for m in matchups) >= 500:  # Threshold for valid data
+                if matchups and sum(m.games for m in matchups) >= 500:  # Threshold for valid data
                     # Use blind pick scoring (empty enemy team)
                     score = self.assistant.score_against_team(matchups, [], champion_name)
                     scores.append((champion_name, score))
@@ -1065,11 +1067,11 @@ class DraftMonitor:
                 champion_matchups = self.assistant.get_matchups_for_draft(champion_name)
 
                 if (
-                    not champion_matchups or sum(m[5] for m in champion_matchups) < 500
-                ):  # m[5] = games in 6-column format
+                    not champion_matchups or sum(m.games for m in champion_matchups) < 500
+                ):  # m.games = games in 6-column format
                     if self.verbose:
                         total_games = (
-                            sum(m[5] for m in champion_matchups) if champion_matchups else 0
+                            sum(m.games for m in champion_matchups) if champion_matchups else 0
                         )
                         print(
                             f"[DEBUG] {champion_name}: Insufficient data (games={total_games}, need >=500)"
@@ -1098,11 +1100,11 @@ class DraftMonitor:
                 champion_matchups = self.assistant.get_matchups_for_draft(champion_name)
 
                 if (
-                    not champion_matchups or sum(m[5] for m in champion_matchups) < 500
-                ):  # m[5] = games in 6-column format
+                    not champion_matchups or sum(m.games for m in champion_matchups) < 500
+                ):  # m.games = games in 6-column format
                     if self.verbose:
                         total_games = (
-                            sum(m[5] for m in champion_matchups) if champion_matchups else 0
+                            sum(m.games for m in champion_matchups) if champion_matchups else 0
                         )
                         print(
                             f"[DEBUG] {champion_name}: Insufficient data (games={total_games}, need >=500)"

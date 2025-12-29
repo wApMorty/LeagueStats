@@ -1,10 +1,11 @@
 """Scoring algorithms for champion matchups and team compositions."""
 
-from typing import List
+from typing import List, Union
 import math
 
 from ..db import Database
 from ..config_constants import analysis_config
+from ..models import Matchup
 
 
 class ChampionScorer:
@@ -21,12 +22,12 @@ class ChampionScorer:
         self.db = db
         self.verbose = verbose
 
-    def filter_valid_matchups(self, matchups: List[tuple]) -> List[tuple]:
+    def filter_valid_matchups(self, matchups: List[Matchup]) -> List[Matchup]:
         """
         Filter matchups with sufficient pick rate and games data.
 
         Args:
-            matchups: List of matchup tuples
+            matchups: List of Matchup objects
 
         Returns:
             Filtered list of valid matchups
@@ -34,15 +35,16 @@ class ChampionScorer:
         return [
             m
             for m in matchups
-            if m[4] >= analysis_config.MIN_PICKRATE and m[5] >= analysis_config.MIN_MATCHUP_GAMES
+            if m.pickrate >= analysis_config.MIN_PICKRATE
+            and m.games >= analysis_config.MIN_MATCHUP_GAMES
         ]
 
-    def avg_delta1(self, matchups: List[tuple]) -> float:
+    def avg_delta1(self, matchups: List[Matchup]) -> float:
         """
         Calculate weighted average delta1 from valid matchups.
 
         Args:
-            matchups: List of matchup tuples
+            matchups: List of Matchup objects
 
         Returns:
             Weighted average delta1
@@ -50,17 +52,17 @@ class ChampionScorer:
         valid_matchups = self.filter_valid_matchups(matchups)
         if not valid_matchups:
             return 0.0
-        total_weight = sum(m[4] for m in valid_matchups)
+        total_weight = sum(m.pickrate for m in valid_matchups)
         if total_weight == 0:
             return 0.0
-        return sum(m[2] * m[4] for m in valid_matchups) / total_weight
+        return sum(m.delta1 * m.pickrate for m in valid_matchups) / total_weight
 
-    def avg_delta2(self, matchups: List[tuple]) -> float:
+    def avg_delta2(self, matchups: List[Matchup]) -> float:
         """
         Calculate weighted average delta2 from valid matchups.
 
         Args:
-            matchups: List of matchup tuples
+            matchups: List of Matchup objects
 
         Returns:
             Weighted average delta2
@@ -68,17 +70,17 @@ class ChampionScorer:
         valid_matchups = self.filter_valid_matchups(matchups)
         if not valid_matchups:
             return 0.0
-        total_weight = sum(m[4] for m in valid_matchups)
+        total_weight = sum(m.pickrate for m in valid_matchups)
         if total_weight == 0:
             return 0.0
-        return sum(m[3] * m[4] for m in valid_matchups) / total_weight
+        return sum(m.delta2 * m.pickrate for m in valid_matchups) / total_weight
 
-    def avg_winrate(self, matchups: List[tuple]) -> float:
+    def avg_winrate(self, matchups: List[Matchup]) -> float:
         """
         Calculate weighted average winrate from valid matchups.
 
         Args:
-            matchups: List of matchup tuples
+            matchups: List of Matchup objects
 
         Returns:
             Weighted average winrate
@@ -86,10 +88,10 @@ class ChampionScorer:
         valid_matchups = self.filter_valid_matchups(matchups)
         if not valid_matchups:
             return 0.0
-        total_weight = sum(m[4] for m in valid_matchups)
+        total_weight = sum(m.pickrate for m in valid_matchups)
         if total_weight == 0:
             return 0.0
-        return sum(m[1] * m[4] for m in valid_matchups) / total_weight
+        return sum(m.winrate * m.pickrate for m in valid_matchups) / total_weight
 
     def delta2_to_win_advantage(self, delta2: float, champion_name: str) -> float:
         """
@@ -126,7 +128,7 @@ class ChampionScorer:
         return advantage
 
     def score_against_team(
-        self, matchups: List[tuple], team: List[str], champion_name: str = None
+        self, matchups: List[Matchup], team: List[str], champion_name: str = None
     ) -> float:
         """
         Calculate bidirectional advantage against a team composition.
@@ -148,7 +150,7 @@ class ChampionScorer:
         This accounts for matchup asymmetry where delta2(A→B) ≠ delta2(B→A).
 
         Args:
-            matchups: List of matchup data tuples for our champion
+            matchups: List of Matchup objects for our champion
             team: Enemy team composition (may be partial, e.g., [1-5] enemies)
             champion_name: Name of our champion (required for reverse matchup lookup)
 
@@ -184,8 +186,8 @@ class ChampionScorer:
         # Calculate delta2 for known matchups
         for enemy in team:
             for i, matchup in enumerate(remaining_matchups):
-                if matchup[0].lower() == enemy.lower():
-                    delta2 = matchup[3]
+                if matchup.enemy_name.lower() == enemy.lower():
+                    delta2 = matchup.delta2
                     total_delta2 += delta2
                     matchup_count += 1
                     remaining_matchups.pop(i)

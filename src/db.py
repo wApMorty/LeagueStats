@@ -1,8 +1,9 @@
 import sqlite3
 from sqlite3 import Error
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Union
 import requests
 from .constants import CHAMPIONS_LIST
+from .models import Matchup, MatchupDraft
 
 
 class Database:
@@ -31,50 +32,63 @@ class Database:
 
     def create_database_indexes(self) -> None:
         """Create database indexes for performance optimization."""
-        print("[INFO] Creating database indexes for performance optimization...")
         cursor = self.connection.cursor()
 
         try:
+            # Get existing indexes
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='index'")
+            existing_indexes = {row[0] for row in cursor.fetchall()}
+
             # Check if tables exist before creating indexes
             cursor.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('champions', 'matchups')"
             )
             existing_tables = {row[0] for row in cursor.fetchall()}
 
+            created_indexes = []
+
             if "champions" in existing_tables:
                 # Index on champions.name for faster name lookups
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_champions_name ON champions(name)")
-                print("[INFO]   - Created index: idx_champions_name")
+                if "idx_champions_name" not in existing_indexes:
+                    cursor.execute("CREATE INDEX idx_champions_name ON champions(name)")
+                    created_indexes.append("idx_champions_name")
 
             if "matchups" in existing_tables:
                 # Indexes on matchups table for faster queries
-                cursor.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_matchups_champion ON matchups(champion)"
-                )
-                print("[INFO]   - Created index: idx_matchups_champion")
+                if "idx_matchups_champion" not in existing_indexes:
+                    cursor.execute("CREATE INDEX idx_matchups_champion ON matchups(champion)")
+                    created_indexes.append("idx_matchups_champion")
 
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_matchups_enemy ON matchups(enemy)")
-                print("[INFO]   - Created index: idx_matchups_enemy")
+                if "idx_matchups_enemy" not in existing_indexes:
+                    cursor.execute("CREATE INDEX idx_matchups_enemy ON matchups(enemy)")
+                    created_indexes.append("idx_matchups_enemy")
 
-                cursor.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_matchups_pickrate ON matchups(pickrate)"
-                )
-                print("[INFO]   - Created index: idx_matchups_pickrate")
+                if "idx_matchups_pickrate" not in existing_indexes:
+                    cursor.execute("CREATE INDEX idx_matchups_pickrate ON matchups(pickrate)")
+                    created_indexes.append("idx_matchups_pickrate")
 
                 # Composite index for common query pattern (champion + pickrate filter)
-                cursor.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_matchups_champion_pickrate ON matchups(champion, pickrate)"
-                )
-                print("[INFO]   - Created index: idx_matchups_champion_pickrate")
+                if "idx_matchups_champion_pickrate" not in existing_indexes:
+                    cursor.execute(
+                        "CREATE INDEX idx_matchups_champion_pickrate ON matchups(champion, pickrate)"
+                    )
+                    created_indexes.append("idx_matchups_champion_pickrate")
 
                 # Composite index for reverse lookups (enemy + pickrate)
-                cursor.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_matchups_enemy_pickrate ON matchups(enemy, pickrate)"
-                )
-                print("[INFO]   - Created index: idx_matchups_enemy_pickrate")
+                if "idx_matchups_enemy_pickrate" not in existing_indexes:
+                    cursor.execute(
+                        "CREATE INDEX idx_matchups_enemy_pickrate ON matchups(enemy, pickrate)"
+                    )
+                    created_indexes.append("idx_matchups_enemy_pickrate")
 
             self.connection.commit()
-            print("[INFO] Database indexes created successfully")
+
+            # Only log if indexes were actually created
+            if created_indexes:
+                print("[INFO] Created database indexes for performance optimization:")
+                for idx_name in created_indexes:
+                    print(f"[INFO]   - {idx_name}")
+
         except Error as e:
             print(f"[WARNING] Error creating indexes: {e}")
 
@@ -217,8 +231,30 @@ class Database:
             print(f"The error '{e}' occurred")
             return []
 
-    def get_champion_matchups_by_name(self, champion_name: str) -> List[tuple]:
-        """Get matchups for a champion by name with enemy names included."""
+    def get_champion_matchups_by_name(
+        self, champion_name: str, as_dataclass: bool = True
+    ) -> Union[List[Matchup], List[tuple]]:
+        """Get matchups for a champion by name with enemy names included.
+
+        Args:
+            champion_name: Name of the champion to get matchups for
+            as_dataclass: If True, return Matchup objects. If False, return tuples.
+                         Default True for new code. Use False for backward compatibility.
+
+        Returns:
+            List of Matchup objects or tuples (enemy_name, winrate, delta1, delta2, pickrate, games)
+
+        Example:
+            >>> # New way (dataclass - readable attributes)
+            >>> matchups = db.get_champion_matchups_by_name("Jinx")
+            >>> for m in matchups:
+            ...     print(f"{m.enemy_name}: {m.winrate}% WR, {m.delta2} delta2")
+
+            >>> # Old way (tuples - for backward compatibility)
+            >>> matchups = db.get_champion_matchups_by_name("Jinx", as_dataclass=False)
+            >>> for m in matchups:
+            ...     print(f"{m[0]}: {m[1]}% WR, {m[3]} delta2")
+        """
         champ_id = self.get_champion_id(champion_name)
         if champ_id is None:
             return []
@@ -236,26 +272,33 @@ class Database:
                 (champ_id,),
             )
             result = cursor.fetchall()
-            # returns (enemy_name, winrate, delta1, delta2, pickrate, games)
-            return result
+
+            # Convert to dataclasses if requested (default)
+            if as_dataclass:
+                return [Matchup.from_tuple(row) for row in result]
+            else:
+                # Backward compatibility: return tuples
+                return result
         except Error as e:
             print(f"The error '{e}' occurred")
             return []
 
     def get_champion_base_winrate(self, champion_name: str) -> float:
         """Calculate champion base winrate from all matchup data using weighted average."""
-        matchups = self.get_champion_matchups_by_name(champion_name)
+        matchups = self.get_champion_matchups_by_name(
+            champion_name
+        )  # Returns Matchup objects by default
         if not matchups:
             return 50.0  # Default to 50% if no data
 
         total_weighted_winrate = 0.0
         total_weight = 0.0
 
-        for enemy_name, winrate, delta1, delta2, pickrate, games in matchups:
+        for matchup in matchups:
             # Use games as weight (more games = more reliable data)
             # Could also use pickrate or combination of both
-            weight = games
-            total_weighted_winrate += winrate * weight
+            weight = matchup.games
+            total_weighted_winrate += matchup.winrate * weight
             total_weight += weight
 
         if total_weight == 0:
@@ -452,7 +495,9 @@ class Database:
             print(f"[ERROR] Error building champion cache: {e}")
             return {}
 
-    def get_champion_matchups_for_draft(self, champion_name: str) -> List[tuple]:
+    def get_champion_matchups_for_draft(
+        self, champion_name: str, as_dataclass: bool = True
+    ) -> Union[List[MatchupDraft], List[tuple]]:
         """
         Optimized query for draft analysis - returns only the columns needed for draft calculations.
 
@@ -468,10 +513,23 @@ class Database:
 
         Args:
             champion_name: Name of the champion to get matchups for
+            as_dataclass: If True, return MatchupDraft objects. If False, return tuples.
+                         Default True for new code. Use False for backward compatibility.
 
         Returns:
-            List of tuples: [(enemy_name, delta2, pickrate, games), ...]
+            List of MatchupDraft objects or tuples: [(enemy_name, delta2, pickrate, games), ...]
             Empty list if champion not found or no matchups
+
+        Example:
+            >>> # New way (dataclass - readable attributes)
+            >>> matchups = db.get_champion_matchups_for_draft("Jinx")
+            >>> for m in matchups:
+            ...     print(f"{m.enemy_name}: {m.delta2} delta2, {m.games} games")
+
+            >>> # Old way (tuples - for backward compatibility)
+            >>> matchups = db.get_champion_matchups_for_draft("Jinx", as_dataclass=False)
+            >>> for m in matchups:
+            ...     print(f"{m[0]}: {m[1]} delta2, {m[3]} games")
         """
         champ_id = self.get_champion_id(champion_name)
         if champ_id is None:
@@ -490,8 +548,13 @@ class Database:
                 (champ_id,),
             )
             result = cursor.fetchall()
-            # returns (enemy_name, delta2, pickrate, games)
-            return result
+
+            # Convert to dataclasses if requested (default)
+            if as_dataclass:
+                return [MatchupDraft.from_tuple(row) for row in result]
+            else:
+                # Backward compatibility: return tuples
+                return result
         except Error as e:
             print(f"The error '{e}' occurred")
             return []
@@ -643,6 +706,47 @@ class Database:
             # Always log database errors - these are unexpected and need visibility
             print(f"[ERROR] Database error getting matchup {champion_name} vs {enemy_name}: {e}")
             return None
+
+    def get_all_matchups_bulk(self) -> dict:
+        """
+        Load ALL valid matchups in a single SQL query for caching.
+
+        Returns dict mapping (champion_name, enemy_name) -> delta2 value.
+        Only includes matchups meeting quality thresholds (pickrate >= 0.5%, games >= 200).
+
+        This is much faster than calling get_matchup_delta2() repeatedly.
+        Use this for bulk operations like holistic optimizer.
+
+        Returns:
+            Dict with keys as tuples (champion_name, enemy_name) and values as delta2 floats
+        """
+        try:
+            cursor = self.connection.cursor()
+
+            # Load all valid matchups in one query
+            cursor.execute(
+                """
+                SELECT c1.name, c2.name, m.delta2
+                FROM matchups m
+                JOIN champions c1 ON m.champion = c1.id
+                JOIN champions c2 ON m.enemy = c2.id
+                WHERE m.pickrate >= 0.5
+                AND m.games >= 200
+            """
+            )
+
+            # Build cache dictionary
+            matchup_cache = {}
+            for champion_name, enemy_name, delta2 in cursor.fetchall():
+                # Normalize to lowercase for case-insensitive lookup
+                key = (champion_name.lower(), enemy_name.lower())
+                matchup_cache[key] = float(delta2)
+
+            return matchup_cache
+
+        except Exception as e:
+            print(f"[ERROR] Failed to load bulk matchups: {e}")
+            return {}
 
     # ========== Champion Scores Methods ==========
 
