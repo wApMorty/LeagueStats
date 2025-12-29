@@ -2,7 +2,11 @@
 
 All notable changes to LeagueStats Coach will be documented in this file.
 
-## [1.1.0-dev] - 2025-12-20 (Sprint 2 - In Progress)
+## [1.1.0] - 2025-12-29
+
+**🎉 RELEASE MAJEURE - Sprints 1 & 2 Complétés**
+
+Cette version marque la complétion de deux sprints majeurs axés sur la dette technique, la performance et les fonctionnalités essentielles. Le projet dispose désormais d'une base solide, testée et performante.
 
 ### ⚡ Performance
 
