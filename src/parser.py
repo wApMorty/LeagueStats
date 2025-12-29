@@ -41,8 +41,9 @@ class Parser:
         if headless:
             # Headless mode for background execution (Task Scheduler, pythonw.exe)
             options.add_argument("--headless")
-            # Force 1920x1080 resolution to match GUI fullscreen behavior
-            # This ensures cookie click coordinates (1661, 853) are within viewport
+            # Force 1920x1080 resolution to match GUI fullscreen behavior.
+            # Note: Coordinate-based cookie fallback is SKIPPED in headless mode.
+            # We rely exclusively on DOM-based strategies (ID, CSS, XPath).
             options.add_argument("--width=1920")
             options.add_argument("--height=1080")
             print("[PARSER] Headless mode enabled - Firefox will run without GUI (1920x1080)")
