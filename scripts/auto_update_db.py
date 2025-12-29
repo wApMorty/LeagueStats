@@ -375,7 +375,7 @@ def main() -> int:
                 logger.log("WARNING", f"Database cleanup failed: {e}")
 
         # Cleanup logging handlers to avoid resource leaks
-        import logging
+        # logging already imported at module level (line 198)
         root_logger = logging.getLogger()
         for handler in root_logger.handlers[:]:
             handler.close()
