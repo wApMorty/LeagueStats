@@ -240,7 +240,11 @@ class ParallelParser:
                     self._write_matchups_thread_safe(db, champ_name, matchups)
                     success_count += 1
                 except Exception as e:
-                    logger.error(f"Failed to scrape {champion} after retries: {e}")
+                    logger.error(f"Failed to scrape {champion} after retries: {type(e).__name__}: {e}")
+                    # Log first failure with full traceback for debugging
+                    if failed_count == 0:
+                        import traceback
+                        logger.error(f"First failure traceback:\n{traceback.format_exc()}")
                     failed_count += 1
                 finally:
                     pbar.update(1)

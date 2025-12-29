@@ -194,6 +194,14 @@ def main() -> int:
         logger.log("SUCCESS", f"Scraping completed in {duration_min:.1f} minutes")
         logger.log("INFO", f"Champions parsed: {success_count}/{total_count} succeeded, {failed_count} failed")
 
+        # Warning if many failures (indicates headless mode issues)
+        if failed_count > 0:
+            failure_rate = (failed_count / total_count) * 100
+            logger.log("WARNING", f"Failure rate: {failure_rate:.1f}% ({failed_count} champions failed)")
+            if failure_rate > 50:
+                logger.log("ERROR", "High failure rate detected - possible headless mode compatibility issue")
+                logger.log("ERROR", "Check logs/auto_update.log for detailed scraping errors")
+
         # 6. Close parser to free resources
         parser.close()
         parser = None
