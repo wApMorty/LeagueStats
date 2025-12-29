@@ -12,20 +12,36 @@ from .config_constants import scraping_config, xpath_config
 
 
 class Parser:
-    def __init__(self) -> None:
+    def __init__(self, headless: bool = False) -> None:
+        """Initialize Parser with optional headless mode.
+
+        Args:
+            headless: If True, run Firefox in headless mode (no GUI).
+                     Useful for Task Scheduler, background tasks, or CI/CD.
+                     Default: False (normal GUI mode with fullscreen).
+        """
         options = Options()
         options.binary_location = config.get_firefox_path()
-        # Add argument to start maximized (helps with window managers like Komorebi)
-        options.add_argument("--start-maximized")
-        self.webdriver = webdriver.Firefox(options=options)
 
-        # Fullscreen mode (with Firefox exception configured in Komorebi)
-        try:
-            self.webdriver.fullscreen_window()
-        except Exception as e:
-            # Fallback to maximize if fullscreen not supported
-            print(f"[DEBUG] Fullscreen failed, falling back to maximize: {e}")
-            self.webdriver.maximize_window()
+        if headless:
+            # Headless mode for background execution (Task Scheduler, pythonw.exe)
+            options.add_argument("--headless")
+            print("[PARSER] Headless mode enabled - Firefox will run without GUI")
+        else:
+            # Normal mode with window manager integration (Komorebi)
+            options.add_argument("--start-maximized")
+
+        self.webdriver = webdriver.Firefox(options=options)
+        self.headless = headless
+
+        # Fullscreen only in GUI mode (not needed in headless)
+        if not headless:
+            try:
+                self.webdriver.fullscreen_window()
+            except Exception as e:
+                # Fallback to maximize if fullscreen not supported
+                print(f"[DEBUG] Fullscreen failed, falling back to maximize: {e}")
+                self.webdriver.maximize_window()
 
         # Minimal delay for Firefox initialization
         # NOTE: Komorebi should have Firefox in float_rules to avoid window manager interference
