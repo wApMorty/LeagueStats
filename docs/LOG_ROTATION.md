@@ -242,7 +242,16 @@ Move-Item -Force logs\auto_update_clean.log logs\auto_update.log
 - **Non** si tu veux lire les anciens logs facilement (pas besoin de décompresser)
 
 ### **Q: Que se passe-t-il si auto_update.log est en cours d'écriture?**
-**R**: Le script échoue gracieusement et réessaiera à la prochaine exécution planifiée. C'est pourquoi on planifie la rotation 1h AVANT l'auto-update (2h AM vs 3h AM).
+**R**: Le script échoue gracieusement et réessaiera à la prochaine exécution planifiée.
+
+**Comment détecter l'échec?**
+Vérifier `logs/log_rotation.log` pour voir l'erreur:
+```
+[YYYY-MM-DD HH:MM:SS] ERROR: FATAL: Log rotation failed: The process cannot access the file because it is being used by another process
+```
+
+**Solution**: C'est pourquoi on planifie la rotation 1h AVANT l'auto-update (2h AM vs 3h AM).
+Cela garantit que `auto_update.log` n'est jamais verrouillé pendant la rotation.
 
 ### **Q: Puis-je changer la fréquence de rotation?**
 **R**: Oui! Relance `setup_log_rotation.ps1` avec différents paramètres:
