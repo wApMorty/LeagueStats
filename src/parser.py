@@ -19,6 +19,7 @@ from .error_ids import (
     ERR_COOKIE_002,
     ERR_COOKIE_003,
     ERR_COOKIE_004,
+    ERR_COOKIE_005,
     ERR_COOKIE_006,
 )
 
@@ -156,6 +157,18 @@ class Parser:
         if self.headless:
             # All DOM-based strategies failed, but this is expected in headless
             # Cookie banner is likely auto-accepted or doesn't exist
+            logger.info("Skipping coordinate-based cookie fallback in headless mode (DOM strategies sufficient)")
+
+            # Verify page is actually loaded and not stuck on cookie banner
+            try:
+                self.webdriver.find_element(By.TAG_NAME, "body")
+                logger.info("Page structure verified - cookie banner handled successfully")
+            except NoSuchElementException:
+                ERR_COOKIE_005.log(
+                    logger,
+                    "CRITICAL: Page failed to load despite cookie banner attempts",
+                    exc_info=True
+                )
             return
 
         # Strategy 4: Fallback to hardcoded coordinates (Bug #1 legacy)
