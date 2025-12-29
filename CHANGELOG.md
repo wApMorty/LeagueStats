@@ -67,8 +67,17 @@ All notable changes to LeagueStats Coach will be documented in this file.
 ### ✅ Validation
 
 Tested with `pythonw.exe` (Task Scheduler environment):
+
+**Before Fix (2025-12-29 16:32 - Headless viewport issue)**:
 ```
-[2025-12-29 17:05:23] Scraping completed: 172/172 succeeded, 0 failed
+[2025-12-29 16:32:11] Champions parsed: 0/172 succeeded, 172 failed ❌
+[2025-12-29 16:32:11] WARNING: Failure rate: 100.0%
+[2025-12-29 16:32:11] ERROR: Move target (1661, 853) out of bounds (1366x683)
+```
+
+**After Fix (2025-12-29 17:05 - 1920x1080 + skip coordinates)**:
+```
+[2025-12-29 17:05:23] Scraping completed: 172/172 succeeded, 0 failed ✅
 [2025-12-29 17:05:23] Duration: 16.6 minutes (995.9 seconds)
 [2025-12-29 17:05:23] SUCCESS: Auto-update completed successfully
 ```
