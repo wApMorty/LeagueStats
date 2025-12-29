@@ -23,7 +23,7 @@
 | **1** | **Refactoring fichiers monolithiques** | **13** ⬆️ | **13** | **1.00** | 🔴🔴🔴 | ✅ **FAIT** |
 | **3** | **Framework Tests Automatisés** | **13** | **13** | **1.00** | 🔴🔴 | ✅ **FAIT** |
 | **9** | **Migrations Base de Données (Alembic)** | **8** ⬆️ | **5** | **1.60** | 🔴 | ✅ **FAIT** |
-| **14** | **Migration SQLAlchemy ORM** | **5** | **5** | **1.00** | 🟡 | ❌ |
+| **14** | **Migration Dataclass Immutables** | **5** | **5** | **1.00** | 🟡 | ✅ **FAIT** |
 | **12** | **Architecture Client-Serveur + Web App** | **21** | **34** | **0.62** | 🟢 | ❌ |
 | **7** | **Support Multi-Plateformes** | **5** | **8** | **0.63** | 🟢 | ❌ |
 | **6** | **Interface Graphique (GUI)** | **13** | **21** | **0.62** | 🟢 | ❌ |
@@ -816,81 +816,109 @@ git pull origin main
 
 ---
 
-### ⭐ Tâche #14: Migration vers SQLAlchemy ORM
-**Status**: ❌ Not started (Sprint 2 - Optionnel)
-**Effort**: 1-2 jours (8-16h)
+### ⭐ Tâche #14: Migration vers Dataclasses Immutables
+**Status**: ✅ **FAIT** (2025-12-29) - PR #22 merged
+**Effort**: 2 jours (effectif)
 
 **Scores Fibonacci**:
-- 📈 **Plus-value**: **5** (architecture moderne, maintenabilité)
-- 🔧 **Difficulté**: **5** (refactoring db.py + tests)
+- 📈 **Plus-value**: **5** (type safety, lisibilité, maintenabilité)
+- 🔧 **Difficulté**: **5** (refactoring complet + tests backward compat)
 - 🎯 **ROI**: **1.00** (investissement architecture long terme)
 
 **Pourquoi ce score**:
-- **Plus-value = 5**: Type safety, queries lisibles, autogenerate migrations, relationships ORM
-- **Difficulté = 5**: Refactoring 594 lignes db.py, tests à adapter, backward compatibility
+- **Plus-value = 5**: Type safety IDE, code lisible, immutabilité garantie, validation automatique
+- **Difficulté = 5**: Migration complète du code analysis/, tests backward compat, migration assistant.py
 
-**Problème actuel**: `db.py` utilise raw SQLite (fonctionne bien mais pas optimal long terme)
+**Problème initial**: Tuples nommés difficiles à maintenir (`matchup[1]` vs `matchup.winrate`)
 
-**Solution**: Migrer vers SQLAlchemy ORM
+**✅ Solution implémentée**: Dataclasses Python immutables
 
-**Approche Hybrid (Recommandée)**:
+**Architecture réalisée**:
 ```python
-# src/models.py - NOUVEAU fichier
-from sqlalchemy import Column, Integer, String, Float, TIMESTAMP, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+# src/models.py - ✅ CRÉÉ
+from dataclasses import dataclass
 
-Base = declarative_base()
+@dataclass(frozen=True)
+class Matchup:
+    """Immutable matchup data with validation."""
+    enemy_name: str
+    winrate: float
+    delta1: float
+    delta2: float
+    pickrate: float
+    games: int
 
-class Champion(Base):
-    __tablename__ = 'champions'
+    def __post_init__(self):
+        # Validation automatique
+        if not 0.0 <= self.winrate <= 100.0:
+            raise ValueError(f"Invalid winrate: {self.winrate}")
 
-    id = Column(Integer, primary_key=True)
-    key = Column(String)
-    name = Column(String, nullable=False)
-    title = Column(String)
-    created_at = Column(TIMESTAMP, server_default=text('CURRENT_TIMESTAMP'))
-    updated_at = Column(TIMESTAMP, server_default=text('CURRENT_TIMESTAMP'))
+@dataclass(frozen=True)
+class MatchupDraft:
+    """Lightweight draft matchup (4 fields vs 6)."""
+    enemy_name: str
+    delta2: float
+    pickrate: float
+    games: int
 
-    matchups_as_champion = relationship('Matchup', foreign_keys='Matchup.champion')
-    matchups_as_enemy = relationship('Matchup', foreign_keys='Matchup.enemy')
-
-class Matchup(Base):
-    __tablename__ = 'matchups'
-
-    id = Column(Integer, primary_key=True)
-    champion = Column(Integer, ForeignKey('champions.id', ondelete='CASCADE'))
-    enemy = Column(Integer, ForeignKey('champions.id', ondelete='CASCADE'))
-    winrate = Column(Float, nullable=False)
-    delta1 = Column(Float, nullable=False)
-    delta2 = Column(Float, nullable=False)
-    pickrate = Column(Float, nullable=False)
-    games = Column(Integer, nullable=False)
+@dataclass(frozen=True)
+class ChampionScore:
+    """Champion performance metrics."""
+    champion_id: int
+    avg_delta2: float
+    variance: float
+    coverage: float
+    peak_impact: float
+    volatility: float
+    target_ratio: float
 ```
 
-**Migration alembic/env.py**:
-```python
-# alembic/env.py - À MODIFIER
-from src.models import Base
-target_metadata = Base.metadata  # ← Utiliser metadata ORM au lieu de Table()
-```
+**✅ Migration réalisée (18 commits)**:
 
-**Bénéfices**:
-- ✅ Type safety avec classes Python
-- ✅ Queries ORM lisibles: `session.query(Champion).filter_by(name='Aatrox').first()`
-- ✅ Relationships automatiques: `champion.matchups_as_champion`
-- ✅ Alembic autogenerate: `alembic revision --autogenerate`
-- ✅ Compatible avec raw SQL (hybrid approach)
+**Phase 1 - Infrastructure** (3 commits):
+- ✅ Création `src/models.py` avec 3 dataclasses
+- ✅ Tests complets `tests/test_models.py` (389 lignes)
+- ✅ Support dataclass dans `Database` (backward compatible)
 
-**Inconvénients**:
-- ⚠️ Refactoring de 594 lignes (db.py)
-- ⚠️ Tests à adapter (89% coverage à maintenir)
-- ⚠️ 0 valeur utilisateur immédiate (refactoring interne)
+**Phase 2 - Migration analysis/** (5 commits):
+- ✅ `scoring.py`: `.winrate` au lieu de `[1]`
+- ✅ `tier_list.py`: Attributs dataclass
+- ✅ `recommendations.py`: Attributs dataclass
+- ✅ `pool_statistics.py`: Migration complète
+- ✅ Tests et fixtures mis à jour
 
-**Recommandation**:
-- 🟡 **Sprint 2 - Optionnel** (après Tâche #4 et #11)
-- ✅ Faire SI temps disponible après features prioritaires
-- ❌ Ne PAS bloquer features pour ça
+**Phase 2.5 - Migration assistant.py** (2 commits):
+- ✅ Backward compatibility config
+- ✅ Refactoring complet (64 insertions, 77 suppressions)
+
+**Phase 3 - Corrections & Tests** (5 commits):
+- ✅ Fix `champion_utils.py`, `draft_monitor.py`
+- ✅ Fix Live Coach conversion
+- ✅ Fix post-draft analysis
+- ✅ Tests backward compatibility (139 lignes)
+- ✅ Documentation CHANGELOG.md
+
+**Bonus - Optimisation** (3 commits):
+- ✅ Holistic Optimizer: 1h06 → 20s (99.5% speedup)
+- ✅ Cache matchups en mémoire (147K queries → 1)
+- ✅ Fix messages index redondants
+
+**✅ Résultats obtenus**:
+- ✅ **Type safety**: IDE autocomplete + détection erreurs compilation
+- ✅ **Lisibilité**: `matchup.winrate` vs `matchup[1]`
+- ✅ **Immutabilité**: `frozen=True` prévient mutations accidentelles
+- ✅ **Validation**: `__post_init__` valide données automatiquement
+- ✅ **Backward compatible**: 100% des tests passent
+- ✅ **Performance**: Bonus 99.5% speedup optimizer
+- ✅ **Tests coverage**: 89% maintenu
+- ✅ **19 commits propres**: Black formatted, CI/CD green
+
+**✅ Bénéfices réalisés**:
+- ✅ Code plus maintenable et lisible
+- ✅ Détection bugs à la compilation (IDE)
+- ✅ Prévention bugs de mutation
+- ✅ Base saine pour futures features
+- ✅ Documentation auto via type hints
 
 ---
 

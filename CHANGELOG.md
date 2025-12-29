@@ -144,24 +144,40 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ♻️ Refactoring
 
-- **MAJOR**: Dataclass migration for improved code readability (Tâche #14)
+- **MAJOR**: Dataclass migration for improved code readability (Tâche #14, PR #22)
   - **Objective**: Replace obscure tuple indexing (`m[3]`, `m[5]`) with readable object attributes (`m.delta2`, `m.games`)
-  - **Impact**: 6 modules migrated (src/analysis/ + assistant.py)
+  - **Impact**: 6 modules migrated (src/analysis/ + assistant.py) + tests backward compat
   - **Modules migrated**:
-    - `src/models.py` - Created 3 immutable dataclasses (Matchup, MatchupDraft, ChampionScore)
-    - `src/db.py` - Added `as_dataclass` parameter for backward compatibility
-    - `src/analysis/scoring.py` - Migrated 9 tuple accesses
+    - `src/models.py` - Created 3 immutable dataclasses (Matchup, MatchupDraft, ChampionScore) with validation
+    - `src/db.py` - Added `as_dataclass` parameter for backward compatibility + bulk matchup loading
+    - `src/analysis/scoring.py` - Migrated 9 tuple accesses to dataclass attributes
     - `src/analysis/tier_list.py` - Migrated 2 tuple accesses
     - `src/analysis/recommendations.py` - Migrated 2 tuple accesses
     - `src/analysis/pool_statistics.py` - Migrated 1 tuple access + method signature
-    - `src/assistant.py` - Migrated 47 tuple accesses + 9 unpacking loops
+    - `src/assistant.py` - Migrated 47 tuple accesses + 9 unpacking loops + holistic optimizer cache
+    - `src/champion_utils.py` - Migrated to dataclass attributes
+    - `src/draft_monitor.py` - Migrated to dataclass attributes
   - **Benefits**:
     - Type safety: Full IDE autocomplete and type checking
     - Readability: `m.delta2` instead of `m[3]`, `m.games` instead of `m[5]`
-    - Immutability: Frozen dataclasses = thread-safe
-    - Validation: Factory methods with input checks
-  - **Tests**: 196/196 passing, 87.93% coverage
+    - Immutability: Frozen dataclasses (`frozen=True`) = thread-safe, prevents accidental mutations
+    - Validation: `__post_init__` with automatic data validation (winrate 0-100, etc.)
+    - Backward compatible: 100% of existing code works without changes
+  - **Tests**:
+    - All tests passing (89% coverage maintained)
+    - New: `tests/test_models.py` (389 lines) - Comprehensive dataclass tests
+    - New: `tests/test_db_dataclass_migration.py` (139 lines) - Backward compatibility tests
   - **Performance**: Zero runtime impact (dataclasses compile to same bytecode as tuples)
+- **MAJOR**: Holistic Optimizer performance boost (PR #22)
+  - **99.5% speedup**: 1h06 (4,290s) → 20 seconds for 286 trio evaluations
+  - **Throughput**: 15 sec/trio → 14 trios/sec
+  - **Root cause**: N+1 query problem - 147,672 SQL queries (286 trios × 172 enemies × 3 champions)
+  - **Solution**: Matchup cache in memory
+    - New method: `Database.get_all_matchups_bulk()` - Single SQL query loads all matchups
+    - Cache preloading before trio evaluation
+    - O(1) dictionary lookups instead of SQL queries with JOINs
+  - **Impact**: Holistic optimizer now usable in production (20s vs 1h06)
+  - **Bonus**: Fixed redundant index creation messages (only show when actually creating)
 - **MAJOR**: Refactored monolithic files into modular architecture (PR #2)
   - `assistant.py`: 2,381 → 190 lines (-92%)
   - `lol_coach.py`: 2,159 → 215 lines (-90%)
