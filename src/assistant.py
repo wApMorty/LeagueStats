@@ -6,6 +6,7 @@ maintaining backward compatibility with the original API.
 """
 
 from typing import Dict, List, Optional
+from tqdm import tqdm
 
 from .db import Database
 from .config import config
@@ -927,7 +928,10 @@ class Assistant:
                                 best_delta2 = matchup.delta2
                                 best_counter = our_champion
                             break
-                except:
+                except Exception as e:
+                    # Log database errors - these indicate data quality issues
+                    if self.verbose:
+                        print(f"[ERROR] Failed to get matchup for {our_champion} vs {enemy_champion}: {e}")
                     continue
 
             if best_counter:
@@ -1185,7 +1189,10 @@ class Assistant:
                                         if m.enemy_name == enemy_champion:
                                             enemy_pickrate = m.pickrate
                                             break
-                                except:
+                                except Exception as e:
+                                    # Failed to get pickrate - use 0.0 (already set)
+                                    if self.verbose:
+                                        print(f"[DEBUG] Failed to get pickrate for {enemy_champion}: {e}")
                                     pass
 
                     except Exception as e:
@@ -1479,7 +1486,16 @@ class Assistant:
             print(f"[INFO] Using scoring profile: {profile}")
 
         # Step 3: Evaluate each trio holistically
-        for trio in trio_combinations:
+        failed_trios = 0
+        successful_trios = 0
+
+        # Add progress bar with ETA to show execution isn't frozen
+        for trio in tqdm(
+            trio_combinations,
+            desc="Evaluating trios",
+            unit="trio",
+            bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]'
+        ):
             try:
                 trio_score = self._evaluate_trio_holistic(trio)
                 trio_rankings.append(
@@ -1493,13 +1509,29 @@ class Assistant:
                         "enemy_coverage": trio_score["enemy_coverage"],
                     }
                 )
+                successful_trios += 1
             except Exception as e:
+                # ALWAYS log trio evaluation failures - not just in verbose mode
+                print(f"\n[ERROR] Failed to evaluate trio {trio}: {e}")
                 if self.verbose:
-                    print(f"Error evaluating trio {trio}: {e}")
+                    import traceback
+                    traceback.print_exc()
+                failed_trios += 1
                 continue
 
+        # Summary after completion
+        print(f"\n✅ Analysis complete: {successful_trios} successful, {failed_trios} failed")
+
+        if failed_trios > 0:
+            failure_rate = (failed_trios / len(trio_combinations)) * 100
+            print(f"⚠️  WARNING: {failure_rate:.1f}% failure rate ({failed_trios}/{len(trio_combinations)} trios)")
+
         if not trio_rankings:
-            raise ValueError("No viable trios found after evaluation")
+            raise ValueError(
+                f"No viable trios found after evaluation. "
+                f"{failed_trios} trios failed, {successful_trios} succeeded. "
+                f"Check database health and error messages above."
+            )
 
         # Step 4: Sort by total score
         trio_rankings.sort(key=lambda x: x["total_score"], reverse=True)
@@ -1709,7 +1741,12 @@ class Assistant:
             balance_ratio = 1 - (shared_weaknesses / total_weaknesses)
             return balance_ratio * 100
 
-        except:
+        except Exception as e:
+            # ALWAYS log calculation failures - these indicate bugs or data issues
+            print(f"[ERROR] Balance score calculation failed for trio {trio}: {e}")
+            if self.verbose:
+                import traceback
+                traceback.print_exc()
             return 50.0  # Neutral score on error
 
     def _calculate_consistency_score(self, trio: tuple, all_matchups: List[List]) -> float:
@@ -1741,7 +1778,12 @@ class Assistant:
 
             return consistency * 0.6 + avg_performance * 0.4
 
-        except:
+        except Exception as e:
+            # ALWAYS log calculation failures - these indicate bugs or data issues
+            print(f"[ERROR] Consistency score calculation failed for trio {trio}: {e}")
+            if self.verbose:
+                import traceback
+                traceback.print_exc()
             return 50.0
 
     def _calculate_meta_score(self, enemy_coverage: dict) -> float:
