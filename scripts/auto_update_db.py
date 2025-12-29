@@ -154,20 +154,28 @@ def main() -> int:
 
     # Configure root logger to write to file
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.DEBUG)
+    root_logger.setLevel(logging.INFO)  # Changed from DEBUG to reduce verbosity
 
     # Remove existing handlers to avoid duplicates
     root_logger.handlers.clear()
 
     # File handler for all logs
     file_handler = logging.FileHandler(log_file, mode='a', encoding='utf-8')
-    file_handler.setLevel(logging.DEBUG)
+    file_handler.setLevel(logging.INFO)  # Changed from DEBUG to reduce verbosity
     file_formatter = logging.Formatter(
         '[%(asctime)s] %(name)s - %(levelname)s: %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
     file_handler.setFormatter(file_formatter)
     root_logger.addHandler(file_handler)
+
+    # Reduce verbosity of external libraries (Selenium, urllib3)
+    # These are extremely verbose in DEBUG mode
+    logging.getLogger('selenium').setLevel(logging.WARNING)
+    logging.getLogger('urllib3').setLevel(logging.WARNING)
+
+    # Keep our modules at INFO level for useful diagnostics
+    logging.getLogger('src').setLevel(logging.INFO)
 
     # Console handler only if stdout exists (not pythonw.exe)
     if sys.stdout is not None:
