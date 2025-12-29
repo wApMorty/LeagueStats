@@ -18,7 +18,7 @@ class TestFilterValidMatchups:
             delta1=0,
             delta2=0,
             pickrate=analysis_config.MIN_PICKRATE - 0.1,  # Below threshold
-            games=1000
+            games=1000,
         )
         matchups = [low_pickrate] + sample_matchups
 
@@ -35,7 +35,7 @@ class TestFilterValidMatchups:
             delta1=0,
             delta2=0,
             pickrate=10.0,  # Good pickrate
-            games=analysis_config.MIN_MATCHUP_GAMES - 1  # Below threshold
+            games=analysis_config.MIN_MATCHUP_GAMES - 1,  # Below threshold
         )
         matchups = [low_games] + sample_matchups
 

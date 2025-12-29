@@ -395,7 +395,9 @@ class Assistant:
 
                 # Coverage (blind pick metric)
                 decent_weight = sum(
-                    m.pickrate for m in matchups if m.delta2 > tierlist_config.DECENT_MATCHUP_THRESHOLD
+                    m.pickrate
+                    for m in matchups
+                    if m.delta2 > tierlist_config.DECENT_MATCHUP_THRESHOLD
                 )
                 total_weight = sum(m.pickrate for m in matchups)
                 coverage = decent_weight / total_weight if total_weight > 0 else 0.0
@@ -420,7 +422,9 @@ class Assistant:
 
                 # Target ratio (counter pick metric)
                 viable_weight = sum(
-                    m.pickrate for m in matchups if m.delta2 > tierlist_config.GOOD_MATCHUP_THRESHOLD
+                    m.pickrate
+                    for m in matchups
+                    if m.delta2 > tierlist_config.GOOD_MATCHUP_THRESHOLD
                 )
                 target_ratio = viable_weight / total_weight if total_weight > 0 else 0.0
 
@@ -931,7 +935,9 @@ class Assistant:
                 except Exception as e:
                     # Log database errors - these indicate data quality issues
                     if self.verbose:
-                        print(f"[ERROR] Failed to get matchup for {our_champion} vs {enemy_champion}: {e}")
+                        print(
+                            f"[ERROR] Failed to get matchup for {our_champion} vs {enemy_champion}: {e}"
+                        )
                     continue
 
             if best_counter:
@@ -1152,7 +1158,10 @@ class Assistant:
                 try:
                     matchups = self.db.get_champion_matchups_by_name(our_champion)
                     for m in matchups:
-                        if m.pickrate >= config.MIN_PICKRATE and m.games >= config.MIN_MATCHUP_GAMES:
+                        if (
+                            m.pickrate >= config.MIN_PICKRATE
+                            and m.games >= config.MIN_MATCHUP_GAMES
+                        ):
                             all_potential_enemies.add(m.enemy_name)
                 except Exception as e:
                     if self.verbose:
@@ -1192,7 +1201,9 @@ class Assistant:
                                 except Exception as e:
                                     # Failed to get pickrate - use 0.0 (already set)
                                     if self.verbose:
-                                        print(f"[DEBUG] Failed to get pickrate for {enemy_champion}: {e}")
+                                        print(
+                                            f"[DEBUG] Failed to get pickrate for {enemy_champion}: {e}"
+                                        )
                                     pass
 
                     except Exception as e:
@@ -1499,7 +1510,7 @@ class Assistant:
             trio_combinations,
             desc="Evaluating trios",
             unit="trio",
-            bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]'
+            bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]",
         ):
             try:
                 trio_score = self._evaluate_trio_holistic(trio, matchup_cache)
@@ -1520,6 +1531,7 @@ class Assistant:
                 print(f"\n[ERROR] Failed to evaluate trio {trio}: {e}")
                 if self.verbose:
                     import traceback
+
                     traceback.print_exc()
                 failed_trios += 1
                 continue
@@ -1529,7 +1541,9 @@ class Assistant:
 
         if failed_trios > 0:
             failure_rate = (failed_trios / len(trio_combinations)) * 100
-            print(f"⚠️  WARNING: {failure_rate:.1f}% failure rate ({failed_trios}/{len(trio_combinations)} trios)")
+            print(
+                f"⚠️  WARNING: {failure_rate:.1f}% failure rate ({failed_trios}/{len(trio_combinations)} trios)"
+            )
 
         if not trio_rankings:
             raise ValueError(
@@ -1592,7 +1606,9 @@ class Assistant:
 
         # Calculate individual scores using the reverse-lookup data
         coverage_score = self._calculate_coverage_score(enemy_coverage, all_enemies)
-        balance_score = self._calculate_balance_score_reverse(trio_list, enemy_coverage, matchup_cache)
+        balance_score = self._calculate_balance_score_reverse(
+            trio_list, enemy_coverage, matchup_cache
+        )
         consistency_score = self._calculate_consistency_score_reverse(trio_list, enemy_coverage)
         meta_score = self._calculate_meta_score(enemy_coverage)
 
@@ -1763,6 +1779,7 @@ class Assistant:
             print(f"[ERROR] Balance score calculation failed for trio {trio}: {e}")
             if self.verbose:
                 import traceback
+
                 traceback.print_exc()
             return 50.0  # Neutral score on error
 
@@ -1800,6 +1817,7 @@ class Assistant:
             print(f"[ERROR] Consistency score calculation failed for trio {trio}: {e}")
             if self.verbose:
                 import traceback
+
                 traceback.print_exc()
             return 50.0
 
@@ -1833,9 +1851,7 @@ class Assistant:
                     # Calculate average pickrate for this champion
                     # Each matchup is a Matchup object with: enemy_name, winrate, delta1, delta2, pickrate, games
                     pickrates = [
-                        matchup.pickrate
-                        for matchup in enemy_matchups
-                        if matchup.pickrate > 0
+                        matchup.pickrate for matchup in enemy_matchups if matchup.pickrate > 0
                     ]
 
                     if not pickrates:
@@ -1890,7 +1906,10 @@ class Assistant:
             for m in matchups:
                 if m.pickrate >= config.MIN_PICKRATE and m.games >= config.MIN_MATCHUP_GAMES:
                     all_enemies.add(m.enemy_name)
-                    if m.enemy_name not in enemy_coverage or m.delta2 > enemy_coverage[m.enemy_name][0]:
+                    if (
+                        m.enemy_name not in enemy_coverage
+                        or m.delta2 > enemy_coverage[m.enemy_name][0]
+                    ):
                         enemy_coverage[m.enemy_name] = (m.delta2, champion_name)
 
         return enemy_coverage

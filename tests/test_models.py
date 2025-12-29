@@ -25,12 +25,7 @@ class TestMatchup:
     def test_create_valid_matchup(self):
         """Test creating a valid Matchup instance."""
         matchup = Matchup(
-            enemy_name="Zed",
-            winrate=52.5,
-            delta1=150.0,
-            delta2=200.0,
-            pickrate=12.5,
-            games=1000
+            enemy_name="Zed", winrate=52.5, delta1=150.0, delta2=200.0, pickrate=12.5, games=1000
         )
 
         assert matchup.enemy_name == "Zed"
@@ -145,12 +140,12 @@ class TestMatchup:
 
         assert isinstance(result, dict)
         assert result == {
-            'enemy_name': 'Zed',
-            'winrate': 52.5,
-            'delta1': 150.0,
-            'delta2': 200.0,
-            'pickrate': 12.5,
-            'games': 1000
+            "enemy_name": "Zed",
+            "winrate": 52.5,
+            "delta1": 150.0,
+            "delta2": 200.0,
+            "pickrate": 12.5,
+            "games": 1000,
         }
 
 
@@ -164,12 +159,7 @@ class TestMatchupDraft:
 
     def test_create_valid_matchup_draft(self):
         """Test creating a valid MatchupDraft instance."""
-        draft = MatchupDraft(
-            enemy_name="Yasuo",
-            delta2=-50.0,
-            pickrate=12.5,
-            games=500
-        )
+        draft = MatchupDraft(enemy_name="Yasuo", delta2=-50.0, pickrate=12.5, games=500)
 
         assert draft.enemy_name == "Yasuo"
         assert draft.delta2 == -50.0
@@ -262,12 +252,7 @@ class TestMatchupDraft:
         result = draft.to_dict()
 
         assert isinstance(result, dict)
-        assert result == {
-            'enemy_name': 'Yasuo',
-            'delta2': -50.0,
-            'pickrate': 12.5,
-            'games': 500
-        }
+        assert result == {"enemy_name": "Yasuo", "delta2": -50.0, "pickrate": 12.5, "games": 500}
 
     def test_matchup_draft_to_matchup(self):
         """Test conversion to full Matchup with default values."""
@@ -277,10 +262,10 @@ class TestMatchupDraft:
         assert isinstance(matchup, Matchup)
         assert matchup.enemy_name == "Yasuo"
         assert matchup.winrate == 50.0  # Default
-        assert matchup.delta1 == 0.0    # Default
+        assert matchup.delta1 == 0.0  # Default
         assert matchup.delta2 == -50.0  # From draft
-        assert matchup.pickrate == 12.5 # From draft
-        assert matchup.games == 500     # From draft
+        assert matchup.pickrate == 12.5  # From draft
+        assert matchup.games == 500  # From draft
 
     def test_matchup_draft_to_matchup_custom_values(self):
         """Test conversion to Matchup with custom winrate and delta1."""
@@ -375,10 +360,7 @@ class TestChampionScore:
         result = champ.to_dict()
 
         assert isinstance(result, dict)
-        assert result == {
-            'name': 'Jinx',
-            'score': 875.5
-        }
+        assert result == {"name": "Jinx", "score": 875.5}
 
 
 # ============================================================================

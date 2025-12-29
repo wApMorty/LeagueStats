@@ -54,7 +54,9 @@ class Matchup:
             ValueError: If any field contains invalid data
         """
         if not isinstance(self.enemy_name, str) or not self.enemy_name.strip():
-            raise ValueError(f"Invalid enemy_name: must be non-empty string, got {self.enemy_name!r}")
+            raise ValueError(
+                f"Invalid enemy_name: must be non-empty string, got {self.enemy_name!r}"
+            )
 
         if not 0.0 <= self.winrate <= 100.0:
             raise ValueError(f"Invalid winrate: must be 0-100, got {self.winrate}")
@@ -90,9 +92,7 @@ class Matchup:
             >>> matchup = Matchup.from_tuple(row)
         """
         if len(data) != 6:
-            raise ValueError(
-                f"Expected 6-element tuple for Matchup, got {len(data)}: {data!r}"
-            )
+            raise ValueError(f"Expected 6-element tuple for Matchup, got {len(data)}: {data!r}")
         return cls(*data)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -142,7 +142,9 @@ class MatchupDraft:
             ValueError: If any field contains invalid data
         """
         if not isinstance(self.enemy_name, str) or not self.enemy_name.strip():
-            raise ValueError(f"Invalid enemy_name: must be non-empty string, got {self.enemy_name!r}")
+            raise ValueError(
+                f"Invalid enemy_name: must be non-empty string, got {self.enemy_name!r}"
+            )
 
         if not isinstance(self.delta2, (int, float)):
             raise ValueError(f"Invalid delta2: must be numeric, got {type(self.delta2)}")
@@ -213,7 +215,7 @@ class MatchupDraft:
             delta1=delta1,
             delta2=self.delta2,
             pickrate=self.pickrate,
-            games=self.games
+            games=self.games,
         )
 
 

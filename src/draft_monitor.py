@@ -649,7 +649,9 @@ class DraftMonitor:
                     # Get champion name and matchups (cached for performance)
                     champion_name = self._get_display_name(champion_id)
                     matchups = self.assistant.get_matchups_for_draft(champion_name)
-                    if matchups and sum(m.games for m in matchups) >= 500:  # Threshold for valid data
+                    if (
+                        matchups and sum(m.games for m in matchups) >= 500
+                    ):  # Threshold for valid data
                         # Calculate score against enemy team using unified scoring method
                         score = self._calculate_score_against_team(
                             matchups, enemy_picks, champion_name

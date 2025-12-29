@@ -232,9 +232,7 @@ class Database:
             return []
 
     def get_champion_matchups_by_name(
-        self,
-        champion_name: str,
-        as_dataclass: bool = True
+        self, champion_name: str, as_dataclass: bool = True
     ) -> Union[List[Matchup], List[tuple]]:
         """Get matchups for a champion by name with enemy names included.
 
@@ -287,7 +285,9 @@ class Database:
 
     def get_champion_base_winrate(self, champion_name: str) -> float:
         """Calculate champion base winrate from all matchup data using weighted average."""
-        matchups = self.get_champion_matchups_by_name(champion_name)  # Returns Matchup objects by default
+        matchups = self.get_champion_matchups_by_name(
+            champion_name
+        )  # Returns Matchup objects by default
         if not matchups:
             return 50.0  # Default to 50% if no data
 
@@ -496,9 +496,7 @@ class Database:
             return {}
 
     def get_champion_matchups_for_draft(
-        self,
-        champion_name: str,
-        as_dataclass: bool = True
+        self, champion_name: str, as_dataclass: bool = True
     ) -> Union[List[MatchupDraft], List[tuple]]:
         """
         Optimized query for draft analysis - returns only the columns needed for draft calculations.

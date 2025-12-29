@@ -35,7 +35,8 @@ class ChampionScorer:
         return [
             m
             for m in matchups
-            if m.pickrate >= analysis_config.MIN_PICKRATE and m.games >= analysis_config.MIN_MATCHUP_GAMES
+            if m.pickrate >= analysis_config.MIN_PICKRATE
+            and m.games >= analysis_config.MIN_MATCHUP_GAMES
         ]
 
     def avg_delta1(self, matchups: List[Matchup]) -> float:
