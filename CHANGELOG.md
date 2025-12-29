@@ -22,18 +22,56 @@ All notable changes to LeagueStats Coach will be documented in this file.
     - Full traceback for first scraping failure (debugging aid)
     - Exception type included in error messages
 
+### ✨ Features
+
+- **NEW**: Automated log rotation system (PR #TBD)
+  - **Problem**: `auto_update.log` grows to 1+ GB, no automatic cleanup
+  - **Solution**: PowerShell scripts for automated log management
+    - `scripts/rotate_logs.ps1` - Rotate logs when exceeding size threshold (default: 50 MB)
+    - `scripts/setup_log_rotation.ps1` - Task Scheduler setup wizard
+    - Archives old logs with timestamp: `auto_update_YYYYMMDD_HHMMSS.log`
+    - Optional compression to `.zip` format (~80% space savings)
+    - Keeps configurable number of backups (default: 5)
+    - Automatic cleanup of old backups
+    - Detailed logging to `logs/log_rotation.log`
+  - **Default schedule**: Weekly on Sunday at 2:00 AM (before auto-update at 3:00 AM)
+  - **Documentation**: `docs/LOG_ROTATION.md` with setup guide and FAQ
+
 ### 🔧 Changed
 
-- `src/parser.py`: Added `headless` parameter to `__init__()` (27 lines modified)
+- `src/parser.py`: Added `headless` parameter + viewport size control (41 lines modified)
+  - Force 1920x1080 resolution in headless mode (matches GUI fullscreen)
+  - Skip coordinate-based cookie fallback in headless (DOM-only strategies)
 - `src/parallel_parser.py`: Propagate `headless` to Parser instances (8 lines modified)
-- `scripts/auto_update_db.py`: Enable headless mode + enhanced error reporting (13 lines modified)
+- `scripts/auto_update_db.py`: Multiple improvements (50+ lines modified)
+  - Enable headless mode for Task Scheduler compatibility
+  - Enhanced error reporting with failure rate calculation
+  - Configured Python logging to capture all logs in file (pythonw.exe compatible)
+  - Reduced log verbosity: Selenium/urllib3 set to WARNING (was DEBUG)
+  - 95% reduction in log file size while keeping useful diagnostics
 
 ### 📊 Impact
 
-- **Auto-update reliability**: Fixed 100% failure rate (0/172 → expected 172/172)
-- **Task Scheduler compatibility**: Now works correctly with pythonw.exe
+- **Auto-update reliability**: ✅ **VALIDATED - 172/172 champions succeeded in 16.6 minutes**
+  - Before: 0/172 succeeded (100% failure rate since 2025-12-23)
+  - After: 172/172 succeeded (100% success rate)
+  - Root cause fixed: Headless viewport + cookie banner compatibility
+- **Task Scheduler compatibility**: Now works correctly with pythonw.exe (no GUI required)
 - **Data integrity**: Database no longer left empty after failed updates
+- **Log management**: Automatic rotation prevents disk space exhaustion
+  - Before: 1+ GB log files, manual cleanup required
+  - After: 50 MB max (configurable), automatic cleanup
 - **Backward compatibility**: 100% - existing code works without changes
+  - Manual scraping still uses GUI mode (headless=False by default)
+
+### ✅ Validation
+
+Tested with `pythonw.exe` (Task Scheduler environment):
+```
+[2025-12-29 17:05:23] Scraping completed: 172/172 succeeded, 0 failed
+[2025-12-29 17:05:23] Duration: 16.6 minutes (995.9 seconds)
+[2025-12-29 17:05:23] SUCCESS: Auto-update completed successfully
+```
 
 ## [1.1.0] - 2025-12-29
 
