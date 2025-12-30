@@ -29,13 +29,11 @@ class TestNotificationFallback:
 
         # Mock toaster to fail
         mocker.patch.object(
-            notifier.toaster,
-            'show_toast',
-            side_effect=Exception("Toast service unavailable")
+            notifier.toaster, "show_toast", side_effect=Exception("Toast service unavailable")
         )
 
         # Mock Path to use tmp_path for log directory
-        mock_path = mocker.patch('scripts.auto_update_db.Path')
+        mock_path = mocker.patch("scripts.auto_update_db.Path")
         mock_path.return_value.parent.parent = tmp_path
 
         # Create logs directory in tmp_path
@@ -44,7 +42,13 @@ class TestNotificationFallback:
         notification_log = log_dir / "notifications.log"
 
         # Mock the path resolution to use our tmp_path
-        with patch.object(Path, '__truediv__', side_effect=lambda self, other: tmp_path / "logs" if other == "logs" else tmp_path / "logs" / "notifications.log"):
+        with patch.object(
+            Path,
+            "__truediv__",
+            side_effect=lambda self, other: (
+                tmp_path / "logs" if other == "logs" else tmp_path / "logs" / "notifications.log"
+            ),
+        ):
             # Send notification (should fallback to log)
             notifier.notify("Test Title", "Test Message")
 
@@ -65,18 +69,14 @@ class TestNotificationFallback:
             notifier = WindowsNotifier(enabled=True)
 
             # Mock toaster to fail
-            mocker.patch.object(
-                notifier.toaster,
-                'show_toast',
-                side_effect=Exception("Failed")
-            )
+            mocker.patch.object(notifier.toaster, "show_toast", side_effect=Exception("Failed"))
 
             # Create mock log directory
             log_dir = tmp_path / "logs"
             log_dir.mkdir(exist_ok=True)
 
             # Mock Path resolution
-            with patch('scripts.auto_update_db.Path') as mock_path:
+            with patch("scripts.auto_update_db.Path") as mock_path:
                 mock_path.return_value.parent.parent = tmp_path
 
                 # Should not crash even without stdout/stderr
@@ -121,10 +121,10 @@ class TestNotificationFallback:
 
         # Mock successful toast
         mock_toast = mocker.MagicMock()
-        mocker.patch.object(notifier.toaster, 'show_toast', mock_toast)
+        mocker.patch.object(notifier.toaster, "show_toast", mock_toast)
 
         # Mock Path to prevent file writes
-        with patch('scripts.auto_update_db.Path') as mock_path:
+        with patch("scripts.auto_update_db.Path") as mock_path:
             # Send notification (should succeed)
             notifier.notify("Success", "Test")
 

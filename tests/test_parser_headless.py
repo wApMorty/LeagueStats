@@ -24,7 +24,7 @@ class TestParserHeadlessMode:
     @pytest.fixture
     def headless_parser(self, mocker):
         """Create Parser in headless mode with mocked WebDriver."""
-        with patch('src.parser.webdriver.Firefox') as mock_firefox:
+        with patch("src.parser.webdriver.Firefox") as mock_firefox:
             mock_driver = MagicMock()
             mock_firefox.return_value = mock_driver
 
@@ -49,6 +49,7 @@ class TestParserHeadlessMode:
 
         # Simulate all DOM strategies fail, but body element exists (page loaded)
         call_count = 0
+
         def find_element_side_effect(by, value):
             nonlocal call_count
             call_count += 1
@@ -121,7 +122,7 @@ class TestParserGUIMode:
     @pytest.fixture
     def gui_parser(self, mocker):
         """Create Parser in GUI mode with mocked WebDriver."""
-        with patch('src.parser.webdriver.Firefox') as mock_firefox:
+        with patch("src.parser.webdriver.Firefox") as mock_firefox:
             mock_driver = MagicMock()
             mock_firefox.return_value = mock_driver
 
@@ -163,5 +164,7 @@ class TestParserGUIMode:
         find_element_calls = gui_parser.webdriver.find_element.call_args_list
 
         # Check that "body" was not searched for (only cookie banner elements)
-        body_calls = [call for call in find_element_calls if len(call[0]) > 1 and call[0][1] == "body"]
+        body_calls = [
+            call for call in find_element_calls if len(call[0]) > 1 and call[0][1] == "body"
+        ]
         assert len(body_calls) == 0, "GUI mode should not verify body element"

@@ -29,7 +29,7 @@ class TestCookieBannerExceptionHandling:
     @pytest.fixture
     def mock_parser(self, mocker):
         """Create Parser with mocked WebDriver."""
-        with patch('src.parser.webdriver.Firefox') as mock_firefox:
+        with patch("src.parser.webdriver.Firefox") as mock_firefox:
             mock_driver = MagicMock()
             mock_firefox.return_value = mock_driver
 
@@ -126,6 +126,7 @@ class TestCookieBannerExceptionHandling:
 
         # Make all ID/CSS fail normally, then XPath raises unexpected
         call_count = 0
+
         def side_effect_func(*args, **kwargs):
             nonlocal call_count
             call_count += 1
@@ -153,7 +154,7 @@ class TestCookieBannerExceptionHandling:
         mock_parser.webdriver.execute_script.side_effect = RuntimeError("JS failed")
 
         # ActionChains also fails
-        with patch('src.parser.ActionChains') as mock_actions:
+        with patch("src.parser.ActionChains") as mock_actions:
             mock_chain = MagicMock()
             mock_chain.move_by_offset.return_value = mock_chain
             mock_chain.click.return_value = mock_chain
@@ -183,7 +184,7 @@ class TestCookieBannerExceptionHandling:
         """Test that headless mode skips coordinate-based fallback."""
         caplog.set_level(logging.INFO)
 
-        with patch('src.parser.webdriver.Firefox') as mock_firefox:
+        with patch("src.parser.webdriver.Firefox") as mock_firefox:
             mock_driver = MagicMock()
             mock_firefox.return_value = mock_driver
 
@@ -205,7 +206,7 @@ class TestWebDriverCrashHandling:
     @pytest.fixture
     def mock_parser(self, mocker):
         """Create Parser with mocked WebDriver."""
-        with patch('src.parser.webdriver.Firefox') as mock_firefox:
+        with patch("src.parser.webdriver.Firefox") as mock_firefox:
             mock_driver = MagicMock()
             mock_firefox.return_value = mock_driver
 
@@ -219,7 +220,9 @@ class TestWebDriverCrashHandling:
         caplog.set_level(logging.CRITICAL)
 
         # Mock find_element to raise InvalidSessionIdException
-        mock_parser.webdriver.find_element.side_effect = InvalidSessionIdException("Session not found")
+        mock_parser.webdriver.find_element.side_effect = InvalidSessionIdException(
+            "Session not found"
+        )
 
         # Should raise exception (not continue silently)
         with pytest.raises(InvalidSessionIdException):

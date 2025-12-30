@@ -88,11 +88,7 @@ class TestErrorIDLogging:
 
         test_exception = ValueError("Test exception")
 
-        ERR_COOKIE_001.log(
-            logger,
-            "Error with exception",
-            exc_info=test_exception
-        )
+        ERR_COOKIE_001.log(logger, "Error with exception", exc_info=test_exception)
 
         assert "[ERR_COOKIE_001]" in caplog.text
         assert "Error with exception" in caplog.text
@@ -144,13 +140,16 @@ class TestErrorIDDescriptions:
         """Test that descriptions indicate what went wrong."""
         # Cookie errors describe cookie banner issues
         assert "cookie" in ERR_COOKIE_001.description.lower()
-        assert "banner" in ERR_COOKIE_001.description.lower() or \
-               "selector" in ERR_COOKIE_001.description.lower()
+        assert (
+            "banner" in ERR_COOKIE_001.description.lower()
+            or "selector" in ERR_COOKIE_001.description.lower()
+        )
 
         # Log errors describe log file issues
         assert "log" in ERR_LOG_001.description.lower()
-        assert "write" in ERR_LOG_001.description.lower() or \
-               "file" in ERR_LOG_001.description.lower()
+        assert (
+            "write" in ERR_LOG_001.description.lower() or "file" in ERR_LOG_001.description.lower()
+        )
 
 
 class TestErrorIDUniqueness:
@@ -187,4 +186,6 @@ class TestNewErrorIDs:
         assert ERR_LOG_003.category == ErrorCategory.LOGGING
         assert ERR_LOG_003.severity == ErrorSeverity.CRITICAL
         assert "runtime" in ERR_LOG_003.description.lower()
-        assert "write" in ERR_LOG_003.description.lower() or "log" in ERR_LOG_003.description.lower()
+        assert (
+            "write" in ERR_LOG_003.description.lower() or "log" in ERR_LOG_003.description.lower()
+        )

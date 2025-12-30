@@ -48,7 +48,7 @@ class TestAutoUpdateLoggerWriteCapability:
 
         logger.test_write_capability()
 
-        content = logger.log_file.read_text(encoding='utf-8')
+        content = logger.log_file.read_text(encoding="utf-8")
         assert "INFO: Log write test" in content
 
     def test_write_capability_resets_counter_on_success(self, tmp_path):
@@ -68,7 +68,7 @@ class TestAutoUpdateLoggerWriteCapability:
         logger = AutoUpdateLogger(log_dir=str(tmp_path))
 
         # Mock open to fail
-        mocker.patch('builtins.open', side_effect=PermissionError("Access denied"))
+        mocker.patch("builtins.open", side_effect=PermissionError("Access denied"))
 
         result = logger.test_write_capability()
 
@@ -80,7 +80,7 @@ class TestAutoUpdateLoggerWriteCapability:
         logger = AutoUpdateLogger(log_dir=str(tmp_path))
 
         # Mock open to fail
-        mocker.patch('builtins.open', side_effect=PermissionError("Access denied"))
+        mocker.patch("builtins.open", side_effect=PermissionError("Access denied"))
 
         # First 2 calls should return False
         assert logger.test_write_capability() is False
@@ -99,7 +99,7 @@ class TestAutoUpdateLoggerWriteCapability:
         """Test that error message mentions permissions and disk space."""
         logger = AutoUpdateLogger(log_dir=str(tmp_path))
 
-        mocker.patch('builtins.open', side_effect=PermissionError("Access denied"))
+        mocker.patch("builtins.open", side_effect=PermissionError("Access denied"))
 
         # Trigger max failures
         try:
@@ -113,7 +113,7 @@ class TestAutoUpdateLoggerWriteCapability:
         """Test that error is printed to stderr if available."""
         logger = AutoUpdateLogger(log_dir=str(tmp_path))
 
-        mocker.patch('builtins.open', side_effect=PermissionError("Access denied"))
+        mocker.patch("builtins.open", side_effect=PermissionError("Access denied"))
 
         # Trigger max failures
         with pytest.raises(RuntimeError):
@@ -122,14 +122,17 @@ class TestAutoUpdateLoggerWriteCapability:
 
         # Check stderr
         captured = capsys.readouterr()
-        assert "Fatal: Unable to write to log file" in captured.err or "Fatal: Unable to write to log file" in captured.out
+        assert (
+            "Fatal: Unable to write to log file" in captured.err
+            or "Fatal: Unable to write to log file" in captured.out
+        )
 
     def test_write_capability_class_level_counter_shared_across_instances(self, tmp_path, mocker):
         """Test that failure counter is shared across logger instances."""
         logger1 = AutoUpdateLogger(log_dir=str(tmp_path))
         logger2 = AutoUpdateLogger(log_dir=str(tmp_path))
 
-        mocker.patch('builtins.open', side_effect=PermissionError("Access denied"))
+        mocker.patch("builtins.open", side_effect=PermissionError("Access denied"))
 
         # Fail with logger1
         logger1.test_write_capability()
@@ -143,7 +146,7 @@ class TestAutoUpdateLoggerWriteCapability:
         """Test handling of PermissionError."""
         logger = AutoUpdateLogger(log_dir=str(tmp_path))
 
-        mocker.patch('builtins.open', side_effect=PermissionError("Access denied"))
+        mocker.patch("builtins.open", side_effect=PermissionError("Access denied"))
 
         result = logger.test_write_capability()
 
@@ -154,7 +157,7 @@ class TestAutoUpdateLoggerWriteCapability:
         """Test handling of disk full (OSError)."""
         logger = AutoUpdateLogger(log_dir=str(tmp_path))
 
-        mocker.patch('builtins.open', side_effect=OSError("No space left on device"))
+        mocker.patch("builtins.open", side_effect=OSError("No space left on device"))
 
         result = logger.test_write_capability()
 
@@ -188,7 +191,7 @@ class TestAutoUpdateLoggerIntegration:
 
         logger.log("INFO", "Test message")
 
-        content = logger.log_file.read_text(encoding='utf-8')
+        content = logger.log_file.read_text(encoding="utf-8")
         assert "INFO: Test message" in content
 
     def test_logger_log_method_includes_timestamp(self, tmp_path):
@@ -197,7 +200,7 @@ class TestAutoUpdateLoggerIntegration:
 
         logger.log("INFO", "Test message")
 
-        content = logger.log_file.read_text(encoding='utf-8')
+        content = logger.log_file.read_text(encoding="utf-8")
         # Timestamp format: [YYYY-MM-DD HH:MM:SS]
         assert "[20" in content  # Year starts with 20
         assert "]" in content
@@ -215,7 +218,7 @@ class TestRuntimeLogWriteFailures:
         assert AutoUpdateLogger._write_test_failures == 0
 
         # Mock open to fail AFTER startup
-        mocker.patch('builtins.open', side_effect=PermissionError("Access denied"))
+        mocker.patch("builtins.open", side_effect=PermissionError("Access denied"))
 
         # First 2 failures should not raise
         logger.log("INFO", "Message 1")  # Failure #1
@@ -238,7 +241,7 @@ class TestRuntimeLogWriteFailures:
         logger.test_write_capability()
 
         # Fail twice
-        mock_open = mocker.patch('builtins.open', side_effect=PermissionError("Denied"))
+        mock_open = mocker.patch("builtins.open", side_effect=PermissionError("Denied"))
         logger.log("INFO", "Fail 1")
         logger.log("INFO", "Fail 2")
         assert AutoUpdateLogger._write_test_failures == 2
@@ -249,7 +252,7 @@ class TestRuntimeLogWriteFailures:
         assert AutoUpdateLogger._write_test_failures == 0
 
         # Verify success was written
-        content = logger.log_file.read_text(encoding='utf-8')
+        content = logger.log_file.read_text(encoding="utf-8")
         assert "Success" in content
 
     def test_log_runtime_failure_uses_stderr_fallback(self, tmp_path, mocker, capsys):
@@ -260,7 +263,7 @@ class TestRuntimeLogWriteFailures:
         logger.test_write_capability()
 
         # Mock file write to fail
-        mocker.patch('builtins.open', side_effect=PermissionError("Access denied"))
+        mocker.patch("builtins.open", side_effect=PermissionError("Access denied"))
 
         # Log should fail and write to stderr
         logger.log("INFO", "Test message")
