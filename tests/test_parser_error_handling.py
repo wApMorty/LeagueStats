@@ -16,6 +16,8 @@ from unittest.mock import MagicMock, patch
 from selenium.common.exceptions import (
     NoSuchElementException,
     ElementNotInteractableException,
+    InvalidSessionIdException,
+    WebDriverException,
 )
 
 from src.parser import Parser
@@ -195,3 +197,76 @@ class TestCookieBannerExceptionHandling:
 
             # Should NOT call execute_script (coordinate strategy)
             parser.webdriver.execute_script.assert_not_called()
+
+
+class TestWebDriverCrashHandling:
+    """Regression tests for WebDriver crash handling (Problem A)."""
+
+    @pytest.fixture
+    def mock_parser(self, mocker):
+        """Create Parser with mocked WebDriver."""
+        with patch('src.parser.webdriver.Firefox') as mock_firefox:
+            mock_driver = MagicMock()
+            mock_firefox.return_value = mock_driver
+
+            parser = Parser(headless=True)
+            parser.webdriver = mock_driver
+
+            yield parser
+
+    def test_accept_cookies_webdriver_crash_id_strategy_raises(self, mock_parser, caplog):
+        """Regression test: WebDriver crash in ID strategy raises exception."""
+        caplog.set_level(logging.CRITICAL)
+
+        # Mock find_element to raise InvalidSessionIdException
+        mock_parser.webdriver.find_element.side_effect = InvalidSessionIdException("Session not found")
+
+        # Should raise exception (not continue silently)
+        with pytest.raises(InvalidSessionIdException):
+            mock_parser._accept_cookies()
+
+        # Should log ERR_COOKIE_007
+        assert "[ERR_COOKIE_007]" in caplog.text
+        assert "FATAL: WebDriver session lost" in caplog.text
+
+    def test_accept_cookies_webdriver_exception_css_strategy_raises(self, mock_parser, caplog):
+        """Regression test: WebDriverException in CSS strategy raises exception."""
+        caplog.set_level(logging.CRITICAL)
+
+        # ID strategy fails (expected), then CSS crashes
+        mock_parser.webdriver.find_element.side_effect = [
+            NoSuchElementException(),  # ID fails (expected)
+            WebDriverException("Browser crashed"),  # CSS crashes
+        ]
+
+        # Should raise exception (not continue silently)
+        with pytest.raises(WebDriverException):
+            mock_parser._accept_cookies()
+
+        # Should log ERR_COOKIE_007
+        assert "[ERR_COOKIE_007]" in caplog.text
+        assert "FATAL: WebDriver session lost" in caplog.text
+
+    def test_accept_cookies_webdriver_crash_xpath_strategy_raises(self, mock_parser, caplog):
+        """Regression test: WebDriver crash in XPath strategy raises exception."""
+        caplog.set_level(logging.CRITICAL)
+
+        # ID and CSS fail (expected), XPath crashes
+        call_count = [0]
+
+        def side_effect_fn(*args, **kwargs):
+            call_count[0] += 1
+            if call_count[0] <= 5:  # ID + 4 CSS selectors
+                raise NoSuchElementException()
+            else:  # XPath crashes
+                raise InvalidSessionIdException("Session lost")
+
+        mock_parser.webdriver.find_element.side_effect = side_effect_fn
+
+        # Should raise exception
+        with pytest.raises(InvalidSessionIdException):
+            mock_parser._accept_cookies()
+
+        # Should log ERR_COOKIE_007
+        assert "[ERR_COOKIE_007]" in caplog.text
+        assert "FATAL: WebDriver session lost" in caplog.text

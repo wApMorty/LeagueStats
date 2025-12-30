@@ -10,6 +10,8 @@ from selenium.webdriver.firefox.options import Options
 from selenium.common.exceptions import (
     NoSuchElementException,
     ElementNotInteractableException,
+    InvalidSessionIdException,
+    WebDriverException,
 )
 
 from .config import config
@@ -21,6 +23,7 @@ from .error_ids import (
     ERR_COOKIE_004,
     ERR_COOKIE_005,
     ERR_COOKIE_006,
+    ERR_COOKIE_007,
 )
 
 logger = logging.getLogger(__name__)
@@ -91,6 +94,14 @@ class Parser:
         except ElementNotInteractableException:
             ERR_COOKIE_004.log(logger, "Cookie button found but not clickable via ID selector")
             pass
+        except (InvalidSessionIdException, WebDriverException) as e:
+            # CRITICAL: WebDriver crashed - cannot continue
+            ERR_COOKIE_007.log(
+                logger,
+                f"FATAL: WebDriver session lost in ID strategy: {type(e).__name__}",
+                exc_info=e
+            )
+            raise  # Re-raise to abort scraping
         except Exception as e:
             ERR_COOKIE_001.log(
                 logger,
@@ -118,6 +129,14 @@ class Parser:
             except ElementNotInteractableException:
                 ERR_COOKIE_004.log(logger, f"Cookie button found but not clickable via CSS: {selector}")
                 continue
+            except (InvalidSessionIdException, WebDriverException) as e:
+                # CRITICAL: WebDriver crashed - cannot continue
+                ERR_COOKIE_007.log(
+                    logger,
+                    f"FATAL: WebDriver session lost in CSS strategy: {type(e).__name__}",
+                    exc_info=e
+                )
+                raise  # Re-raise to abort scraping
             except Exception as e:
                 ERR_COOKIE_002.log(
                     logger,
@@ -144,6 +163,14 @@ class Parser:
             except ElementNotInteractableException:
                 ERR_COOKIE_004.log(logger, f"Cookie button found but not clickable via XPath")
                 continue
+            except (InvalidSessionIdException, WebDriverException) as e:
+                # CRITICAL: WebDriver crashed - cannot continue
+                ERR_COOKIE_007.log(
+                    logger,
+                    f"FATAL: WebDriver session lost in XPath strategy: {type(e).__name__}",
+                    exc_info=e
+                )
+                raise  # Re-raise to abort scraping
             except Exception as e:
                 ERR_COOKIE_003.log(
                     logger,
