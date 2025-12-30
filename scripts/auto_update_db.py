@@ -124,19 +124,48 @@ class AutoUpdateLogger:
         Args:
             level: Log level (INFO, SUCCESS, WARNING, ERROR, FATAL)
             message: Message to log
+
+        Raises:
+            RuntimeError: If max consecutive write failures exceeded during runtime
         """
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         log_entry = f"[{timestamp}] {level}: {message}"
 
-        # Print to console
-        print(log_entry)
+        # Print to console (if available)
+        if hasattr(sys, 'stdout') and sys.stdout is not None:
+            print(log_entry)
 
         # Write to file
         try:
             with open(self.log_file, 'a', encoding='utf-8') as f:
                 f.write(log_entry + '\n')
+
+            # Reset counter on successful write
+            AutoUpdateLogger._write_test_failures = 0
+
         except Exception as e:
-            print(f"[ERROR] Could not write to log file: {e}")
+            AutoUpdateLogger._write_test_failures += 1
+
+            # CRITICAL: Log write failed during runtime
+            error_msg = (
+                f"[ERR_LOG_003] Log write failure #{AutoUpdateLogger._write_test_failures}: {e}"
+            )
+
+            # Try stderr as fallback
+            if hasattr(sys, 'stderr') and sys.stderr is not None:
+                print(error_msg, file=sys.stderr)
+
+            # Abort if too many consecutive failures
+            if AutoUpdateLogger._write_test_failures >= AutoUpdateLogger._max_write_failures:
+                fatal_msg = (
+                    f"FATAL: Unable to write logs after {AutoUpdateLogger._max_write_failures} "
+                    f"consecutive failures during auto-update execution. Aborting."
+                )
+
+                if hasattr(sys, 'stderr') and sys.stderr is not None:
+                    print(fatal_msg, file=sys.stderr)
+
+                raise RuntimeError(fatal_msg) from e
 
 
 class WindowsNotifier:

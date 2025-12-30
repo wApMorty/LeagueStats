@@ -201,3 +201,71 @@ class TestAutoUpdateLoggerIntegration:
         # Timestamp format: [YYYY-MM-DD HH:MM:SS]
         assert "[20" in content  # Year starts with 20
         assert "]" in content
+
+
+class TestRuntimeLogWriteFailures:
+    """Regression tests for runtime log write failures (Problem B)."""
+
+    def test_log_runtime_write_failure_raises_after_3_failures(self, tmp_path, mocker):
+        """Regression test: Runtime log write failures raise after 3 consecutive failures."""
+        logger = AutoUpdateLogger(log_dir=str(tmp_path))
+
+        # Startup test passes
+        logger.test_write_capability()
+        assert AutoUpdateLogger._write_test_failures == 0
+
+        # Mock open to fail AFTER startup
+        mocker.patch('builtins.open', side_effect=PermissionError("Access denied"))
+
+        # First 2 failures should not raise
+        logger.log("INFO", "Message 1")  # Failure #1
+        assert AutoUpdateLogger._write_test_failures == 1
+
+        logger.log("INFO", "Message 2")  # Failure #2
+        assert AutoUpdateLogger._write_test_failures == 2
+
+        # 3rd consecutive failure should raise RuntimeError
+        with pytest.raises(RuntimeError, match="Unable to write logs after 3 consecutive failures"):
+            logger.log("INFO", "Message 3")  # Failure #3
+
+        assert AutoUpdateLogger._write_test_failures == 3
+
+    def test_log_runtime_failure_resets_on_success(self, tmp_path, mocker):
+        """Test: Counter resets to 0 on successful write after failures."""
+        logger = AutoUpdateLogger(log_dir=str(tmp_path))
+
+        # Startup passes
+        logger.test_write_capability()
+
+        # Fail twice
+        mock_open = mocker.patch('builtins.open', side_effect=PermissionError("Denied"))
+        logger.log("INFO", "Fail 1")
+        logger.log("INFO", "Fail 2")
+        assert AutoUpdateLogger._write_test_failures == 2
+
+        # Success resets counter
+        mocker.stop(mock_open)
+        logger.log("INFO", "Success")
+        assert AutoUpdateLogger._write_test_failures == 0
+
+        # Verify success was written
+        content = logger.log_file.read_text(encoding='utf-8')
+        assert "Success" in content
+
+    def test_log_runtime_failure_uses_stderr_fallback(self, tmp_path, mocker, capsys):
+        """Test: Runtime failures output to stderr when available."""
+        logger = AutoUpdateLogger(log_dir=str(tmp_path))
+
+        # Startup passes
+        logger.test_write_capability()
+
+        # Mock file write to fail
+        mocker.patch('builtins.open', side_effect=PermissionError("Access denied"))
+
+        # Log should fail and write to stderr
+        logger.log("INFO", "Test message")
+
+        # Check stderr output
+        captured = capsys.readouterr()
+        assert "[ERR_LOG_003]" in captured.err
+        assert "Log write failure #1" in captured.err
