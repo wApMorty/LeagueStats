@@ -19,8 +19,10 @@ from src.error_ids import (
     ERR_COOKIE_001,
     ERR_COOKIE_004,
     ERR_COOKIE_005,
+    ERR_COOKIE_007,
     ERR_LOG_001,
     ERR_LOG_002,
+    ERR_LOG_003,
 )
 
 
@@ -166,3 +168,23 @@ class TestErrorIDUniqueness:
 
         codes = [err.code for err in error_ids]
         assert len(codes) == len(set(codes)), "Duplicate error codes found"
+
+
+class TestNewErrorIDs:
+    """Test newly added error IDs for PR review fixes."""
+
+    def test_error_cookie_007_exists(self):
+        """Test: ERR_COOKIE_007 defined for WebDriver session loss."""
+        assert ERR_COOKIE_007.code == "ERR_COOKIE_007"
+        assert ERR_COOKIE_007.category == ErrorCategory.COOKIE
+        assert ERR_COOKIE_007.severity == ErrorSeverity.CRITICAL
+        assert "webdriver" in ERR_COOKIE_007.description.lower()
+        assert "session" in ERR_COOKIE_007.description.lower()
+
+    def test_error_log_003_exists(self):
+        """Test: ERR_LOG_003 defined for runtime log write failures."""
+        assert ERR_LOG_003.code == "ERR_LOG_003"
+        assert ERR_LOG_003.category == ErrorCategory.LOGGING
+        assert ERR_LOG_003.severity == ErrorSeverity.CRITICAL
+        assert "runtime" in ERR_LOG_003.description.lower()
+        assert "write" in ERR_LOG_003.description.lower() or "log" in ERR_LOG_003.description.lower()

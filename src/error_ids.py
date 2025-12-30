@@ -137,6 +137,13 @@ ERR_COOKIE_006 = ErrorID(
     "Coordinate-based cookie click failed (GUI mode)"
 )
 
+ERR_COOKIE_007 = ErrorID(
+    "ERR_COOKIE_007",
+    ErrorCategory.COOKIE,
+    ErrorSeverity.CRITICAL,
+    "WebDriver session lost during cookie banner handling"
+)
+
 
 # =============================================================================
 # Logging Errors (ERR_LOG_XXX)
@@ -154,6 +161,13 @@ ERR_LOG_002 = ErrorID(
     ErrorCategory.LOGGING,
     ErrorSeverity.CRITICAL,
     "Unable to write to log file in headless mode (pythonw.exe)"
+)
+
+ERR_LOG_003 = ErrorID(
+    "ERR_LOG_003",
+    ErrorCategory.LOGGING,
+    ErrorSeverity.CRITICAL,
+    "Log write failure during runtime execution (not startup test)"
 )
 
 
