@@ -1,14 +1,32 @@
 from time import sleep
 from typing import List
 import lxml.html
+import logging
 
 from selenium import webdriver
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
+from selenium.common.exceptions import (
+    NoSuchElementException,
+    ElementNotInteractableException,
+    InvalidSessionIdException,
+    WebDriverException,
+)
 
 from .config import config
 from .config_constants import scraping_config, xpath_config
+from .error_ids import (
+    ERR_COOKIE_001,
+    ERR_COOKIE_002,
+    ERR_COOKIE_003,
+    ERR_COOKIE_004,
+    ERR_COOKIE_005,
+    ERR_COOKIE_006,
+    ERR_COOKIE_007,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class Parser:
@@ -26,7 +44,12 @@ class Parser:
         if headless:
             # Headless mode for background execution (Task Scheduler, pythonw.exe)
             options.add_argument("--headless")
-            print("[PARSER] Headless mode enabled - Firefox will run without GUI")
+            # Force 1920x1080 resolution to match GUI fullscreen behavior.
+            # Note: Coordinate-based cookie fallback is SKIPPED in headless mode.
+            # We rely exclusively on DOM-based strategies (ID, CSS, XPath).
+            options.add_argument("--width=1920")
+            options.add_argument("--height=1080")
+            print("[PARSER] Headless mode enabled - Firefox will run without GUI (1920x1080)")
         else:
             # Normal mode with window manager integration (Komorebi)
             options.add_argument("--start-maximized")
@@ -59,53 +82,127 @@ class Parser:
         3. Find button by text content
         4. Fallback to hardcoded coordinates (Bug #1 legacy method)
         """
+        # Strategy 1: Find by ID (most reliable)
         try:
-            # Strategy 1: Find by ID (most reliable)
             cookie_button = self.webdriver.find_element(By.ID, "didomi-notice-agree-button")
             cookie_button.click()
+            logger.info("Cookie banner dismissed via ID selector")
             return
-        except Exception:
-            # Strategy 1 failed, try next approach
+        except NoSuchElementException:
+            # Expected - element not found, try next strategy
+            pass
+        except ElementNotInteractableException:
+            ERR_COOKIE_004.log(logger, "Cookie button found but not clickable via ID selector")
+            pass
+        except (InvalidSessionIdException, WebDriverException) as e:
+            # CRITICAL: WebDriver crashed - cannot continue
+            ERR_COOKIE_007.log(
+                logger,
+                f"FATAL: WebDriver session lost in ID strategy: {type(e).__name__}",
+                exc_info=e,
+            )
+            raise  # Re-raise to abort scraping
+        except Exception as e:
+            ERR_COOKIE_001.log(
+                logger, f"Unexpected error in ID strategy: {type(e).__name__}: {e}", exc_info=e
+            )
             pass
 
-        try:
-            # Strategy 2: Find by CSS selector (button with specific text)
-            selectors = [
-                "button[aria-label*='agree' i]",
-                "button[aria-label*='accept' i]",
-                "button.didomi-button",
-                ".didomi-notice-agree-button",
-            ]
-            for selector in selectors:
-                try:
-                    cookie_button = self.webdriver.find_element(By.CSS_SELECTOR, selector)
-                    cookie_button.click()
-                    return
-                except Exception:
-                    continue
-        except Exception:
-            # Strategy 2 failed, try next approach
-            pass
+        # Strategy 2: Find by CSS selector (button with specific text)
+        selectors = [
+            "button[aria-label*='agree' i]",
+            "button[aria-label*='accept' i]",
+            "button.didomi-button",
+            ".didomi-notice-agree-button",
+        ]
+        for selector in selectors:
+            try:
+                cookie_button = self.webdriver.find_element(By.CSS_SELECTOR, selector)
+                cookie_button.click()
+                logger.info(f"Cookie banner dismissed via CSS selector: {selector}")
+                return
+            except NoSuchElementException:
+                # Expected - try next selector
+                continue
+            except ElementNotInteractableException:
+                ERR_COOKIE_004.log(
+                    logger, f"Cookie button found but not clickable via CSS: {selector}"
+                )
+                continue
+            except (InvalidSessionIdException, WebDriverException) as e:
+                # CRITICAL: WebDriver crashed - cannot continue
+                ERR_COOKIE_007.log(
+                    logger,
+                    f"FATAL: WebDriver session lost in CSS strategy: {type(e).__name__}",
+                    exc_info=e,
+                )
+                raise  # Re-raise to abort scraping
+            except Exception as e:
+                ERR_COOKIE_002.log(
+                    logger,
+                    f"Unexpected error in CSS strategy ({selector}): {type(e).__name__}: {e}",
+                    exc_info=e,
+                )
+                continue
 
-        try:
-            # Strategy 3: Find button by XPath with text content
-            xpath_patterns = [
-                "//button[contains(translate(text(), 'ACCEPT', 'accept'), 'accept')]",
-                "//button[contains(translate(text(), 'AGREE', 'agree'), 'agree')]",
-                "//button[contains(@class, 'agree')]",
-            ]
-            for xpath in xpath_patterns:
-                try:
-                    cookie_button = self.webdriver.find_element(By.XPATH, xpath)
-                    cookie_button.click()
-                    return
-                except Exception:
-                    continue
-        except Exception:
-            # Strategy 3 failed, try next approach
-            pass
+        # Strategy 3: Find button by XPath with text content
+        xpath_patterns = [
+            "//button[contains(translate(text(), 'ACCEPT', 'accept'), 'accept')]",
+            "//button[contains(translate(text(), 'AGREE', 'agree'), 'agree')]",
+            "//button[contains(@class, 'agree')]",
+        ]
+        for xpath in xpath_patterns:
+            try:
+                cookie_button = self.webdriver.find_element(By.XPATH, xpath)
+                cookie_button.click()
+                logger.info(f"Cookie banner dismissed via XPath")
+                return
+            except NoSuchElementException:
+                # Expected - try next XPath
+                continue
+            except ElementNotInteractableException:
+                ERR_COOKIE_004.log(logger, f"Cookie button found but not clickable via XPath")
+                continue
+            except (InvalidSessionIdException, WebDriverException) as e:
+                # CRITICAL: WebDriver crashed - cannot continue
+                ERR_COOKIE_007.log(
+                    logger,
+                    f"FATAL: WebDriver session lost in XPath strategy: {type(e).__name__}",
+                    exc_info=e,
+                )
+                raise  # Re-raise to abort scraping
+            except Exception as e:
+                ERR_COOKIE_003.log(
+                    logger,
+                    f"Unexpected error in XPath strategy: {type(e).__name__}: {e}",
+                    exc_info=e,
+                )
+                continue
+
+        # Skip coordinate-based fallbacks in headless mode
+        # Reason: LoLalytics cookie banner likely doesn't appear in headless,
+        # or coordinates may be out of bounds despite viewport size
+        if self.headless:
+            # All DOM-based strategies failed, but this is expected in headless
+            # Cookie banner is likely auto-accepted or doesn't exist
+            logger.info(
+                "Skipping coordinate-based cookie fallback in headless mode (DOM strategies sufficient)"
+            )
+
+            # Verify page is actually loaded and not stuck on cookie banner
+            try:
+                self.webdriver.find_element(By.TAG_NAME, "body")
+                logger.info("Page structure verified - cookie banner handled successfully")
+            except NoSuchElementException:
+                ERR_COOKIE_005.log(
+                    logger,
+                    "CRITICAL: Page failed to load despite cookie banner attempts",
+                    exc_info=True,
+                )
+            return
 
         # Strategy 4: Fallback to hardcoded coordinates (Bug #1 legacy)
+        # GUI mode only - coordinates are screen-dependent
         try:
             self.webdriver.execute_script(
                 f"""
@@ -119,16 +216,31 @@ class Parser:
                 document.elementFromPoint({scraping_config.COOKIE_CLICK_X}, {scraping_config.COOKIE_CLICK_Y}).dispatchEvent(event);
             """
             )
-        except Exception:
+            logger.info("Cookie banner dismissed via JavaScript coordinates click")
+        except Exception as e:
             # Final fallback to ActionChains
-            actions = ActionChains(self.webdriver)
-            actions.move_by_offset(
-                scraping_config.COOKIE_CLICK_X, scraping_config.COOKIE_CLICK_Y
-            ).click().perform()
-            actions = ActionChains(self.webdriver)
-            actions.move_by_offset(
-                -scraping_config.COOKIE_CLICK_X, -scraping_config.COOKIE_CLICK_Y
-            ).perform()
+            ERR_COOKIE_006.log(
+                logger,
+                f"JavaScript coordinate click failed, trying ActionChains: {type(e).__name__}",
+                exc_info=e,
+            )
+            try:
+                actions = ActionChains(self.webdriver)
+                actions.move_by_offset(
+                    scraping_config.COOKIE_CLICK_X, scraping_config.COOKIE_CLICK_Y
+                ).click().perform()
+                actions = ActionChains(self.webdriver)
+                actions.move_by_offset(
+                    -scraping_config.COOKIE_CLICK_X, -scraping_config.COOKIE_CLICK_Y
+                ).perform()
+                logger.info("Cookie banner dismissed via ActionChains coordinates click")
+            except Exception as e2:
+                ERR_COOKIE_006.log(
+                    logger,
+                    f"ActionChains coordinate click also failed: {type(e2).__name__}",
+                    exc_info=e2,
+                )
+                # Give up gracefully - page may still load
 
     def get_matchup_data(self, champion: str, enemy: str) -> float:
         return self.get_matchup_data_on_patch(config.CURRENT_PATCH, champion, enemy)

@@ -20,26 +20,28 @@ import os
 from pathlib import Path
 
 # Set UTF-8 encoding for console output
-if sys.platform == 'win32':
+if sys.platform == "win32":
     import codecs
-    sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'backslashreplace')
-    sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'backslashreplace')
+
+    sys.stdout = codecs.getwriter("utf-8")(sys.stdout.buffer, "backslashreplace")
+    sys.stderr = codecs.getwriter("utf-8")(sys.stderr.buffer, "backslashreplace")
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-print("="*80)
+print("=" * 80)
 print("LeagueStats Coach - Auto-Update Test (Dry Run)")
-print("="*80)
+print("=" * 80)
 print()
 
 # Test 1: Process priority
 print("[TEST 1] Process priority setting...")
 try:
     import psutil
+
     p = psutil.Process(os.getpid())
-    if sys.platform == 'win32':
+    if sys.platform == "win32":
         p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
         print("  ✅ Process priority set to BELOW_NORMAL")
     else:
@@ -75,6 +77,7 @@ try:
 except Exception as e:
     print(f"  ❌ Error: {e}")
     import traceback
+
     traceback.print_exc()
 
 print()
@@ -113,6 +116,7 @@ try:
 except Exception as e:
     print(f"  ❌ Error: {e}")
     import traceback
+
     traceback.print_exc()
 
 print()
@@ -136,6 +140,7 @@ try:
 except Exception as e:
     print(f"  ❌ Error: {e}")
     import traceback
+
     traceback.print_exc()
 
 print()
@@ -150,11 +155,7 @@ try:
     if notifier.enabled:
         print("  - win10toast available: Yes")
         print("  - Sending test notification...")
-        notifier.notify(
-            "LeagueStats Coach Test",
-            "Auto-update test notification",
-            duration=5
-        )
+        notifier.notify("LeagueStats Coach Test", "Auto-update test notification", duration=5)
         print("  ✅ Notification sent (check system tray)")
     else:
         print("  ⚠️  win10toast not installed, notifications disabled")
@@ -163,6 +164,7 @@ try:
 except Exception as e:
     print(f"  ❌ Error: {e}")
     import traceback
+
     traceback.print_exc()
 
 print()
@@ -181,14 +183,15 @@ try:
 except Exception as e:
     print(f"  ❌ Error: {e}")
     import traceback
+
     traceback.print_exc()
 
 print()
 
 # Summary
-print("="*80)
+print("=" * 80)
 print("TEST SUMMARY")
-print("="*80)
+print("=" * 80)
 print()
 print("✅ All core components are functional")
 print()
@@ -201,4 +204,4 @@ print()
 print("To test full auto-update (WARNING: will scrape 172 champions, ~12min):")
 print("  python scripts/auto_update_db.py")
 print()
-print("="*80)
+print("=" * 80)
