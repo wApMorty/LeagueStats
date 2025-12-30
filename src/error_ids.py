@@ -28,6 +28,7 @@ import logging
 
 class ErrorCategory(Enum):
     """Error categories for classification and filtering."""
+
     COOKIE = "COOKIE"
     DATABASE = "DB"
     SCRAPING = "SCRAPING"
@@ -38,6 +39,7 @@ class ErrorCategory(Enum):
 
 class ErrorSeverity(Enum):
     """Error severity levels matching Python logging."""
+
     CRITICAL = "CRITICAL"
     ERROR = "ERROR"
     WARNING = "WARNING"
@@ -63,16 +65,14 @@ class ErrorID:
             "Cookie banner ID selector failed"
         )
     """
+
     code: str
     category: ErrorCategory
     severity: ErrorSeverity
     description: str
 
     def log(
-        self,
-        logger: logging.Logger,
-        message: str,
-        exc_info: Optional[Exception] = None
+        self, logger: logging.Logger, message: str, exc_info: Optional[Exception] = None
     ) -> None:
         """
         Log error with ID prefix for tracking.
@@ -99,49 +99,49 @@ ERR_COOKIE_001 = ErrorID(
     "ERR_COOKIE_001",
     ErrorCategory.COOKIE,
     ErrorSeverity.ERROR,
-    "Cookie banner ID selector failed with unexpected error"
+    "Cookie banner ID selector failed with unexpected error",
 )
 
 ERR_COOKIE_002 = ErrorID(
     "ERR_COOKIE_002",
     ErrorCategory.COOKIE,
     ErrorSeverity.ERROR,
-    "Cookie banner CSS selector failed with unexpected error"
+    "Cookie banner CSS selector failed with unexpected error",
 )
 
 ERR_COOKIE_003 = ErrorID(
     "ERR_COOKIE_003",
     ErrorCategory.COOKIE,
     ErrorSeverity.ERROR,
-    "Cookie banner XPath selector failed with unexpected error"
+    "Cookie banner XPath selector failed with unexpected error",
 )
 
 ERR_COOKIE_004 = ErrorID(
     "ERR_COOKIE_004",
     ErrorCategory.COOKIE,
     ErrorSeverity.WARNING,
-    "Cookie button found but not interactable"
+    "Cookie button found but not interactable",
 )
 
 ERR_COOKIE_005 = ErrorID(
     "ERR_COOKIE_005",
     ErrorCategory.COOKIE,
     ErrorSeverity.CRITICAL,
-    "Page load failed after cookie banner handling (headless mode)"
+    "Page load failed after cookie banner handling (headless mode)",
 )
 
 ERR_COOKIE_006 = ErrorID(
     "ERR_COOKIE_006",
     ErrorCategory.COOKIE,
     ErrorSeverity.ERROR,
-    "Coordinate-based cookie click failed (GUI mode)"
+    "Coordinate-based cookie click failed (GUI mode)",
 )
 
 ERR_COOKIE_007 = ErrorID(
     "ERR_COOKIE_007",
     ErrorCategory.COOKIE,
     ErrorSeverity.CRITICAL,
-    "WebDriver session lost during cookie banner handling"
+    "WebDriver session lost during cookie banner handling",
 )
 
 
@@ -150,24 +150,21 @@ ERR_COOKIE_007 = ErrorID(
 # =============================================================================
 
 ERR_LOG_001 = ErrorID(
-    "ERR_LOG_001",
-    ErrorCategory.LOGGING,
-    ErrorSeverity.CRITICAL,
-    "Log file write test failed"
+    "ERR_LOG_001", ErrorCategory.LOGGING, ErrorSeverity.CRITICAL, "Log file write test failed"
 )
 
 ERR_LOG_002 = ErrorID(
     "ERR_LOG_002",
     ErrorCategory.LOGGING,
     ErrorSeverity.CRITICAL,
-    "Unable to write to log file in headless mode (pythonw.exe)"
+    "Unable to write to log file in headless mode (pythonw.exe)",
 )
 
 ERR_LOG_003 = ErrorID(
     "ERR_LOG_003",
     ErrorCategory.LOGGING,
     ErrorSeverity.CRITICAL,
-    "Log write failure during runtime execution (not startup test)"
+    "Log write failure during runtime execution (not startup test)",
 )
 
 
@@ -176,10 +173,7 @@ ERR_LOG_003 = ErrorID(
 # =============================================================================
 
 ERR_PARSER_001 = ErrorID(
-    "ERR_PARSER_001",
-    ErrorCategory.PARSER,
-    ErrorSeverity.ERROR,
-    "WebDriver operation failed"
+    "ERR_PARSER_001", ErrorCategory.PARSER, ErrorSeverity.ERROR, "WebDriver operation failed"
 )
 
 
@@ -188,17 +182,11 @@ ERR_PARSER_001 = ErrorID(
 # =============================================================================
 
 ERR_DB_001 = ErrorID(
-    "ERR_DB_001",
-    ErrorCategory.DATABASE,
-    ErrorSeverity.ERROR,
-    "Database connection failed"
+    "ERR_DB_001", ErrorCategory.DATABASE, ErrorSeverity.ERROR, "Database connection failed"
 )
 
 ERR_DB_002 = ErrorID(
-    "ERR_DB_002",
-    ErrorCategory.DATABASE,
-    ErrorSeverity.ERROR,
-    "Database query failed"
+    "ERR_DB_002", ErrorCategory.DATABASE, ErrorSeverity.ERROR, "Database query failed"
 )
 
 
@@ -207,15 +195,12 @@ ERR_DB_002 = ErrorID(
 # =============================================================================
 
 ERR_SCRAPING_001 = ErrorID(
-    "ERR_SCRAPING_001",
-    ErrorCategory.SCRAPING,
-    ErrorSeverity.ERROR,
-    "Champion data scraping failed"
+    "ERR_SCRAPING_001", ErrorCategory.SCRAPING, ErrorSeverity.ERROR, "Champion data scraping failed"
 )
 
 ERR_SCRAPING_002 = ErrorID(
     "ERR_SCRAPING_002",
     ErrorCategory.SCRAPING,
     ErrorSeverity.WARNING,
-    "Partial scraping failure (some champions failed)"
+    "Partial scraping failure (some champions failed)",
 )
