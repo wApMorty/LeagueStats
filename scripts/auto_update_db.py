@@ -191,15 +191,18 @@ class WindowsNotifier:
 
     def notify(self, title: str, message: str, duration: int = 10) -> None:
         """
-        Send Windows toast notification.
+        Send Windows toast notification with fallback to log file.
 
         Args:
             title: Notification title
             message: Notification message
             duration: Duration in seconds (default: 10)
         """
+        # Try console output (GUI mode)
         if not self.enabled or self.toaster is None:
-            print(f"[NOTIFICATION] {title}: {message}")
+            if hasattr(sys, 'stdout') and sys.stdout is not None:
+                print(f"[NOTIFICATION] {title}: {message}")
+            # In pythonw.exe: skip print(), will fallback to log below if needed
             return
 
         try:
@@ -211,8 +214,27 @@ class WindowsNotifier:
                 icon_path=None
             )
         except Exception as e:
-            print(f"[WARNING] Could not send notification: {e}")
-            print(f"[NOTIFICATION] {title}: {message}")
+            # Notification failed - log to file as fallback
+            fallback_msg = f"NOTIFICATION FAILED - {title}: {message} (Error: {e})"
+
+            # Try stderr first
+            if hasattr(sys, 'stderr') and sys.stderr is not None:
+                print(f"[WARNING] {fallback_msg}", file=sys.stderr)
+
+            # Write to notification log file (persistent fallback)
+            try:
+                log_dir = Path(__file__).parent.parent / "logs"
+                log_dir.mkdir(exist_ok=True)
+                notification_log = log_dir / "notifications.log"
+                timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+                with open(notification_log, 'a', encoding='utf-8') as f:
+                    f.write(f"[{timestamp}] {fallback_msg}\n")
+
+            except Exception as log_error:
+                # Both notification and log fallback failed
+                # This is truly silent in pythonw.exe - nothing we can do
+                pass
 
 
 def main() -> int:
