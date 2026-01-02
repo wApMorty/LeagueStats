@@ -38,16 +38,22 @@ class Assistant:
     with the original monolithic API.
     """
 
-    def __init__(self, verbose: bool = False) -> None:
+    def __init__(
+        self, db: Optional["Database"] = None, verbose: bool = False
+    ) -> None:
         """
         Initialize Assistant and all sub-components.
 
         Args:
+            db: Optional Database instance to reuse. If None, creates new instance.
             verbose: Enable verbose logging
         """
         self.MIN_GAMES = analysis_config.MIN_GAMES_THRESHOLD
-        self.db = Database(config.DATABASE_PATH)
-        self.db.connect()
+        if db is not None:
+            self.db = db
+        else:
+            self.db = Database(config.DATABASE_PATH)
+            self.db.connect()
         self.verbose = verbose
 
         # Initialize specialized components
