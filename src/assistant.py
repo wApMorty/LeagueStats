@@ -38,9 +38,7 @@ class Assistant:
     with the original monolithic API.
     """
 
-    def __init__(
-        self, db: Optional["Database"] = None, verbose: bool = False
-    ) -> None:
+    def __init__(self, db: Optional["Database"] = None, verbose: bool = False) -> None:
         """
         Initialize Assistant and all sub-components.
 
