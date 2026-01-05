@@ -446,7 +446,11 @@ class DraftMonitor:
         return self.champion_id_to_name.get(champion_id, f"Champion{champion_id}")
 
     def _calculate_score_against_team(
-        self, matchups: List[tuple], enemy_team: List[int], champion_name: str
+        self,
+        matchups: List[tuple],
+        enemy_team: List[int],
+        champion_name: str,
+        banned_champion_ids: List[int] = None,
     ) -> float:
         """Calculate score against enemy team using Assistant's method."""
         if not matchups or not enemy_team:
@@ -462,8 +466,18 @@ class DraftMonitor:
         if not enemy_names:
             return 0.0
 
+        # Convert banned champion IDs to names
+        banned_names = []
+        if banned_champion_ids:
+            for banned_id in banned_champion_ids:
+                banned_name = self._get_display_name(banned_id)
+                if banned_name:
+                    banned_names.append(banned_name)
+
         # Use the assistant's scoring method which includes blind pick logic
-        return self.assistant.score_against_team(matchups, enemy_names, champion_name)
+        return self.assistant.score_against_team(
+            matchups, enemy_names, champion_name, banned_names if banned_names else None
+        )
 
     def _parse_draft_state(self, champ_select_data: Dict) -> DraftState:
         """Parse champion select data into DraftState."""
@@ -628,6 +642,9 @@ class DraftMonitor:
 
                 scores = []
 
+                # Collect all banned champion IDs for score calculation
+                all_banned_ids = state.ally_bans + state.enemy_bans
+
                 # Debug: show current bans
                 if self.verbose:
                     if state.ally_bans or state.enemy_bans:
@@ -653,8 +670,9 @@ class DraftMonitor:
                         matchups and sum(m.games for m in matchups) >= 500
                     ):  # Threshold for valid data
                         # Calculate score against enemy team using unified scoring method
+                        # Pass banned champions so they're excluded from blind pick calculations
                         score = self._calculate_score_against_team(
-                            matchups, enemy_picks, champion_name
+                            matchups, enemy_picks, champion_name, all_banned_ids
                         )
                         scores.append((champion_id, score))
 

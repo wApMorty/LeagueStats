@@ -128,7 +128,11 @@ class ChampionScorer:
         return advantage
 
     def score_against_team(
-        self, matchups: List[Matchup], team: List[str], champion_name: str = None
+        self,
+        matchups: List[Matchup],
+        team: List[str],
+        champion_name: str = None,
+        banned_champions: List[str] = None,
     ) -> float:
         """
         Calculate bidirectional advantage against a team composition.
@@ -153,6 +157,7 @@ class ChampionScorer:
             matchups: List of Matchup objects for our champion
             team: Enemy team composition (may be partial, e.g., [1-5] enemies)
             champion_name: Name of our champion (required for reverse matchup lookup)
+            banned_champions: List of banned champion names to exclude from blind pick calculations
 
         Returns:
             Net advantage in percentage points (positive = favorable for us)
@@ -161,6 +166,7 @@ class ChampionScorer:
             - Empty team (blind pick): Returns our avg_delta2 advantage (no enemy perspective)
             - Missing champion_name: Returns 0.0 (cannot calculate bidirectional without it)
             - Missing enemy data: Treats enemy_advantage_against_us as 0.0 (unidirectional fallback)
+            - Banned champions: Excluded from remaining matchup pool when calculating avg_delta2 for blind picks
         """
         if not champion_name:
             # Can't calculate accurately without champion name, return 0
@@ -175,7 +181,14 @@ class ChampionScorer:
         # Use logistic transformation for delta2 to advantage conversion
         if not team:
             # Pure blind pick scenario - no enemy perspective available
-            avg_delta2_val = self.avg_delta2(matchups)
+            # Filter out banned champions from matchup pool
+            available_matchups = matchups
+            if banned_champions:
+                banned_lower = [name.lower() for name in banned_champions]
+                available_matchups = [
+                    m for m in matchups if m.enemy_name.lower() not in banned_lower
+                ]
+            avg_delta2_val = self.avg_delta2(available_matchups)
             return self.delta2_to_win_advantage(avg_delta2_val, champion_name)
 
         # STEP 1: Calculate OUR advantage (our champion vs enemy team)
@@ -196,7 +209,14 @@ class ChampionScorer:
         # Calculate delta2 for unknown matchups (blind picks)
         blind_picks = 5 - len(team)
         if blind_picks > 0:
-            avg_delta2_val = self.avg_delta2(remaining_matchups)
+            # Filter out banned champions from remaining matchup pool
+            available_matchups = remaining_matchups
+            if banned_champions:
+                banned_lower = [name.lower() for name in banned_champions]
+                available_matchups = [
+                    m for m in remaining_matchups if m.enemy_name.lower() not in banned_lower
+                ]
+            avg_delta2_val = self.avg_delta2(available_matchups)
             total_delta2 += blind_picks * avg_delta2_val
             matchup_count += blind_picks
 

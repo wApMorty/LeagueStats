@@ -283,10 +283,14 @@ class Assistant:
         return self.scorer.avg_winrate(matchups)
 
     def score_against_team(
-        self, matchups: List[tuple], team: List[str], champion_name: str = None
+        self,
+        matchups: List[tuple],
+        team: List[str],
+        champion_name: str = None,
+        banned_champions: List[str] = None,
     ) -> float:
         """Calculate advantage against a team composition."""
-        return self.scorer.score_against_team(matchups, team, champion_name)
+        return self.scorer.score_against_team(matchups, team, champion_name, banned_champions)
 
     def _delta2_to_win_advantage(self, delta2: float, champion_name: str) -> float:
         """Convert delta2 value to win advantage using logistic transformation."""
