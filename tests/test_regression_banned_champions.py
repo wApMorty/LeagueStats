@@ -127,9 +127,7 @@ def test_banned_champions_case_insensitive(scorer):
 
     # Test with case mismatch
     banned_lowercase = ["enemyc"]  # lowercase
-    score = scorer.score_against_team(
-        matchups, [], "ChampionA", banned_champions=banned_lowercase
-    )
+    score = scorer.score_against_team(matchups, [], "ChampionA", banned_champions=banned_lowercase)
 
     # Calculate expected score (should only include EnemyB)
     # Since EnemyC is banned, avg_delta2 should only use EnemyB's delta2 (50.0)
