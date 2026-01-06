@@ -503,21 +503,36 @@ class DraftMonitor:
             if champ_id > 0:
                 state.enemy_picks.append(champ_id)  # Store Riot ID directly
 
-        # Parse bans
-        bans_session = champ_select_data.get("bans", {})
-        my_team_bans = bans_session.get("myTeamBans", [])
-        their_team_bans = bans_session.get("theirTeamBans", [])
+        # Parse bans - FIXED: Bans are in actions[] with type="ban", not in bans{}
+        # The bans{} object is often empty or unreliable in LCU API
+        # We must parse completed ban actions from the actions[] array instead
+        actions = champ_select_data.get("actions", [])
 
-        for ban_id in my_team_bans:
-            if ban_id > 0:
-                state.ally_bans.append(ban_id)  # Store Riot ID directly
+        for action_set in actions:
+            for action in action_set:
+                if action.get("type") == "ban" and action.get("completed"):
+                    champion_id = action.get("championId", 0)
+                    if champion_id > 0:
+                        actor_cell_id = action.get("actorCellId")
 
-        for ban_id in their_team_bans:
-            if ban_id > 0:
-                state.enemy_bans.append(ban_id)  # Store Riot ID directly
+                        # Determine if this ban is from our team or enemy team
+                        # If actorCellId matches any player in myTeam, it's an ally ban
+                        is_ally_ban = False
+                        for player in my_team:
+                            if player.get("cellId") == actor_cell_id:
+                                is_ally_ban = True
+                                break
+
+                        if is_ally_ban:
+                            if champion_id not in state.ally_bans:
+                                state.ally_bans.append(champion_id)
+                        else:
+                            if champion_id not in state.enemy_bans:
+                                state.enemy_bans.append(champion_id)
 
         # Find current actor (who's supposed to pick/ban now) and track player's champion
-        for action_set in champ_select_data.get("actions", []):
+        # Reuse actions[] already fetched above
+        for action_set in actions:
             for action in action_set:
                 # Track player's champion selection
                 if (
