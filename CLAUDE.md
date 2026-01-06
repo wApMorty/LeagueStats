@@ -3,7 +3,7 @@
 **Projet**: LeagueStats Coach
 **Version**: 1.1.0-dev (Sprint 2 in progress)
 **Mainteneur**: @pj35
-**Dernière mise à jour**: 2025-12-16
+**Dernière mise à jour**: 2026-01-05
 
 ---
 
@@ -164,7 +164,24 @@ python -m py_compile src/**/*.py scripts/**/*.py
 # ✅ Tous les tests doivent passer avant de continuer
 ```
 
-**C. Mise à jour documentation**:
+**C. Formatage du code avec Black**:
+```bash
+# 1. Appliquer le formatage Black à TOUS les fichiers modifiés
+python -m black src/ tests/ scripts/
+
+# 2. Vérifier que le formatage est conforme
+python -m black --check --diff src/ tests/ scripts/
+
+# 3. Commiter les changements de formatage si nécessaire
+git add -u
+git commit -m "🎨 Style: Apply Black formatting"
+
+# ❌ Si Black détecte des problèmes → CORRIGER avant PR
+# ✅ Le pipeline CI/CD vérifie automatiquement le formatage Black
+# ✅ TOUJOURS formater AVANT de push pour éviter échec pipeline
+```
+
+**D. Mise à jour documentation**:
 ```bash
 # 1. Mettre à jour CHANGELOG.md
 # - Ajouter nouvelle feature dans section appropriée
@@ -184,7 +201,7 @@ git add CHANGELOG.md README.md docs/
 git commit -m "📝 Docs: Update documentation for nouvelle_feature"
 ```
 
-**D. Vérification finale**:
+**E. Vérification finale**:
 ```bash
 # 1. Relire tous les commits
 git log --oneline origin/master..HEAD
@@ -257,6 +274,7 @@ git branch -d feature/task-name  # Supprimer feature branch
 
 **Général**:
 - PEP 8 compliance
+- **Black formatting**: Appliquer `python -m black` sur TOUT code modifié avant commit
 - Type hints sur toutes les fonctions publiques
 - Docstrings pour classes et méthodes publiques
 - Maximum 500 lignes par fichier (objectif Dette Technique First)
@@ -751,10 +769,13 @@ pytest tests/ --cov=src --cov-report=html  # Avec couverture
 # Compilation check
 python -m py_compile src/*.py            # Vérifier syntaxe Python
 
-# Linting (à configurer Sprint 1)
-pylint src/ --fail-under=8.0
-black src/ --check
-mypy src/
+# Code formatting (Black) - OBLIGATOIRE avant chaque commit
+python -m black src/ tests/              # Appliquer formatage automatique
+python -m black --check --diff src/ tests/  # Vérifier formatage sans modifier
+
+# Linting
+pylint src/ --fail-under=8.0             # Quality score minimum 8.0/10
+mypy src/ --ignore-missing-imports       # Type checking
 ```
 
 ### Git Workflow
@@ -847,14 +868,15 @@ python -m alembic upgrade head --sql
 3. ✅ **Tests pour nouvelles fonctionnalités** (unitaires + intégration si besoin)
 4. ✅ **Test de régression** pour chaque bug corrigé (OBLIGATOIRE)
 5. ✅ **Tous les tests passent** avant PR (`pytest tests/ -v`)
-6. ✅ **Documentation mise à jour** (CHANGELOG.md, README.md, docs/)
-7. ✅ **Code review** AVANT tout merge
-8. ✅ **Validation utilisateur** explicite requise
-9. ✅ **Requêtes SQL paramétrées** (sécurité)
-10. ✅ **config_constants.py** pour valeurs hardcodées
-11. ✅ **Type hints** sur fonctions publiques
-12. ✅ **Docstrings** sur classes et méthodes
-13. ✅ **Backward compatibility** lors refactoring
+6. ✅ **Formatage Black appliqué** avant PR (`python -m black src/ tests/`)
+7. ✅ **Documentation mise à jour** (CHANGELOG.md, README.md, docs/)
+8. ✅ **Code review** AVANT tout merge
+9. ✅ **Validation utilisateur** explicite requise
+10. ✅ **Requêtes SQL paramétrées** (sécurité)
+11. ✅ **config_constants.py** pour valeurs hardcodées
+12. ✅ **Type hints** sur fonctions publiques
+13. ✅ **Docstrings** sur classes et méthodes
+14. ✅ **Backward compatibility** lors refactoring
 
 ### JAMAIS
 
@@ -881,6 +903,7 @@ Avant de soumettre code review, vérifier:
 - [ ] Compilation Python réussie (`python -m py_compile`)
 - [ ] Imports fonctionnels (tests manuels)
 - [ ] Tests unitaires passent (si applicable)
+- [ ] Formatage Black appliqué (`python -m black src/ tests/`)
 - [ ] Pas de valeurs hardcodées (utilise config_constants.py)
 - [ ] Pas de SQL injection (requêtes paramétrées)
 - [ ] Backward compatibility maintenue
@@ -920,10 +943,81 @@ Avant de soumettre code review, vérifier:
 - [ ] Tâche #10: CI/CD Pipeline (GitHub Actions)
 
 ### Sprint 3+ (Features Avancées)
+- [ ] Tâche #15: Support des Lanes (lane-specific matchups)
+- [ ] Tâche #16: Support des Synergies (champion synergies)
 - [ ] Tâche #6: GUI Desktop (tkinter/PyQt6)
 - [ ] Tâche #7: Multi-plateformes (Linux/macOS)
 - [ ] Tâche #8: Internationalisation (i18n)
 - [ ] Tâche #12: Web App (optionnel)
+
+---
+
+## 🎮 Nouvelles Features Planifiées (Sprint 3+)
+
+### Tâche #15: Support des Lanes (Lane-Specific Matchups)
+
+**Objectif**: Améliorer la précision des recommandations en tenant compte de la lane du joueur.
+
+**Problème actuel**: Les recommandations ignorent la lane, alors que les matchups varient fortement.
+- Yasuo Mid vs Zed: Hard matchup
+- Yasuo Top vs Malphite: Favorable matchup
+- **Actuellement**: Même score → Imprécis ❌
+
+**Solution**:
+1. **Migration BDD**: Ajouter colonne `lane TEXT` nullable à table `matchups`
+2. **Parsing multi-lanes**: Parser lanes avec pickrate > 10% (configurable)
+3. **Détection lane**: Auto-détection via LCU API (`get_assigned_position()`)
+4. **Lane priority**: Matchups même lane ont poids × 1.5 dans scoring
+5. **Backward compat**: Données existantes (lane = NULL) restent utilisables
+
+**Fichiers impactés** (10 fichiers):
+- Parsing: `parser.py`, `parallel_parser.py`, `config_constants.py`
+- Database: `db.py`, migration Alembic
+- Scoring: `scoring.py`, `draft_monitor.py`, `lcu_client.py`
+- Models: `models.py`
+- Tests: `test_scoring.py`, `test_regression_lanes.py`
+
+**Effort**: 3-4 jours | **ROI**: 1.00 (investissement structurant)
+
+---
+
+### Tâche #16: Support des Synergies (Champion Synergies)
+
+**Objectif**: Intégrer bonus synergies avec alliés dans les recommandations.
+
+**Problème actuel**: Recommandations ignorent team comp alliée.
+- Malphite allié pick → Yasuo a bonus synergie (combo R)
+- **Actuellement**: Ignoré → Sous-optimal ❌
+
+**Solution**:
+1. **Nouvelle table BDD**: `synergies` (structure identique `matchups`)
+2. **Parsing synergies**: Cliquer bouton "Synergies" sur LoLalytics, même scrolling
+3. **Intégration scoring**: `final_score = matchup_score + synergy_bonus`
+4. **Backward compat**: Si pas de synergies → bonus = 0 (comportement actuel)
+
+**Fichiers impactés** (10 fichiers):
+- Parsing: `parser.py`, `parallel_parser.py`, `config_constants.py`
+- Database: `db.py`, migration Alembic
+- Scoring: `scoring.py`, `draft_monitor.py`
+- Models: `models.py` (nouvelle dataclass `Synergy`)
+- Tests: `test_scoring.py`, `test_regression_synergies.py`
+
+**Effort**: 2 jours | **ROI**: 1.60 ⭐ (haute valeur)
+
+---
+
+### Ordre d'Implémentation Recommandé
+
+**Séquentiel (recommandé)**:
+1. ✅ Tâche #15 (Lanes) → Base pour synergies lane-specific
+2. ✅ Tâche #16 (Synergies) → Peut bénéficier infrastructure lanes
+
+**Justification**:
+- Moins de conflits sur `scoring.py` et `db.py`
+- Synergies peuvent être lane-specific si #15 déjà implémenté
+- Tests plus simples (features isolées)
+
+**Durée totale**: 5-6 jours (séquentiel)
 
 ---
 

@@ -24,6 +24,8 @@
 | **3** | **Framework Tests Automatisés** | **13** | **13** | **1.00** | 🔴🔴 | ✅ **FAIT** |
 | **9** | **Migrations Base de Données (Alembic)** | **8** ⬆️ | **5** | **1.60** | 🔴 | ✅ **FAIT** |
 | **14** | **Migration Dataclass Immutables** | **5** | **5** | **1.00** | 🟡 | ✅ **FAIT** |
+| **15** | **Support des Lanes** | **13** | **13** | **1.00** | 🟡 | ❌ |
+| **16** | **Support des Synergies** | **8** | **5** | **1.60** | 🟡 | ❌ |
 | **12** | **Architecture Client-Serveur + Web App** | **21** | **34** | **0.62** | 🟢 | ❌ |
 | ~~**7**~~ | ~~**Support Multi-Plateformes**~~ | ~~**5**~~ | ~~**8**~~ | ~~**0.63**~~ | ~~🟢~~ | ❌ **ANNULÉE** |
 | **6** | **Interface Graphique (GUI)** | **13** | **21** | **0.62** | 🟢 | ❌ |
@@ -1223,6 +1225,238 @@ xgettext -o locales/app.pot src/*.py
 # Compiler .po → .mo
 msgfmt locales/fr/LC_MESSAGES/app.po -o locales/fr/LC_MESSAGES/app.mo
 ```
+
+---
+
+### Tâche #15: Support des Lanes (Lane-Specific Data)
+**Status**: ❌ Not started
+**Effort**: 3-4 jours (24-32h)
+
+**Scores Fibonacci**:
+- 📈 **Plus-value**: **13** (améliore drastiquement pertinence recommandations)
+- 🔧 **Difficulté**: **13** (complexe - multi-couches)
+- 🎯 **ROI**: **1.00** (investissement structurant - améliore qualité long terme)
+
+**Pourquoi ce score**:
+- **Plus-value = 13**:
+  - Matchups lane-specific plus précis (Yasuo Mid ≠ Yasuo Top)
+  - Détection automatique lane via LCU API (UX transparent)
+  - Priorisation lane matchup = recommandations intelligentes
+  - Filtrage recommandations avec mauvais lane matchups
+- **Difficulté = 13**:
+  - Migration BDD (colonne lane nullable)
+  - Parsing multi-lanes (boucle sur lanes détectées pickrate > 10%)
+  - Intégration LCU API (détection lane assignée)
+  - Modification scoring (lane priority weighting)
+  - Backward compatibility (données existantes sans lane)
+  - Tests exhaustifs (lane filtering, priority, edge cases)
+
+**Problème**: Les recommandations ne tiennent pas compte de la lane, alors que les matchups varient fortement par lane.
+
+**Exemples**:
+- Yasuo Mid vs Zed: Hard matchup
+- Yasuo Top vs Malphite: Favorable matchup
+- Actuellement: Même score pour les deux → **Imprécis**
+
+---
+
+#### Schéma BDD Mis à Jour
+
+**Table `matchups` - Ajout colonne `lane`**:
+```sql
+-- Migration: Ajouter colonne lane (nullable)
+ALTER TABLE matchups ADD COLUMN lane TEXT;
+
+-- Valeurs: 'top', 'jungle', 'mid', 'adc', 'support', NULL (legacy)
+CREATE INDEX idx_matchups_lane ON matchups(lane);
+CREATE INDEX idx_matchups_champion_lane ON matchups(champion, lane);
+```
+
+**Justification**:
+- `lane TEXT` nullable: migration progressive (données existantes = NULL)
+- Index `idx_matchups_lane`: requêtes filtrées "matchups pour Yasuo Mid"
+- Index composite: optimise `WHERE champion = ? AND lane = ?`
+
+---
+
+#### Fichiers à Modifier (10 fichiers)
+
+**Parsing (3 fichiers)**:
+1. **`src/parser.py`**:
+   - Méthode `_parse_champion_lane_distribution()`: scraper distribution lanes
+   - Filtrer lanes pickrate > 10% (configurable `ScrapingConfig.MIN_LANE_PICKRATE`)
+   - Modifier signature `parse_champion()`: ajouter `lane: str`
+
+2. **`src/parallel_parser.py`**:
+   - Modifier `_parse_single_champion()`: boucle sur lanes détectées
+   - Stocker lane lors `db.add_matchup()`
+   - Logging: indiquer lane parsing
+
+3. **`src/config_constants.py`**:
+   - Ajouter `ScrapingConfig.MIN_LANE_PICKRATE = 10.0`
+
+**Database Layer (2 fichiers)**:
+4. **`src/db.py`**:
+   - Modifier `add_matchup()`: paramètre `lane: Optional[str] = None`
+   - Modifier `get_matchups()`: paramètre `lane: Optional[str] = None` (filtrage)
+
+5. **Migration Alembic**:
+   - Créer `alembic/versions/XXX_add_lane_support.py`
+
+**Scoring (3 fichiers)**:
+6. **`src/analysis/scoring.py`**:
+   - Modifier `score_against_team()`: paramètre `player_lane: Optional[str] = None`
+   - Lane priority weighting (same lane × 1.5)
+
+7. **`src/draft_monitor.py`**:
+   - Détection lane: `lcu_client.get_assigned_position()`
+   - Passer `player_lane` au scoring
+
+8. **`src/lcu_client.py`**:
+   - Nouvelle méthode `get_assigned_position()`: extraire lane LCU
+
+**Modèles & Tests (2 fichiers)**:
+9. **`src/models.py`**:
+   - Ajouter `lane: Optional[str] = None` à `Matchup`
+
+10. **`tests/`**:
+    - Modifier `test_scoring.py`: tests lane priority
+    - Créer `test_regression_lanes.py`: tests backward compat
+
+---
+
+#### Bénéfices
+
+- ✅ Recommandations lane-specific précises (Yasuo Mid ≠ Top)
+- ✅ Détection lane automatique (LCU API)
+- ✅ Filtrage optionnel mauvais lane matchups
+- ✅ Migration progressive (backward compatible)
+
+---
+
+### Tâche #16: Support des Synergies (Champion Synergies)
+**Status**: ❌ Not started
+**Effort**: 2 jours (16h)
+
+**Scores Fibonacci**:
+- 📈 **Plus-value**: **8** (améliore recommandations, feature additionnelle)
+- 🔧 **Difficulté**: **5** (modéré - réutilise infrastructure matchups)
+- 🎯 **ROI**: **1.60** ⭐ **HAUTE VALEUR**
+
+**Pourquoi ce score**:
+- **Plus-value = 8**:
+  - Bonus synergies dans score final
+  - Recommandations basées sur team comp alliée
+  - Plus de données pour recommandations
+  - Intégration silencieuse (pas de changement UX majeur)
+- **Difficulté = 5**:
+  - Nouvelle table (structure identique matchups)
+  - Parsing similaire (bouton + scrolling)
+  - Intégration scoring (addition simple)
+  - Backward compatible (optionnel)
+
+**Problème**: Recommandations ignorent synergies avec alliés déjà pickés.
+
+**Exemple**:
+- Malphite allié pick → Yasuo bonus synergie (combo R)
+- Actuellement: Ignoré → **Sous-optimal**
+
+---
+
+#### Schéma BDD - Nouvelle Table `synergies`
+
+```sql
+CREATE TABLE synergies (
+    id INTEGER PRIMARY KEY,
+    champion INTEGER NOT NULL,
+    ally INTEGER NOT NULL,
+    winrate REAL NOT NULL,
+    delta1 REAL NOT NULL,
+    delta2 REAL NOT NULL,
+    pickrate REAL NOT NULL,  -- Pickrate ensemble
+    games INTEGER NOT NULL,
+    lane TEXT,  -- Nullable
+    FOREIGN KEY (champion) REFERENCES champions(id) ON DELETE CASCADE,
+    FOREIGN KEY (ally) REFERENCES champions(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_synergies_champion ON synergies(champion);
+CREATE INDEX idx_synergies_ally ON synergies(ally);
+CREATE INDEX idx_synergies_champion_lane ON synergies(champion, lane);
+```
+
+**Justification**:
+- Même structure que `matchups`: réutilisation code
+- `ally` au lieu de `enemy`: sémantique claire
+- `lane` nullable: synergies lane-agnostic ou specific
+
+---
+
+#### Fichiers à Modifier (10 fichiers)
+
+**Parsing (3 fichiers)**:
+1. **`src/parser.py`**:
+   - Méthode `_parse_synergies()`: bouton "Synergies" + scrolling
+   - Stocker via `db.add_synergy()`
+
+2. **`src/parallel_parser.py`**:
+   - Modifier `_parse_single_champion()`: parser synergies après matchups
+   - Thread-safe writes synergies
+
+3. **`src/config_constants.py`**:
+   - XPath bouton "Synergies"
+
+**Database Layer (2 fichiers)**:
+4. **`src/db.py`**:
+   - Méthode `add_synergy(champion, ally, winrate, delta1, delta2, pickrate, games, lane)`
+   - Méthode `get_synergies(champion_name, lane=None)`
+
+5. **Migration Alembic**:
+   - Créer `alembic/versions/XXX_add_synergies_table.py`
+
+**Scoring (2 fichiers)**:
+6. **`src/analysis/scoring.py`**:
+   - Modifier `score_against_team()`: paramètre `synergies: List[Synergy] = None`
+   - Intégrer: `final_score = matchup_score + synergy_bonus`
+   - Méthode `calculate_synergy_bonus(synergies) -> float`
+
+7. **`src/draft_monitor.py`**:
+   - Charger synergies: `db.get_synergies(champion_name, player_lane)`
+   - Passer synergies au scoring
+
+**Modèles & Tests (3 fichiers)**:
+8. **`src/models.py`**:
+   - Dataclass `Synergy` (identique `Matchup`, `ally_name` au lieu `enemy_name`)
+
+9. **`tests/test_scoring.py`**:
+   - Tests synergy bonus intégration
+
+10. **`tests/test_regression_synergies.py`**:
+    - Tests backward compat (pas de synergies → score inchangé)
+
+---
+
+#### Bénéfices
+
+- ✅ Recommandations basées team comp complète (alliés + ennemis)
+- ✅ Yasuo + Malphite = bonus synergie détecté
+- ✅ Intégration transparente (score final plus précis)
+- ✅ Backward compatible (bonus = 0 si pas de synergies)
+
+---
+
+#### Ordre d'Implémentation Recommandé
+
+**Séquentiel (recommandé)**:
+1. ✅ Tâche #15 (Lanes) → Base pour synergies lane-specific
+2. ✅ Tâche #16 (Synergies) → Bénéficie infrastructure lanes
+
+**Justification**:
+- ✅ Moins conflits (src/db.py, src/analysis/scoring.py)
+- ✅ Synergies lane-specific si #15 déjà fait
+- ✅ Tests isolés (simpler)
+
+**Durée totale**: 5-6 jours (séquentiel)
 
 ---
 
