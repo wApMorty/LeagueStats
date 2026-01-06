@@ -313,36 +313,49 @@ class Parser:
             enough_data = False
             while not enough_data:
                 for elem in row:
-                    index = row.index(elem) + 1
-                    champ = (
-                        elem.find_element(By.TAG_NAME, "a")
-                        .get_dom_attribute("href")
-                        .split("vs/")[1]
-                        .split("/build")[0]
-                    )
-                    winrate = float(
-                        elem.find_element(By.XPATH, f"{path}/div[{index}]/div[1]/span")
-                        .get_attribute("innerHTML")
-                        .split("%")[0]
-                    )
-                    delta1 = float(
-                        elem.find_elements(By.CLASS_NAME, "my-1")[4].get_attribute("innerHTML")
-                    )
-                    delta2 = float(
-                        elem.find_elements(By.CLASS_NAME, "my-1")[5].get_attribute("innerHTML")
-                    )
-                    pickrate = float(
-                        elem.find_elements(By.CLASS_NAME, "my-1")[6].get_attribute("innerHTML")
-                    )
-                    games = int(
-                        "".join(
-                            elem.find_element(By.CLASS_NAME, r"text-\[9px\]")
-                            .get_attribute("innerHTML")
-                            .split()
+                    try:
+                        index = row.index(elem) + 1
+                        champ = (
+                            elem.find_element(By.TAG_NAME, "a")
+                            .get_dom_attribute("href")
+                            .split("vs/")[1]
+                            .split("/build")[0]
                         )
-                    )
-                    if not self.contains(result, champ, winrate, delta1, delta2, pickrate, games):
-                        result.append((champ, winrate, delta1, delta2, pickrate, games))
+                        winrate = float(
+                            elem.find_element(By.XPATH, f"{path}/div[{index}]/div[1]/span")
+                            .get_attribute("innerHTML")
+                            .split("%")[0]
+                        )
+
+                        # Get all "my-1" elements and validate size before accessing indices
+                        my1_elements = elem.find_elements(By.CLASS_NAME, "my-1")
+                        if len(my1_elements) < 7:
+                            logger.warning(
+                                f"Insufficient 'my-1' elements for {champ} matchup "
+                                f"(found {len(my1_elements)}, expected ≥7). Skipping."
+                            )
+                            continue
+
+                        delta1 = float(my1_elements[4].get_attribute("innerHTML"))
+                        delta2 = float(my1_elements[5].get_attribute("innerHTML"))
+                        pickrate = float(my1_elements[6].get_attribute("innerHTML"))
+
+                        games = int(
+                            "".join(
+                                elem.find_element(By.CLASS_NAME, r"text-\[9px\]")
+                                .get_attribute("innerHTML")
+                                .split()
+                            )
+                        )
+                        if not self.contains(
+                            result, champ, winrate, delta1, delta2, pickrate, games
+                        ):
+                            result.append((champ, winrate, delta1, delta2, pickrate, games))
+                    except (IndexError, ValueError, NoSuchElementException) as e:
+                        logger.warning(
+                            f"Failed to parse matchup element: {type(e).__name__}: {e}. Skipping."
+                        )
+                        continue
                 actions = ActionChains(self.webdriver)
                 actions.click_and_hold().move_by_offset(
                     -scraping_config.MATCHUP_CAROUSEL_SCROLL_X, 0
