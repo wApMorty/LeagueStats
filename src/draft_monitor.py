@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from .lcu_client import LCUClient
 from .assistant import Assistant
 from .utils.display import safe_print
+from .utils.console import clear_console
 from .constants import SOLOQ_POOL, ROLE_POOLS, normalize_champion_name_for_onetricks
 from .config import config
 from .config_constants import draft_config
@@ -104,6 +105,9 @@ class DraftMonitor:
         # Performance: Warm cache for selected pool (eliminates SQL queries during draft)
         if self.current_pool:
             self.assistant.warm_cache(self.current_pool)
+
+        # Clear console before starting monitoring loop
+        clear_console()
 
         self.is_monitoring = True
         print("[WATCH] Monitoring for champion select...")
@@ -410,6 +414,9 @@ class DraftMonitor:
 
     def _reset_for_next_game(self):
         """Reset state for the next game."""
+        # Clear console when returning to queue for clean slate
+        clear_console()
+
         self.last_draft_state = DraftState()
         self.has_done_initial_hover = False
         self.has_analyzed_final_draft = False
@@ -562,6 +569,9 @@ class DraftMonitor:
 
     def _handle_draft_change(self, state: DraftState):
         """Handle draft state change and provide recommendations."""
+        # Clear console on draft updates to prevent infinite scroll
+        clear_console()
+
         print("\n" + "=" * 80)
         print(f"[INFO] DRAFT UPDATE - Phase: {state.phase}")
         if self.verbose:
@@ -854,6 +864,9 @@ class DraftMonitor:
     def _do_initial_hover(self):
         """Do initial hover with the best champion from the pool when entering champion select."""
         try:
+            # Clear console at start of champion select
+            clear_console()
+
             print(f"\n[INITIAL] 🎮 Champion select started - Preparing your strategy!")
             print("=" * 80)
 
@@ -1069,6 +1082,8 @@ class DraftMonitor:
 
     def _calculate_final_scores(self, ally_picks: List[int], enemy_picks: List[int]):
         """Calculate individual scores for each champion at end of draft."""
+        # Clear console before final analysis for clean display
+        clear_console()
 
         print("\n" + "=" * 80)
         safe_print("🎮 FINAL DRAFT ANALYSIS - Individual Champion Scores")
