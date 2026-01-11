@@ -3,10 +3,12 @@
 from ..db import Database
 from ..config import config
 from ..assistant import Assistant
+from ..utils.console import clear_console
 
 
 def update_champion_data() -> None:
     """Update champion data with submenu."""
+    clear_console()  # Clear console at start
     print("\n" + "=" * 60)
     print("CHAMPION DATA MANAGEMENT")
     print("=" * 60)
