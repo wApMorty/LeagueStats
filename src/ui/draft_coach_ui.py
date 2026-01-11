@@ -2,6 +2,7 @@
 
 from typing import Optional
 from ..draft_monitor import DraftMonitor
+from ..utils.console import clear_console
 
 
 def run_draft_coach(
@@ -21,6 +22,7 @@ def run_draft_coach(
         auto_ban_hover: Auto-hover ban recommendations
         open_onetricks: Open champion pages on draft completion
     """
+    clear_console()  # Clear console at start
     print("[INFO] Starting Real-time Draft Coach...")
     print("Make sure League of Legends client is running and start a game!")
     if auto_hover:
