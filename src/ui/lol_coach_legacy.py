@@ -19,6 +19,7 @@ from src.parallel_parser import ParallelParser
 from src.assistant import Assistant
 from src.constants import TOP_SOLOQ_POOL
 from src.config import config
+from src.utils.console import clear_console
 
 
 def print_banner():
@@ -282,6 +283,7 @@ def _recalculate_champion_scores():
 
 def parse_match_statistics():
     """Parse match statistics from web sources with submenu."""
+    clear_console()  # Clear console at start
     print("[INFO] Match Statistics Parser")
 
     # Ask for patch version first
@@ -496,6 +498,7 @@ def parse_all_champions(patch_version=None):
 
 def run_champion_analysis():
     """Run champion analysis and tournament coaching."""
+    clear_console()  # Clear console at start
     print("[INFO] Champion Analysis & Tournament Coaching")
     print("\nAvailable options:")
     print("1. Generate Tier List       - Create blind pick or counter pick tier lists")
@@ -533,6 +536,7 @@ def run_statistical_analysis():
 
 def run_tier_list_generator():
     """Generate tier lists for champion pools."""
+    clear_console()  # Clear console at start
     print("[INFO] Tier List Generator")
 
     try:
@@ -695,6 +699,7 @@ def _display_tier_list(tier_list: List[dict], pool_name: str, type_name: str, an
 
 def run_tournament_draft_coach():
     """Manual draft coaching for tournament scenarios."""
+    clear_console()  # Clear console at start
     print("[INFO] Tournament Draft Coach")
     print("Perfect for external tournaments, scrimmages, or any draft outside the League client")
     print("\nThis tool provides the same coaching logic as the real-time coach,")
@@ -1262,6 +1267,7 @@ def _export_draft(ally_team, enemy_team, banned_champions, pool_name):
 
 def run_optimal_team_builder():
     """Run optimal team building tools."""
+    clear_console()  # Clear console at start
     print("[INFO] Optimal Team Builder")
     print("\nAvailable options:")
     print("1. Find optimal trio from pool (traditional - blind pick + counterpicks)")
@@ -1674,6 +1680,7 @@ def _show_ban_recommendations(champions: List[str]):
 
 def manage_champion_pools():
     """Manage champion pools with interactive interface."""
+    clear_console()  # Clear console at start
     from src.pool_manager import PoolManager
     from src.assistant import Assistant
 
