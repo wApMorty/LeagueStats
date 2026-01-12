@@ -825,27 +825,22 @@ class DraftMonitor:
         """
         Determine if bans should be displayed based on the current draft phase.
 
+        Ban phase is considered active until enemy bans are revealed.
+        Once enemy bans appear, we know ban phase is complete.
+
         Returns:
             True if bans should be shown, False otherwise
         """
         if not state.phase:
             return False
 
-        phase_upper = state.phase.upper()
-
-        # Show bans during ban phases
-        if "BAN" in phase_upper:
+        # Show bans during ban phase (until enemy bans are revealed)
+        # Once enemy bans appear, ban phase is complete and we hide ban recommendations
+        if not state.enemy_bans:
+            # No enemy bans yet = still in ban phase
             return True
 
-        # Hide bans during pure pick phases
-        if "PICK" in phase_upper and "BAN" not in phase_upper:
-            return False
-
-        # Show bans during planning phase (before draft starts)
-        if "PLANNING" in phase_upper:
-            return True
-
-        # Default: hide bans during active picking to reduce clutter
+        # Enemy bans revealed = ban phase complete, hide bans to reduce clutter
         return False
 
     def _auto_hover_champion(self, champion_name: str, reason: str = ""):
