@@ -570,7 +570,27 @@ class DraftMonitor:
     def _handle_draft_change(self, state: DraftState):
         """Handle draft state change and provide recommendations."""
         # Clear console on draft updates to prevent infinite scroll
-        clear_console()
+        # BUT don't clear during ban phase to keep ban recommendations visible
+        should_clear = True
+
+        # Don't clear during active ban phase - keep ban recommendations visible
+        if self._is_ban_phase(state):
+            should_clear = False
+            if self.verbose:
+                print(f"[DEBUG] Ban phase active - skipping console clear to preserve ban recommendations")
+
+        # Only clear on phase transitions, not during same phase
+        if should_clear and self.last_draft_state.phase == state.phase:
+            # Same phase - only clear if there's a significant change (new pick)
+            picks_changed = (
+                len(state.ally_picks) != len(self.last_draft_state.ally_picks) or
+                len(state.enemy_picks) != len(self.last_draft_state.enemy_picks)
+            )
+            if not picks_changed:
+                should_clear = False
+
+        if should_clear:
+            clear_console()
 
         print("\n" + "=" * 80)
         print(f"[INFO] DRAFT UPDATE - Phase: {state.phase}")
