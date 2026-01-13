@@ -9,14 +9,334 @@
 
 ## 📋 Table des Matières
 
-1. [Contexte du Projet](#contexte-du-projet)
-2. [Workflow de Développement](#workflow-de-développement)
-3. [Standards de Code](#standards-de-code)
-4. [Conventions Git](#conventions-git)
-5. [Process de Code Review](#process-de-code-review)
-6. [Approche Dette Technique First](#approche-dette-technique-first)
-7. [Fichiers Importants](#fichiers-importants)
-8. [Commandes Utiles](#commandes-utiles)
+1. [🔴 Système d'Agents Custom - RÈGLE CRITIQUE](#-système-dagents-custom---règle-critique)
+2. [Contexte du Projet](#contexte-du-projet)
+3. [Workflow de Développement](#workflow-de-développement)
+4. [Standards de Code](#standards-de-code)
+5. [Conventions Git](#conventions-git)
+6. [Process de Code Review](#process-de-code-review)
+7. [Approche Dette Technique First](#approche-dette-technique-first)
+8. [Fichiers Importants](#fichiers-importants)
+9. [Commandes Utiles](#commandes-utiles)
+
+---
+
+## 🔴 Système d'Agents Custom - RÈGLE CRITIQUE
+
+### ⚠️ WORKFLOW OBLIGATOIRE - À LIRE EN PREMIER ⚠️
+
+**AVANT toute action de développement, TOUJOURS utiliser les agents custom définis dans `.claude/agents/`**
+
+Ce projet utilise un système d'agents spécialisés pour orchestrer TOUT le développement. L'assistant principal (toi) ne doit JAMAIS coder/tester/commiter directement.
+
+### Principe Fondamental
+
+```
+❌ INTERDIT: Travailler directement (Read → Edit → Write → Bash pytest → git commit)
+✅ OBLIGATOIRE: Spawner les agents appropriés via Task tool
+```
+
+### Architecture des Agents
+
+**Agents disponibles dans `.claude/agents/`**:
+
+| Agent | Fichier | Rôle | Output | Spawné par |
+|-------|---------|------|--------|------------|
+| **Orchestrateur** | `00-orchestrateur.md` | Routage automatique des tâches | Plan YAML (phases) | Tech Lead |
+| **Architecte** | `01-architecte.md` | Analyse besoins + 2-3 approches | Plan YAML (approaches) | Assistant (toi) |
+| **Tech Lead** | `02-tech-lead.md` | **Coordination workflow complet** | Verbeux (notifications) | Assistant (toi) |
+| **Python Expert** | `03-python-expert.md` | Développement Python | YAML silencieux | Tech Lead |
+| **Database Expert** | `04-database-expert.md` | Migrations Alembic + SQL | YAML silencieux | Tech Lead |
+| **QA Expert** | `05-qa-expert.md` | Tests (unitaires + régression) | YAML silencieux | Tech Lead |
+| **Scraping Expert** | `06-scraping-expert.md` | Selenium + XPath | YAML silencieux | Tech Lead |
+| **Build Expert** | `07-build-expert.md` | PyInstaller + packaging | YAML silencieux | Tech Lead |
+| **Git Expert** | `08-git-expert.md` | Commits Gitmoji + PR | YAML silencieux | Tech Lead |
+| **Windows Expert** | `09-windows-expert.md` | Task Scheduler + services | YAML silencieux | Tech Lead |
+| **LCU API Expert** | `10-lcu-api-expert.md` | League Client API | YAML silencieux | Tech Lead |
+| **Performance Expert** | `11-performance-expert.md` | Profiling + optimisation | YAML silencieux | Tech Lead |
+
+**Hiérarchie**:
+```
+Assistant (toi) → Spawne ARCHITECTE ou TECH LEAD
+                         ↓
+                   TECH LEAD → Spawne ORCHESTRATEUR
+                         ↓
+                   ORCHESTRATEUR → Plan d'exécution
+                         ↓
+                   TECH LEAD → Spawne EXPERTS (Python, DB, QA, Git, etc.)
+                         ↓
+                   TECH LEAD → Valide + Notifie client
+```
+
+### Matrice de Décision (Quick Reference)
+
+| Demande Utilisateur | Premier Agent | Justification |
+|---------------------|---------------|---------------|
+| **"Ajoute feature X"** | Architecte | Besoin d'analyse d'approches (2-3 options) |
+| **"Implémente Tâche #N"** (complexe) | Architecte | Besoin d'exploration codebase + trade-offs |
+| **"Implémente Tâche #N"** (plan clair) | Tech Lead | Plan déjà défini dans TODO.md |
+| **"Corrige bug Y"** (simple) | Tech Lead | Bug connu, correction directe |
+| **"Corrige bug Y"** (cause inconnue) | Architecte | Investigation requise (exploration) |
+| **"Optimise performance Z"** | Architecte | Profiling + analyse approches |
+| **"Ajoute migration BD"** | Tech Lead | Tâche technique directe |
+| **"Ajoute tests pour X"** | Tech Lead | Tests après développement existant |
+| **"Refactor module Y"** | Architecte | Analyse impact + approches |
+
+### Workflow Standard
+
+#### Scénario 1: Feature Nouvelle / Besoin d'Analyse
+
+```
+USER: "Ajoute support des lanes"
+  ↓
+ASSISTANT (toi): Spawne ARCHITECTE
+  ↓
+ARCHITECTE:
+  - Explore codebase (.claude/agents/01-architecte.md)
+  - Analyse besoins techniques
+  - Propose 2-3 approches (A, B, C) avec pros/cons
+  - Retourne plan YAML structuré
+  ↓
+USER: "Je choisis approche A"
+  ↓
+ASSISTANT (toi): Spawne TECH LEAD avec plan Architecte (approche A)
+  ↓
+TECH LEAD (.claude/agents/02-tech-lead.md):
+  1. Crée feature branch (git checkout -b feature/xxx origin/master)
+  2. Découpe en tâches atomiques (TodoWrite)
+  3. Spawne ORCHESTRATEUR → Plan d'exécution optimisé
+  4. Exécute phases séquentielles:
+     - Phase 1: Database Expert (migration BD) [BLOQUANT]
+     - Phase 2: Python Expert + Scraping Expert [PARALLÈLE]
+     - Phase 3: QA Expert (tests) [BLOQUANT]
+     - Phase 4: Git Expert (commits + PR)
+  5. Valide chaque livrable (compilation, imports, standards)
+  6. Notifie client: "✅ PR #42 créée et prête pour review"
+```
+
+#### Scénario 2: Bug Fix Simple
+
+```
+USER: "Corrige division by zero dans scoring.py"
+  ↓
+ASSISTANT (toi): Spawne TECH LEAD directement
+  ↓
+TECH LEAD:
+  1. Crée fix branch (git checkout -b fix/division-by-zero origin/master)
+  2. TodoWrite (T1: Fix code, T2: Test régression, T3: Commit)
+  3. Spawne ORCHESTRATEUR → Plan
+  4. Exécute phases:
+     - Phase 1: Python Expert (fix code)
+     - Phase 2: QA Expert (test régression OBLIGATOIRE)
+     - Phase 3: Git Expert (commit + PR)
+  5. Valide + Notifie client
+```
+
+#### Scénario 3: Optimisation Performance
+
+```
+USER: "Optimise la génération de tier lists (trop lente)"
+  ↓
+ASSISTANT (toi): Spawne ARCHITECTE (besoin profiling + analyse)
+  ↓
+ARCHITECTE:
+  - Profile code existant (identifie bottlenecks)
+  - Propose 2-3 approches (ex: caching, indexes DB, algorithme optimisé)
+  - Trade-offs détaillés
+  ↓
+USER: "Approche B (caching)"
+  ↓
+ASSISTANT (toi): Spawne TECH LEAD
+  ↓
+TECH LEAD → [Workflow standard avec Performance Expert en phase 1]
+```
+
+### 🔴 RÈGLES CRITIQUES - À RESPECTER ABSOLUMENT
+
+#### 1. Délégation Obligatoire
+
+```python
+# ❌ INTERDIT (Assistant travaille directement)
+User: "Ajoute colonne lane à la BD"
+Assistant: [Read alembic/...]
+Assistant: [Write alembic/versions/xxx.py]
+Assistant: [Bash alembic upgrade head]
+
+# ✅ OBLIGATOIRE (Spawner Tech Lead)
+User: "Ajoute colonne lane à la BD"
+Assistant: [Task tool: Tech Lead avec description tâche]
+Tech Lead: [Spawne Database Expert]
+Database Expert: [Crée migration, teste, retourne YAML]
+Tech Lead: [Valide + continue workflow]
+```
+
+#### 2. JAMAIS Coder/Tester/Commiter Directement
+
+**L'assistant principal (toi) ne doit JAMAIS**:
+- ❌ Edit/Write du code Python
+- ❌ Créer migrations Alembic
+- ❌ Écrire tests pytest
+- ❌ Exécuter git commit
+- ❌ Créer PR avec gh CLI
+
+**L'assistant principal (toi) doit UNIQUEMENT**:
+- ✅ Spawner ARCHITECTE (si analyse requise)
+- ✅ Spawner TECH LEAD (coordination)
+- ✅ Lire documentation (.claude/agents/*.md)
+- ✅ Communiquer avec utilisateur
+
+#### 3. Tech Lead = Point d'Entrée Principal
+
+Pour **99% des tâches de développement**, spawner **Tech Lead** en premier (sauf si analyse architecturale nécessaire → Architecte).
+
+Le Tech Lead orchestrera **automatiquement** tous les autres agents.
+
+#### 4. Experts = Output YAML Silencieux
+
+Tous les agents experts (Python, Database, QA, Git, etc.) retournent **UNIQUEMENT du YAML structuré**, pas de prose.
+
+**Exemple output Python Expert**:
+```yaml
+status: "✅ DONE"
+task_id: "T2"
+files_modified:
+  - path: "src/analysis/scoring.py"
+    lines_changed: "+45 -12"
+commit_message: "✨ Feature: Add lane priority weighting"
+notes: "Backward compatible (null lane = 1.0x multiplier)"
+issues: []
+```
+
+Seuls **Tech Lead** et **Architecte** sont verbeux (explications pour client).
+
+#### 5. Toujours Lire l'Agent Avant de Spawner
+
+Avant de spawner un agent, **TOUJOURS lire son fichier .md** dans `.claude/agents/` pour comprendre :
+- Son rôle exact
+- Son OUTPUT FORMAT attendu
+- Ses outils autorisés/interdits
+- Ses règles critiques
+
+### Exemples Concrets d'Utilisation
+
+#### ✅ Exemple 1: Feature Complète (Tâche #15 - Support Lanes)
+
+```
+User: "Implémente la Tâche #15 (Support des Lanes) du TODO.md"
+
+Assistant (toi):
+  "Je vais spawner l'Architecte pour analyser cette feature et proposer des approches."
+  [Task: Architecte, description: Tâche #15 Support Lanes]
+
+Architecte retourne:
+  - Approche A: Lane nullable (backward compat) - Complexité 5, 3-4j, low risk
+  - Approche B: Lane obligatoire (breaking) - Complexité 8, 2j+rescrape, high risk
+  - Approche C: Table séparée - Complexité 8, 4-5j, medium risk
+  - Recommandation: Approche A (meilleur ratio valeur/risque)
+
+User: "OK, approche A"
+
+Assistant (toi):
+  "Je spawne maintenant le Tech Lead pour coordonner l'implémentation."
+  [Task: Tech Lead, description: Tâche #15 avec approche A validée]
+
+Tech Lead:
+  1. Crée feature branch: git checkout -b feature/lane-support origin/master
+  2. TodoWrite: [T1: Migration BD, T2: Code Python, T3: Scraping, T4: Tests, T5: Git]
+  3. Spawne Orchestrateur → Plan: Phase1=[T1], Phase2=[T2,T3], Phase3=[T4], Phase4=[T5]
+  4. Phase 1 (bloquante):
+     - Spawne Database Expert
+     - Database Expert retourne YAML: migration créée, testée up/down
+     - Tech Lead valide: alembic current, compilation OK
+  5. Phase 2 (parallèle):
+     - Spawne Python Expert (scoring logic)
+     - Spawne Scraping Expert (parse lane data)
+     - Attends complétion des DEUX
+     - Tech Lead valide: py_compile OK, imports OK
+  6. Phase 3 (bloquante):
+     - Spawne QA Expert avec TOUS fichiers modifiés
+     - QA Expert retourne: 18 tests, 18 passed, 95% coverage
+     - Tech Lead valide: pytest OK
+  7. Phase 4:
+     - Spawne Git Expert avec liste commits
+     - Git Expert: 3 commits + PR #42 créée
+  8. Tech Lead notifie:
+     "✅ Feature terminée - PR #42 prête pour review"
+```
+
+#### ✅ Exemple 2: Bug Fix Simple
+
+```
+User: "Corrige le bug: division by zero dans scoring.calculate_weighted_avg()"
+
+Assistant (toi):
+  "Je spawne le Tech Lead pour orchestrer la correction."
+  [Task: Tech Lead, description: Bug division by zero]
+
+Tech Lead:
+  1. Crée fix branch: git checkout -b fix/division-by-zero origin/master
+  2. TodoWrite: [T1: Fix code, T2: Test régression, T3: Commit]
+  3. Spawne Orchestrateur → Plan simple
+  4. Phase 1: Spawne Python Expert
+     - Python Expert: Ajoute check if total_games == 0: return 0.0
+     - Retourne YAML
+  5. Phase 2: Spawne QA Expert
+     - QA Expert: Crée test_regression_division_by_zero.py
+     - Test échoue AVANT fix, passe APRÈS fix ✅
+     - Retourne YAML
+  6. Phase 3: Spawne Git Expert
+     - Commit 1: "🐛 Fix: Division by zero in calculate_weighted_avg()"
+     - Commit 2: "✅ Test: Add regression test for division by zero"
+     - PR #43 créée
+  7. Tech Lead notifie client
+```
+
+#### ❌ Exemple 3: Ce qu'il NE FAUT JAMAIS FAIRE
+
+```
+User: "Ajoute colonne lane à la BD"
+
+❌ MAUVAIS - Assistant travaille directement:
+Assistant: "Je vais créer la migration Alembic..."
+[Read alembic/env.py]
+[Write alembic/versions/abc123_add_lane.py]
+[Bash: alembic upgrade head]
+[Edit src/db.py]
+"✅ Migration créée"
+
+✅ BON - Assistant spawne Tech Lead:
+Assistant: "Je spawne le Tech Lead pour coordonner cette modification BD."
+[Task: Tech Lead, description: Ajouter colonne lane]
+Tech Lead → Database Expert → Migration créée + testée
+Tech Lead → Valide → Notifie
+```
+
+### Localisation et Documentation
+
+- **Tous les agents**: `.claude/agents/*.md` (12 agents)
+- **TOUJOURS lire l'agent** avant de le spawner pour comprendre:
+  - Son workflow exact
+  - Son OUTPUT FORMAT (YAML structure)
+  - Ses outils autorisés/interdits
+  - Ses règles critiques spécifiques
+
+### Checklist Avant Toute Action
+
+Avant de faire QUOI QUE CE SOIT sur une demande utilisateur :
+
+- [ ] Ai-je lu la demande utilisateur attentivement ?
+- [ ] Est-ce une tâche de développement (code/BD/tests/git) ?
+- [ ] Si OUI → Dois-je spawner Architecte (analyse) ou Tech Lead (direct) ?
+- [ ] Ai-je lu le fichier .md de l'agent que je vais spawner ?
+- [ ] Ai-je préparé une description claire pour l'agent ?
+- [ ] Suis-je certain de NE PAS coder/tester/commiter moi-même ?
+
+### En Cas de Doute
+
+**Si tu hésites sur quel agent spawner**:
+1. Lire `.claude/agents/00-orchestrateur.md` (matrice de routage)
+2. Lire `.claude/agents/02-tech-lead.md` (coordination générale)
+3. **Par défaut**: Spawner **Tech Lead** (il déléguera automatiquement)
 
 ---
 
