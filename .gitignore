@@ -18,3 +18,6 @@ dist
 coverage.xml
 htmlcov/
 .pytest_cache/
+
+# Claude Code temporary files
+tmpclaude-*-cwd
