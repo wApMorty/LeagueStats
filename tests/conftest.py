@@ -55,6 +55,23 @@ def temp_db(tmp_path):
     """
     )
 
+    # Pool ban recommendations table
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS pool_ban_recommendations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            pool_name TEXT NOT NULL,
+            enemy_champion TEXT NOT NULL,
+            threat_score REAL NOT NULL,
+            best_response_delta2 REAL NOT NULL,
+            best_response_champion TEXT NOT NULL,
+            matchups_count INTEGER NOT NULL,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(pool_name, enemy_champion)
+        )
+    """
+    )
+
     conn.commit()
     conn.close()
 

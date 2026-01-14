@@ -1029,7 +1029,8 @@ class Assistant:
             num_bans: Number of ban recommendations to return
 
         Returns:
-            List of tuples (enemy_name, threat_score, best_response_delta2)
+            List of tuples (enemy_name, threat_score, best_response_delta2,
+                           best_response_champion, matchups_count)
             Sorted by threat_score (descending)
         """
         from .config import config
@@ -1132,10 +1133,12 @@ class Assistant:
         # Sort by combined threat (descending)
         ban_candidates.sort(key=lambda x: x[1], reverse=True)
 
-        # Return in clean format: (enemy, threat_score, best_response_delta2)
+        # Return in complete format matching database: (enemy, threat_score, best_response_delta2, best_response_champion, matchups_count)
         return [
-            (name, threat, best_delta2)
-            for name, threat, best_delta2, _, _ in ban_candidates[:num_bans]
+            (name, threat, best_delta2, best_response, matchups_found)
+            for name, threat, best_delta2, best_response, matchups_found in ban_candidates[
+                :num_bans
+            ]
         ]
 
     def precalculate_pool_bans(self, pool_name: str, champion_pool: List[str]) -> bool:
