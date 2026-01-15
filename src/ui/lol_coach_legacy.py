@@ -1662,7 +1662,10 @@ def _show_ban_recommendations(champions: List[str]):
 
         if ban_recommendations:
             print(f"\nTop threats to ban:")
-            for i, (enemy, threat_score, matchup_count) in enumerate(ban_recommendations, 1):
+            # Tuple format: (enemy, threat_score, best_delta2, best_champ, matchup_count)
+            for i, (enemy, threat_score, _best_delta2, _best_champ, matchup_count) in enumerate(
+                ban_recommendations, 1
+            ):
                 print(
                     f"  {i}. {enemy:<15} | Threat: {threat_score:>5.2f} | Counters {matchup_count}/{len(champions)} champions"
                 )

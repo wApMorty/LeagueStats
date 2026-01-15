@@ -337,11 +337,11 @@ class DraftMonitor:
                 print(f"[DEBUG] Got {len(ban_recommendations)} ban recommendations")
 
             # Get the top ban recommendation
-            # Handle both pre-calculated format (5 values) and real-time format (3 values)
+            # Tuple format: (enemy, threat_score, best_delta2, best_champ, matchup_count)
             top_ban_data = ban_recommendations[0]
             top_ban = top_ban_data[0]
             threat_score = top_ban_data[1]
-            matchup_count = top_ban_data[2] if len(top_ban_data) > 2 else 0
+            matchup_count = top_ban_data[4] if len(top_ban_data) >= 5 else 0
 
             if self.verbose:
                 print(f"[DEBUG] Top ban recommendation: {top_ban} (threat: {threat_score:.2f})")
@@ -577,15 +577,16 @@ class DraftMonitor:
         if self._is_ban_phase(state):
             should_clear = False
             if self.verbose:
-                print(f"[DEBUG] Ban phase active - skipping console clear to preserve ban recommendations")
+                print(
+                    f"[DEBUG] Ban phase active - skipping console clear to preserve ban recommendations"
+                )
 
         # Only clear on phase transitions, not during same phase
         if should_clear and self.last_draft_state.phase == state.phase:
             # Same phase - only clear if there's a significant change (new pick)
-            picks_changed = (
-                len(state.ally_picks) != len(self.last_draft_state.ally_picks) or
-                len(state.enemy_picks) != len(self.last_draft_state.enemy_picks)
-            )
+            picks_changed = len(state.ally_picks) != len(self.last_draft_state.ally_picks) or len(
+                state.enemy_picks
+            ) != len(self.last_draft_state.enemy_picks)
             if not picks_changed:
                 should_clear = False
 
@@ -985,7 +986,8 @@ class DraftMonitor:
 
             if ban_recommendations:
                 print(f"Consider banning these threats to your pool:")
-                for i, (enemy, threat_score, matchup_count, *_) in enumerate(
+                # Tuple format: (enemy, threat_score, best_delta2, best_champ, matchup_count)
+                for i, (enemy, threat_score, _best_delta2, _best_champ, matchup_count) in enumerate(
                     ban_recommendations, 1
                 ):
                     print(
