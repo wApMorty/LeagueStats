@@ -109,6 +109,97 @@ class Matchup:
 
 
 @dataclass(frozen=True)
+class Synergy:
+    """Champion synergy with ally statistics.
+
+    Represents synergy between a champion and an ally champion,
+    including win rate, performance deltas, pick rate, and game count.
+    Structure identical to Matchup but semantic difference: synergies are
+    WITH allies (positive relationship), matchups are AGAINST enemies.
+
+    Attributes:
+        ally_name: Name of the allied champion
+        winrate: Win rate percentage when playing with this ally (0.0-100.0)
+        delta1: First performance delta metric
+        delta2: Second performance delta metric
+        pickrate: Pick rate percentage of this ally combination (0.0-100.0)
+        games: Number of games with this synergy
+
+    Example:
+        >>> synergy = Synergy("Malphite", 55.0, 180.0, 220.0, 15.0, 1200)
+        >>> print(f"With {synergy.ally_name}: {synergy.winrate}% WR")
+        With Malphite: 55.0% WR
+    """
+
+    ally_name: str
+    winrate: float
+    delta1: float
+    delta2: float
+    pickrate: float
+    games: int
+
+    def __post_init__(self):
+        """Validate data integrity on creation.
+
+        Raises:
+            ValueError: If any field contains invalid data
+        """
+        if not isinstance(self.ally_name, str) or not self.ally_name.strip():
+            raise ValueError(
+                f"Invalid ally_name: must be non-empty string, got {self.ally_name!r}"
+            )
+
+        if not 0.0 <= self.winrate <= 100.0:
+            raise ValueError(f"Invalid winrate: must be 0-100, got {self.winrate}")
+
+        # delta1 and delta2 can be negative (performance metrics)
+        if not isinstance(self.delta1, (int, float)):
+            raise ValueError(f"Invalid delta1: must be numeric, got {type(self.delta1)}")
+
+        if not isinstance(self.delta2, (int, float)):
+            raise ValueError(f"Invalid delta2: must be numeric, got {type(self.delta2)}")
+
+        if not 0.0 <= self.pickrate <= 100.0:
+            raise ValueError(f"Invalid pickrate: must be 0-100, got {self.pickrate}")
+
+        if not isinstance(self.games, int) or self.games < 0:
+            raise ValueError(f"Invalid games: must be non-negative integer, got {self.games}")
+
+    @classmethod
+    def from_tuple(cls, data: Tuple) -> "Synergy":
+        """Create Synergy from database tuple.
+
+        Args:
+            data: 6-element tuple (ally_name, winrate, delta1, delta2, pickrate, games)
+
+        Returns:
+            Synergy instance
+
+        Raises:
+            ValueError: If tuple length is not 6
+
+        Example:
+            >>> row = cursor.fetchone()  # ('Malphite', 55.0, 180.0, 220.0, 15.0, 1200)
+            >>> synergy = Synergy.from_tuple(row)
+        """
+        if len(data) != 6:
+            raise ValueError(f"Expected 6-element tuple for Synergy, got {len(data)}: {data!r}")
+        return cls(*data)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for serialization.
+
+        Returns:
+            Dictionary with all fields
+
+        Example:
+            >>> synergy.to_dict()
+            {'ally_name': 'Malphite', 'winrate': 55.0, ...}
+        """
+        return asdict(self)
+
+
+@dataclass(frozen=True)
 class MatchupDraft:
     """Simplified matchup for draft recommendations.
 

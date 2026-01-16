@@ -1,9 +1,9 @@
 import sqlite3
 from sqlite3 import Error
-from typing import List, Optional, Dict, Union
+from typing import List, Optional, Dict, Union, Tuple
 import requests
 from .constants import CHAMPIONS_LIST
-from .models import Matchup, MatchupDraft
+from .models import Matchup, MatchupDraft, Synergy
 
 
 class Database:
@@ -746,6 +746,243 @@ class Database:
 
         except Exception as e:
             print(f"[ERROR] Failed to load bulk matchups: {e}")
+            return {}
+
+    # ========== Synergies Methods ==========
+
+    def add_synergy(
+        self,
+        champion: str,
+        ally: str,
+        winrate: float,
+        delta1: float,
+        delta2: float,
+        pickrate: float,
+        games: int,
+    ) -> None:
+        """Add synergy data between champion and ally.
+
+        Args:
+            champion: Name of the champion
+            ally: Name of the allied champion
+            winrate: Win rate percentage with this ally (0.0-100.0)
+            delta1: First performance delta metric
+            delta2: Second performance delta metric
+            pickrate: Pick rate percentage of this ally combination
+            games: Number of games with this synergy
+        """
+        champ_id = self.get_champion_id(champion)
+        ally_id = self.get_champion_id(ally)
+        if (
+            champ_id is None
+            or ally_id is None
+            or winrate is None
+            or delta1 is None
+            or delta2 is None
+            or pickrate is None
+            or games is None
+        ):
+            print(
+                f"[WARNING] Invalid synergy data: {champ_id}, {ally_id}, {winrate}, {delta1}, {delta2}, {pickrate}, {games}"
+            )
+            return
+        cursor = self.connection.cursor()
+        try:
+            cursor.execute(
+                "INSERT INTO synergies (champion, ally, winrate, delta1, delta2, pickrate, games) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (champ_id, ally_id, winrate, delta1, delta2, pickrate, games),
+            )
+            self.connection.commit()
+            print(f"Query executed successfully : INSERT INTO synergies")
+        except Error as e:
+            print(f"The error '{e}' occurred")
+
+    def get_champion_synergies_by_name(
+        self, champion_name: str, as_dataclass: bool = True
+    ) -> Union[List["Synergy"], List[tuple]]:
+        """Get synergies for a champion by name with ally names included.
+
+        Args:
+            champion_name: Name of the champion to get synergies for
+            as_dataclass: If True, return Synergy objects. If False, return tuples.
+                         Default True for new code. Use False for backward compatibility.
+
+        Returns:
+            List of Synergy objects or tuples (ally_name, winrate, delta1, delta2, pickrate, games)
+
+        Example:
+            >>> # New way (dataclass - readable attributes)
+            >>> synergies = db.get_champion_synergies_by_name("Yasuo")
+            >>> for s in synergies:
+            ...     print(f"With {s.ally_name}: {s.winrate}% WR, {s.delta2} delta2")
+
+            >>> # Old way (tuples - for backward compatibility)
+            >>> synergies = db.get_champion_synergies_by_name("Yasuo", as_dataclass=False)
+            >>> for s in synergies:
+            ...     print(f"With {s[0]}: {s[1]}% WR, {s[3]} delta2")
+        """
+        champ_id = self.get_champion_id(champion_name)
+        if champ_id is None:
+            return []
+
+        cursor = self.connection.cursor()
+        try:
+            # Join avec la table champions pour obtenir les noms des alliés
+            cursor.execute(
+                """
+                SELECT c.name, s.winrate, s.delta1, s.delta2, s.pickrate, s.games
+                FROM synergies s
+                JOIN champions c ON s.ally = c.id
+                WHERE s.champion = ? AND s.pickrate > 0.5
+            """,
+                (champ_id,),
+            )
+            result = cursor.fetchall()
+
+            # Convert to dataclasses if requested (default)
+            if as_dataclass:
+                return [Synergy.from_tuple(row) for row in result]
+            else:
+                # Backward compatibility: return tuples
+                return result
+
+        except Error as e:
+            print(f"The error '{e}' occurred")
+            return []
+
+    def add_synergies_batch(
+        self, synergies: List[Tuple[str, str, float, float, float, float, int]]
+    ) -> None:
+        """Batch insert synergies for performance.
+
+        Args:
+            synergies: List of tuples (champion, ally, winrate, delta1, delta2, pickrate, games)
+        """
+        cursor = self.connection.cursor()
+        try:
+            # Convert champion/ally names to IDs
+            synergy_data = []
+            for champion, ally, winrate, delta1, delta2, pickrate, games in synergies:
+                champ_id = self.get_champion_id(champion)
+                ally_id = self.get_champion_id(ally)
+                if champ_id and ally_id:
+                    synergy_data.append(
+                        (champ_id, ally_id, winrate, delta1, delta2, pickrate, games)
+                    )
+
+            # Batch insert
+            cursor.executemany(
+                "INSERT INTO synergies (champion, ally, winrate, delta1, delta2, pickrate, games) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                synergy_data,
+            )
+            self.connection.commit()
+            print(f"Batch insert successful: {len(synergy_data)} synergies added")
+        except Error as e:
+            print(f"The error '{e}' occurred during batch synergy insert")
+
+    def clear_synergies_for_champion(self, champion_name: str) -> None:
+        """Clear all synergies for a specific champion.
+
+        Used before re-parsing champion synergies to avoid duplicates.
+
+        Args:
+            champion_name: Name of the champion to clear synergies for
+        """
+        champ_id = self.get_champion_id(champion_name)
+        if champ_id is None:
+            print(f"[WARNING] Champion '{champion_name}' not found, cannot clear synergies")
+            return
+
+        cursor = self.connection.cursor()
+        try:
+            cursor.execute("DELETE FROM synergies WHERE champion = ?", (champ_id,))
+            self.connection.commit()
+            deleted = cursor.rowcount
+            print(f"Deleted {deleted} synergies for {champion_name}")
+        except Error as e:
+            print(f"The error '{e}' occurred")
+
+    def get_synergy_delta2(
+        self, champion_name: str, ally_name: str
+    ) -> Optional[float]:
+        """Get delta2 value for a specific champion-ally synergy.
+
+        Args:
+            champion_name: Name of the champion
+            ally_name: Name of the allied champion
+
+        Returns:
+            delta2 value if synergy exists, None otherwise
+        """
+        champ_id = self.get_champion_id(champion_name)
+        ally_id = self.get_champion_id(ally_name)
+
+        if champ_id is None or ally_id is None:
+            return None
+
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute(
+                """
+                SELECT delta2
+                FROM synergies
+                WHERE champion = ? AND ally = ?
+                AND pickrate >= 0.5
+                AND games >= 200
+            """,
+                (champ_id, ally_id),
+            )
+
+            result = cursor.fetchone()
+            if result:
+                return float(result[0])
+            else:
+                return None
+
+        except Exception as e:
+            print(
+                f"[ERROR] Database error getting synergy {champion_name} with {ally_name}: {e}"
+            )
+            return None
+
+    def get_all_synergies_bulk(self) -> dict:
+        """Load ALL valid synergies in a single SQL query for caching.
+
+        Returns dict mapping (champion_name, ally_name) -> delta2 value.
+        Only includes synergies meeting quality thresholds (pickrate >= 0.5%, games >= 200).
+
+        This is much faster than calling get_synergy_delta2() repeatedly.
+        Use this for bulk operations like draft optimization.
+
+        Returns:
+            Dict with keys as tuples (champion_name, ally_name) and values as delta2 floats
+        """
+        try:
+            cursor = self.connection.cursor()
+
+            # Load all valid synergies in one query
+            cursor.execute(
+                """
+                SELECT c1.name, c2.name, s.delta2
+                FROM synergies s
+                JOIN champions c1 ON s.champion = c1.id
+                JOIN champions c2 ON s.ally = c2.id
+                WHERE s.pickrate >= 0.5
+                AND s.games >= 200
+            """
+            )
+
+            # Build cache dictionary
+            synergy_cache = {}
+            for champion_name, ally_name, delta2 in cursor.fetchall():
+                # Normalize to lowercase for case-insensitive lookup
+                key = (champion_name.lower(), ally_name.lower())
+                synergy_cache[key] = float(delta2)
+
+            return synergy_cache
+
+        except Exception as e:
+            print(f"[ERROR] Failed to load bulk synergies: {e}")
             return {}
 
     # ========== Champion Scores Methods ==========
