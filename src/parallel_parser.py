@@ -179,6 +179,154 @@ class ParallelParser:
             except Exception as e:
                 logger.error(f"Database write error for {champion}: {e}")
 
+    def _scrape_champion_synergies_with_retry(
+        self, champion: str, normalize_func
+    ) -> List[Tuple[str, float, float, float, float, int]]:
+        """Scrape champion synergies with automatic retry on failure.
+
+        Uses exponential backoff: 2s, 4s, 8s (max 10s) between retries.
+        Retries up to 3 times on WebDriverException or TimeoutException.
+
+        Args:
+            champion: Champion name to scrape
+            normalize_func: Function to normalize champion name for URL
+
+        Returns:
+            List of synergy tuples: (ally, winrate, delta1, delta2, pickrate, games)
+
+        Raises:
+            WebDriverException: After 3 failed attempts
+            TimeoutException: After 3 failed attempts
+        """
+        parser = self._get_parser()
+
+        try:
+            normalized_champion = normalize_func(champion)
+            synergies = parser.get_champion_synergies_on_patch(
+                self.patch_version, normalized_champion
+            )
+            logger.info(
+                f"Successfully scraped synergies for {champion} (patch {self.patch_version}): {len(synergies)} allies"
+            )
+            return champion, synergies
+        except (WebDriverException, TimeoutException) as e:
+            logger.warning(f"Retry triggered for {champion} synergies: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error scraping {champion} synergies: {e}")
+            return champion, []
+
+    def _write_synergies_thread_safe(
+        self, db: Database, champion: str, synergies: List[Tuple]
+    ) -> None:
+        """Write synergy data to database with thread-safe locking.
+
+        Args:
+            db: Database instance
+            champion: Champion name
+            synergies: List of synergy tuples (ally, winrate, delta1, delta2, pickrate, games)
+        """
+        with self.db_lock:
+            try:
+                for synergy in synergies:
+                    ally, winrate, d1, d2, pick, games = synergy
+                    db.add_synergy(champion, ally, winrate, d1, d2, pick, games)
+            except Exception as e:
+                logger.error(f"Database write error for {champion} synergies: {e}")
+
+    def parse_all_synergies(self, db: Database, normalize_func) -> dict:
+        """Parse all champion synergies in parallel with progress tracking.
+
+        Similar to parse_all_champions() but parses synergies (WITH allies)
+        instead of matchups (AGAINST enemies).
+
+        Args:
+            db: Database instance (must be connected)
+            normalize_func: Function to normalize champion names for URLs
+
+        Returns:
+            dict: Statistics with keys 'success', 'failed', 'total', 'duration'
+
+        Example:
+            >>> from src.parallel_parser import ParallelParser
+            >>> from src.db import Database
+            >>> from src.parser import normalize_champion_name_for_url
+            >>> db = Database("data/db.db")
+            >>> db.connect()
+            >>> parser = ParallelParser(max_workers=10)
+            >>> stats = parser.parse_all_synergies(db, normalize_champion_name_for_url)
+            >>> print(f"{stats['success']}/{stats['total']} champions parsed")
+        """
+        import time
+
+        start_time = time.time()
+
+        # Get champion list from database (populated by Riot API)
+        champion_names = list(db.get_all_champion_names().values())
+        logger.info(
+            f"Starting parallel scraping of synergies for {len(champion_names)} champions"
+        )
+
+        # Create thread pool and submit tasks
+        self.executor = ThreadPoolExecutor(max_workers=self.max_workers)
+        futures = {
+            self.executor.submit(
+                self._scrape_champion_synergies_with_retry, champion, normalize_func
+            ): champion
+            for champion in champion_names
+        }
+
+        # Track progress with tqdm
+        success_count = 0
+        failed_count = 0
+        total_champions = len(champion_names)
+
+        # Disable tqdm in headless mode (pythonw.exe, Task Scheduler)
+        disable_tqdm = _is_headless_mode()
+        if disable_tqdm:
+            logger.info("Headless mode detected - tqdm progress bar disabled")
+
+        with tqdm(
+            total=total_champions,
+            desc="Scraping synergies",
+            unit="champ",
+            disable=disable_tqdm,
+        ) as pbar:
+            for future in as_completed(futures):
+                champion = futures[future]
+                try:
+                    champ_name, synergies = future.result()
+                    self._write_synergies_thread_safe(db, champ_name, synergies)
+                    success_count += 1
+                except Exception as e:
+                    logger.error(
+                        f"Failed to scrape synergies for {champion} after retries: {type(e).__name__}: {e}"
+                    )
+                    # Log first failure with full traceback for debugging
+                    if failed_count == 0:
+                        import traceback
+
+                        logger.error(f"First failure traceback:\n{traceback.format_exc()}")
+                    failed_count += 1
+                finally:
+                    pbar.update(1)
+
+        duration = time.time() - start_time
+
+        stats = {
+            "success": success_count,
+            "failed": failed_count,
+            "total": total_champions,
+            "duration": duration,
+        }
+
+        logger.info(
+            f"Synergy scraping completed: {success_count}/{total_champions} succeeded, "
+            f"{failed_count} failed, duration: {duration:.1f}s ({duration/60:.1f}min)"
+        )
+
+        return stats
+
     def parse_all_champions(self, db: Database, normalize_func) -> dict:
         """Parse all champions in parallel with progress tracking.
 

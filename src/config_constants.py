@@ -122,6 +122,9 @@ class XPathConfig:
     # Matchup row base path
     MATCHUP_ROW_BASE: str = "/html/body/main/div[6]/div[1]/div[{index}]/div[2]/div"
 
+    # Synergies button (LoLalytics: Click to switch from Counters to Synergies)
+    SYNERGIES_BUTTON_XPATH: str = "//button[contains(text(), 'Synergies')]"
+
 
 @dataclass
 class PoolStatisticsConfig:
@@ -132,6 +135,33 @@ class PoolStatisticsConfig:
     MIN_PICKRATE: float = 0.5  # Minimum pickrate % for matchup inclusion
 
 
+@dataclass
+class SynergyConfig:
+    """Configuration for champion synergy analysis and scoring."""
+
+    # Minimum thresholds for synergy data quality
+    MIN_SYNERGY_PICKRATE: float = 0.5  # Minimum pickrate % for synergy inclusion
+    MIN_SYNERGY_GAMES: int = 200  # Minimum games for synergy reliability
+
+    # Synergy scoring weights
+    SYNERGY_BONUS_MULTIPLIER: float = 0.3  # Multiplier for synergy bonus in final score
+    # Formula: final_score = matchup_score + (synergy_bonus * SYNERGY_BONUS_MULTIPLIER)
+    # Example: matchup_score=100, synergy_bonus=50 → final_score=100+(50*0.3)=115
+
+    # Synergy aggregation method
+    USE_WEIGHTED_AVERAGE: bool = True  # Weight synergies by ally pickrate
+    # If True: synergy_bonus = sum(delta2 * pickrate) / sum(pickrate)
+    # If False: synergy_bonus = average(delta2) for all allies
+
+    # Feature toggle
+    SYNERGIES_ENABLED: bool = True  # Global toggle for synergy feature
+    # If False, synergy bonus = 0 (backward compatible behavior)
+
+    # Display configuration
+    SHOW_SYNERGY_DETAILS: bool = True  # Show detailed synergy breakdown in UI
+    MAX_SYNERGIES_DISPLAYED: int = 5  # Maximum number of top synergies to display
+
+
 # Global configuration instances
 scraping_config = ScrapingConfig()
 analysis_config = AnalysisConfig()
@@ -139,3 +169,4 @@ draft_config = DraftConfig()
 ui_config = UIConfig()
 xpath_config = XPathConfig()
 pool_stats_config = PoolStatisticsConfig()
+synergy_config = SynergyConfig()
