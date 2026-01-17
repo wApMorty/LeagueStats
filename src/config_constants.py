@@ -123,7 +123,9 @@ class XPathConfig:
     MATCHUP_ROW_BASE: str = "/html/body/main/div[6]/div[1]/div[{index}]/div[2]/div"
 
     # Synergies button (LoLalytics: Click to switch from Counters to Synergies)
-    SYNERGIES_BUTTON_XPATH: str = "//button[contains(text(), 'Synergies')]"
+    # Note: LoLalytics uses a <div> containing <span>Common Teammates</span> (as of 2026-01-17)
+    # The span itself has pointer-events-none, so we click the parent div
+    SYNERGIES_BUTTON_XPATH: str = "//span[text()='Common Teammates']/.."
 
 
 @dataclass
