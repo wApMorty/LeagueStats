@@ -7,11 +7,14 @@ from selenium import webdriver
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import (
     NoSuchElementException,
     ElementNotInteractableException,
     InvalidSessionIdException,
     WebDriverException,
+    TimeoutException,
 )
 
 from .config import config
@@ -431,14 +434,27 @@ class Parser:
                 By.XPATH, xpath_config.SYNERGIES_BUTTON_XPATH
             )
             synergies_button.click()
-            sleep(scraping_config.PAGE_LOAD_DELAY)  # Wait for tab switch
             logger.info(f"Clicked Synergies button for {champion}")
+
+            # Explicit wait for synergies data to load (wait for first row)
+            # Wait up to 10 seconds for the first synergy row to be present
+            wait = WebDriverWait(self.webdriver, 10)
+            first_synergy_row_xpath = "/html/body/main/div[6]/div[1]/div[2]/div[2]/div"
+            wait.until(EC.presence_of_element_located((By.XPATH, first_synergy_row_xpath)))
+            logger.info(f"Synergies data loaded for {champion}")
+            sleep(scraping_config.PAGE_LOAD_DELAY)  # Additional wait for stability
         except NoSuchElementException:
             logger.warning(
                 f"Synergies button not found for {champion}. "
                 f"XPath: {xpath_config.SYNERGIES_BUTTON_XPATH}"
             )
             return []  # Return empty if button not found
+        except TimeoutException:
+            logger.error(
+                f"Synergies data failed to load for {champion} after clicking button. "
+                f"Timeout waiting for first synergy row."
+            )
+            return []
         except Exception as e:
             logger.error(f"Failed to click Synergies button for {champion}: {e}")
             return []
@@ -461,13 +477,11 @@ class Parser:
                 for elem in row:
                     try:
                         index = row.index(elem) + 1
-                        # Extract ally name (instead of enemy)
-                        ally = (
-                            elem.find_element(By.TAG_NAME, "a")
-                            .get_dom_attribute("href")
-                            .split("vs/")[1]
-                            .split("/build")[0]
-                        )
+                        # Extract ally name from href
+                        # Synergies URL format: /lol/{champion}/build/?lane=...
+                        # (different from matchups which use /lol/yasuo/vs/{enemy}/build)
+                        href = elem.find_element(By.TAG_NAME, "a").get_dom_attribute("href")
+                        ally = href.split("/lol/")[1].split("/build")[0]
                         winrate = float(
                             elem.find_element(By.XPATH, f"{path}/div[{index}]/div[1]/span")
                             .get_attribute("innerHTML")
