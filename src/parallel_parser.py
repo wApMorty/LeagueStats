@@ -261,11 +261,12 @@ class ParallelParser:
 
         start_time = time.time()
 
+        # Initialize synergies table (drop + recreate with indexes)
+        db.init_synergies_table()
+
         # Get champion list from database (populated by Riot API)
         champion_names = list(db.get_all_champion_names().values())
-        logger.info(
-            f"Starting parallel scraping of synergies for {len(champion_names)} champions"
-        )
+        logger.info(f"Starting parallel scraping of synergies for {len(champion_names)} champions")
 
         # Create thread pool and submit tasks
         self.executor = ThreadPoolExecutor(max_workers=self.max_workers)

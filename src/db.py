@@ -142,6 +142,38 @@ class Database:
         # Create indexes for performance optimization
         self.create_database_indexes()
 
+    def init_synergies_table(self) -> None:
+        """Create or reset synergies table for champion synergy data.
+
+        Drops existing synergies table and recreates it with proper schema
+        and indexes. Structure mirrors matchups table but stores synergies
+        WITH allies instead of matchups AGAINST enemies.
+        """
+        self.execute_query("DROP TABLE IF EXISTS synergies")
+        self.execute_query(
+            """CREATE TABLE synergies (
+            id INTEGER PRIMARY KEY,
+            champion INTEGER NOT NULL,
+            ally INTEGER NOT NULL,
+            winrate REAL NOT NULL,
+            delta1 REAL NOT NULL,
+            delta2 REAL NOT NULL,
+            pickrate REAL NOT NULL,
+            games INTEGER NOT NULL,
+            FOREIGN KEY (champion) REFERENCES champions(id) ON DELETE CASCADE,
+            FOREIGN KEY (ally) REFERENCES champions(id) ON DELETE CASCADE
+        )"""
+        )
+        # Create indexes for performance optimization
+        cursor = self.connection.cursor()
+        cursor.execute("CREATE INDEX idx_synergies_champion ON synergies(champion)")
+        cursor.execute("CREATE INDEX idx_synergies_ally ON synergies(ally)")
+        cursor.execute("CREATE INDEX idx_synergies_pickrate ON synergies(pickrate)")
+        cursor.execute(
+            "CREATE INDEX idx_synergies_champion_pickrate ON synergies(champion, pickrate)"
+        )
+        cursor.execute("CREATE INDEX idx_synergies_ally_pickrate ON synergies(ally, pickrate)")
+
     def init_champion_scores_table(self) -> None:
         """Create or reset champion_scores table for tier list calculations."""
         self.execute_query("DROP TABLE IF EXISTS champion_scores")
@@ -902,9 +934,7 @@ class Database:
         except Error as e:
             print(f"The error '{e}' occurred")
 
-    def get_synergy_delta2(
-        self, champion_name: str, ally_name: str
-    ) -> Optional[float]:
+    def get_synergy_delta2(self, champion_name: str, ally_name: str) -> Optional[float]:
         """Get delta2 value for a specific champion-ally synergy.
 
         Args:
@@ -940,9 +970,7 @@ class Database:
                 return None
 
         except Exception as e:
-            print(
-                f"[ERROR] Database error getting synergy {champion_name} with {ally_name}: {e}"
-            )
+            print(f"[ERROR] Database error getting synergy {champion_name} with {ally_name}: {e}")
             return None
 
     def get_all_synergies_bulk(self) -> dict:
