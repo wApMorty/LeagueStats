@@ -486,6 +486,32 @@ class DraftMonitor:
             matchups, enemy_names, champion_name, banned_names if banned_names else None
         )
 
+    def _calculate_synergy_score(self, champion_name: str, ally_team: List[int]) -> float:
+        """Calculate synergy score as sum of delta2 with allied champions.
+
+        Args:
+            champion_name: Name of the champion to evaluate
+            ally_team: List of allied champion IDs already picked
+
+        Returns:
+            Sum of delta2 values for synergies with allies (0.0 if no allies)
+        """
+        if not ally_team:
+            return 0.0
+
+        synergy_score = 0.0
+
+        for ally_id in ally_team:
+            ally_name = self._get_display_name(ally_id)
+            if ally_name:
+                delta2 = self.assistant.db.get_synergy_delta2(champion_name, ally_name)
+                if delta2 is not None:
+                    synergy_score += delta2
+                    if self.verbose:
+                        print(f"[DEBUG] Synergy: {champion_name} + {ally_name} = {delta2:+.2f}")
+
+        return synergy_score
+
     def _parse_draft_state(self, champ_select_data: Dict) -> DraftState:
         """Parse champion select data into DraftState."""
         state = DraftState()
@@ -715,12 +741,24 @@ class DraftMonitor:
                     if (
                         matchups and sum(m.games for m in matchups) >= 500
                     ):  # Threshold for valid data
-                        # Calculate score against enemy team using unified scoring method
-                        # Pass banned champions so they're excluded from blind pick calculations
-                        score = self._calculate_score_against_team(
+                        # Calculate matchup score against enemy team
+                        matchup_score = self._calculate_score_against_team(
                             matchups, enemy_picks, champion_name, all_banned_ids
                         )
-                        scores.append((champion_id, score))
+
+                        # Calculate synergy score with allied champions
+                        synergy_score = self._calculate_synergy_score(champion_name, ally_picks)
+
+                        # Final score = matchup_score + synergy_score
+                        final_score = matchup_score + synergy_score
+
+                        if self.verbose:
+                            print(
+                                f"[DEBUG] {champion_name}: Matchup={matchup_score:.2f}, "
+                                f"Synergy={synergy_score:+.2f}, Final={final_score:.2f}"
+                            )
+
+                        scores.append((champion_id, final_score))
 
                 scores.sort(key=lambda x: -x[1])
 
@@ -729,16 +767,24 @@ class DraftMonitor:
                 top_recommendation = None
 
                 for i in range(display_count):
-                    champion_id, score = scores[i]
+                    champion_id, final_score = scores[i]
                     display_name = self._get_display_name(champion_id)
                     rank = "[1st]" if i == 0 else "[2nd]" if i == 1 else "[3rd]"
-                    # Format score as win rate advantage
-                    if score > 0:
-                        print(f"  {rank} {display_name} (+{score:.2f}% advantage)")
-                    elif score < 0:
-                        print(f"  {rank} {display_name} ({score:.2f}% disadvantage)")
-                    else:
-                        print(f"  {rank} {display_name} (neutral)")
+
+                    # Recalculate matchup and synergy scores for display
+                    matchups = self.assistant.get_matchups_for_draft(display_name)
+                    matchup_score = self._calculate_score_against_team(
+                        matchups, enemy_picks, display_name, all_banned_ids
+                    )
+                    synergy_score = self._calculate_synergy_score(display_name, ally_picks)
+
+                    # Format score as win rate advantage with breakdown
+                    score_text = (
+                        f"+{final_score:.2f}%" if final_score > 0 else f"{final_score:.2f}%"
+                    )
+                    breakdown = f"(Matchup: {matchup_score:+.2f}%, Synergy: {synergy_score:+.2f}%)"
+
+                    print(f"  {rank} {display_name} {score_text} {breakdown}")
 
                     # Store top recommendation for auto-hover
                     if i == 0:
