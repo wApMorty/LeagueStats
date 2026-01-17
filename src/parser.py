@@ -7,11 +7,14 @@ from selenium import webdriver
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import (
     NoSuchElementException,
     ElementNotInteractableException,
     InvalidSessionIdException,
     WebDriverException,
+    TimeoutException,
 )
 
 from .config import config
@@ -378,3 +381,145 @@ class Parser:
                 ctns = True
                 break
         return ctns
+
+    def get_champion_synergies(self, champion: str, lane: str = None) -> List[tuple]:
+        """Parse champion synergies (WITH allies) from LoLalytics.
+
+        Identical to get_champion_data but clicks the "Synergies" button first
+        to switch from Counters to Synergies tab.
+
+        Args:
+            champion: Champion name (e.g., "yasuo")
+            lane: Optional lane filter (e.g., "mid")
+
+        Returns:
+            List of tuples (ally_name, winrate, delta1, delta2, pickrate, games)
+
+        Example:
+            >>> parser.get_champion_synergies("yasuo", "mid")
+            [('malphite', 55.0, 180.0, 220.0, 15.0, 1200), ...]
+        """
+        return self.get_champion_synergies_on_patch(config.CURRENT_PATCH, champion, lane)
+
+    def get_champion_synergies_on_patch(
+        self, patch: str, champion: str, lane: str = None
+    ) -> List[tuple]:
+        """Parse champion synergies for a specific patch.
+
+        Args:
+            patch: Patch version (e.g., "14.23")
+            champion: Champion name
+            lane: Optional lane filter
+
+        Returns:
+            List of tuples (ally_name, winrate, delta1, delta2, pickrate, games)
+        """
+        result = []
+
+        # Build URL (same as matchups)
+        if lane:
+            url = f"https://lolalytics.com/lol/{champion}/build/?lane={lane}&tier=diamond_plus&patch={patch}"
+        else:
+            url = f"https://lolalytics.com/lol/{champion}/build/?tier=diamond_plus&patch={patch}"
+
+        self.webdriver.get(url)
+        sleep(scraping_config.PAGE_LOAD_DELAY)
+
+        # Accept cookies before clicking Synergies button
+        self._accept_cookies()
+
+        # Click "Synergies" button to switch tabs
+        try:
+            synergies_button = self.webdriver.find_element(
+                By.XPATH, xpath_config.SYNERGIES_BUTTON_XPATH
+            )
+            synergies_button.click()
+            logger.info(f"Clicked Synergies button for {champion}")
+
+            # Explicit wait for synergies data to load (wait for first row)
+            # Wait up to 10 seconds for the first synergy row to be present
+            wait = WebDriverWait(self.webdriver, 10)
+            first_synergy_row_xpath = "/html/body/main/div[6]/div[1]/div[2]/div[2]/div"
+            wait.until(EC.presence_of_element_located((By.XPATH, first_synergy_row_xpath)))
+            logger.info(f"Synergies data loaded for {champion}")
+            sleep(scraping_config.PAGE_LOAD_DELAY)  # Additional wait for stability
+        except NoSuchElementException:
+            logger.warning(
+                f"Synergies button not found for {champion}. "
+                f"XPath: {xpath_config.SYNERGIES_BUTTON_XPATH}"
+            )
+            return []  # Return empty if button not found
+        except TimeoutException:
+            logger.error(
+                f"Synergies data failed to load for {champion} after clicking button. "
+                f"Timeout waiting for first synergy row."
+            )
+            return []
+        except Exception as e:
+            logger.error(f"Failed to click Synergies button for {champion}: {e}")
+            return []
+
+        # Scroll to synergies section (same scroll position as matchups)
+        self.webdriver.execute_script(f"window.scrollTo(0,{scraping_config.MATCHUP_SCROLL_Y})")
+        sleep(scraping_config.SCROLL_DELAY)
+
+        # Parse synergies (4 rows instead of 5 for matchups)
+        for index in range(2, 6):
+            path = f"/html/body/main/div[6]/div[1]/div[{index}]/div[2]/div"
+            row = self.webdriver.find_elements(By.XPATH, f"{path}/*")
+            actions = ActionChains(self.webdriver)
+            actions.move_to_element_with_offset(
+                row[0], scraping_config.MATCHUP_CAROUSEL_SCROLL_X, 0
+            ).perform()
+            enough_data = False
+            pickrate = float("inf")  # Initialize to continue scrolling if all elements fail
+            while not enough_data:
+                for elem in row:
+                    try:
+                        index = row.index(elem) + 1
+                        # Extract ally name from href
+                        # Synergies URL format: /lol/{champion}/build/?lane=...
+                        # (different from matchups which use /lol/yasuo/vs/{enemy}/build)
+                        href = elem.find_element(By.TAG_NAME, "a").get_dom_attribute("href")
+                        ally = href.split("/lol/")[1].split("/build")[0]
+                        winrate = float(
+                            elem.find_element(By.XPATH, f"{path}/div[{index}]/div[1]/span")
+                            .get_attribute("innerHTML")
+                            .split("%")[0]
+                        )
+
+                        # Get all "my-1" elements and validate size
+                        my1_elements = elem.find_elements(By.CLASS_NAME, "my-1")
+                        if len(my1_elements) < 7:
+                            logger.warning(
+                                f"Insufficient 'my-1' elements for {ally} synergy "
+                                f"(found {len(my1_elements)}, expected ≥7). Skipping."
+                            )
+                            continue
+
+                        delta1 = float(my1_elements[4].get_attribute("innerHTML"))
+                        delta2 = float(my1_elements[5].get_attribute("innerHTML"))
+                        pickrate = float(my1_elements[6].get_attribute("innerHTML"))
+
+                        games = int(
+                            "".join(
+                                elem.find_element(By.CLASS_NAME, r"text-\[9px\]")
+                                .get_attribute("innerHTML")
+                                .split()
+                            )
+                        )
+                        if not self.contains(
+                            result, ally, winrate, delta1, delta2, pickrate, games
+                        ):
+                            result.append((ally, winrate, delta1, delta2, pickrate, games))
+                    except (IndexError, ValueError, NoSuchElementException) as e:
+                        logger.warning(
+                            f"Failed to parse synergy element: {type(e).__name__}: {e}. Skipping."
+                        )
+                        continue
+                actions = ActionChains(self.webdriver)
+                actions.click_and_hold().move_by_offset(
+                    -scraping_config.MATCHUP_CAROUSEL_SCROLL_X, 0
+                ).release().move_by_offset(scraping_config.MATCHUP_CAROUSEL_SCROLL_X, 0).perform()
+                enough_data = pickrate < config.MIN_PICKRATE
+        return result

@@ -486,6 +486,32 @@ class DraftMonitor:
             matchups, enemy_names, champion_name, banned_names if banned_names else None
         )
 
+    def _calculate_synergy_score(self, champion_name: str, ally_team: List[int]) -> float:
+        """Calculate synergy score as sum of delta2 with allied champions.
+
+        Args:
+            champion_name: Name of the champion to evaluate
+            ally_team: List of allied champion IDs already picked
+
+        Returns:
+            Sum of delta2 values for synergies with allies (0.0 if no allies)
+        """
+        if not ally_team:
+            return 0.0
+
+        synergy_score = 0.0
+
+        for ally_id in ally_team:
+            ally_name = self._get_display_name(ally_id)
+            if ally_name:
+                delta2 = self.assistant.db.get_synergy_delta2(champion_name, ally_name)
+                if delta2 is not None:
+                    synergy_score += delta2
+                    if self.verbose:
+                        print(f"[DEBUG] Synergy: {champion_name} + {ally_name} = {delta2:+.2f}")
+
+        return synergy_score
+
     def _parse_draft_state(self, champ_select_data: Dict) -> DraftState:
         """Parse champion select data into DraftState."""
         state = DraftState()
@@ -715,12 +741,24 @@ class DraftMonitor:
                     if (
                         matchups and sum(m.games for m in matchups) >= 500
                     ):  # Threshold for valid data
-                        # Calculate score against enemy team using unified scoring method
-                        # Pass banned champions so they're excluded from blind pick calculations
-                        score = self._calculate_score_against_team(
+                        # Calculate matchup score against enemy team
+                        matchup_score = self._calculate_score_against_team(
                             matchups, enemy_picks, champion_name, all_banned_ids
                         )
-                        scores.append((champion_id, score))
+
+                        # Calculate synergy score with allied champions
+                        synergy_score = self._calculate_synergy_score(champion_name, ally_picks)
+
+                        # Final score = matchup_score + synergy_score
+                        final_score = matchup_score + synergy_score
+
+                        if self.verbose:
+                            print(
+                                f"[DEBUG] {champion_name}: Matchup={matchup_score:.2f}, "
+                                f"Synergy={synergy_score:+.2f}, Final={final_score:.2f}"
+                            )
+
+                        scores.append((champion_id, final_score))
 
                 scores.sort(key=lambda x: -x[1])
 
@@ -729,16 +767,24 @@ class DraftMonitor:
                 top_recommendation = None
 
                 for i in range(display_count):
-                    champion_id, score = scores[i]
+                    champion_id, final_score = scores[i]
                     display_name = self._get_display_name(champion_id)
                     rank = "[1st]" if i == 0 else "[2nd]" if i == 1 else "[3rd]"
-                    # Format score as win rate advantage
-                    if score > 0:
-                        print(f"  {rank} {display_name} (+{score:.2f}% advantage)")
-                    elif score < 0:
-                        print(f"  {rank} {display_name} ({score:.2f}% disadvantage)")
-                    else:
-                        print(f"  {rank} {display_name} (neutral)")
+
+                    # Recalculate matchup and synergy scores for display
+                    matchups = self.assistant.get_matchups_for_draft(display_name)
+                    matchup_score = self._calculate_score_against_team(
+                        matchups, enemy_picks, display_name, all_banned_ids
+                    )
+                    synergy_score = self._calculate_synergy_score(display_name, ally_picks)
+
+                    # Format score as win rate advantage with breakdown
+                    score_text = (
+                        f"+{final_score:.2f}%" if final_score > 0 else f"{final_score:.2f}%"
+                    )
+                    breakdown = f"(Matchup: {matchup_score:+.2f}%, Synergy: {synergy_score:+.2f}%)"
+
+                    print(f"  {rank} {display_name} {score_text} {breakdown}")
 
                     # Store top recommendation for auto-hover
                     if i == 0:
@@ -1141,20 +1187,30 @@ class DraftMonitor:
                         print(
                             f"[DEBUG] {champion_name}: Insufficient data (games={total_games}, need >=500)"
                         )
-                    ally_scores.append((champion_name, None, 0))  # Mark insufficient data
+                    ally_scores.append(
+                        (champion_name, None, 0, 0.0)
+                    )  # (name, matchup_score, synergy_score, total)
                     continue
 
                 # Use the new normalized scoring system
                 enemy_names = [self._get_display_name(enemy_id) for enemy_id in enemy_picks]
 
-                # Use assistant's new win advantage calculation
-                win_advantage = self.assistant.score_against_team(
+                # Calculate matchup score against enemies
+                matchup_score = self.assistant.score_against_team(
                     champion_matchups, enemy_names, champion_name
                 )
-                ally_scores.append((champion_name, win_advantage, len(enemy_picks)))
+
+                # Calculate synergy score with other allies (excluding self)
+                other_allies = [aid for aid in ally_picks if aid != champion_id]
+                synergy_score = self._calculate_synergy_score(champion_name, other_allies)
+
+                # Total score = matchup + synergy
+                total_score = matchup_score + synergy_score
+
+                ally_scores.append((champion_name, matchup_score, synergy_score, total_score))
 
             except Exception as e:
-                ally_scores.append((champion_name, None, 0))  # Mark error
+                ally_scores.append((champion_name, None, 0.0, 0.0))  # Mark error
 
         # Calculate scores for ENEMY team (without displaying yet)
         for i, champion_id in enumerate(enemy_picks):
@@ -1174,77 +1230,92 @@ class DraftMonitor:
                         print(
                             f"[DEBUG] {champion_name}: Insufficient data (games={total_games}, need >=500)"
                         )
-                    enemy_scores.append((champion_name, None, 0))  # Mark insufficient data
+                    enemy_scores.append((champion_name, None, 0.0, 0.0))  # Mark insufficient data
                     continue
 
                 # Use the new normalized scoring system
                 ally_names = [self._get_display_name(ally_id) for ally_id in ally_picks]
 
-                # Use assistant's new win advantage calculation
-                win_advantage = self.assistant.score_against_team(
+                # Calculate matchup score against our team
+                matchup_score = self.assistant.score_against_team(
                     champion_matchups, ally_names, champion_name
                 )
-                enemy_scores.append((champion_name, win_advantage, len(ally_picks)))
+
+                # Calculate synergy score with other enemies (excluding self)
+                other_enemies = [eid for eid in enemy_picks if eid != champion_id]
+                synergy_score = self._calculate_synergy_score(champion_name, other_enemies)
+
+                # Total score = matchup + synergy
+                total_score = matchup_score + synergy_score
+
+                enemy_scores.append((champion_name, matchup_score, synergy_score, total_score))
 
             except Exception as e:
-                enemy_scores.append((champion_name, None, 0))  # Mark error
+                enemy_scores.append((champion_name, None, 0.0, 0.0))  # Mark error
 
-        # Sort both teams by win advantage (descending - best advantages first)
-        ally_scores.sort(key=lambda x: x[1] if x[1] is not None else -999, reverse=True)
-        enemy_scores.sort(key=lambda x: x[1] if x[1] is not None else -999, reverse=True)
+        # Sort both teams by total score (descending - best scores first)
+        ally_scores.sort(
+            key=lambda x: x[3] if x[1] is not None else -999, reverse=True
+        )  # Sort by total_score
+        enemy_scores.sort(key=lambda x: x[3] if x[1] is not None else -999, reverse=True)
+
+        # Helper function to get emoji for score
+        def get_emoji(score):
+            if score >= 2.0:
+                return "✅"
+            elif score >= 1.0:
+                return "🟡"
+            elif score >= -1.0:
+                return "➖"
+            elif score >= -2.0:
+                return "🟠"
+            else:
+                return "🔴"
 
         # Display ALLY team performance (sorted)
         safe_print(f"\n🟢 YOUR TEAM:")
-        for champion_name, win_advantage, matchup_count in ally_scores:
-            if win_advantage is None:
+        safe_print(f"  {'Champion':<15} | Matchup | Synergy | Total")
+        safe_print(f"  {'-'*15}-+---------+---------+-------")
+        for champion_name, matchup_score, synergy_score, total_score in ally_scores:
+            if matchup_score is None:
                 safe_print(f"  {champion_name:<15} | ❌ Insufficient data")
             else:
-                # Overall assessment with win rate thresholds
-                if win_advantage >= 2.0:
-                    safe_print(f"  {champion_name:<15} | ✅ +{win_advantage:.2f}% (Excellent)")
-                elif win_advantage >= 1.0:
-                    safe_print(f"  {champion_name:<15} | 🟡 +{win_advantage:.2f}% (Good)")
-                elif win_advantage >= -1.0:
-                    safe_print(f"  {champion_name:<15} | ➖ {win_advantage:+.2f}% (Neutral)")
-                elif win_advantage >= -2.0:
-                    safe_print(f"  {champion_name:<15} | 🟠 {win_advantage:.2f}% (Bad)")
-                else:
-                    safe_print(f"  {champion_name:<15} | 🔴 {win_advantage:.2f}% (Very Bad)")
+                matchup_emoji = get_emoji(matchup_score)
+                synergy_emoji = get_emoji(synergy_score)
+                total_emoji = get_emoji(total_score)
+                safe_print(
+                    f"  {champion_name:<15} | {matchup_emoji} {matchup_score:+5.1f} | "
+                    f"{synergy_emoji} {synergy_score:+5.1f} | {total_emoji} {total_score:+5.1f}"
+                )
 
         # Display ENEMY team performance (sorted)
         safe_print(f"\n🔴 ENEMY TEAM:")
-        for champion_name, win_advantage, matchup_count in enemy_scores:
-            if win_advantage is None:
+        safe_print(f"  {'Champion':<15} | Matchup | Synergy | Total")
+        safe_print(f"  {'-'*15}-+---------+---------+-------")
+        for champion_name, matchup_score, synergy_score, total_score in enemy_scores:
+            if matchup_score is None:
                 safe_print(f"  {champion_name:<15} | ❌ Insufficient data")
             else:
-                # Overall assessment (from enemy perspective - their advantage against us)
-                if win_advantage >= 2.0:
-                    safe_print(
-                        f"  {champion_name:<15} | ✅ +{win_advantage:.2f}% (Strong against us)"
-                    )
-                elif win_advantage >= 1.0:
-                    safe_print(
-                        f"  {champion_name:<15} | 🟡 +{win_advantage:.2f}% (Good against us)"
-                    )
-                elif win_advantage >= -1.0:
-                    safe_print(f"  {champion_name:<15} | ➖ {win_advantage:+.2f}% (Neutral)")
-                elif win_advantage >= -2.0:
-                    safe_print(f"  {champion_name:<15} | 🟠 {win_advantage:.2f}% (Weak against us)")
-                else:
-                    safe_print(
-                        f"  {champion_name:<15} | 🔴 {win_advantage:.2f}% (Very weak against us)"
-                    )
+                matchup_emoji = get_emoji(matchup_score)
+                synergy_emoji = get_emoji(synergy_score)
+                total_emoji = get_emoji(total_score)
+                safe_print(
+                    f"  {champion_name:<15} | {matchup_emoji} {matchup_score:+5.1f} | "
+                    f"{synergy_emoji} {synergy_score:+5.1f} | {total_emoji} {total_score:+5.1f}"
+                )
 
         # Team summary comparison
         safe_print(f"\n📈 DRAFT COMPARISON:")
         print("-" * 40)
 
-        # Calculate team winrates using geometric mean (same method as score_teams)
-        ally_valid_scores = [score[1] for score in ally_scores if score[1] is not None]
-        enemy_valid_scores = [score[1] for score in enemy_scores if score[1] is not None]
+        # Calculate team winrates using total scores (matchup + synergy)
+        ally_valid_scores = [
+            score[3] for score in ally_scores if score[1] is not None
+        ]  # index 3 = total_score
+        enemy_valid_scores = [score[3] for score in enemy_scores if score[1] is not None]
 
         if ally_valid_scores:
-            # Convert advantages to individual winrates
+            # Convert total advantages to individual winrates
             ally_winrates = [50.0 + advantage for advantage in ally_valid_scores]
             # Use geometric mean for team strength calculation
             ally_team_stats = self.assistant._calculate_team_winrate(ally_winrates)

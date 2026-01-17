@@ -293,17 +293,32 @@ def parse_match_statistics():
 
     print(f"\n✅ Patch selected: {patch_version}")
     print("\nParsing options:")
-    print("1. Parse SoloQ Pool only       - Fast (~1 min, recommended)")
-    print("2. Parse All Champions         - Comprehensive (~30+ min)")
-    print("3. Back to main menu")
+    print("MATCHUPS:")
+    print("1. Parse Matchups (SoloQ Pool)           - Fast (~1 min)")
+    print("2. Parse Matchups (All Champions)        - Comprehensive (~6-8 min)")
+    print("\nSYNERGIES:")
+    print("3. Parse Synergies (SoloQ Pool)          - Fast (~1 min)")
+    print("4. Parse Synergies (All Champions)       - Comprehensive (~6-8 min)")
+    print("\nCOMPLETE:")
+    print("5. Parse All Data (SoloQ Pool)           - Matchups + Synergies (~2 min)")
+    print("6. Parse All Data (All Champions)        - Matchups + Synergies (~12-16 min)")
+    print("\n7. Back to main menu")
 
-    choice = input("\nChoose option (1-3): ").strip()
+    choice = input("\nChoose option (1-7): ").strip()
 
     if choice == "1":
         parse_champion_pool(patch_version)
     elif choice == "2":
         parse_all_champions(patch_version)
     elif choice == "3":
+        parse_synergies_pool(patch_version)
+    elif choice == "4":
+        parse_synergies_all(patch_version)
+    elif choice == "5":
+        parse_all_data_pool(patch_version)
+    elif choice == "6":
+        parse_all_data_all(patch_version)
+    elif choice == "7":
         return
     else:
         print("[ERROR] Invalid option")
@@ -487,6 +502,401 @@ def parse_all_champions(patch_version=None):
         assistant.close()
         print(
             f"[SUCCESS] All champion statistics updated! ({stats['success']} champions scraped, {champions_scored} scored)"
+        )
+
+    except Exception as e:
+        print(f"[ERROR] Parsing error: {e}")
+        import traceback
+
+        traceback.print_exc()
+
+
+def parse_synergies_pool(patch_version=None):
+    """Parse synergies for selected champion pool using parallel scraping."""
+    print("[INFO] Champion Pool Synergies Parser (Parallel Mode)")
+
+    # Enhanced pool selection
+    selected_pool_info = _select_pool_for_parsing()
+    if not selected_pool_info:
+        print("[WARNING] No pool selected, using default Top SoloQ pool")
+        pool_name = "Top SoloQ (Default)"
+        pool_champions = TOP_SOLOQ_POOL
+    else:
+        pool_name, pool_champions = selected_pool_info
+
+    print(f"\n✅ Parsing synergies for: {pool_name}")
+    print(f"🔧 Patch version: {patch_version or 'default'}")
+    print(f"Champions to process: {', '.join(pool_champions)}")
+
+    # Updated time estimate for parallel scraping (80% faster)
+    sequential_time = len(pool_champions) * 0.75  # Average 45 seconds per champion
+    parallel_time = sequential_time * 0.2  # 80% improvement
+    print(f"This will take approximately {parallel_time:.1f} minutes with parallel scraping...")
+
+    if patch_version:
+        print(f"\n[INFO] Will scrape synergy data for patch version: {patch_version}")
+
+    confirm = (
+        input(f"\nProceed with parsing synergies for {len(pool_champions)} champions? (y/N): ")
+        .strip()
+        .lower()
+    )
+    if confirm != "y":
+        print("[INFO] Parsing cancelled.")
+        return
+
+    try:
+        from src.config import config
+        from src.constants import normalize_champion_name_for_url
+        import time
+
+        db = Database(config.DATABASE_PATH)
+        db.connect()
+
+        # Ensure champions are up to date
+        cursor = db.connection.cursor()
+        cursor.execute("SELECT COUNT(*) FROM champions")
+        champion_count = cursor.fetchone()[0]
+
+        if champion_count == 0:
+            print("[INFO] No champions found, updating from Riot API first...")
+            db.create_riot_champions_table()
+            db.update_champions_from_riot_api()
+
+        # Initialize synergies table
+        db.init_synergies_table()
+
+        # Use parallel scraping
+        from src.config_constants import scraping_config
+
+        start_time = time.time()
+        parallel_parser = ParallelParser(
+            max_workers=scraping_config.DEFAULT_MAX_WORKERS, patch_version=patch_version
+        )
+
+        print(
+            f"\n[INFO] Starting parallel synergy scraping with {scraping_config.DEFAULT_MAX_WORKERS} workers (patch {patch_version or config.CURRENT_PATCH})..."
+        )
+        stats = parallel_parser.parse_synergies_by_role(
+            db, pool_champions, "top", normalize_champion_name_for_url
+        )
+
+        parallel_parser.close()
+        duration = time.time() - start_time
+
+        # Display statistics
+        print("\n" + "=" * 60)
+        print("PARALLEL SYNERGY SCRAPING COMPLETED")
+        print("=" * 60)
+        print(f"Pool: {pool_name}")
+        print(f"Total champions: {stats['total']}")
+        print(f"Successful: {stats['success']}")
+        print(f"Failed: {stats['failed']}")
+        print(f"Duration: {duration:.1f}s ({duration/60:.1f}min)")
+        print("=" * 60)
+
+        db.close()
+        print(f"[SUCCESS] Synergy statistics updated! ({stats['success']} champions scraped)")
+
+    except Exception as e:
+        print(f"[ERROR] Parsing error: {e}")
+        import traceback
+
+        traceback.print_exc()
+
+
+def parse_synergies_all(patch_version=None):
+    """Parse synergies for all champions using parallel scraping."""
+    print("[INFO] Parsing synergies for ALL champions (Parallel Mode)")
+    print("[INFO] Estimated time: 6-8 minutes")
+
+    if patch_version:
+        print(f"\n[INFO] Will scrape synergy data for patch version: {patch_version}")
+
+    confirm = input("\nAre you sure you want to continue? (y/N): ").strip().lower()
+
+    if confirm != "y":
+        print("[INFO] Cancelled by user")
+        return
+
+    try:
+        from src.constants import normalize_champion_name_for_url
+        from src.config import config
+        import time
+
+        db = Database(config.DATABASE_PATH)
+        db.connect()
+
+        # Ensure champions are up to date
+        cursor = db.connection.cursor()
+        cursor.execute("SELECT COUNT(*) FROM champions")
+        champion_count = cursor.fetchone()[0]
+
+        if champion_count == 0:
+            print("[INFO] No champions found, updating from Riot API first...")
+            db.create_riot_champions_table()
+            db.update_champions_from_riot_api()
+
+        # Use parallel scraping
+        from src.config_constants import scraping_config
+
+        start_time = time.time()
+        parallel_parser = ParallelParser(
+            max_workers=scraping_config.DEFAULT_MAX_WORKERS, patch_version=patch_version
+        )
+
+        print(
+            f"\n[INFO] Starting parallel synergy scraping with {scraping_config.DEFAULT_MAX_WORKERS} workers (patch {patch_version or config.CURRENT_PATCH})..."
+        )
+        print(f"[INFO] Parsing champions from Riot API...")
+
+        stats = parallel_parser.parse_all_synergies(db, normalize_champion_name_for_url)
+
+        parallel_parser.close()
+        duration = time.time() - start_time
+
+        # Display statistics
+        total_count = stats.get("total", 0)
+        print(f"[INFO] Parsed {total_count} champions from Riot API")
+        print("\n" + "=" * 60)
+        print("PARALLEL SYNERGY SCRAPING COMPLETED")
+        print("=" * 60)
+        print(f"Total champions: {stats['total']}")
+        print(f"Successful: {stats['success']}")
+        print(f"Failed: {stats['failed']}")
+        print(f"Duration: {duration:.1f}s ({duration/60:.1f}min)")
+        print("=" * 60)
+
+        db.close()
+        print(f"[SUCCESS] Synergy statistics updated! ({stats['success']} champions scraped)")
+
+    except Exception as e:
+        print(f"[ERROR] Parsing error: {e}")
+        import traceback
+
+        traceback.print_exc()
+
+
+def parse_all_data_pool(patch_version=None):
+    """Parse both matchups and synergies for selected champion pool."""
+    print("[INFO] Parsing ALL data (matchups + synergies) for Champion Pool")
+
+    # Enhanced pool selection
+    selected_pool_info = _select_pool_for_parsing()
+    if not selected_pool_info:
+        print("[WARNING] No pool selected, using default Top SoloQ pool")
+        pool_name = "Top SoloQ (Default)"
+        pool_champions = TOP_SOLOQ_POOL
+    else:
+        pool_name, pool_champions = selected_pool_info
+
+    print(f"\n✅ Parsing complete data for: {pool_name}")
+    print(f"🔧 Patch version: {patch_version or 'default'}")
+    print(f"Champions to process: {', '.join(pool_champions)}")
+
+    # Time estimate: matchups + synergies
+    sequential_time = len(pool_champions) * 0.75 * 2  # Both matchups and synergies
+    parallel_time = sequential_time * 0.2  # 80% improvement
+    print(f"This will take approximately {parallel_time:.1f} minutes with parallel scraping...")
+    print(f"  - Matchups: ~{parallel_time/2:.1f} min")
+    print(f"  - Synergies: ~{parallel_time/2:.1f} min")
+
+    if patch_version:
+        print(f"\n[INFO] Will scrape data for patch version: {patch_version}")
+
+    confirm = (
+        input(
+            f"\nProceed with parsing matchups + synergies for {len(pool_champions)} champions? (y/N): "
+        )
+        .strip()
+        .lower()
+    )
+    if confirm != "y":
+        print("[INFO] Parsing cancelled.")
+        return
+
+    try:
+        from src.config import config
+        from src.constants import normalize_champion_name_for_url
+        import time
+
+        db = Database(config.DATABASE_PATH)
+        db.connect()
+
+        # Ensure champions are up to date
+        cursor = db.connection.cursor()
+        cursor.execute("SELECT COUNT(*) FROM champions")
+        champion_count = cursor.fetchone()[0]
+
+        if champion_count == 0:
+            print("[INFO] No champions found, updating from Riot API first...")
+            db.create_riot_champions_table()
+            db.update_champions_from_riot_api()
+
+        # Initialize tables
+        db.init_matchups_table()
+        db.init_synergies_table()
+        db.init_champion_scores_table()
+
+        # Use parallel scraping
+        from src.config_constants import scraping_config
+
+        parallel_parser = ParallelParser(
+            max_workers=scraping_config.DEFAULT_MAX_WORKERS, patch_version=patch_version
+        )
+
+        # Parse matchups
+        print(
+            f"\n[INFO] Step 1/2: Starting matchup scraping with {scraping_config.DEFAULT_MAX_WORKERS} workers..."
+        )
+        start_time = time.time()
+        matchup_stats = parallel_parser.parse_champions_by_role(
+            db, pool_champions, "top", normalize_champion_name_for_url
+        )
+        matchup_duration = time.time() - start_time
+
+        # Parse synergies
+        print(
+            f"\n[INFO] Step 2/2: Starting synergy scraping with {scraping_config.DEFAULT_MAX_WORKERS} workers..."
+        )
+        start_time = time.time()
+        synergy_stats = parallel_parser.parse_synergies_by_role(
+            db, pool_champions, "top", normalize_champion_name_for_url
+        )
+        synergy_duration = time.time() - start_time
+
+        parallel_parser.close()
+        total_duration = matchup_duration + synergy_duration
+
+        # Display statistics
+        print("\n" + "=" * 60)
+        print("COMPLETE DATA SCRAPING FINISHED")
+        print("=" * 60)
+        print(f"Pool: {pool_name}")
+        print(f"\nMatchups:")
+        print(f"  - Total: {matchup_stats['total']}")
+        print(f"  - Successful: {matchup_stats['success']}")
+        print(f"  - Failed: {matchup_stats['failed']}")
+        print(f"  - Duration: {matchup_duration:.1f}s ({matchup_duration/60:.1f}min)")
+        print(f"\nSynergies:")
+        print(f"  - Total: {synergy_stats['total']}")
+        print(f"  - Successful: {synergy_stats['success']}")
+        print(f"  - Failed: {synergy_stats['failed']}")
+        print(f"  - Duration: {synergy_duration:.1f}s ({synergy_duration/60:.1f}min)")
+        print(f"\nTotal Duration: {total_duration:.1f}s ({total_duration/60:.1f}min)")
+        print("=" * 60)
+
+        # Calculate global scores for tier lists
+        print("\n[INFO] Calculating global champion scores for tier lists...")
+        db.close()
+
+        assistant = Assistant()
+        champions_scored = assistant.calculate_global_scores()
+        assistant.close()
+        print(
+            f"[SUCCESS] All data updated! (Matchups: {matchup_stats['success']}, Synergies: {synergy_stats['success']}, Scored: {champions_scored})"
+        )
+
+    except Exception as e:
+        print(f"[ERROR] Parsing error: {e}")
+        import traceback
+
+        traceback.print_exc()
+
+
+def parse_all_data_all(patch_version=None):
+    """Parse both matchups and synergies for all champions."""
+    print("[INFO] Parsing ALL data (matchups + synergies) for ALL champions")
+    print("[INFO] Estimated time: 12-16 minutes")
+    print("  - Matchups: ~6-8 min")
+    print("  - Synergies: ~6-8 min")
+
+    if patch_version:
+        print(f"\n[INFO] Will scrape data for patch version: {patch_version}")
+
+    confirm = input("\nAre you sure you want to continue? (y/N): ").strip().lower()
+
+    if confirm != "y":
+        print("[INFO] Cancelled by user")
+        return
+
+    try:
+        from src.constants import normalize_champion_name_for_url
+        from src.config import config
+        import time
+
+        db = Database(config.DATABASE_PATH)
+        db.connect()
+
+        # Ensure champions are up to date
+        cursor = db.connection.cursor()
+        cursor.execute("SELECT COUNT(*) FROM champions")
+        champion_count = cursor.fetchone()[0]
+
+        if champion_count == 0:
+            print("[INFO] No champions found, updating from Riot API first...")
+            db.create_riot_champions_table()
+            db.update_champions_from_riot_api()
+
+        # Initialize tables
+        db.init_matchups_table()
+        db.init_synergies_table()
+        db.init_champion_scores_table()
+
+        # Use parallel scraping
+        from src.config_constants import scraping_config
+
+        parallel_parser = ParallelParser(
+            max_workers=scraping_config.DEFAULT_MAX_WORKERS, patch_version=patch_version
+        )
+
+        # Parse matchups
+        print(
+            f"\n[INFO] Step 1/2: Starting matchup scraping with {scraping_config.DEFAULT_MAX_WORKERS} workers..."
+        )
+        print(f"[INFO] Parsing champions from Riot API...")
+        start_time = time.time()
+        matchup_stats = parallel_parser.parse_all_champions(db, normalize_champion_name_for_url)
+        matchup_duration = time.time() - start_time
+
+        # Parse synergies
+        print(
+            f"\n[INFO] Step 2/2: Starting synergy scraping with {scraping_config.DEFAULT_MAX_WORKERS} workers..."
+        )
+        print(f"[INFO] Parsing champions from Riot API...")
+        start_time = time.time()
+        synergy_stats = parallel_parser.parse_all_synergies(db, normalize_champion_name_for_url)
+        synergy_duration = time.time() - start_time
+
+        parallel_parser.close()
+        total_duration = matchup_duration + synergy_duration
+
+        # Display statistics
+        print("\n" + "=" * 60)
+        print("COMPLETE DATA SCRAPING FINISHED")
+        print("=" * 60)
+        print(f"\nMatchups:")
+        print(f"  - Total: {matchup_stats['total']}")
+        print(f"  - Successful: {matchup_stats['success']}")
+        print(f"  - Failed: {matchup_stats['failed']}")
+        print(f"  - Duration: {matchup_duration:.1f}s ({matchup_duration/60:.1f}min)")
+        print(f"\nSynergies:")
+        print(f"  - Total: {synergy_stats['total']}")
+        print(f"  - Successful: {synergy_stats['success']}")
+        print(f"  - Failed: {synergy_stats['failed']}")
+        print(f"  - Duration: {synergy_duration:.1f}s ({synergy_duration/60:.1f}min)")
+        print(f"\nTotal Duration: {total_duration:.1f}s ({total_duration/60:.1f}min)")
+        print("=" * 60)
+
+        # Calculate global scores for tier lists
+        print("\n[INFO] Calculating global champion scores for tier lists...")
+        db.close()
+
+        assistant = Assistant()
+        champions_scored = assistant.calculate_global_scores()
+        assistant.close()
+        print(
+            f"[SUCCESS] All data updated! (Matchups: {matchup_stats['success']}, Synergies: {synergy_stats['success']}, Scored: {champions_scored})"
         )
 
     except Exception as e:
