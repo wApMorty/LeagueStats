@@ -1285,7 +1285,7 @@ class DraftMonitor:
                 total_emoji = get_emoji(total_score)
                 safe_print(
                     f"  {champion_name:<15} | {matchup_emoji} {matchup_score:+5.1f} | "
-                    f"🤝 {synergy_score:+5.1f} | {total_emoji} {total_score:+5.1f}"
+                    f"{synergy_emoji} {synergy_score:+5.1f} | {total_emoji} {total_score:+5.1f}"
                 )
 
         # Display ENEMY team performance (sorted)
@@ -1301,7 +1301,7 @@ class DraftMonitor:
                 total_emoji = get_emoji(total_score)
                 safe_print(
                     f"  {champion_name:<15} | {matchup_emoji} {matchup_score:+5.1f} | "
-                    f"🤝 {synergy_score:+5.1f} | {total_emoji} {total_score:+5.1f}"
+                    f"{synergy_emoji} {synergy_score:+5.1f} | {total_emoji} {total_score:+5.1f}"
                 )
 
         # Team summary comparison
