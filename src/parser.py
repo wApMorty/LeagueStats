@@ -447,8 +447,8 @@ class Parser:
         self.webdriver.execute_script(f"window.scrollTo(0,{scraping_config.MATCHUP_SCROLL_Y})")
         sleep(scraping_config.SCROLL_DELAY)
 
-        # Parse synergies (identical logic to matchups)
-        for index in range(2, 7):
+        # Parse synergies (4 rows instead of 5 for matchups)
+        for index in range(2, 6):
             path = f"/html/body/main/div[6]/div[1]/div[{index}]/div[2]/div"
             row = self.webdriver.find_elements(By.XPATH, f"{path}/*")
             actions = ActionChains(self.webdriver)
@@ -456,6 +456,7 @@ class Parser:
                 row[0], scraping_config.MATCHUP_CAROUSEL_SCROLL_X, 0
             ).perform()
             enough_data = False
+            pickrate = float("inf")  # Initialize to continue scrolling if all elements fail
             while not enough_data:
                 for elem in row:
                     try:
