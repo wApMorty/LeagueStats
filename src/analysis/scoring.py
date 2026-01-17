@@ -321,9 +321,7 @@ class ChampionScorer:
 
         return {"team_winrate": team_winrate, "individual_winrates": clamped_winrates}
 
-    def calculate_synergy_bonus(
-        self, champion_name: str, ally_names: List[str]
-    ) -> float:
+    def calculate_synergy_bonus(self, champion_name: str, ally_names: List[str]) -> float:
         """Calculate synergy bonus for a champion with given allies.
 
         Formula: weighted average of delta2 values from synergies table.
@@ -374,9 +372,7 @@ class ChampionScorer:
             total_weight = sum(s.pickrate for s in valid_synergies)
             if total_weight == 0:
                 return 0.0
-            synergy_bonus = (
-                sum(s.delta2 * s.pickrate for s in valid_synergies) / total_weight
-            )
+            synergy_bonus = sum(s.delta2 * s.pickrate for s in valid_synergies) / total_weight
         else:
             synergy_bonus = sum(s.delta2 for s in valid_synergies) / len(valid_synergies)
 
@@ -407,9 +403,7 @@ class ChampionScorer:
             return matchup_score
 
         synergy_bonus = self.calculate_synergy_bonus(champion_name, ally_names)
-        final_score = matchup_score + (
-            synergy_bonus * synergy_config.SYNERGY_BONUS_MULTIPLIER
-        )
+        final_score = matchup_score + (synergy_bonus * synergy_config.SYNERGY_BONUS_MULTIPLIER)
 
         if self.verbose:
             print(

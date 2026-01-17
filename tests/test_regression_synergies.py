@@ -182,9 +182,7 @@ def test_final_score_with_synergies(temp_synergy_db):
     scorer = ChampionScorer(db, verbose=False)
 
     matchup_score = 100.0
-    final_score = scorer.calculate_final_score_with_synergies(
-        matchup_score, "Yasuo", ["Malphite"]
-    )
+    final_score = scorer.calculate_final_score_with_synergies(matchup_score, "Yasuo", ["Malphite"])
 
     # Expected: 100.0 + (220.0 * 0.3) = 166.0
     expected_score = matchup_score + (220.0 * synergy_config.SYNERGY_BONUS_MULTIPLIER)
@@ -204,9 +202,7 @@ def test_synergy_feature_toggle(temp_synergy_db):
         bonus = scorer.calculate_synergy_bonus("Yasuo", ["Malphite"])
         assert bonus == 0.0  # Must return 0 when disabled
 
-        final_score = scorer.calculate_final_score_with_synergies(
-            100.0, "Yasuo", ["Malphite"]
-        )
+        final_score = scorer.calculate_final_score_with_synergies(100.0, "Yasuo", ["Malphite"])
         assert final_score == 100.0  # Must return matchup score unchanged
 
     finally:

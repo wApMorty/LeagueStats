@@ -145,9 +145,7 @@ class Synergy:
             ValueError: If any field contains invalid data
         """
         if not isinstance(self.ally_name, str) or not self.ally_name.strip():
-            raise ValueError(
-                f"Invalid ally_name: must be non-empty string, got {self.ally_name!r}"
-            )
+            raise ValueError(f"Invalid ally_name: must be non-empty string, got {self.ally_name!r}")
 
         if not 0.0 <= self.winrate <= 100.0:
             raise ValueError(f"Invalid winrate: must be 0-100, got {self.winrate}")
