@@ -543,6 +543,99 @@ class ParallelParser:
 
         return stats
 
+    def parse_synergies_by_role(
+        self, db: Database, champion_list: List[str], lane: str, normalize_func
+    ) -> dict:
+        """Parse champion synergies for a specific role/lane in parallel.
+
+        Args:
+            db: Database instance (must be connected)
+            champion_list: List of champion names for this role
+            lane: Lane name (top, jungle, middle, bottom, support)
+            normalize_func: Function to normalize champion names for URLs
+
+        Returns:
+            dict: Statistics with keys 'success', 'failed', 'total', 'duration'
+        """
+        import time
+
+        start_time = time.time()
+
+        logger.info(
+            f"Starting parallel scraping of synergies for {len(champion_list)} champions for {lane}"
+        )
+
+        # Initialize synergies table
+        db.init_synergies_table()
+
+        # Create thread pool and submit tasks
+        self.executor = ThreadPoolExecutor(max_workers=self.max_workers)
+
+        # Modified worker function that includes lane parameter
+        def scrape_synergies_with_lane(champion):
+            parser = self._get_parser()
+            try:
+                normalized_champion = normalize_func(champion)
+                synergies = parser.get_champion_synergies_on_patch(
+                    self.patch_version, normalized_champion, lane
+                )
+                logger.info(
+                    f"Successfully scraped synergies for {champion} ({lane}, patch {self.patch_version}): {len(synergies)} allies"
+                )
+                return champion, synergies
+            except Exception as e:
+                logger.error(f"Error scraping synergies for {champion} ({lane}): {e}")
+                return champion, []
+
+        futures = {
+            self.executor.submit(scrape_synergies_with_lane, champion): champion
+            for champion in champion_list
+        }
+
+        # Track progress with tqdm
+        success_count = 0
+        failed_count = 0
+
+        # Disable tqdm in headless mode (pythonw.exe, Task Scheduler)
+        disable_tqdm = _is_headless_mode()
+        if disable_tqdm:
+            logger.info(f"Headless mode detected - tqdm progress bar disabled for {lane} synergies")
+
+        with tqdm(
+            total=len(champion_list),
+            desc=f"Scraping {lane} synergies",
+            unit="champ",
+            disable=disable_tqdm,
+        ) as pbar:
+            for future in as_completed(futures):
+                champion = futures[future]
+                try:
+                    champ_name, synergies = future.result()
+                    self._write_synergies_thread_safe(db, champ_name, synergies)
+                    success_count += 1
+                except Exception as e:
+                    logger.error(f"Failed to scrape synergies for {champion} ({lane}): {e}")
+                    failed_count += 1
+                finally:
+                    pbar.update(1)
+
+        duration = time.time() - start_time
+
+        stats = {
+            "success": success_count,
+            "failed": failed_count,
+            "total": len(champion_list),
+            "lane": lane,
+            "duration": duration,
+        }
+
+        logger.info(
+            f"Scraping {lane} synergies completed: {success_count}/{len(champion_list)} succeeded, "
+            f"{failed_count} failed, duration: {duration:.1f}s ({duration/60:.1f}min)"
+        )
+
+        return stats
+
     def close(self) -> None:
         """Close all parser instances and clean up resources.
 
