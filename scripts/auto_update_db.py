@@ -1,16 +1,18 @@
 """
 Auto-Update Database Script for LeagueStats Coach.
 
-This script automatically updates the champion matchup database by:
+This script automatically updates the champion matchup and synergy database by:
 1. Detecting new patch versions from LoLalytics
-2. Scraping champion data using parallel parser (12min execution)
-3. Recalculating tier list scores
-4. Sending notifications on success/failure
-5. Logging all operations for debugging
+2. Scraping champion matchup data using parallel parser (~12min execution)
+3. Scraping champion synergy data using parallel parser (~12min execution)
+4. Recalculating tier list scores
+5. Sending notifications on success/failure
+6. Logging all operations for debugging
 
 REQUIREMENTS:
 - Web Scraping Parallèle (Tâche #4) - COMPLETED ✅
-- ParallelParser with 10 workers (12min execution time)
+- Synergies Support (Tâche #16) - COMPLETED ✅
+- ParallelParser with 10 workers (~24min total execution time)
 - Process priority set to BELOW_NORMAL (background execution)
 
 USAGE:
@@ -367,12 +369,48 @@ def main() -> int:
                 )
                 logger.log("ERROR", "Check logs/auto_update.log for detailed scraping errors")
 
-        # 6. Close parser to free resources
+        # 6. Parse all champion synergies (WITH allies, not AGAINST enemies)
+        logger.log("INFO", "Starting parallel scraping of champion synergies...")
+        logger.log("INFO", "Estimated time: ~12 minutes (background process)")
+
+        synergies_start_time = datetime.now()
+        synergies_stats = parser.parse_all_synergies(db, normalize_champion_name_for_url)
+        synergies_end_time = datetime.now()
+
+        synergies_success_count = synergies_stats.get("success", 0)
+        synergies_failed_count = synergies_stats.get("failed", 0)
+        synergies_total_count = synergies_stats.get("total", 0)
+        synergies_duration = synergies_stats.get("duration", 0)
+
+        synergies_duration_min = synergies_duration / 60
+        logger.log(
+            "SUCCESS", f"Synergies scraping completed in {synergies_duration_min:.1f} minutes"
+        )
+        logger.log(
+            "INFO",
+            f"Synergies parsed: {synergies_success_count}/{synergies_total_count} succeeded, {synergies_failed_count} failed",
+        )
+
+        # Warning if many synergy failures
+        if synergies_failed_count > 0:
+            synergies_failure_rate = (synergies_failed_count / synergies_total_count) * 100
+            logger.log(
+                "WARNING",
+                f"Synergies failure rate: {synergies_failure_rate:.1f}% ({synergies_failed_count} champions failed)",
+            )
+            if synergies_failure_rate > 50:
+                logger.log(
+                    "ERROR",
+                    "High synergies failure rate detected - possible headless mode compatibility issue",
+                )
+                logger.log("ERROR", "Check logs/auto_update.log for detailed scraping errors")
+
+        # 7. Close parser to free resources
         parser.close()
         parser = None
         logger.log("INFO", "ParallelParser closed (Firefox drivers cleaned up)")
 
-        # 7. Recalculate champion scores
+        # 8. Recalculate champion scores
         logger.log("INFO", "Recalculating champion scores...")
         assistant = Assistant(verbose=False)
         assistant.calculate_global_scores()
@@ -380,12 +418,14 @@ def main() -> int:
         assistant = None
         logger.log("SUCCESS", "Champion scores recalculated")
 
-        # 8. Success notification
-        total_time = (end_time - start_time).total_seconds() / 60
+        # 9. Success notification with synergies stats
+        total_time = (synergies_end_time - start_time).total_seconds() / 60
         logger.log("SUCCESS", f"Auto-update completed successfully in {total_time:.1f} minutes")
         notifier.notify(
             "LeagueStats Coach ✅",
-            f"BD mise à jour avec succès!\n{success_count} champions parsés ({duration_min:.1f} min)",
+            f"BD mise à jour avec succès!\n"
+            f"Matchups: {success_count}/{total_count} ({duration_min:.1f} min)\n"
+            f"Synergies: {synergies_success_count}/{synergies_total_count} ({synergies_duration_min:.1f} min)",
             duration=15,
         )
 
