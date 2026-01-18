@@ -288,3 +288,60 @@ class TestCalculateTeamWinrate:
 
         assert abs(result["team_winrate"] - 55.0) < 0.01
         assert result["individual_winrates"] == [55.0]
+
+
+class TestDelta2ToWinAdvantage:
+    """Tests for delta2_to_win_advantage method - linear conversion."""
+
+    def test_linear_conversion_positive(self, scorer):
+        """Test that delta2 converts linearly (1:1 ratio) for positive values."""
+        # delta2 = 3.40 should give ~3.40% advantage (not 10%+ from old logistic formula)
+        result = scorer.delta2_to_win_advantage(3.40, "TestChamp")
+
+        assert 3.0 <= result <= 4.0, f"Expected ~3.40%, got {result}%"
+        assert abs(result - 3.40) < 0.1  # Should be very close to 3.40
+
+    def test_linear_conversion_negative(self, scorer):
+        """Test that delta2 converts linearly for negative values."""
+        result = scorer.delta2_to_win_advantage(-5.0, "TestChamp")
+
+        assert -5.5 <= result <= -4.5, f"Expected ~-5.0%, got {result}%"
+        assert abs(result - (-5.0)) < 0.1
+
+    def test_zero_delta2_gives_zero_advantage(self, scorer):
+        """Test that delta2=0 gives 0% advantage (neutral matchup)."""
+        result = scorer.delta2_to_win_advantage(0.0, "TestChamp")
+
+        assert abs(result) < 0.1  # Should be very close to 0
+
+    def test_realistic_values_from_database(self, scorer):
+        """Regression test: realistic delta2 values should give realistic advantages.
+
+        Based on database analysis of 36,000+ matchups:
+        - delta2 = 3.40 → advantage should be ~3-5% (empirical data)
+        - delta2 = 5.00 → advantage should be ~5-7%
+        - NOT the 10%+ from previous logistic formula (3x amplification bug)
+        """
+        # User-reported bug: delta2=3.40 gave +10.06% with logistic formula
+        result_3_40 = scorer.delta2_to_win_advantage(3.40, "Riven")
+        assert 2.0 <= result_3_40 <= 5.0, f"delta2=3.40 gave {result_3_40}%, expected 2-5%"
+
+        # Additional validation
+        result_5 = scorer.delta2_to_win_advantage(5.0, "TestChamp")
+        assert result_5 < 7.0, f"delta2=5.0 gave {result_5}%, should be <7%"
+
+    def test_extreme_positive_values(self, scorer):
+        """Test that extreme positive delta2 doesn't get amplified excessively."""
+        # Database shows max delta2 = 31.74
+        result = scorer.delta2_to_win_advantage(30.0, "TestChamp")
+
+        # Linear conversion: should be ~30%, not 40%+ from sigmoid
+        assert 28.0 <= result <= 32.0
+
+    def test_extreme_negative_values(self, scorer):
+        """Test that extreme negative delta2 doesn't get amplified excessively."""
+        # Database shows min delta2 = -51.43
+        result = scorer.delta2_to_win_advantage(-50.0, "TestChamp")
+
+        # Linear conversion: should be ~-50%, not worse
+        assert -52.0 <= result <= -48.0

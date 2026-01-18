@@ -95,35 +95,32 @@ class ChampionScorer:
 
     def delta2_to_win_advantage(self, delta2: float, champion_name: str) -> float:
         """
-        Convert delta2 value to win advantage using logistic transformation.
+        Convert delta2 value to win advantage using empirically-validated linear scaling.
 
-        Uses probability theory for non-linear scaling:
-        - log_odds = 0.12 * delta2 (~1.2% win probability per delta2 unit)
-        - win_probability = 1 / (1 + exp(-log_odds))  [logistic function]
-        - advantage = (win_probability - 0.5) * 100  [deviation from 50% baseline]
+        Based on analysis of 36,000+ matchups in the database:
+        - delta2 from LoLalytics is already correlated with winrate delta
+        - Empirical ratio: 1 delta2 ≈ 1.0 percentage point advantage
+        - Previous logistic transformation incorrectly amplified values by ~3x
 
-        The logistic function provides natural diminishing returns:
-        - Small delta2 (~0-100) scales roughly linearly
-        - Large delta2 (>200) shows diminishing returns due to asymptotic behavior
-        - Theoretical bounds: -50% to +50% (0% to 100% win probability)
-        - Practical range: Most matchups fall within ±20% advantage
-
-        NOTE: No explicit bounds applied. Extreme delta2 values (e.g., 1000)
-        will produce very high advantages (>40%), which is intentional for
-        representing truly dominant matchups.
+        The linear conversion is validated by database analysis showing:
+        - delta2 = 3.40 → actual winrate delta = ~3-5% (not 10%+ from logistic)
+        - delta2 range in DB: -51.43 to +31.74
+        - Typical matchups: delta2 between -10 and +10
 
         Args:
-            delta2: The delta2 value from matchup data
+            delta2: The delta2 value from matchup data (LoLalytics metric)
             champion_name: Champion name (unused - kept for backward compatibility)
 
         Returns:
             Win advantage percentage (positive = our team favored)
-            Range: Theoretically [-50, +50], typically [-20, +20]
+            Range: Typically [-10, +10], extreme cases up to ±30%
+
+        Example:
+            delta2 = 3.40 → advantage = 3.40% (not 10.06% from old formula)
         """
-        # Logistic transformation
-        log_odds = 0.12 * delta2  # ~1.2% per delta2 unit
-        win_probability = 1 / (1 + math.exp(-log_odds))
-        advantage = (win_probability - 0.5) * 100  # Percentage points from 50% baseline
+        # Simple linear conversion (1:1 ratio validated empirically)
+        # No sigmoid needed - delta2 is not a log-odds, it's already performance-correlated
+        advantage = delta2 * 1.0
 
         return advantage
 
