@@ -1,0 +1,48 @@
+services:
+  - type: web
+    name: leaguestats-api
+    env: python
+    region: frankfurt  # EU region (proche Neon eu-west-2)
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn src.api.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false  # Set manually in Render dashboard (secret)
+      - key: API_HOST
+        value: 0.0.0.0
+      - key: API_PORT
+        value: 8000
+      - key: CORS_ORIGINS
+        value: "*"  # Development - restrict in production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: APP_VERSION
+        value: 2.0.0
+      - key: APP_ENV
+        value: production
+      - key: PYTHON_VERSION
+        value: 3.13.0
+
+# CONFIGURATION NOTES:
+#
+# 1. DATABASE_URL must be configured manually in Render dashboard
+#    with PostgreSQL Neon connection string (contains password)
+#    Format: postgresql://user:password@host/database
+#
+# 2. Free tier limitations:
+#    - Service spins down after 15 minutes of inactivity
+#    - 750 hours/month free
+#    - Limited to 512MB RAM
+#
+# 3. Region: frankfurt selected for proximity to Neon eu-west-2
+#
+# 4. Gunicorn configuration:
+#    - 2 workers (free tier RAM limit)
+#    - Uvicorn worker class for ASGI support
+#    - Binds to PORT environment variable (set by Render)
+#
+# 5. CORS: Currently set to "*" for development
+#    - Restrict to specific origins in production
+#    - Update CORS_ORIGINS env var in Render dashboard

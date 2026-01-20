@@ -1,0 +1,55 @@
+# LeagueStats Coach - API Server Dependencies
+# Generated: 2026-01-19
+# Python: 3.13+
+
+# ========================================
+# WEB FRAMEWORK
+# ========================================
+fastapi==0.110.0
+uvicorn[standard]==0.27.0
+gunicorn==21.2.0
+
+# ========================================
+# DATABASE
+# ========================================
+sqlalchemy[asyncio]==2.0.25
+asyncpg==0.29.0  # PostgreSQL async driver
+alembic==1.13.0  # Database migrations
+
+# ========================================
+# DATA VALIDATION & SERIALIZATION
+# ========================================
+pydantic==2.10.4  # Updated for Python 3.13 compatibility
+pydantic-settings==2.6.1  # Updated for compatibility
+
+# ========================================
+# ENVIRONMENT & CONFIGURATION
+# ========================================
+python-dotenv==1.0.0
+
+# ========================================
+# DATA PROCESSING (from client analysis modules)
+# ========================================
+numpy>=2.0.0,<3.0.0  # Required for analysis algorithms
+
+# ========================================
+# TESTING (development)
+# ========================================
+pytest==7.4.3
+pytest-asyncio==0.23.0
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+httpx==0.26.0  # Async HTTP client for API testing
+
+# ========================================
+# CODE QUALITY (development)
+# ========================================
+black==23.12.1
+pylint==3.0.3
+mypy==1.7.1
+
+# ========================================
+# OPTIONAL: CELERY WORKER (Phase 2)
+# ========================================
+# celery==5.3.4
+# redis==5.0.1
