@@ -25,7 +25,7 @@ from sqlalchemy.ext.asyncio import (
     AsyncSession,
     create_async_engine,
     async_sessionmaker,
-    AsyncEngine
+    AsyncEngine,
 )
 from sqlalchemy.orm import declarative_base, relationship
 from .config import settings
@@ -37,6 +37,7 @@ Base = declarative_base()
 # ========================================
 # ORM MODELS
 # ========================================
+
 
 class Champion(Base):
     """Champion model (172 champions).
@@ -58,25 +59,25 @@ class Champion(Base):
         "Matchup",
         foreign_keys="Matchup.champion_id",
         back_populates="champion",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
     )
     matchups_as_enemy = relationship(
         "Matchup",
         foreign_keys="Matchup.enemy_id",
         back_populates="enemy",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
     )
     synergies_as_champion = relationship(
         "Synergy",
         foreign_keys="Synergy.champion_id",
         back_populates="champion",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
     )
     synergies_as_ally = relationship(
         "Synergy",
         foreign_keys="Synergy.ally_id",
         back_populates="ally",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
     )
 
     def __repr__(self) -> str:
@@ -101,21 +102,25 @@ class Matchup(Base):
     __tablename__ = "matchups"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    champion_id = Column(Integer, ForeignKey("champions.id", ondelete="CASCADE"), nullable=False, index=True)
-    enemy_id = Column(Integer, ForeignKey("champions.id", ondelete="CASCADE"), nullable=False, index=True)
+    champion_id = Column(
+        Integer, ForeignKey("champions.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    enemy_id = Column(
+        Integer, ForeignKey("champions.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     winrate = Column(Float, nullable=False)
     delta2 = Column(Float, nullable=False, index=True)  # Indexed for tier list sorting
     games = Column(Integer, nullable=False)
     pickrate = Column(Float, nullable=False)
 
     # Relationships
-    champion = relationship("Champion", foreign_keys=[champion_id], back_populates="matchups_as_champion")
+    champion = relationship(
+        "Champion", foreign_keys=[champion_id], back_populates="matchups_as_champion"
+    )
     enemy = relationship("Champion", foreign_keys=[enemy_id], back_populates="matchups_as_enemy")
 
     # Composite index for fast lookups
-    __table_args__ = (
-        Index("ix_matchups_champion_enemy", "champion_id", "enemy_id", unique=True),
-    )
+    __table_args__ = (Index("ix_matchups_champion_enemy", "champion_id", "enemy_id", unique=True),)
 
     def __repr__(self) -> str:
         return f"<Matchup(champion_id={self.champion_id}, enemy_id={self.enemy_id}, delta2={self.delta2})>"
@@ -139,21 +144,25 @@ class Synergy(Base):
     __tablename__ = "synergies"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    champion_id = Column(Integer, ForeignKey("champions.id", ondelete="CASCADE"), nullable=False, index=True)
-    ally_id = Column(Integer, ForeignKey("champions.id", ondelete="CASCADE"), nullable=False, index=True)
+    champion_id = Column(
+        Integer, ForeignKey("champions.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    ally_id = Column(
+        Integer, ForeignKey("champions.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     winrate = Column(Float, nullable=False)
     delta2 = Column(Float, nullable=False, index=True)
     games = Column(Integer, nullable=False)
     pickrate = Column(Float, nullable=False)
 
     # Relationships
-    champion = relationship("Champion", foreign_keys=[champion_id], back_populates="synergies_as_champion")
+    champion = relationship(
+        "Champion", foreign_keys=[champion_id], back_populates="synergies_as_champion"
+    )
     ally = relationship("Champion", foreign_keys=[ally_id], back_populates="synergies_as_ally")
 
     # Composite index for fast lookups
-    __table_args__ = (
-        Index("ix_synergies_champion_ally", "champion_id", "ally_id", unique=True),
-    )
+    __table_args__ = (Index("ix_synergies_champion_ally", "champion_id", "ally_id", unique=True),)
 
     def __repr__(self) -> str:
         return f"<Synergy(champion_id={self.champion_id}, ally_id={self.ally_id}, delta2={self.delta2})>"
@@ -165,6 +174,7 @@ class Synergy(Base):
 
 # Thread-local storage for engines (each thread/event loop gets its own engine)
 import threading
+
 _thread_local = threading.local()
 
 
@@ -176,7 +186,7 @@ def get_engine() -> AsyncEngine:
     Returns:
         AsyncEngine configured for PostgreSQL with asyncpg driver
     """
-    if not hasattr(_thread_local, 'engine') or _thread_local.engine is None:
+    if not hasattr(_thread_local, "engine") or _thread_local.engine is None:
         # Use the async-compatible database URL (postgresql+asyncpg:// with filtered params)
         db_url = settings.get_async_database_url()
 
@@ -257,7 +267,7 @@ async def close_db() -> None:
         async def shutdown():
             await close_db()
     """
-    if hasattr(_thread_local, 'engine') and _thread_local.engine is not None:
+    if hasattr(_thread_local, "engine") and _thread_local.engine is not None:
         await _thread_local.engine.dispose()
         _thread_local.engine = None
 
@@ -265,6 +275,7 @@ async def close_db() -> None:
 # ========================================
 # SYNCHRONOUS DATABASE WRAPPER
 # ========================================
+
 
 class Database:
     """Synchronous database wrapper for analysis modules compatibility.
@@ -323,9 +334,7 @@ class Database:
         async def _get():
             session_maker = get_session_maker()
             async with session_maker() as session:
-                result = await session.execute(
-                    select(Champion.id).where(Champion.name.ilike(name))
-                )
+                result = await session.execute(select(Champion.id).where(Champion.name.ilike(name)))
                 champion = result.scalar_one_or_none()
                 return champion
 
@@ -398,9 +407,7 @@ class Database:
             session_maker = get_session_maker()
             async with session_maker() as session:
                 # Get champion ID first
-                result = await session.execute(
-                    select(Champion.id).where(Champion.name.ilike(name))
-                )
+                result = await session.execute(select(Champion.id).where(Champion.name.ilike(name)))
                 champ_id = result.scalar_one_or_none()
 
                 if champ_id is None:
@@ -413,7 +420,7 @@ class Database:
                         Matchup.winrate,
                         Matchup.games,
                         Matchup.delta2,
-                        Matchup.pickrate
+                        Matchup.pickrate,
                     )
                     .join(Matchup, Matchup.enemy_id == Champion.id)
                     .where(Matchup.champion_id == champ_id)
@@ -441,7 +448,7 @@ class Database:
                             games=row[2],
                             delta2=row[3],
                             pickrate=row[4],
-                            delta1=0.0  # Not used in current schema
+                            delta1=0.0,  # Not used in current schema
                         )
                         for row in rows
                     ]
@@ -467,9 +474,7 @@ class Database:
             session_maker = get_session_maker()
             async with session_maker() as session:
                 # Get champion ID first
-                result = await session.execute(
-                    select(Champion.id).where(Champion.name.ilike(name))
-                )
+                result = await session.execute(select(Champion.id).where(Champion.name.ilike(name)))
                 champ_id = result.scalar_one_or_none()
 
                 if champ_id is None:
@@ -482,7 +487,7 @@ class Database:
                         Synergy.winrate,
                         Synergy.games,
                         Synergy.delta2,
-                        Synergy.pickrate
+                        Synergy.pickrate,
                     )
                     .join(Synergy, Synergy.ally_id == Champion.id)
                     .where(Synergy.champion_id == champ_id)
@@ -508,7 +513,7 @@ class Database:
                             winrate=row[1],
                             games=row[2],
                             delta2=row[3],
-                            pickrate=row[4]
+                            pickrate=row[4],
                         )
                         for row in rows
                     ]
@@ -548,13 +553,12 @@ class Database:
 
                 # Get matchup delta2
                 result = await session.execute(
-                    select(Matchup.delta2)
-                    .where(
+                    select(Matchup.delta2).where(
                         and_(
                             Matchup.champion_id == champ_id,
                             Matchup.enemy_id == enemy_id,
                             Matchup.pickrate >= 0.5,
-                            Matchup.games >= 200
+                            Matchup.games >= 200,
                         )
                     )
                 )
@@ -594,13 +598,12 @@ class Database:
 
                 # Get synergy delta2
                 result = await session.execute(
-                    select(Synergy.delta2)
-                    .where(
+                    select(Synergy.delta2).where(
                         and_(
                             Synergy.champion_id == champ_id,
                             Synergy.ally_id == ally_id,
                             Synergy.pickrate >= 0.5,
-                            Synergy.games >= 200
+                            Synergy.games >= 200,
                         )
                     )
                 )
@@ -668,20 +671,11 @@ class Database:
                 enemy_champion = alias(Champion, name="enemy")
 
                 result = await session.execute(
-                    select(
-                        Champion.name,
-                        enemy_champion.c.name,
-                        Matchup.delta2
-                    )
+                    select(Champion.name, enemy_champion.c.name, Matchup.delta2)
                     .select_from(Matchup)
                     .join(Champion, Champion.id == Matchup.champion_id)
                     .join(enemy_champion, enemy_champion.c.id == Matchup.enemy_id)
-                    .where(
-                        and_(
-                            Matchup.pickrate >= 0.5,
-                            Matchup.games >= 200
-                        )
-                    )
+                    .where(and_(Matchup.pickrate >= 0.5, Matchup.games >= 200))
                 )
 
                 matchup_cache = {}
@@ -713,20 +707,11 @@ class Database:
                 ally_champion = alias(Champion, name="ally")
 
                 result = await session.execute(
-                    select(
-                        Champion.name,
-                        ally_champion.c.name,
-                        Synergy.delta2
-                    )
+                    select(Champion.name, ally_champion.c.name, Synergy.delta2)
                     .select_from(Synergy)
                     .join(Champion, Champion.id == Synergy.champion_id)
                     .join(ally_champion, ally_champion.c.id == Synergy.ally_id)
-                    .where(
-                        and_(
-                            Synergy.pickrate >= 0.5,
-                            Synergy.games >= 200
-                        )
-                    )
+                    .where(and_(Synergy.pickrate >= 0.5, Synergy.games >= 200))
                 )
 
                 synergy_cache = {}

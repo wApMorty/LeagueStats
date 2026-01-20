@@ -17,7 +17,7 @@ POOL_MAP = {
     "JUNGLE": JUNGLE_LIST,
     "MID": MID_LIST,
     "ADC": ADC_LIST,
-    "SUPPORT": SUPPORT_LIST
+    "SUPPORT": SUPPORT_LIST,
 }
 
 
@@ -25,7 +25,7 @@ POOL_MAP = {
 def get_tier_list(
     pool: str = Query(..., description="Champion pool (TOP, JUNGLE, MID, ADC, SUPPORT)"),
     type: str = Query(default="blind", description="Analysis type (blind or counter)"),
-    db: Database = Depends(get_db)
+    db: Database = Depends(get_db),
 ):
     """
     Generate tier list for a champion pool.
@@ -43,15 +43,14 @@ def get_tier_list(
         if pool_upper not in POOL_MAP:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid pool '{pool}'. Must be one of: {', '.join(POOL_MAP.keys())}"
+                detail=f"Invalid pool '{pool}'. Must be one of: {', '.join(POOL_MAP.keys())}",
             )
 
         # Validate type
         analysis_type = "blind_pick" if type.lower() == "blind" else "counter_pick"
         if type.lower() not in ["blind", "counter"]:
             raise HTTPException(
-                status_code=400,
-                detail=f"Invalid type '{type}'. Must be 'blind' or 'counter'"
+                status_code=400, detail=f"Invalid type '{type}'. Must be 'blind' or 'counter'"
             )
 
         # Get champion pool
@@ -68,7 +67,7 @@ def get_tier_list(
                 id=db.get_champion_id(item["champion"]),
                 name=item["champion"],
                 score=item["score"],
-                tier=item["tier"]
+                tier=item["tier"],
             )
             for item in tier_list_data
         ]
@@ -77,7 +76,7 @@ def get_tier_list(
             pool=pool_upper,
             type=type.lower(),
             tier_list=tier_list_entries,
-            generated_at=datetime.utcnow().isoformat() + "Z"
+            generated_at=datetime.utcnow().isoformat() + "Z",
         )
 
     except HTTPException:

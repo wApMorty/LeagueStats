@@ -116,6 +116,7 @@ class TierListGenerator:
         """
         # Import TierListConfig from server config
         from ..config_constants import TierListConfig
+
         tierlist_config = TierListConfig()
         import statistics
 

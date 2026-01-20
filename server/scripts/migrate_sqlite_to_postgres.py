@@ -70,18 +70,19 @@ def extract_sqlite_data() -> tuple[list, list, list]:
     # PostgreSQL expects: id, name, lolalytics_id
     # Map: id->id, key->lolalytics_id, name->name
     champions = [
-        {"id": row["id"], "name": row["name"], "lolalytics_id": row["key"]}
-        for row in champions_raw
+        {"id": row["id"], "name": row["name"], "lolalytics_id": row["key"]} for row in champions_raw
     ]
     print(f"[OK] Extracted {len(champions)} champions")
 
     # Extract matchups
     print("[INFO] Extracting matchups...")
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT champion, enemy, winrate, delta2, games, pickrate,
                ROW_NUMBER() OVER (PARTITION BY champion, enemy ORDER BY games DESC) as rn
         FROM matchups
-    """)
+    """
+    )
     matchups_raw = cursor.fetchall()
     # Map column names to PostgreSQL schema and deduplicate
     # SQLite has: champion, enemy
@@ -94,7 +95,7 @@ def extract_sqlite_data() -> tuple[list, list, list]:
             "winrate": row["winrate"],
             "delta2": row["delta2"],
             "games": row["games"],
-            "pickrate": row["pickrate"]
+            "pickrate": row["pickrate"],
         }
         for row in matchups_raw
         if row["rn"] == 1  # Only keep the first row (highest games)
@@ -103,11 +104,13 @@ def extract_sqlite_data() -> tuple[list, list, list]:
 
     # Extract synergies
     print("[INFO] Extracting synergies...")
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT champion, ally, winrate, delta2, games, pickrate,
                ROW_NUMBER() OVER (PARTITION BY champion, ally ORDER BY games DESC) as rn
         FROM synergies
-    """)
+    """
+    )
     synergies_raw = cursor.fetchall()
     # Map column names to PostgreSQL schema and deduplicate
     # SQLite has: champion, ally
@@ -120,7 +123,7 @@ def extract_sqlite_data() -> tuple[list, list, list]:
             "winrate": row["winrate"],
             "delta2": row["delta2"],
             "games": row["games"],
-            "pickrate": row["pickrate"]
+            "pickrate": row["pickrate"],
         }
         for row in synergies_raw
         if row["rn"] == 1  # Only keep the first row (highest games)
@@ -142,14 +145,9 @@ async def insert_champions(session: AsyncSession, champions: list) -> None:
 
     # Insert in batches
     for i in range(0, len(champions), BATCH_SIZE):
-        batch = champions[i:i + BATCH_SIZE]
+        batch = champions[i : i + BATCH_SIZE]
         champion_objects = [
-            Champion(
-                id=c["id"],
-                name=c["name"],
-                lolalytics_id=c["lolalytics_id"]
-            )
-            for c in batch
+            Champion(id=c["id"], name=c["name"], lolalytics_id=c["lolalytics_id"]) for c in batch
         ]
         session.add_all(champion_objects)
         await session.flush()
@@ -169,7 +167,7 @@ async def insert_matchups(session: AsyncSession, matchups: list) -> None:
 
     # Insert in batches for performance
     for i in range(0, len(matchups), BATCH_SIZE):
-        batch = matchups[i:i + BATCH_SIZE]
+        batch = matchups[i : i + BATCH_SIZE]
         matchup_objects = [
             Matchup(
                 champion_id=m["champion_id"],
@@ -177,7 +175,7 @@ async def insert_matchups(session: AsyncSession, matchups: list) -> None:
                 winrate=m["winrate"],
                 delta2=m["delta2"],
                 games=m["games"],
-                pickrate=m["pickrate"]
+                pickrate=m["pickrate"],
             )
             for m in batch
         ]
@@ -202,7 +200,7 @@ async def insert_synergies(session: AsyncSession, synergies: list) -> None:
 
     # Insert in batches
     for i in range(0, len(synergies), BATCH_SIZE):
-        batch = synergies[i:i + BATCH_SIZE]
+        batch = synergies[i : i + BATCH_SIZE]
         synergy_objects = [
             Synergy(
                 champion_id=s["champion_id"],
@@ -210,7 +208,7 @@ async def insert_synergies(session: AsyncSession, synergies: list) -> None:
                 winrate=s["winrate"],
                 delta2=s["delta2"],
                 games=s["games"],
-                pickrate=s["pickrate"]
+                pickrate=s["pickrate"],
             )
             for s in batch
         ]
@@ -306,7 +304,7 @@ async def main() -> None:
     expected_counts = {
         "champions": len(champions),
         "matchups": len(matchups),
-        "synergies": len(synergies)
+        "synergies": len(synergies),
     }
 
     success = await verify_data_integrity(expected_counts)

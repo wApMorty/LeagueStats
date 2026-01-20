@@ -10,13 +10,14 @@ from ..models import (
     BulkMatchupsResponse,
     ChampionSynergiesResponse,
     SynergyResponse,
-    BulkSynergiesResponse
+    BulkSynergiesResponse,
 )
 
 router = APIRouter()
 
 
 # ========== Matchup Endpoints ==========
+
 
 @router.get("/champions/{champion_id}/matchups", response_model=ChampionMatchupsResponse)
 def get_champion_matchups(champion_id: int, db: Database = Depends(get_db)):
@@ -47,7 +48,7 @@ def get_champion_matchups(champion_id: int, db: Database = Depends(get_db)):
                 games=m.games,
                 delta2=m.delta2,
                 pickrate=m.pickrate,
-                delta1=m.delta1
+                delta1=m.delta1,
             )
             for m in matchups_data
         ]
@@ -56,7 +57,7 @@ def get_champion_matchups(champion_id: int, db: Database = Depends(get_db)):
             champion_id=champion_id,
             champion_name=champion_name,
             matchups=matchups,
-            count=len(matchups)
+            count=len(matchups),
         )
 
     except HTTPException:
@@ -88,23 +89,21 @@ def get_bulk_matchups(db: Database = Depends(get_db)):
                     games=m.games,
                     delta2=m.delta2,
                     pickrate=m.pickrate,
-                    delta1=m.delta1
+                    delta1=m.delta1,
                 )
                 for m in matchups_data
             ]
 
             bulk_matchups[str(champ_id)] = matchups
 
-        return BulkMatchupsResponse(
-            matchups=bulk_matchups,
-            count=len(bulk_matchups)
-        )
+        return BulkMatchupsResponse(matchups=bulk_matchups, count=len(bulk_matchups))
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch bulk matchups: {str(e)}")
 
 
 # ========== Synergy Endpoints ==========
+
 
 @router.get("/champions/{champion_id}/synergies", response_model=ChampionSynergiesResponse)
 def get_champion_synergies(champion_id: int, db: Database = Depends(get_db)):
@@ -134,7 +133,7 @@ def get_champion_synergies(champion_id: int, db: Database = Depends(get_db)):
                 winrate=s.winrate,
                 games=s.games,
                 delta2=s.delta2,
-                pickrate=s.pickrate
+                pickrate=s.pickrate,
             )
             for s in synergies_data
         ]
@@ -143,7 +142,7 @@ def get_champion_synergies(champion_id: int, db: Database = Depends(get_db)):
             champion_id=champion_id,
             champion_name=champion_name,
             synergies=synergies,
-            count=len(synergies)
+            count=len(synergies),
         )
 
     except HTTPException:
@@ -174,17 +173,14 @@ def get_bulk_synergies(db: Database = Depends(get_db)):
                     winrate=s.winrate,
                     games=s.games,
                     delta2=s.delta2,
-                    pickrate=s.pickrate
+                    pickrate=s.pickrate,
                 )
                 for s in synergies_data
             ]
 
             bulk_synergies[str(champ_id)] = synergies
 
-        return BulkSynergiesResponse(
-            synergies=bulk_synergies,
-            count=len(bulk_synergies)
-        )
+        return BulkSynergiesResponse(synergies=bulk_synergies, count=len(bulk_synergies))
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch bulk synergies: {str(e)}")
