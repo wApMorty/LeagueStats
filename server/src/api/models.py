@@ -6,7 +6,6 @@ from pydantic import BaseModel, Field
 
 # ========== Champion Models ==========
 
-
 class ChampionResponse(BaseModel):
     """Response model for a single champion."""
 
