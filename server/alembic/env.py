@@ -40,6 +40,7 @@ if "?" in db_url:
     # Remove sslmode and channel_binding (psycopg2 params)
     # asyncpg uses ssl=require instead
     import urllib.parse
+
     parsed_params = urllib.parse.parse_qs(params)
 
     # For Neon, we need ssl='require' as a connect_arg

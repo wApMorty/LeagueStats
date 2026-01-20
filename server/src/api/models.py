@@ -6,8 +6,10 @@ from pydantic import BaseModel, Field
 
 # ========== Champion Models ==========
 
+
 class ChampionResponse(BaseModel):
     """Response model for a single champion."""
+
     id: int
     name: str
     riot_id: Optional[str] = None

@@ -2,6 +2,7 @@
 
 FastAPI application providing REST API for champion analysis.
 """
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from ..config import settings

@@ -13,7 +13,7 @@ gunicorn==21.2.0
 # DATABASE
 # ========================================
 sqlalchemy[asyncio]==2.0.25
-asyncpg==0.29.0  # PostgreSQL async driver
+asyncpg==0.31.0  # PostgreSQL async driver (Python 3.13 wheels available)
 alembic==1.13.0  # Database migrations
 
 # ========================================
