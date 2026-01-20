@@ -6,7 +6,6 @@ from fastapi import status
 
 # ========== Health Check Tests ==========
 
-
 def test_health_check_returns_200(client):
     """Test health endpoint returns 200 status."""
     response = client.get("/health")
@@ -28,7 +27,6 @@ def test_health_check_response_format(client):
 
 
 # ========== Champions Endpoints Tests ==========
-
 
 def test_get_all_champions_returns_200(client):
     """Test GET /api/champions returns 200."""
@@ -81,7 +79,6 @@ def test_get_champion_by_id_not_found(client):
 
 
 # ========== Matchup Endpoints Tests ==========
-
 
 def test_get_champion_matchups_returns_200(client):
     """Test GET /api/champions/{id}/matchups returns 200."""
@@ -144,7 +141,6 @@ def test_get_bulk_matchups_format(client):
 
 # ========== Synergy Endpoints Tests ==========
 
-
 def test_get_champion_synergies_returns_200(client):
     """Test GET /api/champions/{id}/synergies returns 200."""
     response = client.get("/api/champions/266/synergies")
@@ -204,7 +200,6 @@ def test_get_bulk_synergies_format(client):
 
 
 # ========== Tier List Endpoint Tests ==========
-
 
 def test_get_tier_list_returns_200(client):
     """Test GET /api/tier-list with valid params returns 200."""
@@ -271,7 +266,6 @@ def test_get_tier_list_counter_type(client):
 
 # ========== Team Analysis Endpoint Tests ==========
 
-
 def test_analyze_team_returns_200(client):
     """Test POST /api/analyze-team with valid data returns 200."""
     payload = {"champion_ids": [1, 2, 3]}
@@ -328,7 +322,6 @@ def test_analyze_team_invalid_champion(client):
 
 
 # ========== Ban Recommendations Endpoint Tests ==========
-
 
 def test_ban_recommendations_returns_200(client):
     """Test GET /api/ban-recommendations with valid pool returns 200."""

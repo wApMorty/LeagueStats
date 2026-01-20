@@ -24,12 +24,17 @@ def get_all_champions(db: Database = Depends(get_db)):
         # Convert to Pydantic models
         champions = [
             ChampionResponse(
-                id=champ_id, name=champ_name, riot_id=champ_name.lower()  # Simple riot_id mapping
+                id=champ_id,
+                name=champ_name,
+                riot_id=champ_name.lower()  # Simple riot_id mapping
             )
             for champ_id, champ_name in champions_data
         ]
 
-        return ChampionsListResponse(champions=champions, count=len(champions))
+        return ChampionsListResponse(
+            champions=champions,
+            count=len(champions)
+        )
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch champions: {str(e)}")
@@ -52,7 +57,11 @@ def get_champion_by_id(champion_id: int, db: Database = Depends(get_db)):
         if not champion_name:
             raise HTTPException(status_code=404, detail=f"Champion with ID {champion_id} not found")
 
-        return ChampionResponse(id=champion_id, name=champion_name, riot_id=champion_name.lower())
+        return ChampionResponse(
+            id=champion_id,
+            name=champion_name,
+            riot_id=champion_name.lower()
+        )
 
     except HTTPException:
         raise

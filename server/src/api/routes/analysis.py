@@ -13,7 +13,7 @@ from ..models import (
     ChampionResponse,
     SynergyDetail,
     BanRecommendationsResponse,
-    BanRecommendation,
+    BanRecommendation
 )
 
 router = APIRouter()
@@ -36,9 +36,7 @@ def analyze_team(request: TeamAnalysisRequest, db: Database = Depends(get_db)):
         for champ_id in request.champion_ids:
             champ_name = db.get_champion_name(champ_id)
             if not champ_name:
-                raise HTTPException(
-                    status_code=404, detail=f"Champion with ID {champ_id} not found"
-                )
+                raise HTTPException(status_code=404, detail=f"Champion with ID {champ_id} not found")
             champion_names.append(champ_name)
 
         # Calculate scores
@@ -58,7 +56,7 @@ def analyze_team(request: TeamAnalysisRequest, db: Database = Depends(get_db)):
         synergy_scores = []
 
         for i, champ1 in enumerate(champion_names):
-            for champ2 in champion_names[i + 1 :]:
+            for champ2 in champion_names[i+1:]:
                 # Get synergy between champ1 and champ2
                 synergies = db.get_champion_synergies_by_name(champ1, as_dataclass=True)
                 matching_synergy = next((s for s in synergies if s.ally_name == champ2), None)
@@ -68,7 +66,7 @@ def analyze_team(request: TeamAnalysisRequest, db: Database = Depends(get_db)):
                         SynergyDetail(
                             pair=[champ1, champ2],
                             winrate=matching_synergy.winrate,
-                            games=matching_synergy.games,
+                            games=matching_synergy.games
                         )
                     )
                     synergy_scores.append(matching_synergy.delta2)
@@ -97,7 +95,7 @@ def analyze_team(request: TeamAnalysisRequest, db: Database = Depends(get_db)):
             synergy_score=synergy_score,
             holistic_score=holistic_score,
             synergy_details=synergy_details,
-            recommendations=recommendations,
+            recommendations=recommendations
         )
 
     except HTTPException:
@@ -109,7 +107,7 @@ def analyze_team(request: TeamAnalysisRequest, db: Database = Depends(get_db)):
 @router.get("/ban-recommendations", response_model=BanRecommendationsResponse)
 def get_ban_recommendations(
     pool: str = Query(..., description="Champion pool to protect (TOP, JUNGLE, MID, ADC, SUPPORT)"),
-    db: Database = Depends(get_db),
+    db: Database = Depends(get_db)
 ):
     """
     Get ban recommendations for a champion pool.
@@ -127,16 +125,15 @@ def get_ban_recommendations(
             "JUNGLE": [],
             "MID": [],
             "ADC": [],
-            "SUPPORT": [],
+            "SUPPORT": []
         }
         from ...constants import TOP_LIST, JUNGLE_LIST, MID_LIST, ADC_LIST, SUPPORT_LIST
-
         POOL_MAP = {
             "TOP": TOP_LIST,
             "JUNGLE": JUNGLE_LIST,
             "MID": MID_LIST,
             "ADC": ADC_LIST,
-            "SUPPORT": SUPPORT_LIST,
+            "SUPPORT": SUPPORT_LIST
         }
 
         # Validate pool
@@ -144,7 +141,7 @@ def get_ban_recommendations(
         if pool_upper not in POOL_MAP:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid pool '{pool}'. Must be one of: {', '.join(POOL_MAP.keys())}",
+                detail=f"Invalid pool '{pool}'. Must be one of: {', '.join(POOL_MAP.keys())}"
             )
 
         champion_pool = POOL_MAP[pool_upper]
@@ -185,17 +182,17 @@ def get_ban_recommendations(
                     champion_id=db.get_champion_id(enemy_name),
                     champion_name=enemy_name,
                     ban_score=ban_score,
-                    reason=reason,
+                    reason=reason
                 )
             )
 
         return BanRecommendationsResponse(
-            pool=pool_upper, recommendations=recommendations, count=len(recommendations)
+            pool=pool_upper,
+            recommendations=recommendations,
+            count=len(recommendations)
         )
 
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to generate ban recommendations: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to generate ban recommendations: {str(e)}")

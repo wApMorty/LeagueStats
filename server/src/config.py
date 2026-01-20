@@ -42,7 +42,10 @@ class Settings(BaseSettings):
     app_env: str = "development"
 
     model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore"
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore"
     )
 
     def get_cors_origins_list(self) -> list[str]:
@@ -72,8 +75,7 @@ class Settings(BaseSettings):
             base_url, params = url.split("?", 1)
             # Filter out psycopg-specific params
             filtered_params = [
-                p
-                for p in params.split("&")
+                p for p in params.split("&")
                 if not p.startswith("sslmode=") and not p.startswith("channel_binding=")
             ]
             if filtered_params:
