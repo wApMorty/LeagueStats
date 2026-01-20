@@ -31,7 +31,7 @@ def temp_synergy_db(tmp_path):
             id INTEGER PRIMARY KEY,
             name TEXT NOT NULL UNIQUE
         )
-        """
+    """
     )
 
     # Create synergies table
@@ -49,7 +49,7 @@ def temp_synergy_db(tmp_path):
             FOREIGN KEY (champion) REFERENCES champions(id) ON DELETE CASCADE,
             FOREIGN KEY (ally) REFERENCES champions(id) ON DELETE CASCADE
         )
-        """
+    """
     )
     db.connection.commit()
 
@@ -64,13 +64,13 @@ def temp_synergy_db(tmp_path):
         """
         INSERT INTO synergies (champion, ally, winrate, delta1, delta2, pickrate, games)
         VALUES (1, 2, 55.0, 180.0, 220.0, 15.0, 1200)
-        """
+    """
     )  # Yasuo + Malphite
     cursor.execute(
         """
         INSERT INTO synergies (champion, ally, winrate, delta1, delta2, pickrate, games)
         VALUES (1, 3, 53.5, 160.0, 190.0, 12.0, 1000)
-        """
+    """
     )  # Yasuo + Diana
     db.connection.commit()
 
