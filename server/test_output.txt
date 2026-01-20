@@ -1,0 +1,502 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.1, pytest-9.0.2, pluggy-1.6.0 -- C:\Python313\python.exe
+cachedir: .pytest_cache
+benchmark: 4.0.0 (defaults: timer=time.perf_counter disable_gc=False min_rounds=5 min_time=0.000005 max_time=1.0 calibration_precision=10 warmup=False warmup_iterations=100000)
+rootdir: C:\Users\pj35\.claude-worktrees\LeagueStats\inspiring-rhodes
+configfile: pyproject.toml
+plugins: anyio-4.12.1, benchmark-4.0.0, cov-5.0.0, mock-3.15.1
+collecting ... collected 32 items
+
+tests\test_api.py::test_health_check_returns_200 PASSED                  [  3%]
+tests\test_api.py::test_health_check_response_format PASSED              [  6%]
+tests\test_api.py::test_get_all_champions_returns_200 PASSED             [  9%]
+tests\test_api.py::test_get_all_champions_returns_172_champions FAILED   [ 12%]
+tests\test_api.py::test_get_all_champions_format PASSED                  [ 15%]
+tests\test_api.py::test_get_champion_by_id_exists FAILED                 [ 18%]
+tests\test_api.py::test_get_champion_by_id_not_found PASSED              [ 21%]
+tests\test_api.py::test_get_champion_matchups_returns_200 FAILED         [ 25%]
+tests\test_api.py::test_get_champion_matchups_format FAILED              [ 28%]
+tests\test_api.py::test_get_champion_matchups_not_found FAILED           [ 31%]
+tests\test_api.py::test_get_bulk_matchups_returns_200 FAILED             [ 34%]
+tests\test_api.py::test_get_bulk_matchups_format FAILED                  [ 37%]
+tests\test_api.py::test_get_champion_synergies_returns_200 PASSED        [ 40%]
+tests\test_api.py::test_get_champion_synergies_format FAILED             [ 43%]
+tests\test_api.py::test_get_champion_synergies_not_found PASSED          [ 46%]
+tests\test_api.py::test_get_bulk_synergies_returns_200 FAILED            [ 50%]
+tests\test_api.py::test_get_bulk_synergies_format PASSED                 [ 53%]
+tests\test_api.py::test_get_tier_list_returns_200 PASSED                 [ 56%]
+tests\test_api.py::test_get_tier_list_format FAILED                      [ 59%]
+tests\test_api.py::test_get_tier_list_all_pools PASSED                   [ 62%]
+tests\test_api.py::test_get_tier_list_invalid_pool PASSED                [ 65%]
+tests\test_api.py::test_get_tier_list_invalid_type PASSED                [ 68%]
+tests\test_api.py::test_get_tier_list_counter_type PASSED                [ 71%]
+tests\test_api.py::test_analyze_team_returns_200 FAILED                  [ 75%]
+tests\test_api.py::test_analyze_team_format PASSED                       [ 78%]
+tests\test_api.py::test_analyze_team_single_champion FAILED              [ 81%]
+tests\test_api.py::test_analyze_team_five_champions PASSED               [ 84%]
+tests\test_api.py::test_analyze_team_invalid_champion FAILED             [ 87%]
+tests\test_api.py::test_ban_recommendations_returns_200 FAILED           [ 90%]
+tests\test_api.py::test_ban_recommendations_format FAILED                [ 93%]
+tests\test_api.py::test_ban_recommendations_all_pools FAILED             [ 96%]
+tests\test_api.py::test_ban_recommendations_invalid_pool PASSED          [100%]
+
+================================== FAILURES ===================================
+________________ test_get_all_champions_returns_172_champions _________________
+tests\test_api.py:42: in test_get_all_champions_returns_172_champions
+    assert "champions" in data
+E   assert 'champions' in {'detail': "Failed to fetch champions: Task <Task pending name='Task-14' coro=<Database.get_all_champions.<locals>._get() running at C:\\Users\\pj35\\.claude-worktrees\\LeagueStats\\inspiring-rhodes\\server\\src\\db.py:358> cb=[_run_until_complete_cb() at C:\\Python313\\Lib\\asyncio\\base_events.py:181]> got Future <Future pending cb=[BaseProtocol._on_waiter_completed()]> attached to a different loop"}
+------------------------------ Captured log call ------------------------------
+ERROR    sqlalchemy.pool.impl.AsyncAdaptedQueuePool:base.py:376 Exception terminating connection <AdaptedConnection <asyncpg.connection.Connection object at 0x0000020476A148C0>>
+Traceback (most recent call last):
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\pool\base.py", line 372, in _close_connection
+    self._dialect.do_terminate(connection)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 1127, in do_terminate
+    dbapi_connection.terminate()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\connectors\asyncio.py", line 402, in terminate
+    self.await_(asyncio.shield(self._terminate_graceful_close()))  # type: ignore[attr-defined] # noqa: E501
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 912, in _terminate_graceful_close
+    await self._connection.close(timeout=2)
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\asyncpg\connection.py", line 1513, in close
+    await self._protocol.close(timeout)
+  File "asyncpg/protocol/protocol.pyx", line 618, in close
+RuntimeError: Task <Task pending name='Task-15' coro=<AsyncAdapt_asyncpg_connection._terminate_graceful_close() running at C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py:912> cb=[shield.<locals>._inner_done_callback() at C:\Python313\Lib\asyncio\tasks.py:958]> got Future <Future pending> attached to a different loop
+_______________________ test_get_champion_by_id_exists ________________________
+tests\test_api.py:67: in test_get_champion_by_id_exists
+    assert response.status_code == status.HTTP_200_OK
+E   assert 500 == 200
+E    +  where 500 = <Response [500 Internal Server Error]>.status_code
+E    +  and   200 = status.HTTP_200_OK
+------------------------------ Captured log call ------------------------------
+ERROR    sqlalchemy.pool.impl.AsyncAdaptedQueuePool:base.py:376 Exception terminating connection <AdaptedConnection <asyncpg.connection.Connection object at 0x0000020476A9DD60>>
+Traceback (most recent call last):
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\pool\base.py", line 372, in _close_connection
+    self._dialect.do_terminate(connection)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 1127, in do_terminate
+    dbapi_connection.terminate()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\connectors\asyncio.py", line 402, in terminate
+    self.await_(asyncio.shield(self._terminate_graceful_close()))  # type: ignore[attr-defined] # noqa: E501
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 912, in _terminate_graceful_close
+    await self._connection.close(timeout=2)
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\asyncpg\connection.py", line 1513, in close
+    await self._protocol.close(timeout)
+  File "asyncpg/protocol/protocol.pyx", line 618, in close
+RuntimeError: Task <Task pending name='Task-28' coro=<AsyncAdapt_asyncpg_connection._terminate_graceful_close() running at C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py:912> cb=[shield.<locals>._inner_done_callback() at C:\Python313\Lib\asyncio\tasks.py:958]> got Future <Future pending> attached to a different loop
+___________________ test_get_champion_matchups_returns_200 ____________________
+tests\test_api.py:87: in test_get_champion_matchups_returns_200
+    assert response.status_code == status.HTTP_200_OK
+E   assert 500 == 200
+E    +  where 500 = <Response [500 Internal Server Error]>.status_code
+E    +  and   200 = status.HTTP_200_OK
+------------------------------ Captured log call ------------------------------
+ERROR    sqlalchemy.pool.impl.AsyncAdaptedQueuePool:base.py:376 Exception terminating connection <AdaptedConnection <asyncpg.connection.Connection object at 0x0000020476A9FF20>>
+Traceback (most recent call last):
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\pool\base.py", line 372, in _close_connection
+    self._dialect.do_terminate(connection)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 1127, in do_terminate
+    dbapi_connection.terminate()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\connectors\asyncio.py", line 402, in terminate
+    self.await_(asyncio.shield(self._terminate_graceful_close()))  # type: ignore[attr-defined] # noqa: E501
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 912, in _terminate_graceful_close
+    await self._connection.close(timeout=2)
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\asyncpg\connection.py", line 1513, in close
+    await self._protocol.close(timeout)
+  File "asyncpg/protocol/protocol.pyx", line 618, in close
+RuntimeError: Task <Task pending name='Task-41' coro=<AsyncAdapt_asyncpg_connection._terminate_graceful_close() running at C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py:912> cb=[shield.<locals>._inner_done_callback() at C:\Python313\Lib\asyncio\tasks.py:958]> got Future <Future pending> attached to a different loop
+______________________ test_get_champion_matchups_format ______________________
+tests\test_api.py:95: in test_get_champion_matchups_format
+    assert "champion_id" in data
+E   AssertionError: assert 'champion_id' in {'detail': 'Failed to fetch matchups: enemy_name'}
+____________________ test_get_champion_matchups_not_found _____________________
+tests\test_api.py:117: in test_get_champion_matchups_not_found
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+E   assert 500 == 404
+E    +  where 500 = <Response [500 Internal Server Error]>.status_code
+E    +  and   404 = status.HTTP_404_NOT_FOUND
+------------------------------ Captured log call ------------------------------
+ERROR    sqlalchemy.pool.impl.AsyncAdaptedQueuePool:base.py:376 Exception terminating connection <AdaptedConnection <asyncpg.connection.Connection object at 0x0000020476EB8C80>>
+Traceback (most recent call last):
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\pool\base.py", line 372, in _close_connection
+    self._dialect.do_terminate(connection)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 1127, in do_terminate
+    dbapi_connection.terminate()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\connectors\asyncio.py", line 402, in terminate
+    self.await_(asyncio.shield(self._terminate_graceful_close()))  # type: ignore[attr-defined] # noqa: E501
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 912, in _terminate_graceful_close
+    await self._connection.close(timeout=2)
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\asyncpg\connection.py", line 1513, in close
+    await self._protocol.close(timeout)
+  File "asyncpg/protocol/protocol.pyx", line 618, in close
+RuntimeError: Task <Task pending name='Task-56' coro=<AsyncAdapt_asyncpg_connection._terminate_graceful_close() running at C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py:912> cb=[shield.<locals>._inner_done_callback() at C:\Python313\Lib\asyncio\tasks.py:958]> got Future <Future pending> attached to a different loop
+_____________________ test_get_bulk_matchups_returns_200 ______________________
+tests\test_api.py:123: in test_get_bulk_matchups_returns_200
+    assert response.status_code == status.HTTP_200_OK
+E   assert 500 == 200
+E    +  where 500 = <Response [500 Internal Server Error]>.status_code
+E    +  and   200 = status.HTTP_200_OK
+________________________ test_get_bulk_matchups_format ________________________
+tests\test_api.py:131: in test_get_bulk_matchups_format
+    assert "matchups" in data
+E   assert 'matchups' in {'detail': "Failed to fetch bulk matchups: Task <Task pending name='Task-70' coro=<Database.get_all_champions.<locals>._get() running at C:\\Users\\pj35\\.claude-worktrees\\LeagueStats\\inspiring-rhodes\\server\\src\\db.py:358> cb=[_run_until_complete_cb() at C:\\Python313\\Lib\\asyncio\\base_events.py:181]> got Future <Future pending cb=[BaseProtocol._on_waiter_completed()]> attached to a different loop"}
+------------------------------ Captured log call ------------------------------
+ERROR    sqlalchemy.pool.impl.AsyncAdaptedQueuePool:base.py:376 Exception terminating connection <AdaptedConnection <asyncpg.connection.Connection object at 0x0000020476F14B90>>
+Traceback (most recent call last):
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\pool\base.py", line 372, in _close_connection
+    self._dialect.do_terminate(connection)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 1127, in do_terminate
+    dbapi_connection.terminate()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\connectors\asyncio.py", line 402, in terminate
+    self.await_(asyncio.shield(self._terminate_graceful_close()))  # type: ignore[attr-defined] # noqa: E501
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 912, in _terminate_graceful_close
+    await self._connection.close(timeout=2)
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\asyncpg\connection.py", line 1513, in close
+    await self._protocol.close(timeout)
+  File "asyncpg/protocol/protocol.pyx", line 618, in close
+RuntimeError: Task <Task pending name='Task-71' coro=<AsyncAdapt_asyncpg_connection._terminate_graceful_close() running at C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py:912> cb=[shield.<locals>._inner_done_callback() at C:\Python313\Lib\asyncio\tasks.py:958]> got Future <Future pending> attached to a different loop
+_____________________ test_get_champion_synergies_format ______________________
+tests\test_api.py:155: in test_get_champion_synergies_format
+    assert "champion_id" in data
+E   assert 'champion_id' in {'detail': "Failed to fetch synergies: Task <Task pending name='Task-359' coro=<Database.get_champion_name.<locals>._get() running at C:\\Users\\pj35\\.claude-worktrees\\LeagueStats\\inspiring-rhodes\\server\\src\\db.py:330> cb=[_run_until_complete_cb() at C:\\Python313\\Lib\\asyncio\\base_events.py:181]> got Future <Future pending cb=[BaseProtocol._on_waiter_completed()]> attached to a different loop"}
+------------------------------ Captured log call ------------------------------
+ERROR    sqlalchemy.pool.impl.AsyncAdaptedQueuePool:base.py:376 Exception terminating connection <AdaptedConnection <asyncpg.connection.Connection object at 0x0000020476F176B0>>
+Traceback (most recent call last):
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\pool\base.py", line 372, in _close_connection
+    self._dialect.do_terminate(connection)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 1127, in do_terminate
+    dbapi_connection.terminate()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\connectors\asyncio.py", line 402, in terminate
+    self.await_(asyncio.shield(self._terminate_graceful_close()))  # type: ignore[attr-defined] # noqa: E501
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 912, in _terminate_graceful_close
+    await self._connection.close(timeout=2)
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\asyncpg\connection.py", line 1513, in close
+    await self._protocol.close(timeout)
+  File "asyncpg/protocol/protocol.pyx", line 618, in close
+RuntimeError: Task <Task pending name='Task-360' coro=<AsyncAdapt_asyncpg_connection._terminate_graceful_close() running at C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py:912> cb=[shield.<locals>._inner_done_callback() at C:\Python313\Lib\asyncio\tasks.py:958]> got Future <Future pending> attached to a different loop
+_____________________ test_get_bulk_synergies_returns_200 _____________________
+tests\test_api.py:183: in test_get_bulk_synergies_returns_200
+    assert response.status_code == status.HTTP_200_OK
+E   assert 500 == 200
+E    +  where 500 = <Response [500 Internal Server Error]>.status_code
+E    +  and   200 = status.HTTP_200_OK
+------------------------------ Captured log call ------------------------------
+ERROR    sqlalchemy.pool.impl.AsyncAdaptedQueuePool:base.py:376 Exception terminating connection <AdaptedConnection <asyncpg.connection.Connection object at 0x0000020476F294F0>>
+Traceback (most recent call last):
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\pool\base.py", line 372, in _close_connection
+    self._dialect.do_terminate(connection)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 1127, in do_terminate
+    dbapi_connection.terminate()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\connectors\asyncio.py", line 402, in terminate
+    self.await_(asyncio.shield(self._terminate_graceful_close()))  # type: ignore[attr-defined] # noqa: E501
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 912, in _terminate_graceful_close
+    await self._connection.close(timeout=2)
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\asyncpg\connection.py", line 1513, in close
+    await self._protocol.close(timeout)
+  File "asyncpg/protocol/protocol.pyx", line 618, in close
+RuntimeError: Task <Task pending name='Task-373' coro=<AsyncAdapt_asyncpg_connection._terminate_graceful_close() running at C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py:912> cb=[shield.<locals>._inner_done_callback() at C:\Python313\Lib\asyncio\tasks.py:958]> got Future <Future pending> attached to a different loop
+__________________________ test_get_tier_list_format __________________________
+tests\test_api.py:223: in test_get_tier_list_format
+    assert len(data["tier_list"]) > 0
+E   assert 0 > 0
+E    +  where 0 = len([])
+---------------------------- Captured stdout call -----------------------------
+[WARNING] Champion scores not found in database.
+[INFO] Please run 'Parse Match Statistics' to generate scores first.
+________________________ test_analyze_team_returns_200 ________________________
+tests\test_api.py:273: in test_analyze_team_returns_200
+    assert response.status_code == status.HTTP_200_OK
+E   assert 500 == 200
+E    +  where 500 = <Response [500 Internal Server Error]>.status_code
+E    +  and   200 = status.HTTP_200_OK
+------------------------------ Captured log call ------------------------------
+ERROR    sqlalchemy.pool.impl.AsyncAdaptedQueuePool:base.py:376 Exception terminating connection <AdaptedConnection <asyncpg.connection.Connection object at 0x0000020476F2B980>>
+Traceback (most recent call last):
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\pool\base.py", line 372, in _close_connection
+    self._dialect.do_terminate(connection)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 1127, in do_terminate
+    dbapi_connection.terminate()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\connectors\asyncio.py", line 402, in terminate
+    self.await_(asyncio.shield(self._terminate_graceful_close()))  # type: ignore[attr-defined] # noqa: E501
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 912, in _terminate_graceful_close
+    await self._connection.close(timeout=2)
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\asyncpg\connection.py", line 1513, in close
+    await self._protocol.close(timeout)
+  File "asyncpg/protocol/protocol.pyx", line 618, in close
+RuntimeError: Task <Task pending name='Task-48510' coro=<AsyncAdapt_asyncpg_connection._terminate_graceful_close() running at C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py:912> cb=[shield.<locals>._inner_done_callback() at C:\Python313\Lib\asyncio\tasks.py:958]> got Future <Future pending> attached to a different loop
+______________________ test_analyze_team_single_champion ______________________
+tests\test_api.py:301: in test_analyze_team_single_champion
+    assert response.status_code == status.HTTP_200_OK
+E   assert 500 == 200
+E    +  where 500 = <Response [500 Internal Server Error]>.status_code
+E    +  and   200 = status.HTTP_200_OK
+------------------------------ Captured log call ------------------------------
+ERROR    sqlalchemy.pool.impl.AsyncAdaptedQueuePool:base.py:376 Exception terminating connection <AdaptedConnection <asyncpg.connection.Connection object at 0x0000020476F16F30>>
+Traceback (most recent call last):
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\pool\base.py", line 372, in _close_connection
+    self._dialect.do_terminate(connection)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 1127, in do_terminate
+    dbapi_connection.terminate()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\connectors\asyncio.py", line 402, in terminate
+    self.await_(asyncio.shield(self._terminate_graceful_close()))  # type: ignore[attr-defined] # noqa: E501
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 912, in _terminate_graceful_close
+    await self._connection.close(timeout=2)
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\asyncpg\connection.py", line 1513, in close
+    await self._protocol.close(timeout)
+  File "asyncpg/protocol/protocol.pyx", line 618, in close
+RuntimeError: Task <Task pending name='Task-48545' coro=<AsyncAdapt_asyncpg_connection._terminate_graceful_close() running at C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py:912> cb=[shield.<locals>._inner_done_callback() at C:\Python313\Lib\asyncio\tasks.py:958]> got Future <Future pending> attached to a different loop
+_____________________ test_analyze_team_invalid_champion ______________________
+tests\test_api.py:321: in test_analyze_team_invalid_champion
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+E   assert 500 == 404
+E    +  where 500 = <Response [500 Internal Server Error]>.status_code
+E    +  and   404 = status.HTTP_404_NOT_FOUND
+------------------------------ Captured log call ------------------------------
+ERROR    sqlalchemy.pool.impl.AsyncAdaptedQueuePool:base.py:376 Exception terminating connection <AdaptedConnection <asyncpg.connection.Connection object at 0x0000020476EBBE30>>
+Traceback (most recent call last):
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\pool\base.py", line 372, in _close_connection
+    self._dialect.do_terminate(connection)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 1127, in do_terminate
+    dbapi_connection.terminate()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\connectors\asyncio.py", line 402, in terminate
+    self.await_(asyncio.shield(self._terminate_graceful_close()))  # type: ignore[attr-defined] # noqa: E501
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 912, in _terminate_graceful_close
+    await self._connection.close(timeout=2)
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\asyncpg\connection.py", line 1513, in close
+    await self._protocol.close(timeout)
+  File "asyncpg/protocol/protocol.pyx", line 618, in close
+RuntimeError: Task <Task pending name='Task-48606' coro=<AsyncAdapt_asyncpg_connection._terminate_graceful_close() running at C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py:912> cb=[shield.<locals>._inner_done_callback() at C:\Python313\Lib\asyncio\tasks.py:958]> got Future <Future pending> attached to a different loop
+____________________ test_ban_recommendations_returns_200 _____________________
+tests\test_api.py:329: in test_ban_recommendations_returns_200
+    assert response.status_code == status.HTTP_200_OK
+E   assert 500 == 200
+E    +  where 500 = <Response [500 Internal Server Error]>.status_code
+E    +  and   200 = status.HTTP_200_OK
+_______________________ test_ban_recommendations_format _______________________
+tests\test_api.py:337: in test_ban_recommendations_format
+    assert "pool" in data
+E   assert 'pool' in {'detail': "Failed to generate ban recommendations: Task <Task pending name='Task-48620' coro=<Database.get_all_champions.<locals>._get() running at C:\\Users\\pj35\\.claude-worktrees\\LeagueStats\\inspiring-rhodes\\server\\src\\db.py:358> cb=[_run_until_complete_cb() at C:\\Python313\\Lib\\asyncio\\base_events.py:181]> got Future <Future pending cb=[BaseProtocol._on_waiter_completed()]> attached to a different loop"}
+------------------------------ Captured log call ------------------------------
+ERROR    sqlalchemy.pool.impl.AsyncAdaptedQueuePool:base.py:376 Exception terminating connection <AdaptedConnection <asyncpg.connection.Connection object at 0x0000020476F157C0>>
+Traceback (most recent call last):
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\pool\base.py", line 372, in _close_connection
+    self._dialect.do_terminate(connection)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 1127, in do_terminate
+    dbapi_connection.terminate()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\connectors\asyncio.py", line 402, in terminate
+    self.await_(asyncio.shield(self._terminate_graceful_close()))  # type: ignore[attr-defined] # noqa: E501
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 912, in _terminate_graceful_close
+    await self._connection.close(timeout=2)
+  File "C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\asyncpg\connection.py", line 1513, in close
+    await self._protocol.close(timeout)
+  File "asyncpg/protocol/protocol.pyx", line 618, in close
+RuntimeError: Task <Task pending name='Task-48621' coro=<AsyncAdapt_asyncpg_connection._terminate_graceful_close() running at C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py:912> cb=[shield.<locals>._inner_done_callback() at C:\Python313\Lib\asyncio\tasks.py:958]> got Future <Future pending> attached to a different loop
+_____________________ test_ban_recommendations_all_pools ______________________
+tests\test_api.py:360: in test_ban_recommendations_all_pools
+    assert response.status_code == status.HTTP_200_OK, f"Failed for pool: {pool}"
+E   AssertionError: Failed for pool: TOP
+E   assert 500 == 200
+E    +  where 500 = <Response [500 Internal Server Error]>.status_code
+E    +  and   200 = status.HTTP_200_OK
+============================== warnings summary ===============================
+src\api\main.py:37
+  C:\Users\pj35\.claude-worktrees\LeagueStats\inspiring-rhodes\server\src\api\main.py:37: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    @app.on_event("startup")
+
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\fastapi\applications.py:4576
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\fastapi\applications.py:4576
+  C:\Users\pj35\AppData\Roaming\Python\Python313\site-packages\fastapi\applications.py:4576: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    return self.router.on_event(event_type)
+
+src\api\main.py:45
+  C:\Users\pj35\.claude-worktrees\LeagueStats\inspiring-rhodes\server\src\api\main.py:45: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    @app.on_event("shutdown")
+
+server/tests/test_api.py::test_health_check_returns_200
+server/tests/test_api.py::test_health_check_response_format
+  C:\Users\pj35\.claude-worktrees\LeagueStats\inspiring-rhodes\server\src\api\routes\health.py:23: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    timestamp=datetime.utcnow().isoformat() + "Z"
+
+server/tests/test_api.py::test_get_bulk_synergies_format
+  C:\Python313\Lib\asyncio\base_events.py:745: RuntimeWarning: coroutine 'Connection._cancel' was never awaited
+    self._ready.clear()
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+server/tests/test_api.py::test_get_tier_list_returns_200
+server/tests/test_api.py::test_get_tier_list_format
+server/tests/test_api.py::test_get_tier_list_all_pools
+server/tests/test_api.py::test_get_tier_list_all_pools
+server/tests/test_api.py::test_get_tier_list_all_pools
+server/tests/test_api.py::test_get_tier_list_all_pools
+server/tests/test_api.py::test_get_tier_list_all_pools
+server/tests/test_api.py::test_get_tier_list_counter_type
+  C:\Users\pj35\.claude-worktrees\LeagueStats\inspiring-rhodes\server\src\api\routes\tier_list.py:80: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    generated_at=datetime.utcnow().isoformat() + "Z"
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+
+---------- coverage: platform win32, python 3.13.1-final-0 -----------
+Name                              Stmts   Miss  Cover   Missing
+---------------------------------------------------------------
+src\analysis\__init__.py              0      0   100%
+src\analysis\recommendations.py      61     61     0%   3-119
+src\analysis\scoring.py             143    111    22%   52-58, 72, 75, 88-94, 170-176, 184-185, 192-278, 295-319, 338-376, 397-411
+src\analysis\team_analysis.py        69     61    12%   21-22, 38-118, 127-135
+src\analysis\tier_list.py           139    117    16%   38-46, 58-66, 78-92, 129-303
+---------------------------------------------------------------
+TOTAL                               412    350    15%
+Coverage XML written to file coverage.xml
+
+FAIL Required test coverage of 70% not reached. Total coverage: 15.05%
+=========================== short test summary info ===========================
+FAILED tests\test_api.py::test_get_all_champions_returns_172_champions - assert 'champions' in {'detail': "Failed to fetch champions: Task <Task pending name='Task-14' coro=<Database.get_all_champions.<locals>._get() running at C:\\Users\\pj35\\.claude-worktrees\\LeagueStats\\inspiring-rhodes\\server\\src\\db.py:358> cb=[_run_until_complete_cb() at C:\\Python313\\Lib\\asyncio\\base_events.py:181]> got Future <Future pending cb=[BaseProtocol._on_waiter_completed()]> attached to a different loop"}
+FAILED tests\test_api.py::test_get_champion_by_id_exists - assert 500 == 200
+ +  where 500 = <Response [500 Internal Server Error]>.status_code
+ +  and   200 = status.HTTP_200_OK
+FAILED tests\test_api.py::test_get_champion_matchups_returns_200 - assert 500 == 200
+ +  where 500 = <Response [500 Internal Server Error]>.status_code
+ +  and   200 = status.HTTP_200_OK
+FAILED tests\test_api.py::test_get_champion_matchups_format - AssertionError: assert 'champion_id' in {'detail': 'Failed to fetch matchups: enemy_name'}
+FAILED tests\test_api.py::test_get_champion_matchups_not_found - assert 500 == 404
+ +  where 500 = <Response [500 Internal Server Error]>.status_code
+ +  and   404 = status.HTTP_404_NOT_FOUND
+FAILED tests\test_api.py::test_get_bulk_matchups_returns_200 - assert 500 == 200
+ +  where 500 = <Response [500 Internal Server Error]>.status_code
+ +  and   200 = status.HTTP_200_OK
+FAILED tests\test_api.py::test_get_bulk_matchups_format - assert 'matchups' in {'detail': "Failed to fetch bulk matchups: Task <Task pending name='Task-70' coro=<Database.get_all_champions.<locals>._get() running at C:\\Users\\pj35\\.claude-worktrees\\LeagueStats\\inspiring-rhodes\\server\\src\\db.py:358> cb=[_run_until_complete_cb() at C:\\Python313\\Lib\\asyncio\\base_events.py:181]> got Future <Future pending cb=[BaseProtocol._on_waiter_completed()]> attached to a different loop"}
+FAILED tests\test_api.py::test_get_champion_synergies_format - assert 'champion_id' in {'detail': "Failed to fetch synergies: Task <Task pending name='Task-359' coro=<Database.get_champion_name.<locals>._get() running at C:\\Users\\pj35\\.claude-worktrees\\LeagueStats\\inspiring-rhodes\\server\\src\\db.py:330> cb=[_run_until_complete_cb() at C:\\Python313\\Lib\\asyncio\\base_events.py:181]> got Future <Future pending cb=[BaseProtocol._on_waiter_completed()]> attached to a different loop"}
+FAILED tests\test_api.py::test_get_bulk_synergies_returns_200 - assert 500 == 200
+ +  where 500 = <Response [500 Internal Server Error]>.status_code
+ +  and   200 = status.HTTP_200_OK
+FAILED tests\test_api.py::test_get_tier_list_format - assert 0 > 0
+ +  where 0 = len([])
+FAILED tests\test_api.py::test_analyze_team_returns_200 - assert 500 == 200
+ +  where 500 = <Response [500 Internal Server Error]>.status_code
+ +  and   200 = status.HTTP_200_OK
+FAILED tests\test_api.py::test_analyze_team_single_champion - assert 500 == 200
+ +  where 500 = <Response [500 Internal Server Error]>.status_code
+ +  and   200 = status.HTTP_200_OK
+FAILED tests\test_api.py::test_analyze_team_invalid_champion - assert 500 == 404
+ +  where 500 = <Response [500 Internal Server Error]>.status_code
+ +  and   404 = status.HTTP_404_NOT_FOUND
+FAILED tests\test_api.py::test_ban_recommendations_returns_200 - assert 500 == 200
+ +  where 500 = <Response [500 Internal Server Error]>.status_code
+ +  and   200 = status.HTTP_200_OK
+FAILED tests\test_api.py::test_ban_recommendations_format - assert 'pool' in {'detail': "Failed to generate ban recommendations: Task <Task pending name='Task-48620' coro=<Database.get_all_champions.<locals>._get() running at C:\\Users\\pj35\\.claude-worktrees\\LeagueStats\\inspiring-rhodes\\server\\src\\db.py:358> cb=[_run_until_complete_cb() at C:\\Python313\\Lib\\asyncio\\base_events.py:181]> got Future <Future pending cb=[BaseProtocol._on_waiter_completed()]> attached to a different loop"}
+FAILED tests\test_api.py::test_ban_recommendations_all_pools - AssertionError: Failed for pool: TOP
+assert 500 == 200
+ +  where 500 = <Response [500 Internal Server Error]>.status_code
+ +  and   200 = status.HTTP_200_OK
+=========== 16 failed, 16 passed, 15 warnings in 2905.16s (0:48:25) ===========

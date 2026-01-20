@@ -20,5 +20,5 @@ async def health_check():
         status="ok",
         version=settings.app_version,
         database="connected",
-        timestamp=datetime.utcnow().isoformat() + "Z"
+        timestamp=datetime.utcnow().isoformat() + "Z",
     )

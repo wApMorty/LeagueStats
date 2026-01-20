@@ -2,6 +2,7 @@
 
 FastAPI application providing REST API for champion analysis.
 """
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from ..config import settings
@@ -14,7 +15,7 @@ app = FastAPI(
     description="REST API for League of Legends champion analysis and draft recommendations",
     version=settings.app_version,
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
 )
 
 # CORS middleware
