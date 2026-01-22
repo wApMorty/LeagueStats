@@ -4,6 +4,8 @@ services:
     env: python
     region: frankfurt  # EU region (proche Neon eu-west-2)
     plan: free
+    branch: feature/api-backend-phase1  # Deploy from feature branch for testing
+    rootDir: server  # Application code is in server/ subdirectory
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn src.api.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
     healthCheckPath: /health
