@@ -10,7 +10,7 @@ def run_draft_coach(
     auto_hover: bool = False,
     auto_accept_queue: bool = False,
     auto_ban_hover: bool = False,
-    open_onetricks: Optional[bool] = None,
+    open_loltheory: Optional[bool] = None,
 ) -> None:
     """
     Run the real-time draft coach.
@@ -20,7 +20,7 @@ def run_draft_coach(
         auto_hover: Auto-hover recommended champions
         auto_accept_queue: Auto-accept queue
         auto_ban_hover: Auto-hover ban recommendations
-        open_onetricks: Open champion pages on draft completion
+        open_loltheory: Open champion pages on draft completion
     """
     clear_console()  # Clear console at start
     print("[INFO] Starting Real-time Draft Coach...")
@@ -31,8 +31,8 @@ def run_draft_coach(
         print("🔥 [AUTO-ACCEPT] Queue auto-accept is ENABLED")
     if auto_ban_hover:
         print("🚫 [AUTO-BAN-HOVER] Ban hover is ENABLED")
-    if open_onetricks:
-        print("🌐 [ONETRICKS] Open champion page on draft completion is ENABLED")
+    if open_loltheory:
+        print("🌐 [LOLTHEORY] Open champion page on draft completion is ENABLED")
     print("Press Ctrl+C to stop monitoring.\n")
 
     try:
@@ -42,7 +42,7 @@ def run_draft_coach(
             auto_hover=auto_hover,
             auto_accept_queue=auto_accept_queue,
             auto_ban_hover=auto_ban_hover,
-            open_onetricks=open_onetricks,
+            open_loltheory=open_loltheory,
         )
         monitor.start_monitoring()
     except KeyboardInterrupt:

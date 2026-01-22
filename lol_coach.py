@@ -58,14 +58,14 @@ def main():
         help="Enable automatic ban hovering during ban phases",
     )
     parser.add_argument(
-        "--open-onetricks",
+        "--open-loltheory",
         action="store_true",
-        help="Open champion page on Onetricks.gg when draft completes",
+        help="Open champion page on LoLTheory.gg when draft completes",
     )
     parser.add_argument(
-        "--no-onetricks",
+        "--no-loltheory",
         action="store_true",
-        help="Disable opening champion page on Onetricks.gg (overrides config default)",
+        help="Disable opening champion page on LoLTheory.gg (overrides config default)",
     )
     parser.add_argument(
         "--no-clear",
@@ -89,20 +89,20 @@ def main():
         if not check_dependencies() or not check_database():
             sys.exit(1)
 
-        # Determine open_onetricks setting from command line args
-        if args.no_onetricks:
-            open_onetricks = False
-        elif args.open_onetricks:
-            open_onetricks = True
+        # Determine open_loltheory setting from command line args
+        if args.no_loltheory:
+            open_loltheory = False
+        elif args.open_loltheory:
+            open_loltheory = True
         else:
-            open_onetricks = None  # Use config default
+            open_loltheory = None  # Use config default
 
         run_draft_coach(
             args.verbose,
             auto_hover=args.auto_hover,
             auto_accept_queue=args.auto_accept_queue,
             auto_ban_hover=args.auto_ban_hover,
-            open_onetricks=open_onetricks,
+            open_loltheory=open_loltheory,
         )
         return
 
@@ -135,19 +135,19 @@ def main():
                 ban_hover_choice = input("Enable automatic ban hovering? (y/N): ").strip().lower()
                 auto_ban_hover = ban_hover_choice == "y"
 
-                onetricks_choice = (
-                    input("Open champion page on Onetricks.gg when draft completes? (Y/n): ")
+                loltheory_choice = (
+                    input("Open champion page on LoLTheory.gg when draft completes? (Y/n): ")
                     .strip()
                     .lower()
                 )
-                open_onetricks = onetricks_choice != "n"  # Default to True unless explicitly 'n'
+                open_loltheory = loltheory_choice != "n"  # Default to True unless explicitly 'n'
 
                 run_draft_coach(
                     args.verbose,
                     auto_hover=auto_hover,
                     auto_accept_queue=auto_accept_queue,
                     auto_ban_hover=auto_ban_hover,
-                    open_onetricks=open_onetricks,
+                    open_loltheory=open_loltheory,
                 )
 
             elif choice == "2":

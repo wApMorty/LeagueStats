@@ -8,7 +8,7 @@ from .lcu_client import LCUClient
 from .assistant import Assistant
 from .utils.display import safe_print
 from .utils.console import clear_console
-from .constants import SOLOQ_POOL, ROLE_POOLS, normalize_champion_name_for_onetricks
+from .constants import SOLOQ_POOL, ROLE_POOLS, normalize_champion_name_for_loltheory
 from .config import config
 from .config_constants import draft_config
 
@@ -56,7 +56,7 @@ class DraftMonitor:
         auto_hover: bool = False,
         auto_accept_queue: bool = False,
         auto_ban_hover: bool = False,
-        open_onetricks: bool = None,
+        open_loltheory: bool = None,
     ):
         self.lcu = LCUClient(verbose=verbose)
         self.assistant = Assistant()
@@ -70,10 +70,10 @@ class DraftMonitor:
         self.auto_hover = auto_hover
         self.auto_accept_queue = auto_accept_queue
         self.auto_ban_hover = auto_ban_hover
-        self.open_onetricks = (
-            open_onetricks
-            if open_onetricks is not None
-            else draft_config.OPEN_ONETRICKS_ON_DRAFT_END
+        self.open_loltheory = (
+            open_loltheory
+            if open_loltheory is not None
+            else draft_config.OPEN_LOLTHEORY_ON_DRAFT_END
         )
         self.last_recommendation = None  # Track last recommendation to avoid spam
         self.last_ban_recommendation = None  # Track last ban recommendation to avoid spam
@@ -116,8 +116,8 @@ class DraftMonitor:
             print("   🔥 [AUTO-ACCEPT] Queue auto-accept is ENABLED")
         if self.auto_ban_hover:
             print("   🚫 [AUTO-BAN-HOVER] Ban hover is ENABLED")
-        if self.open_onetricks:
-            print("   🌐 [ONETRICKS] Open champion page on draft completion is ENABLED")
+        if self.open_loltheory:
+            print("   🌐 [LOLTHEORY] Open champion page on draft completion is ENABLED")
         print("   (Press Ctrl+C to stop)")
 
         try:
@@ -129,38 +129,38 @@ class DraftMonitor:
         finally:
             self.cleanup()
 
-    def _open_champion_page_on_onetricks(self):
-        """Open the player's champion page on OneTriks.gg using Brave browser."""
+    def _open_champion_page_on_loltheory(self):
+        """Open the player's champion page on LoLTheory.gg using Brave browser."""
         try:
             if not self.player_champion:
                 if self.verbose:
-                    print("[ONETRICKS] No player champion detected, skipping browser open")
+                    print("[LOLTHEORY] No player champion detected, skipping browser open")
                 return
 
-            # Normalize champion name for OneTricks.gg URL
-            normalized_name = normalize_champion_name_for_onetricks(self.player_champion)
-            onetricks_url = f"https://www.onetricks.gg/champions/builds/{normalized_name}"
+            # Normalize champion name for LoLTheory.gg URL
+            normalized_name = normalize_champion_name_for_loltheory(self.player_champion)
+            loltheory_url = f"https://loltheory.gg/lol/champion/{normalized_name}/build-runes"
 
             # Try to get Brave browser path
             try:
                 brave_path = config.get_brave_path()
             except FileNotFoundError:
                 if self.verbose:
-                    print("[ONETRICKS] Brave browser not found, trying default browser")
+                    print("[LOLTHEORY] Brave browser not found, trying default browser")
                 # Fallback to default browser
                 import webbrowser
 
-                webbrowser.open(onetricks_url)
+                webbrowser.open(loltheory_url)
                 return
 
             # Open with Brave browser
             subprocess.Popen(
-                [brave_path, onetricks_url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                [brave_path, loltheory_url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
             )
 
         except Exception as e:
             if self.verbose:
-                print(f"[WARNING] Failed to open OneTriks.gg page: {e}")
+                print(f"[WARNING] Failed to open LoLTheory.gg page: {e}")
             else:
                 print(f"[WARNING] Failed to open champion page in browser")
 
@@ -401,9 +401,9 @@ class DraftMonitor:
                 # Mark analysis as done
                 self.has_analyzed_final_draft = True
 
-                # Open champion page on OneTriks.gg if enabled
-                if self.open_onetricks:
-                    self._open_champion_page_on_onetricks()
+                # Open champion page on LoLTheory.gg if enabled
+                if self.open_loltheory:
+                    self._open_champion_page_on_loltheory()
 
         except Exception as e:
             print(f"[ERROR] Failed to analyze complete draft: {e}")

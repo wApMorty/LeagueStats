@@ -92,7 +92,7 @@ class DraftConfig:
     # Feature toggles
     AUTO_BAN_ENABLED: bool = True
     AUTO_ACCEPT_QUEUE_ENABLED: bool = False
-    OPEN_ONETRICKS_ON_DRAFT_END: bool = True
+    OPEN_LOLTHEORY_ON_DRAFT_END: bool = True
 
     # Draft phase detection
     READY_CHECK_COOLDOWN: float = 2.0  # Seconds after accepting queue
