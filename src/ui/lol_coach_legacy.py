@@ -384,7 +384,9 @@ def parse_champion_pool(patch_version=None):
 
         start_time = time.time()
         parallel_parser = ParallelParser(
-            max_workers=scraping_config.DEFAULT_MAX_WORKERS, patch_version=patch_version
+            max_workers=scraping_config.DEFAULT_MAX_WORKERS,
+            patch_version=patch_version,
+            headless=scraping_config.HEADLESS
         )
 
         print(
@@ -468,7 +470,9 @@ def parse_all_champions(patch_version=None):
 
         start_time = time.time()
         parallel_parser = ParallelParser(
-            max_workers=scraping_config.DEFAULT_MAX_WORKERS, patch_version=patch_version
+            max_workers=scraping_config.DEFAULT_MAX_WORKERS,
+            patch_version=patch_version,
+            headless=scraping_config.HEADLESS
         )
 
         print(
@@ -571,7 +575,9 @@ def parse_synergies_pool(patch_version=None):
 
         start_time = time.time()
         parallel_parser = ParallelParser(
-            max_workers=scraping_config.DEFAULT_MAX_WORKERS, patch_version=patch_version
+            max_workers=scraping_config.DEFAULT_MAX_WORKERS,
+            patch_version=patch_version,
+            headless=scraping_config.HEADLESS
         )
 
         print(
@@ -642,7 +648,9 @@ def parse_synergies_all(patch_version=None):
 
         start_time = time.time()
         parallel_parser = ParallelParser(
-            max_workers=scraping_config.DEFAULT_MAX_WORKERS, patch_version=patch_version
+            max_workers=scraping_config.DEFAULT_MAX_WORKERS,
+            patch_version=patch_version,
+            headless=scraping_config.HEADLESS
         )
 
         print(
@@ -742,7 +750,9 @@ def parse_all_data_pool(patch_version=None):
         from src.config_constants import scraping_config
 
         parallel_parser = ParallelParser(
-            max_workers=scraping_config.DEFAULT_MAX_WORKERS, patch_version=patch_version
+            max_workers=scraping_config.DEFAULT_MAX_WORKERS,
+            patch_version=patch_version,
+            headless=scraping_config.HEADLESS
         )
 
         # Parse matchups
@@ -847,7 +857,9 @@ def parse_all_data_all(patch_version=None):
         from src.config_constants import scraping_config
 
         parallel_parser = ParallelParser(
-            max_workers=scraping_config.DEFAULT_MAX_WORKERS, patch_version=patch_version
+            max_workers=scraping_config.DEFAULT_MAX_WORKERS,
+            patch_version=patch_version,
+            headless=scraping_config.HEADLESS
         )
 
         # Parse matchups

@@ -37,8 +37,13 @@ def parse_all_champions_parallel(db: Database, max_workers: int = 10, patch_vers
     Returns:
         dict: Statistics with 'success', 'failed', 'total', 'duration' keys
     """
+    from src.config_constants import scraping_config
     db.connect()
-    parallel_parser = ParallelParser(max_workers=max_workers, patch_version=patch_version)
+    parallel_parser = ParallelParser(
+        max_workers=max_workers,
+        patch_version=patch_version,
+        headless=scraping_config.HEADLESS
+    )
 
     try:
         stats = parallel_parser.parse_all_champions(
@@ -92,8 +97,13 @@ def parse_champions_by_role_parallel(db: Database, max_workers: int = 10, patch_
     Returns:
         dict: Combined statistics from all roles
     """
+    from src.config_constants import scraping_config
     db.connect()
-    parallel_parser = ParallelParser(max_workers=max_workers, patch_version=patch_version)
+    parallel_parser = ParallelParser(
+        max_workers=max_workers,
+        patch_version=patch_version,
+        headless=scraping_config.HEADLESS
+    )
 
     # Define role mappings
     role_mappings = [
