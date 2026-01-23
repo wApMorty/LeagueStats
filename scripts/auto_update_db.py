@@ -188,11 +188,11 @@ class WindowsNotifier:
 
         if enabled:
             try:
-                from win10toast import ToastNotifier
+                from windows_toasts import WindowsToaster
 
-                self.toaster = ToastNotifier()
+                self.toaster = WindowsToaster("LeagueStats Coach")
             except ImportError:
-                print("[WARNING] win10toast not available, notifications disabled")
+                print("[WARNING] windows-toasts not available, notifications disabled")
                 self.enabled = False
 
     def notify(self, title: str, message: str, duration: int = 10) -> None:
@@ -212,9 +212,11 @@ class WindowsNotifier:
             return
 
         try:
-            self.toaster.show_toast(
-                title, message, duration=duration, threaded=True, icon_path=None
-            )
+            from windows_toasts import Toast
+
+            toast = Toast()
+            toast.text_fields = [title, message]
+            self.toaster.show_toast(toast)
         except Exception as e:
             # Notification failed - log to file as fallback
             fallback_msg = f"NOTIFICATION FAILED - {title}: {message} (Error: {e})"
