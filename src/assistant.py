@@ -810,9 +810,7 @@ class Assistant:
         viable_companions, validation_report = self._validate_champion_pool(available_pool)
 
         if len(viable_companions) < 2:
-            safe_print(
-                f"\n❌ ERROR: Only {len(viable_companions)} companions have sufficient data."
-            )
+            safe_print(f"\n❌ ERROR: Only {len(viable_companions)} companions have sufficient data.")
             print("Need at least 2 viable companions to form a duo.")
             print("\nCompanions with insufficient data:")
             for champ, data in validation_report.items():
