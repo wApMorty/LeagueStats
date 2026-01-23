@@ -180,7 +180,6 @@ class DraftMonitor:
                 if self.last_draft_state.phase and (
                     self.last_draft_state.ally_picks or self.last_draft_state.enemy_picks
                 ):
-
                     # Only show the message once when leaving champion select
                     if not hasattr(self, "_shown_ready_message"):
                         print("\n[INFO] Left champion select - Game starting!")
@@ -253,7 +252,6 @@ class DraftMonitor:
                     self.ready_check_accepted_time > 0
                     and current_time - self.ready_check_accepted_time > cooldown
                 ):
-
                     print("\n" + "=" * 60)
                     print("🎮 [QUEUE] GAME FOUND!")
                     print("=" * 60)
