@@ -37,7 +37,7 @@ def get_champion_matchups(champion_id: int, db: Database = Depends(get_db)):
             raise HTTPException(status_code=404, detail=f"Champion with ID {champion_id} not found")
 
         # Get matchups
-        matchups_data = db.get_champion_matchups_by_name(champion_name)
+        matchups_data = db.get_champion_matchups_by_name(champion_name, as_dataclass=True)
 
         # Convert to Pydantic models
         matchups = [
@@ -79,7 +79,7 @@ def get_bulk_matchups(db: Database = Depends(get_db)):
         bulk_matchups = {}
 
         for champ_id, champ_name in all_champions:
-            matchups_data = db.get_champion_matchups_by_name(champ_name)
+            matchups_data = db.get_champion_matchups_by_name(champ_name, as_dataclass=True)
 
             matchups = [
                 MatchupResponse(
