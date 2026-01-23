@@ -46,8 +46,8 @@ if "?" in db_url:
     # For Neon, we need ssl='require' as a connect_arg
     # But for the URL, we can omit it as Neon enforces SSL by default
     # Remove psycopg2-specific params
-    parsed_params.pop('sslmode', None)
-    parsed_params.pop('channel_binding', None)
+    parsed_params.pop("sslmode", None)
+    parsed_params.pop("channel_binding", None)
 
     # Rebuild URL without incompatible params
     if parsed_params:

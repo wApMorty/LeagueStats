@@ -5,16 +5,16 @@
 # ========================================
 # WEB FRAMEWORK
 # ========================================
-fastapi==0.110.0
-uvicorn[standard]==0.27.0
-gunicorn==21.2.0
+fastapi==0.125.0  # Python 3.13 support
+uvicorn[standard]==0.40.0  # Latest version with Python 3.13 support
+gunicorn==23.0.0  # Updated for compatibility
 
 # ========================================
 # DATABASE
 # ========================================
-sqlalchemy[asyncio]==2.0.25
+sqlalchemy[asyncio]==2.0.46  # Python 3.13 full support (released Jan 21, 2026)
 asyncpg==0.31.0  # PostgreSQL async driver (Python 3.13 wheels available)
-alembic==1.13.0  # Database migrations
+alembic==1.18.1  # Database migrations (Python 3.13 support)
 
 # ========================================
 # DATA VALIDATION & SERIALIZATION
