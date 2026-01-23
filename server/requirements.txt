@@ -36,7 +36,7 @@ numpy>=2.0.0,<3.0.0  # Required for analysis algorithms
 # TESTING (development)
 # ========================================
 pytest>=8.0.0,<10.0.0  # Updated for Python 3.13 compatibility
-pytest-asyncio==0.23.0
+pytest-asyncio>=0.24.0  # Updated for pytest 8.x compatibility
 pytest-cov==4.1.0
 pytest-mock==3.12.0
 httpx==0.26.0  # Async HTTP client for API testing
