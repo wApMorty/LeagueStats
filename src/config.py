@@ -119,11 +119,11 @@ class Config:
         return scraping_config.PAGE_LOAD_DELAY
 
     @property
-    def OPEN_LOLTHEORY_ON_DRAFT_END(self) -> bool:
+    def OPEN_ONETRICKS_ON_DRAFT_END(self) -> bool:
         """Redirect to config_constants.draft_config"""
         from .config_constants import draft_config
 
-        return draft_config.OPEN_LOLTHEORY_ON_DRAFT_END
+        return draft_config.OPEN_ONETRICKS_ON_DRAFT_END
 
     @classmethod
     def get_firefox_path(cls) -> str:

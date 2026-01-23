@@ -556,57 +556,57 @@ def denormalize_champion_name_from_url(url_name: str) -> str:
     return url_name.capitalize()
 
 
-def normalize_champion_name_for_loltheory(champion_name: str) -> str:
+def normalize_champion_name_for_onetricks(champion_name: str) -> str:
     """
-    Normalize champion names for use in LoLTheory.gg URLs.
+    Normalize champion names for use in Onetricks.gg URLs.
 
-    LoLTheory.gg uses lowercase hyphenated champion names in URLs like:
-    /lol/champion/champion-name/build-runes
+    Onericks.gg uses proper case champion names in URLs like:
+    /champions/ranking/ChampionName
     """
-    # Handle special cases for LoLTheory.gg
+    # Handle special cases for OneTriks.gg
     special_cases = {
-        "JarvanIV": "jarvan-iv",
-        "Jarvan IV": "jarvan-iv",
-        "AurelionSol": "aurelion-sol",
-        "Aurelion Sol": "aurelion-sol",
-        "DrMundo": "dr-mundo",
-        "Dr. Mundo": "dr-mundo",
-        "Khazix": "khazix",
-        "Kha'Zix": "khazix",
-        "LeeSin": "lee-sin",
-        "Lee Sin": "lee-sin",
-        "Kaisa": "kaisa",
-        "Kai'Sa": "kaisa",
-        "MissFortune": "miss-fortune",
-        "Miss Fortune": "miss-fortune",
-        "TwistedFate": "twisted-fate",
-        "Twisted Fate": "twisted-fate",
-        "XinZhao": "xin-zhao",
-        "Xin Zhao": "xin-zhao",
-        "Chogath": "chogath",
-        "Cho'Gath": "chogath",
-        "KogMaw": "kogmaw",
-        "Kog'Maw": "kogmaw",
-        "RekSai": "reksai",
-        "Rek'Sai": "reksai",
-        "TahmKench": "tahm-kench",
-        "Tahm Kench": "tahm-kench",
-        "Velkoz": "velkoz",
-        "Vel'Koz": "velkoz",
-        "Belveth": "belveth",
-        "Bel'Veth": "belveth",
-        "KSante": "ksante",
-        "K'Sante": "ksante",
-        "MasterYi": "master-yi",
-        "Master Yi": "master-yi",
-        "MonkeyKing": "wukong",
-        "Wukong": "wukong",
+        "JarvanIV": "JarvanIV",
+        "Jarvan IV": "JarvanIV",
+        "AurelionSol": "AurelionSol",
+        "Aurelion Sol": "AurelionSol",
+        "DrMundo": "DrMundo",
+        "Dr. Mundo": "DrMundo",
+        "Khazix": "Khazix",
+        "Kha'Zix": "Khazix",
+        "LeeSin": "LeeSin",
+        "Lee Sin": "LeeSin",
+        "Kaisa": "Kaisa",
+        "Kai'Sa": "Kaisa",
+        "MissFortune": "MissFortune",
+        "Miss Fortune": "MissFortune",
+        "TwistedFate": "TwistedFate",
+        "Twisted Fate": "TwistedFate",
+        "XinZhao": "XinZhao",
+        "Xin Zhao": "XinZhao",
+        "Chogath": "Chogath",
+        "Cho'Gath": "Chogath",
+        "KogMaw": "KogMaw",
+        "Kog'Maw": "KogMaw",
+        "RekSai": "RekSai",
+        "Rek'Sai": "RekSai",
+        "TahmKench": "TahmKench",
+        "Tahm Kench": "TahmKench",
+        "Velkoz": "Velkoz",
+        "Vel'Koz": "Velkoz",
+        "Belveth": "Belveth",
+        "Bel'Veth": "Belveth",
+        "KSante": "KSante",
+        "K'Sante": "KSante",
+        "MasterYi": "MasterYi",
+        "Master Yi": "MasterYi",
+        "MonkeyKing": "Wukong",
+        "Wukong": "Wukong",
     }
 
     # Check if it's a special case
     if champion_name in special_cases:
         return special_cases[champion_name]
 
-    # Default: lowercase, replace spaces with hyphens, remove apostrophes and dots
-    normalized = champion_name.lower().replace(" ", "-").replace("'", "").replace(".", "")
+    # Default: remove spaces and apostrophes, keep proper case
+    normalized = champion_name.replace(" ", "").replace("'", "")
     return normalized

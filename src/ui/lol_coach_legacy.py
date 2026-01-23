@@ -140,7 +140,7 @@ def run_draft_coach(
     auto_hover=False,
     auto_accept_queue=False,
     auto_ban_hover=False,
-    open_loltheory=None,
+    open_onetricks=None,
 ):
     """Run the real-time draft coach."""
     print("[INFO] Starting Real-time Draft Coach...")
@@ -151,8 +151,8 @@ def run_draft_coach(
         print("🔥 [AUTO-ACCEPT] Queue auto-accept is ENABLED")
     if auto_ban_hover:
         print("🚫 [AUTO-BAN-HOVER] Ban hover is ENABLED")
-    if open_loltheory:
-        print("🌐 [LOLTHEORY] Open champion page on draft completion is ENABLED")
+    if open_onetricks:
+        print("🌐 [ONETRICKS] Open champion page on draft completion is ENABLED")
     print("Press Ctrl+C to stop monitoring.\n")
 
     try:
@@ -162,7 +162,7 @@ def run_draft_coach(
             auto_hover=auto_hover,
             auto_accept_queue=auto_accept_queue,
             auto_ban_hover=auto_ban_hover,
-            open_loltheory=open_loltheory,
+            open_onetricks=open_onetricks,
         )
         monitor.start_monitoring()
     except KeyboardInterrupt:
@@ -386,7 +386,7 @@ def parse_champion_pool(patch_version=None):
         parallel_parser = ParallelParser(
             max_workers=scraping_config.DEFAULT_MAX_WORKERS,
             patch_version=patch_version,
-            headless=scraping_config.HEADLESS,
+            headless=scraping_config.HEADLESS
         )
 
         print(
@@ -472,7 +472,7 @@ def parse_all_champions(patch_version=None):
         parallel_parser = ParallelParser(
             max_workers=scraping_config.DEFAULT_MAX_WORKERS,
             patch_version=patch_version,
-            headless=scraping_config.HEADLESS,
+            headless=scraping_config.HEADLESS
         )
 
         print(
@@ -577,7 +577,7 @@ def parse_synergies_pool(patch_version=None):
         parallel_parser = ParallelParser(
             max_workers=scraping_config.DEFAULT_MAX_WORKERS,
             patch_version=patch_version,
-            headless=scraping_config.HEADLESS,
+            headless=scraping_config.HEADLESS
         )
 
         print(
@@ -650,7 +650,7 @@ def parse_synergies_all(patch_version=None):
         parallel_parser = ParallelParser(
             max_workers=scraping_config.DEFAULT_MAX_WORKERS,
             patch_version=patch_version,
-            headless=scraping_config.HEADLESS,
+            headless=scraping_config.HEADLESS
         )
 
         print(
@@ -752,7 +752,7 @@ def parse_all_data_pool(patch_version=None):
         parallel_parser = ParallelParser(
             max_workers=scraping_config.DEFAULT_MAX_WORKERS,
             patch_version=patch_version,
-            headless=scraping_config.HEADLESS,
+            headless=scraping_config.HEADLESS
         )
 
         # Parse matchups
@@ -859,7 +859,7 @@ def parse_all_data_all(patch_version=None):
         parallel_parser = ParallelParser(
             max_workers=scraping_config.DEFAULT_MAX_WORKERS,
             patch_version=patch_version,
-            headless=scraping_config.HEADLESS,
+            headless=scraping_config.HEADLESS
         )
 
         # Parse matchups
@@ -2686,14 +2686,14 @@ def main():
         help="Enable automatic ban hovering during ban phases",
     )
     parser.add_argument(
-        "--open-loltheory",
+        "--open-onetricks",
         action="store_true",
-        help="Open champion page on LoLTheory.gg when draft completes",
+        help="Open champion page on Onetricks.gg when draft completes",
     )
     parser.add_argument(
-        "--no-loltheory",
+        "--no-onetricks",
         action="store_true",
-        help="Disable opening champion page on LoLTheory.gg (overrides config default)",
+        help="Disable opening champion page on Onetricks.gg (overrides config default)",
     )
 
     args = parser.parse_args()
@@ -2708,20 +2708,20 @@ def main():
         if not check_dependencies() or not check_database():
             sys.exit(1)
 
-        # Determine open_loltheory setting from command line args
-        if args.no_loltheory:
-            open_loltheory = False
-        elif args.open_loltheory:
-            open_loltheory = True
+        # Determine open_onetricks setting from command line args
+        if args.no_onetricks:
+            open_onetricks = False
+        elif args.open_onetricks:
+            open_onetricks = True
         else:
-            open_loltheory = None  # Use config default
+            open_onetricks = None  # Use config default
 
         run_draft_coach(
             args.verbose,
             auto_hover=args.auto_hover,
             auto_accept_queue=args.auto_accept_queue,
             auto_ban_hover=args.auto_ban_hover,
-            open_loltheory=open_loltheory,
+            open_onetricks=open_onetricks,
         )
         return
 
@@ -2754,20 +2754,20 @@ def main():
                 ban_hover_choice = input("Enable automatic ban hovering? (y/N): ").strip().lower()
                 auto_ban_hover = ban_hover_choice == "y"
 
-                # Ask about opening LoLTheory.gg page
-                loltheory_choice = (
-                    input("Open champion page on LoLTheory.gg when draft completes? (Y/n): ")
+                # Ask about opening Onetricks.gg page
+                onetricks_choice = (
+                    input("Open champion page on Onetricks.gg when draft completes? (Y/n): ")
                     .strip()
                     .lower()
                 )
-                open_loltheory = loltheory_choice != "n"  # Default to True unless explicitly 'n'
+                open_onetricks = onetricks_choice != "n"  # Default to True unless explicitly 'n'
 
                 run_draft_coach(
                     args.verbose,
                     auto_hover=auto_hover,
                     auto_accept_queue=auto_accept_queue,
                     auto_ban_hover=auto_ban_hover,
-                    open_loltheory=open_loltheory,
+                    open_onetricks=open_onetricks,
                 )
 
             elif choice == "2":
