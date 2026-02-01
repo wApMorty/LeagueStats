@@ -17,7 +17,7 @@ jobs:
   scrape-and-update:
     name: Scrape Data and Update PostgreSQL
     runs-on: ubuntu-latest
-    timeout-minutes: 30  # Scraping typically takes ~12 minutes
+    timeout-minutes: 120  # Scraping with 2 workers takes ~90-120 minutes
 
     steps:
       - name: Checkout code
@@ -48,8 +48,8 @@ jobs:
           # Install Firefox
           sudo apt-get install -y firefox
 
-          # Install geckodriver
-          GECKODRIVER_VERSION=v0.34.0
+          # Install geckodriver (0.36.0 recommended for Firefox 147.x)
+          GECKODRIVER_VERSION=v0.36.0
           wget -q https://github.com/mozilla/geckodriver/releases/download/$GECKODRIVER_VERSION/geckodriver-$GECKODRIVER_VERSION-linux64.tar.gz
           tar -xzf geckodriver-$GECKODRIVER_VERSION-linux64.tar.gz
           sudo mv geckodriver /usr/local/bin/

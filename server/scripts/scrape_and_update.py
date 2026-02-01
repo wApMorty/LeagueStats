@@ -108,7 +108,8 @@ def scrape_to_temp_database() -> Tuple[Database, int, int, int]:
 
     # Create champions table with Riot API schema (avoid migration issues)
     cursor = temp_db.connection.cursor()
-    cursor.execute("""
+    cursor.execute(
+        """
         CREATE TABLE champions (
             id INTEGER PRIMARY KEY,
             key TEXT,
@@ -117,16 +118,18 @@ def scrape_to_temp_database() -> Tuple[Database, int, int, int]:
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-    """)
+    """
+    )
     temp_db.connection.commit()
     logger.info("Champions table created with Riot API schema")
 
     temp_db.init_matchups_table()
     temp_db.init_synergies_table()
 
-    # Configure parser for GitHub Actions (5 workers, headless mode)
-    logger.info("Starting parallel scraping (5 workers, headless mode)...")
-    parser = ParallelParser(max_workers=5, headless=True)
+    # Configure parser for GitHub Actions (2 workers, headless mode)
+    # 2 workers is optimal for GitHub Actions runners (2-core CPU)
+    logger.info("Starting parallel scraping (2 workers, headless mode)...")
+    parser = ParallelParser(max_workers=2, headless=True)
 
     try:
         # Parse all champions (list is retrieved automatically from Riot API)
