@@ -187,8 +187,29 @@ def get_engine() -> AsyncEngine:
         AsyncEngine configured for PostgreSQL with asyncpg driver
     """
     if not hasattr(_thread_local, "engine") or _thread_local.engine is None:
-        # Use the async-compatible database URL (postgresql+asyncpg:// with filtered params)
-        db_url = settings.get_async_database_url()
+        # Read DATABASE_URL from environment first (for GitHub Actions), fallback to settings
+        import os
+        env_db_url = os.environ.get("DATABASE_URL")
+        if env_db_url:
+            # Manually convert to async format (same logic as settings.get_async_database_url())
+            db_url = env_db_url
+            # Remove psycopg-specific params
+            if "?" in db_url:
+                base_url, params = db_url.split("?", 1)
+                filtered_params = [
+                    p for p in params.split("&")
+                    if not p.startswith("sslmode=") and not p.startswith("channel_binding=")
+                ]
+                if filtered_params:
+                    db_url = f"{base_url}?{'&'.join(filtered_params)}"
+                else:
+                    db_url = base_url
+            # Ensure +asyncpg driver
+            if "postgresql://" in db_url and "+asyncpg" not in db_url:
+                db_url = db_url.replace("postgresql://", "postgresql+asyncpg://")
+        else:
+            # Fallback to settings (for local development with .env file)
+            db_url = settings.get_async_database_url()
 
         _thread_local.engine = create_async_engine(
             db_url,
@@ -218,8 +239,9 @@ def get_session_maker():
     )
 
 
-# Session factory (creates new sessions) - use function for lazy init
-AsyncSessionLocal = get_session_maker()
+# Session factory (creates new sessions) - lazy initialization to allow env vars to load first
+# Do NOT call get_session_maker() at module level, call it when needed
+AsyncSessionLocal = None
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:

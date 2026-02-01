@@ -42,7 +42,13 @@ class Settings(BaseSettings):
     app_env: str = "development"
 
     model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore"
+        # Make .env file optional - prioritize environment variables (for GitHub Actions)
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+        # Read .env but don't fail if it doesn't exist
+        validate_default=True,
     )
 
     def get_cors_origins_list(self) -> list[str]:
