@@ -56,6 +56,13 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
+          # Create empty .env file for pydantic-settings compatibility
+          touch .env
+          touch server/.env
+
+          # Debug: Print DATABASE_URL length (not content for security)
+          echo "DATABASE_URL length: ${#DATABASE_URL}"
+
           python server/scripts/scrape_and_update.py
 
       - name: Report success
