@@ -348,7 +348,9 @@ class Parser:
                                 elem.find_element(By.CLASS_NAME, r"text-\[9px\]")
                                 .get_attribute("innerHTML")
                                 .split()
-                            )
+                            ).replace(
+                                ",", ""
+                            )  # Remove thousands separator
                         )
                         if not self.contains(
                             result, champ, winrate, delta1, delta2, pickrate, games
@@ -506,7 +508,9 @@ class Parser:
                                 elem.find_element(By.CLASS_NAME, r"text-\[9px\]")
                                 .get_attribute("innerHTML")
                                 .split()
-                            )
+                            ).replace(
+                                ",", ""
+                            )  # Remove thousands separator
                         )
                         if not self.contains(
                             result, ally, winrate, delta1, delta2, pickrate, games
