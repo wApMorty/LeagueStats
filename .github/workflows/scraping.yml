@@ -70,6 +70,7 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          FIREFOX_PATH: /usr/bin/firefox
           PATH: /snap/bin:/usr/local/bin:/usr/bin:/bin
         run: |
           # Create empty .env file for pydantic-settings compatibility
