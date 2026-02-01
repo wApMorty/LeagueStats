@@ -31,14 +31,22 @@ jobs:
 
       - name: Install Firefox and geckodriver
         run: |
-          # Install Firefox (snap on Ubuntu 24.04)
-          sudo snap install firefox
+          # Remove snap Firefox if present
+          sudo snap remove firefox || true
 
-          # Add snap bin to PATH for Firefox
-          export PATH="/snap/bin:$PATH"
+          # Install Firefox from Mozilla PPA (traditional apt installation)
+          sudo add-apt-repository -y ppa:mozillateam/ppa
+          sudo apt-get update
 
-          # Create symlink for easier access
-          sudo ln -sf /snap/bin/firefox /usr/local/bin/firefox
+          # Set Mozilla PPA priority higher than snap
+          echo '
+          Package: *
+          Pin: release o=LP-PPA-mozillateam
+          Pin-Priority: 1001
+          ' | sudo tee /etc/apt/preferences.d/mozilla-firefox
+
+          # Install Firefox
+          sudo apt-get install -y firefox
 
           # Install geckodriver
           GECKODRIVER_VERSION=v0.34.0
@@ -48,6 +56,7 @@ jobs:
           sudo chmod +x /usr/local/bin/geckodriver
 
           # Verify installation
+          which firefox
           firefox --version
           geckodriver --version
 
