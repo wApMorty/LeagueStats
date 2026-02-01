@@ -103,9 +103,24 @@ def scrape_to_temp_database() -> Tuple[Database, int, int, int]:
     temp_db = Database(":memory:")
     temp_db.connect()
 
-    # Note: ParallelParser.parse_all_champions() will initialize champions table via Riot API
-    # We only need to initialize matchups and synergies tables here
+    # Initialize tables with Riot API-compatible schema
     logger.info("Initializing temporary database tables...")
+
+    # Create champions table with Riot API schema (avoid migration issues)
+    cursor = temp_db.connection.cursor()
+    cursor.execute("""
+        CREATE TABLE champions (
+            id INTEGER PRIMARY KEY,
+            key TEXT,
+            name TEXT NOT NULL,
+            title TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    temp_db.connection.commit()
+    logger.info("Champions table created with Riot API schema")
+
     temp_db.init_matchups_table()
     temp_db.init_synergies_table()
 
