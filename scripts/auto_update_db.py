@@ -26,6 +26,7 @@ Version: 1.1.0-dev
 
 import sys
 import os
+import subprocess
 from pathlib import Path
 from datetime import datetime
 import json
@@ -420,14 +421,48 @@ def main() -> int:
         assistant = None
         logger.log("SUCCESS", "Champion scores recalculated")
 
-        # 9. Success notification with synergies stats
+        # 9. Sync to PostgreSQL Neon (non-blocking - local DB is primary)
+        neon_sync_status = "Not attempted"
+        try:
+            logger.log("INFO", "Syncing to PostgreSQL Neon...")
+            sync_script = project_root / "scripts" / "sync_local_to_neon.py"
+
+            result = subprocess.run(
+                [sys.executable, str(sync_script)],
+                cwd=str(project_root),
+                capture_output=True,
+                timeout=300,  # 5 min max
+                text=True,
+            )
+
+            if result.returncode == 0:
+                # Extract stats from stdout
+                logger.log("SUCCESS", "Neon sync completed")
+                for line in result.stdout.strip().split("\n"):
+                    if line.strip():
+                        logger.log("INFO", f"  {line.strip()}")
+                neon_sync_status = "✅ Success"
+            else:
+                logger.log("WARNING", "Neon sync failed (local DB still updated)")
+                logger.log("WARNING", f"Error: {result.stderr.strip()}")
+                neon_sync_status = "⚠️ Failed (check logs)"
+
+        except subprocess.TimeoutExpired:
+            logger.log("WARNING", "Neon sync timeout after 5 minutes (local DB still updated)")
+            neon_sync_status = "⚠️ Timeout (>5 min)"
+        except Exception as e:
+            logger.log("WARNING", f"Neon sync error: {e} (local DB still updated)")
+            neon_sync_status = f"⚠️ Error: {str(e)[:50]}"
+
+        # 10. Success notification with synergies and Neon sync status
         total_time = (synergies_end_time - start_time).total_seconds() / 60
         logger.log("SUCCESS", f"Auto-update completed successfully in {total_time:.1f} minutes")
         notifier.notify(
             "LeagueStats Coach ✅",
             f"BD mise à jour avec succès!\n"
             f"Matchups: {success_count}/{total_count} ({duration_min:.1f} min)\n"
-            f"Synergies: {synergies_success_count}/{synergies_total_count} ({synergies_duration_min:.1f} min)",
+            f"Synergies: {synergies_success_count}/{synergies_total_count} ({synergies_duration_min:.1f} min)\n"
+            f"Neon Sync: {neon_sync_status}",
             duration=15,
         )
 
