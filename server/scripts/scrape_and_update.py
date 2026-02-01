@@ -32,6 +32,13 @@ import requests
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 
+# Validate required environment variables BEFORE importing server modules
+# (server.src.db initializes AsyncSessionLocal at module level which needs DATABASE_URL)
+if not os.environ.get("DATABASE_URL"):
+    print("❌ ERROR: DATABASE_URL environment variable is not set")
+    print("Please configure DATABASE_URL secret in GitHub Actions settings")
+    sys.exit(1)
+
 # Add project root to path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
