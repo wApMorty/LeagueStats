@@ -34,6 +34,12 @@ jobs:
           # Install Firefox (snap on Ubuntu 24.04)
           sudo snap install firefox
 
+          # Add snap bin to PATH for Firefox
+          export PATH="/snap/bin:$PATH"
+
+          # Create symlink for easier access
+          sudo ln -sf /snap/bin/firefox /usr/local/bin/firefox
+
           # Install geckodriver
           GECKODRIVER_VERSION=v0.34.0
           wget -q https://github.com/mozilla/geckodriver/releases/download/$GECKODRIVER_VERSION/geckodriver-$GECKODRIVER_VERSION-linux64.tar.gz
@@ -55,6 +61,7 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          PATH: /snap/bin:/usr/local/bin:/usr/bin:/bin
         run: |
           # Create empty .env file for pydantic-settings compatibility
           touch .env
@@ -62,6 +69,10 @@ jobs:
 
           # Debug: Print DATABASE_URL length (not content for security)
           echo "DATABASE_URL length: ${#DATABASE_URL}"
+
+          # Verify Firefox is accessible
+          which firefox
+          firefox --version
 
           python server/scripts/scrape_and_update.py
 
