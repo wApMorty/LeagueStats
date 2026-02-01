@@ -386,7 +386,7 @@ def parse_champion_pool(patch_version=None):
         parallel_parser = ParallelParser(
             max_workers=scraping_config.DEFAULT_MAX_WORKERS,
             patch_version=patch_version,
-            headless=scraping_config.HEADLESS
+            headless=scraping_config.HEADLESS,
         )
 
         print(
@@ -472,7 +472,7 @@ def parse_all_champions(patch_version=None):
         parallel_parser = ParallelParser(
             max_workers=scraping_config.DEFAULT_MAX_WORKERS,
             patch_version=patch_version,
-            headless=scraping_config.HEADLESS
+            headless=scraping_config.HEADLESS,
         )
 
         print(
@@ -577,7 +577,7 @@ def parse_synergies_pool(patch_version=None):
         parallel_parser = ParallelParser(
             max_workers=scraping_config.DEFAULT_MAX_WORKERS,
             patch_version=patch_version,
-            headless=scraping_config.HEADLESS
+            headless=scraping_config.HEADLESS,
         )
 
         print(
@@ -650,7 +650,7 @@ def parse_synergies_all(patch_version=None):
         parallel_parser = ParallelParser(
             max_workers=scraping_config.DEFAULT_MAX_WORKERS,
             patch_version=patch_version,
-            headless=scraping_config.HEADLESS
+            headless=scraping_config.HEADLESS,
         )
 
         print(
@@ -752,7 +752,7 @@ def parse_all_data_pool(patch_version=None):
         parallel_parser = ParallelParser(
             max_workers=scraping_config.DEFAULT_MAX_WORKERS,
             patch_version=patch_version,
-            headless=scraping_config.HEADLESS
+            headless=scraping_config.HEADLESS,
         )
 
         # Parse matchups
@@ -859,7 +859,7 @@ def parse_all_data_all(patch_version=None):
         parallel_parser = ParallelParser(
             max_workers=scraping_config.DEFAULT_MAX_WORKERS,
             patch_version=patch_version,
-            headless=scraping_config.HEADLESS
+            headless=scraping_config.HEADLESS,
         )
 
         # Parse matchups
