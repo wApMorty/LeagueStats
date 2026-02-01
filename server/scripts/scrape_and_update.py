@@ -44,7 +44,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 
 from src.parallel_parser import ParallelParser
 from src.db import Database
-from src.constants import CHAMPIONS_LIST
+from src.constants import CHAMPIONS_LIST, normalize_champion_name_for_url
 from server.src.db import Champion, Matchup, Synergy, get_session_maker
 from server.src.config import settings
 
@@ -103,9 +103,9 @@ def scrape_to_temp_database() -> Tuple[Database, int, int, int]:
     temp_db = Database(":memory:")
     temp_db.connect()
 
-    # Initialize tables
+    # Note: ParallelParser.parse_all_champions() will initialize champions table via Riot API
+    # We only need to initialize matchups and synergies tables here
     logger.info("Initializing temporary database tables...")
-    temp_db.init_champion_table()
     temp_db.init_matchups_table()
     temp_db.init_synergies_table()
 
@@ -114,13 +114,15 @@ def scrape_to_temp_database() -> Tuple[Database, int, int, int]:
     parser = ParallelParser(max_workers=5, headless=True)
 
     try:
-        # Convert numpy array to list
-        champions = list(CHAMPIONS_LIST)
-        logger.info(f"Scraping {len(champions)} champions...")
+        # Parse all champions (list is retrieved automatically from Riot API)
+        logger.info("Starting scraping (champions retrieved from Riot API)...")
 
         start_time = time.time()
-        parser.parse_all_champions(temp_db, champions)
+        # Pass normalize function, NOT a list (parse_all_champions gets list from Riot API)
+        stats = parser.parse_all_champions(temp_db, normalize_champion_name_for_url)
         duration = time.time() - start_time
+
+        logger.info(f"Scraping stats: {stats}")
 
         # Get statistics
         cursor = temp_db.connection.cursor()
@@ -182,7 +184,9 @@ async def transfer_to_postgresql(
 
             # Transfer Champions
             logger.info("Transferring champions...")
-            cursor.execute("SELECT id, champion FROM champions ORDER BY id")
+            # Note: ParallelParser.parse_all_champions() creates table with 'name' column (Riot API schema)
+            # not 'champion' column (old schema from init_champion_table())
+            cursor.execute("SELECT id, name FROM champions ORDER BY id")
             champions_data = cursor.fetchall()
 
             champion_objects = [
