@@ -26,13 +26,13 @@ class ScrapingConfig:
     TIMEOUT: int = 30
 
     # Scroll position for matchup data
-    MATCHUP_SCROLL_Y: int = 1310
+    MATCHUP_SCROLL_Y: int = 1000
 
     # Scroll distance for horizontal matchup carousel
     MATCHUP_CAROUSEL_SCROLL_X: int = 460
 
     # Parallel scraping configuration
-    DEFAULT_MAX_WORKERS: int = 20  # Increased for headless mode performance
+    DEFAULT_MAX_WORKERS: int = 10  # Increased for headless mode performance
     FIREFOX_STARTUP_DELAY: float = 1.0  # Minimal delay for Firefox initialization
     HEADLESS: bool = True  # Run Firefox in headless mode (no GUI, better performance)
 

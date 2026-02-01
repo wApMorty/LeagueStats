@@ -173,9 +173,17 @@ class ParallelParser:
         """
         with self.db_lock:
             try:
-                for matchup in matchups:
-                    enemy, winrate, d1, d2, pick, games = matchup
-                    db.add_matchup(champion, enemy, winrate, d1, d2, pick, games)
+                # Convert matchups to batch format: [(champion, enemy, winrate, d1, d2, pick, games), ...]
+                matchup_batch = [
+                    (champion, enemy, winrate, d1, d2, pick, games)
+                    for enemy, winrate, d1, d2, pick, games in matchups
+                ]
+
+                # Use batch insert (much faster - single transaction)
+                if not hasattr(self, "_champion_cache"):
+                    self._champion_cache = db.build_champion_cache()
+
+                db.add_matchups_batch(matchup_batch, self._champion_cache)
             except Exception as e:
                 logger.error(f"Database write error for {champion}: {e}")
 
@@ -228,9 +236,17 @@ class ParallelParser:
         """
         with self.db_lock:
             try:
-                for synergy in synergies:
-                    ally, winrate, d1, d2, pick, games = synergy
-                    db.add_synergy(champion, ally, winrate, d1, d2, pick, games)
+                # Convert synergies to batch format: [(champion, ally, winrate, d1, d2, pick, games), ...]
+                synergy_batch = [
+                    (champion, ally, winrate, d1, d2, pick, games)
+                    for ally, winrate, d1, d2, pick, games in synergies
+                ]
+
+                # Use batch insert (much faster - single transaction)
+                if not hasattr(self, "_champion_cache"):
+                    self._champion_cache = db.build_champion_cache()
+
+                db.add_synergies_batch(synergy_batch)
             except Exception as e:
                 logger.error(f"Database write error for {champion} synergies: {e}")
 
@@ -263,6 +279,10 @@ class ParallelParser:
 
         # Initialize synergies table (drop + recreate with indexes)
         db.init_synergies_table()
+
+        # Build champion cache once for all workers
+        self._champion_cache = db.build_champion_cache()
+        logger.info("Champion cache built for batch operations")
 
         # Get champion list from database (populated by Riot API)
         champion_names = list(db.get_all_champion_names().values())
@@ -356,6 +376,10 @@ class ParallelParser:
         db.update_champions_from_riot_api()
 
         db.init_matchups_table()
+
+        # Build champion cache once for all workers
+        self._champion_cache = db.build_champion_cache()
+        logger.info("Champion cache built for batch operations")
 
         # Get champion list dynamically from database (populated by Riot API)
         champion_names = list(db.get_all_champion_names().values())
