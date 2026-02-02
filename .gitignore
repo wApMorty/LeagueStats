@@ -19,5 +19,9 @@ coverage.xml
 htmlcov/
 .pytest_cache/
 
+# Environment variables (sensitive credentials)
+.env
+server/.env
+
 # Claude Code temporary files
 tmpclaude-*-cwd
