@@ -120,7 +120,9 @@ class Matchup(Base):
     enemy = relationship("Champion", foreign_keys=[enemy_id], back_populates="matchups_as_enemy")
 
     # Composite index for fast lookups
-    __table_args__ = (Index("ix_matchups_champion_enemy", "champion_id", "enemy_id", unique=True),)
+    # Removed unique constraint - multi-lane support (same matchup in Top, Jungle, Mid, Support)
+    # TODO: Add lane column + UNIQUE(champion_id, enemy_id, lane) constraint in future
+    __table_args__ = (Index("ix_matchups_champion_enemy", "champion_id", "enemy_id", unique=False),)
 
     def __repr__(self) -> str:
         return f"<Matchup(champion_id={self.champion_id}, enemy_id={self.enemy_id}, delta2={self.delta2})>"
@@ -162,7 +164,9 @@ class Synergy(Base):
     ally = relationship("Champion", foreign_keys=[ally_id], back_populates="synergies_as_ally")
 
     # Composite index for fast lookups
-    __table_args__ = (Index("ix_synergies_champion_ally", "champion_id", "ally_id", unique=True),)
+    # Removed unique constraint - multi-lane support (same synergy across multiple lanes)
+    # TODO: Add lane column + UNIQUE(champion_id, ally_id, lane) constraint in future
+    __table_args__ = (Index("ix_synergies_champion_ally", "champion_id", "ally_id", unique=False),)
 
     def __repr__(self) -> str:
         return f"<Synergy(champion_id={self.champion_id}, ally_id={self.ally_id}, delta2={self.delta2})>"
