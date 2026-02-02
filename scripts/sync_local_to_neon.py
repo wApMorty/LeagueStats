@@ -26,6 +26,7 @@ import sys
 import traceback
 from pathlib import Path
 from typing import Dict, List, Tuple
+from sqlalchemy import text
 
 # Add server directory to path for imports
 project_root = Path(__file__).parent.parent
@@ -159,12 +160,12 @@ async def transfer_to_neon(
 
     async with session_maker() as session:
         try:
-            # Clear existing data (cascade order: Synergy → Matchup → Champion)
-            # Pattern from scrape_and_update.py lines 196-200
+            # Clear existing data using TRUNCATE (faster and more reliable than DELETE)
+            # TRUNCATE automatically cascades to dependent tables via ON DELETE CASCADE
             print("  Clearing existing data...")
-            await session.execute(delete(Synergy))
-            await session.execute(delete(Matchup))
-            await session.execute(delete(Champion))
+            await session.execute(
+                text("TRUNCATE TABLE champions, matchups, synergies RESTART IDENTITY CASCADE")
+            )
             await session.commit()
             print("  Existing data cleared")
 
@@ -185,8 +186,8 @@ async def transfer_to_neon(
             await session.flush()  # Get IDs without committing
             print(f"    {len(champion_objects)} champions")
 
-            # Transfer Matchups
-            # Pattern from scrape_and_update.py lines 224-242
+            # Transfer Matchups (all entries, including multi-lane duplicates)
+            # Multi-lane support: Same matchup can exist across Top, Jungle, Mid, Support lanes
             print("  Transferring matchups...")
             matchup_objects = [
                 Matchup(
@@ -203,8 +204,8 @@ async def transfer_to_neon(
             await session.flush()
             print(f"    {len(matchup_objects)} matchups")
 
-            # Transfer Synergies
-            # Pattern from scrape_and_update.py lines 245-263
+            # Transfer Synergies (all entries, including multi-lane duplicates)
+            # Multi-lane support: Same synergy can exist across multiple lanes
             print("  Transferring synergies...")
             synergy_objects = [
                 Synergy(
