@@ -44,7 +44,7 @@ httpx==0.26.0  # Async HTTP client for API testing
 # ========================================
 # CODE QUALITY (development)
 # ========================================
-black==23.12.1
+black==24.10.0  # Fixed CVE-2024-21503 (ReDoS vulnerability, requires >= 24.3.0)
 pylint==3.0.3
 mypy==1.7.1
 
