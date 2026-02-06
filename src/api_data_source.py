@@ -156,12 +156,16 @@ class APIDataSource(DataSource):
         if champion_id is not None:
             return champion_id
 
-        # Fallback: Query API
+        # Fallback: Query API (no name filtering on API side, filter client-side)
         try:
-            response = self._get("/api/champions", name=champion)
+            response = self._get("/api/champions")
             data = response.json()
-            if data and len(data) > 0:
-                return data[0]["id"]
+            champions = data.get("champions", [])  # Extract wrapped list
+
+            # Filter by name (case-insensitive)
+            matching = [c for c in champions if c["name"].lower() == champion.lower()]
+            if matching:
+                return matching[0]["id"]
             return None
         except Exception as e:
             logger.error(f"[API] Error getting champion ID for {champion}: {e}")
@@ -186,7 +190,8 @@ class APIDataSource(DataSource):
         """Get mapping of all champion IDs to names."""
         try:
             response = self._get("/api/champions")
-            champions = response.json()
+            data = response.json()
+            champions = data.get("champions", [])  # Extract wrapped list
             mapping = {champ["id"]: champ["name"] for champ in champions}
             self._champion_names_cache = mapping  # Update cache
             return mapping
@@ -198,7 +203,8 @@ class APIDataSource(DataSource):
         """Build cache of champion name -> ID mappings."""
         try:
             response = self._get("/api/champions")
-            champions = response.json()
+            data = response.json()
+            champions = data.get("champions", [])  # Extract wrapped list
             cache = {}
             for champ in champions:
                 name = champ["name"]
@@ -224,7 +230,8 @@ class APIDataSource(DataSource):
 
         try:
             response = self._get(f"/api/champions/{champion_id}/matchups")
-            matchups = response.json()
+            data = response.json()
+            matchups = data.get("matchups", [])  # Extract wrapped list
 
             if as_dataclass:
                 return [
@@ -265,7 +272,8 @@ class APIDataSource(DataSource):
         try:
             # Use same endpoint but only extract needed fields
             response = self._get(f"/api/champions/{champion_id}/matchups")
-            matchups = response.json()
+            data = response.json()
+            matchups = data.get("matchups", [])  # Extract wrapped list
 
             if as_dataclass:
                 return [
@@ -311,16 +319,31 @@ class APIDataSource(DataSource):
         """Load ALL valid matchups in single query for caching."""
         try:
             response = self._get("/api/matchups/bulk")
-            matchups = response.json()
+            data = response.json()
+            matchups_dict = data.get(
+                "matchups", {}
+            )  # Extract wrapped dict {champion_id: [matchups]}
 
             cache = {}
-            for matchup in matchups:
-                champion_name = matchup["champion_name"]
-                enemy_name = matchup["enemy_name"]
-                delta2 = matchup["delta2"]
-                # Normalize to lowercase for case-insensitive lookup
-                key = (champion_name.lower(), enemy_name.lower())
-                cache[key] = float(delta2)
+            # Build reverse lookup from champion ID to name using existing cache
+            id_to_name = {v: k for k, v in self._champion_cache.items() if k == k.capitalize()}
+
+            # Iterate over all champions' matchups
+            for champion_id_str, matchups_list in matchups_dict.items():
+                champion_id = int(champion_id_str)
+                champion_name = id_to_name.get(champion_id, "")
+
+                if not champion_name:
+                    # Skip if champion not in cache (shouldn't happen)
+                    logger.warning(f"[API] Champion ID {champion_id} not found in cache")
+                    continue
+
+                for matchup in matchups_list:
+                    enemy_name = matchup["enemy_name"]
+                    delta2 = matchup["delta2"]
+                    # Normalize to lowercase for case-insensitive lookup
+                    key = (champion_name.lower(), enemy_name.lower())
+                    cache[key] = float(delta2)
 
             return cache
         except Exception as e:
@@ -358,14 +381,15 @@ class APIDataSource(DataSource):
 
         try:
             response = self._get(f"/api/champions/{champion_id}/synergies")
-            synergies = response.json()
+            data = response.json()
+            synergies = data.get("synergies", [])  # Extract wrapped list
 
             if as_dataclass:
                 return [
                     Synergy(
                         ally_name=s["ally_name"],
                         winrate=s["winrate"],
-                        delta1=s["delta1"],
+                        delta1=s.get("delta1", 0.0),  # delta1 might be missing in SynergyResponse
                         delta2=s["delta2"],
                         pickrate=s["pickrate"],
                         games=s["games"],
@@ -377,7 +401,7 @@ class APIDataSource(DataSource):
                     (
                         s["ally_name"],
                         s["winrate"],
-                        s["delta1"],
+                        s.get("delta1", 0.0),
                         s["delta2"],
                         s["pickrate"],
                         s["games"],
@@ -416,16 +440,31 @@ class APIDataSource(DataSource):
         """Load ALL valid synergies in single query for caching."""
         try:
             response = self._get("/api/synergies/bulk")
-            synergies = response.json()
+            data = response.json()
+            synergies_dict = data.get(
+                "synergies", {}
+            )  # Extract wrapped dict {champion_id: [synergies]}
 
             cache = {}
-            for synergy in synergies:
-                champion_name = synergy["champion_name"]
-                ally_name = synergy["ally_name"]
-                delta2 = synergy["delta2"]
-                # Normalize to lowercase for case-insensitive lookup
-                key = (champion_name.lower(), ally_name.lower())
-                cache[key] = float(delta2)
+            # Build reverse lookup from champion ID to name using existing cache
+            id_to_name = {v: k for k, v in self._champion_cache.items() if k == k.capitalize()}
+
+            # Iterate over all champions' synergies
+            for champion_id_str, synergies_list in synergies_dict.items():
+                champion_id = int(champion_id_str)
+                champion_name = id_to_name.get(champion_id, "")
+
+                if not champion_name:
+                    # Skip if champion not in cache (shouldn't happen)
+                    logger.warning(f"[API] Champion ID {champion_id} not found in cache")
+                    continue
+
+                for synergy in synergies_list:
+                    ally_name = synergy["ally_name"]
+                    delta2 = synergy["delta2"]
+                    # Normalize to lowercase for case-insensitive lookup
+                    key = (champion_name.lower(), ally_name.lower())
+                    cache[key] = float(delta2)
 
             return cache
         except Exception as e:

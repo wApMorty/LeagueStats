@@ -71,15 +71,15 @@ class TestAPIDataSourceChampionQueries:
 
     def test_get_champion_id_returns_id_from_api(self, api_data_source):
         """Test get_champion_id() queries API and returns ID."""
-        # Mock API response
+        # Mock API response with wrapped format
         mock_response = Mock()
-        mock_response.json.return_value = [{"id": 42, "name": "Jinx"}]
+        mock_response.json.return_value = {"champions": [{"id": 42, "name": "Jinx"}], "count": 1}
         api_data_source._client.get.return_value = mock_response
 
         champion_id = api_data_source.get_champion_id("Jinx")
 
         assert champion_id == 42
-        api_data_source._client.get.assert_called_with("/api/champions", params={"name": "Jinx"})
+        api_data_source._client.get.assert_called_with("/api/champions", params={})
 
     def test_get_champion_id_uses_cache(self, api_data_source):
         """Test get_champion_id() uses cache before querying API."""
@@ -95,7 +95,7 @@ class TestAPIDataSourceChampionQueries:
     def test_get_champion_id_returns_none_for_empty_response(self, api_data_source):
         """Test get_champion_id() returns None when champion not found."""
         mock_response = Mock()
-        mock_response.json.return_value = []
+        mock_response.json.return_value = {"champions": [], "count": 0}
         api_data_source._client.get.return_value = mock_response
 
         champion_id = api_data_source.get_champion_id("InvalidChamp")
@@ -115,11 +115,14 @@ class TestAPIDataSourceChampionQueries:
     def test_get_all_champion_names_returns_dict(self, api_data_source):
         """Test get_all_champion_names() returns ID->name mapping."""
         mock_response = Mock()
-        mock_response.json.return_value = [
-            {"id": 1, "name": "Aatrox"},
-            {"id": 2, "name": "Ahri"},
-            {"id": 42, "name": "Jinx"},
-        ]
+        mock_response.json.return_value = {
+            "champions": [
+                {"id": 1, "name": "Aatrox"},
+                {"id": 2, "name": "Ahri"},
+                {"id": 42, "name": "Jinx"},
+            ],
+            "count": 3,
+        }
         api_data_source._client.get.return_value = mock_response
 
         names = api_data_source.get_all_champion_names()
@@ -129,10 +132,13 @@ class TestAPIDataSourceChampionQueries:
     def test_build_champion_cache_returns_dict(self, api_data_source):
         """Test build_champion_cache() returns name->ID mapping."""
         mock_response = Mock()
-        mock_response.json.return_value = [
-            {"id": 1, "name": "Aatrox"},
-            {"id": 42, "name": "Jinx"},
-        ]
+        mock_response.json.return_value = {
+            "champions": [
+                {"id": 1, "name": "Aatrox"},
+                {"id": 42, "name": "Jinx"},
+            ],
+            "count": 2,
+        }
         api_data_source._client.get.return_value = mock_response
 
         cache = api_data_source.build_champion_cache()
@@ -151,26 +157,31 @@ class TestAPIDataSourceMatchupQueries:
         # Mock champion ID lookup
         api_data_source._champion_cache = {"aatrox": 1, "Aatrox": 1}
 
-        # Mock matchups response
+        # Mock matchups response with wrapped format
         mock_response = Mock()
-        mock_response.json.return_value = [
-            {
-                "enemy_name": "Darius",
-                "winrate": 48.5,
-                "delta1": -150.0,
-                "delta2": -200.0,
-                "pickrate": 8.5,
-                "games": 1500,
-            },
-            {
-                "enemy_name": "Garen",
-                "winrate": 52.0,
-                "delta1": 100.0,
-                "delta2": 150.0,
-                "pickrate": 12.3,
-                "games": 2000,
-            },
-        ]
+        mock_response.json.return_value = {
+            "champion_id": 1,
+            "champion_name": "Aatrox",
+            "matchups": [
+                {
+                    "enemy_name": "Darius",
+                    "winrate": 48.5,
+                    "delta1": -150.0,
+                    "delta2": -200.0,
+                    "pickrate": 8.5,
+                    "games": 1500,
+                },
+                {
+                    "enemy_name": "Garen",
+                    "winrate": 52.0,
+                    "delta1": 100.0,
+                    "delta2": 150.0,
+                    "pickrate": 12.3,
+                    "games": 2000,
+                },
+            ],
+            "count": 2,
+        }
         api_data_source._client.get.return_value = mock_response
 
         matchups = api_data_source.get_champion_matchups_by_name("Aatrox")
@@ -185,16 +196,21 @@ class TestAPIDataSourceMatchupQueries:
         api_data_source._champion_cache = {"aatrox": 1, "Aatrox": 1}
 
         mock_response = Mock()
-        mock_response.json.return_value = [
-            {
-                "enemy_name": "Darius",
-                "winrate": 48.5,
-                "delta1": -150.0,
-                "delta2": -200.0,
-                "pickrate": 8.5,
-                "games": 1500,
-            }
-        ]
+        mock_response.json.return_value = {
+            "champion_id": 1,
+            "champion_name": "Aatrox",
+            "matchups": [
+                {
+                    "enemy_name": "Darius",
+                    "winrate": 48.5,
+                    "delta1": -150.0,
+                    "delta2": -200.0,
+                    "pickrate": 8.5,
+                    "games": 1500,
+                }
+            ],
+            "count": 1,
+        }
         api_data_source._client.get.return_value = mock_response
 
         matchups = api_data_source.get_champion_matchups_by_name("Aatrox", as_dataclass=False)
@@ -208,16 +224,21 @@ class TestAPIDataSourceMatchupQueries:
         api_data_source._champion_cache = {"aatrox": 1, "Aatrox": 1}
 
         mock_response = Mock()
-        mock_response.json.return_value = [
-            {
-                "enemy_name": "Darius",
-                "winrate": 48.5,
-                "delta1": -150.0,
-                "delta2": -200.0,
-                "pickrate": 8.5,
-                "games": 1500,
-            }
-        ]
+        mock_response.json.return_value = {
+            "champion_id": 1,
+            "champion_name": "Aatrox",
+            "matchups": [
+                {
+                    "enemy_name": "Darius",
+                    "winrate": 48.5,
+                    "delta1": -150.0,
+                    "delta2": -200.0,
+                    "pickrate": 8.5,
+                    "games": 1500,
+                }
+            ],
+            "count": 1,
+        }
         api_data_source._client.get.return_value = mock_response
 
         matchups = api_data_source.get_champion_matchups_for_draft("Aatrox")
@@ -251,11 +272,38 @@ class TestAPIDataSourceMatchupQueries:
 
     def test_get_all_matchups_bulk_returns_dict(self, api_data_source):
         """Test get_all_matchups_bulk() returns matchup cache."""
+        # Pre-populate champion cache for ID->name lookup
+        api_data_source._champion_cache = {
+            "Aatrox": 1,
+            "aatrox": 1,
+            "Darius": 2,
+            "darius": 2,
+            "Garen": 3,
+            "garen": 3,
+        }
+
         mock_response = Mock()
-        mock_response.json.return_value = [
-            {"champion_name": "Aatrox", "enemy_name": "Darius", "delta2": -200.0},
-            {"champion_name": "Aatrox", "enemy_name": "Garen", "delta2": 150.0},
-        ]
+        mock_response.json.return_value = {
+            "matchups": {
+                "1": [  # Aatrox matchups
+                    {
+                        "enemy_id": 2,
+                        "enemy_name": "Darius",
+                        "delta2": -200.0,
+                        "games": 1500,
+                        "winrate": 48.5,
+                    },
+                    {
+                        "enemy_id": 3,
+                        "enemy_name": "Garen",
+                        "delta2": 150.0,
+                        "games": 2000,
+                        "winrate": 52.0,
+                    },
+                ]
+            },
+            "count": 1,
+        }
         api_data_source._client.get.return_value = mock_response
 
         matchups_bulk = api_data_source.get_all_matchups_bulk()
@@ -269,24 +317,29 @@ class TestAPIDataSourceMatchupQueries:
         api_data_source._champion_cache = {"aatrox": 1, "Aatrox": 1}
 
         mock_response = Mock()
-        mock_response.json.return_value = [
-            {
-                "enemy_name": "Darius",
-                "winrate": 48.0,
-                "delta1": -150.0,
-                "delta2": -200.0,
-                "pickrate": 8.5,
-                "games": 1000,
-            },
-            {
-                "enemy_name": "Garen",
-                "winrate": 52.0,
-                "delta1": 100.0,
-                "delta2": 150.0,
-                "pickrate": 12.3,
-                "games": 1000,
-            },
-        ]
+        mock_response.json.return_value = {
+            "champion_id": 1,
+            "champion_name": "Aatrox",
+            "matchups": [
+                {
+                    "enemy_name": "Darius",
+                    "winrate": 48.0,
+                    "delta1": -150.0,
+                    "delta2": -200.0,
+                    "pickrate": 8.5,
+                    "games": 1000,
+                },
+                {
+                    "enemy_name": "Garen",
+                    "winrate": 52.0,
+                    "delta1": 100.0,
+                    "delta2": 150.0,
+                    "pickrate": 12.3,
+                    "games": 1000,
+                },
+            ],
+            "count": 2,
+        }
         api_data_source._client.get.return_value = mock_response
 
         winrate = api_data_source.get_champion_base_winrate("Aatrox")
@@ -303,16 +356,20 @@ class TestAPIDataSourceSynergyQueries:
         api_data_source._champion_cache = {"yasuo": 42, "Yasuo": 42}
 
         mock_response = Mock()
-        mock_response.json.return_value = [
-            {
-                "ally_name": "Malphite",
-                "winrate": 55.0,
-                "delta1": 200.0,
-                "delta2": 250.0,
-                "pickrate": 8.5,
-                "games": 1000,
-            }
-        ]
+        mock_response.json.return_value = {
+            "champion_id": 42,
+            "champion_name": "Yasuo",
+            "synergies": [
+                {
+                    "ally_name": "Malphite",
+                    "winrate": 55.0,
+                    "delta2": 250.0,
+                    "pickrate": 8.5,
+                    "games": 1000,
+                }
+            ],
+            "count": 1,
+        }
         api_data_source._client.get.return_value = mock_response
 
         synergies = api_data_source.get_champion_synergies_by_name("Yasuo")
@@ -333,11 +390,38 @@ class TestAPIDataSourceSynergyQueries:
 
     def test_get_all_synergies_bulk_returns_dict(self, api_data_source):
         """Test get_all_synergies_bulk() returns synergy cache."""
+        # Pre-populate champion cache for ID->name lookup
+        api_data_source._champion_cache = {
+            "Yasuo": 42,
+            "yasuo": 42,
+            "Malphite": 516,
+            "malphite": 516,
+            "Gragas": 79,
+            "gragas": 79,
+        }
+
         mock_response = Mock()
-        mock_response.json.return_value = [
-            {"champion_name": "Yasuo", "ally_name": "Malphite", "delta2": 250.0},
-            {"champion_name": "Yasuo", "ally_name": "Gragas", "delta2": 120.0},
-        ]
+        mock_response.json.return_value = {
+            "synergies": {
+                "42": [  # Yasuo synergies
+                    {
+                        "ally_id": 516,
+                        "ally_name": "Malphite",
+                        "delta2": 250.0,
+                        "games": 1000,
+                        "winrate": 55.0,
+                    },
+                    {
+                        "ally_id": 79,
+                        "ally_name": "Gragas",
+                        "delta2": 120.0,
+                        "games": 800,
+                        "winrate": 52.5,
+                    },
+                ]
+            },
+            "count": 1,
+        }
         api_data_source._client.get.return_value = mock_response
 
         synergies_bulk = api_data_source.get_all_synergies_bulk()
