@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from ..config import settings
 
 # Import routes
-from .routes import health, champions, matchups, tier_list, analysis
+from .routes import health, champions, matchups, tier_list, analysis, admin
 
 app = FastAPI(
     title="LeagueStats Coach API",
@@ -33,6 +33,7 @@ app.include_router(champions.router, prefix="/api", tags=["champions"])
 app.include_router(matchups.router, prefix="/api", tags=["matchups"])
 app.include_router(tier_list.router, prefix="/api", tags=["tier-list"])
 app.include_router(analysis.router, prefix="/api", tags=["analysis"])
+app.include_router(admin.router, prefix="/admin", tags=["admin"])
 
 
 @app.on_event("startup")

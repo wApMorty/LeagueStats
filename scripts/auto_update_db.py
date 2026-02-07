@@ -31,6 +31,7 @@ from pathlib import Path
 from datetime import datetime
 import json
 import traceback
+import requests
 from typing import Optional, Tuple
 
 # Add project root to path
@@ -454,7 +455,37 @@ def main() -> int:
             logger.log("WARNING", f"Neon sync error: {e} (local DB still updated)")
             neon_sync_status = f"⚠️ Error: {str(e)[:50]}"
 
-        # 10. Success notification with synergies and Neon sync status
+        # 10. Trigger API refresh (force pool recycle on Render)
+        api_refresh_status = "Not attempted"
+        try:
+            logger.log("INFO", "Triggering API pool refresh...")
+            api_url = "https://leaguestats-adf4.onrender.com/admin/refresh-db"
+            api_key = os.getenv("ADMIN_API_KEY")
+
+            if not api_key:
+                logger.log("WARNING", "ADMIN_API_KEY not configured - skipping API refresh")
+                api_refresh_status = "⚠️ Skipped (no API key)"
+            else:
+                response = requests.post(api_url, headers={"X-API-Key": api_key}, timeout=30)
+
+                if response.status_code == 200:
+                    logger.log("SUCCESS", "API pool refreshed successfully")
+                    api_refresh_status = "✅ Success"
+                elif response.status_code == 403:
+                    logger.log("ERROR", "API refresh failed: Invalid API key")
+                    api_refresh_status = "❌ Invalid API key"
+                else:
+                    logger.log("WARNING", f"API refresh failed: HTTP {response.status_code}")
+                    api_refresh_status = f"⚠️ HTTP {response.status_code}"
+
+        except requests.exceptions.Timeout:
+            logger.log("WARNING", "API refresh timeout after 30s")
+            api_refresh_status = "⚠️ Timeout"
+        except Exception as e:
+            logger.log("WARNING", f"API refresh error: {e}")
+            api_refresh_status = f"⚠️ Error: {str(e)[:30]}"
+
+        # 11. Success notification with synergies, Neon sync, and API refresh status
         total_time = (synergies_end_time - start_time).total_seconds() / 60
         logger.log("SUCCESS", f"Auto-update completed successfully in {total_time:.1f} minutes")
         notifier.notify(
@@ -462,7 +493,8 @@ def main() -> int:
             f"BD mise à jour avec succès!\n"
             f"Matchups: {success_count}/{total_count} ({duration_min:.1f} min)\n"
             f"Synergies: {synergies_success_count}/{synergies_total_count} ({synergies_duration_min:.1f} min)\n"
-            f"Neon Sync: {neon_sync_status}",
+            f"Neon Sync: {neon_sync_status}\n"
+            f"API Refresh: {api_refresh_status}",
             duration=15,
         )
 

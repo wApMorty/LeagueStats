@@ -300,6 +300,20 @@ async def close_db() -> None:
         _thread_local.engine = None
 
 
+async def close_all_connections() -> None:
+    """Close all database connections and dispose engine pool.
+
+    This forces SQLAlchemy to recreate the connection pool on next query.
+    Used by admin endpoint after database sync to see fresh data immediately.
+
+    This is different from close_db() in that it's designed to be called
+    mid-lifecycle to force pool refresh, not just at shutdown.
+    """
+    if hasattr(_thread_local, "engine") and _thread_local.engine is not None:
+        await _thread_local.engine.dispose()
+        _thread_local.engine = None
+
+
 # ========================================
 # SYNCHRONOUS DATABASE WRAPPER
 # ========================================

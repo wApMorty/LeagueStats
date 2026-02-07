@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     """
 
     # Database
-    database_url: str
+    database_url: str = ""  # Required for production, optional for tests
 
     # API Configuration
     api_host: str = "0.0.0.0"
@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     # Application
     app_version: str = "2.0.0"
     app_env: str = "development"
+
+    # Admin API
+    admin_api_key: str = ""  # Set via ADMIN_API_KEY env var
 
     model_config = SettingsConfigDict(
         # Make .env file optional - prioritize environment variables (for GitHub Actions)
