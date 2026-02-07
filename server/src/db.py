@@ -193,6 +193,7 @@ def get_engine() -> AsyncEngine:
     if not hasattr(_thread_local, "engine") or _thread_local.engine is None:
         # Read DATABASE_URL from environment first (for GitHub Actions), fallback to settings
         import os
+
         env_db_url = os.environ.get("DATABASE_URL")
         if env_db_url:
             # Manually convert to async format (same logic as settings.get_async_database_url())
@@ -201,7 +202,8 @@ def get_engine() -> AsyncEngine:
             if "?" in db_url:
                 base_url, params = db_url.split("?", 1)
                 filtered_params = [
-                    p for p in params.split("&")
+                    p
+                    for p in params.split("&")
                     if not p.startswith("sslmode=") and not p.startswith("channel_binding=")
                 ]
                 if filtered_params:
@@ -221,7 +223,7 @@ def get_engine() -> AsyncEngine:
             pool_size=2,  # Small pool per thread
             max_overflow=5,
             pool_pre_ping=True,  # Verify connections before using
-            pool_recycle=3600,  # Recycle connections after 1 hour
+            pool_recycle=300,  # Recycle connections after 5 minutes (daily sync use case)
         )
     return _thread_local.engine
 
