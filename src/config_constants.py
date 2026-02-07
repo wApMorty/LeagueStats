@@ -165,6 +165,29 @@ class SynergyConfig:
     MAX_SYNERGIES_DISPLAYED: int = 5  # Maximum number of top synergies to display
 
 
+@dataclass
+class APIConfig:
+    """Configuration for remote API data source (FastAPI backend)."""
+
+    # API connectivity
+    ENABLED: bool = True  # Enable API data source (set False to use SQLite only)
+    BASE_URL: str = "https://leaguestats-adf4.onrender.com"  # FastAPI backend URL
+
+    # HTTP client settings
+    TIMEOUT: int = 10  # Request timeout in seconds
+    RETRY_ATTEMPTS: int = 3  # Number of retry attempts on failure
+    RETRY_BACKOFF: float = 1.0  # Exponential backoff base (seconds)
+
+    # Fallback behavior
+    FALLBACK_TO_SQLITE: bool = True  # Fall back to SQLite on API errors (hybrid mode)
+
+    # Data source mode
+    MODE: str = "sqlite_only"  # Data source mode: "api_only", "sqlite_only", "hybrid"
+    # - "api_only": Use API only, fail if API unavailable
+    # - "sqlite_only": Use local SQLite only (offline mode)
+    # - "hybrid": Try API first, fallback to SQLite on error (default)
+
+
 # Global configuration instances
 scraping_config = ScrapingConfig()
 analysis_config = AnalysisConfig()
@@ -173,3 +196,4 @@ ui_config = UIConfig()
 xpath_config = XPathConfig()
 pool_stats_config = PoolStatisticsConfig()
 synergy_config = SynergyConfig()
+api_config = APIConfig()

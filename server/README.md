@@ -194,7 +194,7 @@ curl http://localhost:8000/health
 ### Base URL
 ```
 Development: http://localhost:8000
-Production: https://leaguestats-api.onrender.com
+Production: https://leaguestats-adf4.onrender.com
 ```
 
 ### Endpoints
@@ -317,11 +317,11 @@ open htmlcov/index.html
 4. **Verify Deployment**:
    ```bash
    # Health check (replace with your Render URL)
-   curl https://leaguestats-api.onrender.com/health
+   curl https://leaguestats-adf4.onrender.com/health
    ```
 
 5. **Access Swagger Docs**:
-   - https://leaguestats-api.onrender.com/docs
+   - https://leaguestats-adf4.onrender.com/docs
 
 ### Auto-Deploy on Push
 

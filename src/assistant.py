@@ -5,13 +5,16 @@ This is the new modular version that delegates to specialized modules while
 maintaining backward compatibility with the original API.
 """
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, TYPE_CHECKING
 from tqdm import tqdm
 
-from .db import Database
 from .config import config
 from .config_constants import analysis_config
 from .models import Matchup, MatchupDraft
+
+# Import DataSource for type hints
+if TYPE_CHECKING:
+    from .data_source import DataSource
 
 # Import specialized modules
 from .analysis.scoring import ChampionScorer
@@ -36,22 +39,72 @@ class Assistant:
 
     Delegates to specialized modules while maintaining backward compatibility
     with the original monolithic API.
+
+    Data Source Modes (new in v1.1.0):
+    - The Assistant now supports dependency injection of data sources
+    - Default behavior: Uses HybridDataSource (API with SQLite fallback)
+    - Configure mode via src.config_constants.api_config.MODE:
+      * "hybrid": Try API first, fallback to SQLite (default)
+      * "api_only": Use API only, fail if unavailable
+      * "sqlite_only": Use local SQLite only (offline mode)
     """
 
-    def __init__(self, db: Optional["Database"] = None, verbose: bool = False) -> None:
+    def __init__(self, data_source: Optional["DataSource"] = None, verbose: bool = False) -> None:
         """
         Initialize Assistant and all sub-components.
 
         Args:
-            db: Optional Database instance to reuse. If None, creates new instance.
+            data_source: Optional DataSource instance to use for data access.
+                        If None, creates HybridDataSource instance (default).
+                        For backward compatibility, you can also pass a Database instance.
             verbose: Enable verbose logging
+
+        Examples:
+            >>> # Default: Hybrid mode (API with SQLite fallback)
+            >>> assistant = Assistant()
+
+            >>> # Explicit SQLite-only mode
+            >>> from src.sqlite_data_source import SQLiteDataSource
+            >>> data_source = SQLiteDataSource("data/db.db")
+            >>> assistant = Assistant(data_source=data_source)
+
+            >>> # Explicit API-only mode
+            >>> from src.api_data_source import APIDataSource
+            >>> data_source = APIDataSource()
+            >>> assistant = Assistant(data_source=data_source)
+
+            >>> # Backward compatibility: Database instance still works
+            >>> from src.db import Database
+            >>> from src.sqlite_data_source import SQLiteDataSource
+            >>> db = Database("data/db.db")
+            >>> # Wrap Database in SQLiteDataSource adapter
+            >>> assistant = Assistant(data_source=SQLiteDataSource(db.path))
         """
         self.MIN_GAMES = analysis_config.MIN_GAMES_THRESHOLD
-        if db is not None:
-            self.db = db
+
+        # Handle data source initialization with backward compatibility
+        if data_source is not None:
+            # Check if it's a legacy Database instance (for backward compatibility)
+            from .db import Database
+
+            if isinstance(data_source, Database):
+                # Wrap Database in SQLiteDataSource adapter
+                from .sqlite_data_source import SQLiteDataSource
+
+                print("[COMPAT] Database instance detected - wrapping in SQLiteDataSource adapter")
+                self.db = SQLiteDataSource(data_source.path)
+                self.db.connect()
+            else:
+                # Modern DataSource interface
+                self.db = data_source
+                self.db.connect()
         else:
-            self.db = Database(config.DATABASE_PATH)
+            # Default: HybridDataSource (API with SQLite fallback)
+            from .hybrid_data_source import HybridDataSource
+
+            self.db = HybridDataSource()
             self.db.connect()
+
         self.verbose = verbose
 
         # Initialize specialized components
