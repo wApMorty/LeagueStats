@@ -134,6 +134,27 @@ class SQLiteDataSource(DataSource):
         """Check if champion_scores table exists and has data (delegates to Database)."""
         return self._db.champion_scores_table_exists()
 
+    def save_champion_scores(
+        self,
+        champion_id: int,
+        avg_delta2: float,
+        variance: float,
+        coverage: float,
+        peak_impact: float,
+        volatility: float,
+        target_ratio: float,
+    ) -> None:
+        """Save or update champion scores in the database."""
+        self._db.save_champion_scores(
+            champion_id=champion_id,
+            avg_delta2=avg_delta2,
+            variance=variance,
+            coverage=coverage,
+            peak_impact=peak_impact,
+            volatility=volatility,
+            target_ratio=target_ratio,
+        )
+
     # ==================== Ban Recommendations ====================
 
     def get_pool_ban_recommendations(self, pool_name: str, limit: int = 5) -> List[tuple]:

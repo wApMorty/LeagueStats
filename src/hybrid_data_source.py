@@ -248,6 +248,35 @@ class HybridDataSource(DataSource):
         """Check if champion_scores data exists (hybrid: API first, SQLite fallback)."""
         return self._try_api_with_fallback("champion_scores_table_exists")
 
+    def save_champion_scores(
+        self,
+        champion_id: int,
+        avg_delta2: float,
+        variance: float,
+        coverage: float,
+        peak_impact: float,
+        volatility: float,
+        target_ratio: float,
+    ) -> None:
+        """Save champion scores to SQLite only (write operation).
+
+        Write operations always go to SQLite, never to the API.
+        """
+        if self.sqlite_source is None:
+            logger.error("[HYBRID] Cannot save champion scores: SQLite source not available")
+            raise RuntimeError("[HYBRID] SQLite source not available for write operation")
+
+        logger.info(f"[HYBRID] Saving champion scores for champion_id={champion_id} to SQLite")
+        self.sqlite_source.save_champion_scores(
+            champion_id=champion_id,
+            avg_delta2=avg_delta2,
+            variance=variance,
+            coverage=coverage,
+            peak_impact=peak_impact,
+            volatility=volatility,
+            target_ratio=target_ratio,
+        )
+
     # ==================== Ban Recommendations ====================
 
     def get_pool_ban_recommendations(self, pool_name: str, limit: int = 5) -> List[tuple]:

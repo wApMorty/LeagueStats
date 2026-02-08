@@ -270,6 +270,30 @@ class DataSource(ABC):
         """
         pass
 
+    @abstractmethod
+    def save_champion_scores(
+        self,
+        champion_id: int,
+        avg_delta2: float,
+        variance: float,
+        coverage: float,
+        peak_impact: float,
+        volatility: float,
+        target_ratio: float,
+    ) -> None:
+        """Save or update champion scores in the database.
+
+        Args:
+            champion_id: The champion's database ID
+            avg_delta2: Average delta squared metric
+            variance: Variance metric
+            coverage: Coverage metric
+            peak_impact: Peak impact metric
+            volatility: Volatility metric
+            target_ratio: Target ratio metric
+        """
+        pass
+
     # ==================== Ban Recommendations ====================
 
     @abstractmethod
