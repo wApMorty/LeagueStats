@@ -324,3 +324,18 @@ class DataSource(ABC):
             True if recommendations exist, False otherwise
         """
         pass
+
+    @abstractmethod
+    def save_pool_ban_recommendations(self, pool_name: str, ban_data: List[tuple]) -> int:
+        """
+        Save pre-calculated ban recommendations for a champion pool.
+
+        Args:
+            pool_name: Name of the champion pool
+            ban_data: List of tuples (enemy_champion, threat_score, best_response_delta2,
+                                      best_response_champion, matchups_count)
+
+        Returns:
+            Number of ban recommendations saved
+        """
+        pass

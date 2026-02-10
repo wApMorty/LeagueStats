@@ -164,3 +164,7 @@ class SQLiteDataSource(DataSource):
     def pool_has_ban_recommendations(self, pool_name: str) -> bool:
         """Check if pool has ban recommendations (delegates to Database)."""
         return self._db.pool_has_ban_recommendations(pool_name)
+
+    def save_pool_ban_recommendations(self, pool_name: str, ban_data: List[tuple]) -> int:
+        """Save pre-calculated ban recommendations (delegates to Database)."""
+        return self._db.save_pool_ban_recommendations(pool_name, ban_data)

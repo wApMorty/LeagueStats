@@ -554,6 +554,31 @@ class APIDataSource(DataSource):
         bans = self.get_pool_ban_recommendations(pool_name, limit=1)
         return len(bans) > 0
 
+    def save_pool_ban_recommendations(self, pool_name: str, recommendations: List[tuple]) -> int:
+        """
+        Save ban recommendations for a champion pool (NOT SUPPORTED for read-only API data source).
+
+        APIDataSource is read-only - writes should be performed on the backend.
+        This method is a no-op stub to satisfy the DataSource abstract interface.
+
+        Args:
+            pool_name: Name of the champion pool
+            recommendations: List of (enemy_champion, threat_score, best_response_delta2,
+                           best_response_champion, matchups_count) tuples
+
+        Returns:
+            0 (no rows affected, operation not supported)
+
+        Raises:
+            NotImplementedError: If write operations are attempted
+        """
+        logger.warning(
+            "[API] save_pool_ban_recommendations() called on read-only API data source (no-op)"
+        )
+        raise NotImplementedError(
+            "APIDataSource is read-only. Use SQLiteDataSource or HybridDataSource for writes."
+        )
+
     def save_champion_scores(self, scores: List[tuple]) -> int:
         """
         Save champion scores (NOT SUPPORTED for read-only API data source).
