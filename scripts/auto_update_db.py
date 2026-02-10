@@ -38,6 +38,17 @@ from typing import Optional, Tuple
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+# Load environment variables from .env before importing config
+try:
+    from dotenv import load_dotenv
+
+    env_path = project_root / ".env"
+    if env_path.exists():
+        load_dotenv(env_path)
+except ImportError:
+    # python-dotenv not installed, rely on environment variables
+    pass
+
 
 # Set process priority to BELOW_NORMAL to avoid blocking PC (only when run as main)
 def _set_process_priority():
