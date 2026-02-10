@@ -7,6 +7,8 @@ Multi-purpose tool for champion analysis, draft coaching, and data management
 import sys
 import os
 import argparse
+import subprocess
+from pathlib import Path
 from typing import List
 
 # Add src directory to path
@@ -20,6 +22,49 @@ from src.assistant import Assistant
 from src.constants import TOP_SOLOQ_POOL
 from src.config import config
 from src.utils.console import clear_console
+
+
+def sync_to_neon() -> str:
+    """Sync local SQLite database to PostgreSQL Neon.
+
+    Non-blocking operation - local DB remains primary.
+
+    Returns:
+        str: Sync status ("✅ Success", "⚠️ Failed", "⚠️ Timeout", "⚠️ Error")
+    """
+    neon_sync_status = "Not attempted"
+    try:
+        print("[INFO] Syncing to PostgreSQL Neon...")
+        project_root = Path(__file__).resolve().parent.parent.parent
+        sync_script = project_root / "scripts" / "sync_local_to_neon.py"
+
+        result = subprocess.run(
+            [sys.executable, str(sync_script)],
+            cwd=str(project_root),
+            capture_output=True,
+            timeout=300,  # 5 min max
+            text=True,
+        )
+
+        if result.returncode == 0:
+            print("[SUCCESS] Neon sync completed")
+            for line in result.stdout.strip().split("\n"):
+                if line.strip():
+                    print(f"  {line.strip()}")
+            neon_sync_status = "✅ Success"
+        else:
+            print("[WARNING] Neon sync failed (local DB still updated)")
+            print(f"[WARNING] Error: {result.stderr.strip()}")
+            neon_sync_status = "⚠️ Failed (check logs)"
+
+    except subprocess.TimeoutExpired:
+        print("[WARNING] Neon sync timeout after 5 minutes (local DB still updated)")
+        neon_sync_status = "⚠️ Timeout (>5 min)"
+    except Exception as e:
+        print(f"[WARNING] Neon sync error: {e} (local DB still updated)")
+        neon_sync_status = f"⚠️ Error: {str(e)[:50]}"
+
+    return neon_sync_status
 
 
 def print_banner():
@@ -417,6 +462,12 @@ def parse_champion_pool(patch_version=None):
         assistant = Assistant()
         champions_scored = assistant.calculate_global_scores()
         assistant.close()
+
+        # Sync to Neon
+        print("\n[INFO] Syncing to PostgreSQL Neon...")
+        neon_status = sync_to_neon()
+        print(f"[INFO] Neon sync: {neon_status}")
+
         print(
             f"[SUCCESS] SoloQ Pool statistics updated! ({stats['success']} champions scraped, {champions_scored} scored)"
         )
@@ -504,6 +555,12 @@ def parse_all_champions(patch_version=None):
         assistant = Assistant()
         champions_scored = assistant.calculate_global_scores()
         assistant.close()
+
+        # Sync to Neon
+        print("\n[INFO] Syncing to PostgreSQL Neon...")
+        neon_status = sync_to_neon()
+        print(f"[INFO] Neon sync: {neon_status}")
+
         print(
             f"[SUCCESS] All champion statistics updated! ({stats['success']} champions scraped, {champions_scored} scored)"
         )
@@ -602,6 +659,12 @@ def parse_synergies_pool(patch_version=None):
         print("=" * 60)
 
         db.close()
+
+        # Sync to Neon
+        print("\n[INFO] Syncing to PostgreSQL Neon...")
+        neon_status = sync_to_neon()
+        print(f"[INFO] Neon sync: {neon_status}")
+
         print(f"[SUCCESS] Synergy statistics updated! ({stats['success']} champions scraped)")
 
     except Exception as e:
@@ -676,6 +739,12 @@ def parse_synergies_all(patch_version=None):
         print("=" * 60)
 
         db.close()
+
+        # Sync to Neon
+        print("\n[INFO] Syncing to PostgreSQL Neon...")
+        neon_status = sync_to_neon()
+        print(f"[INFO] Neon sync: {neon_status}")
+
         print(f"[SUCCESS] Synergy statistics updated! ({stats['success']} champions scraped)")
 
     except Exception as e:
@@ -803,6 +872,12 @@ def parse_all_data_pool(patch_version=None):
         assistant = Assistant()
         champions_scored = assistant.calculate_global_scores()
         assistant.close()
+
+        # Sync to Neon
+        print("\n[INFO] Syncing to PostgreSQL Neon...")
+        neon_status = sync_to_neon()
+        print(f"[INFO] Neon sync: {neon_status}")
+
         print(
             f"[SUCCESS] All data updated! (Matchups: {matchup_stats['success']}, Synergies: {synergy_stats['success']}, Scored: {champions_scored})"
         )
@@ -907,6 +982,12 @@ def parse_all_data_all(patch_version=None):
         assistant = Assistant()
         champions_scored = assistant.calculate_global_scores()
         assistant.close()
+
+        # Sync to Neon
+        print("\n[INFO] Syncing to PostgreSQL Neon...")
+        neon_status = sync_to_neon()
+        print(f"[INFO] Neon sync: {neon_status}")
+
         print(
             f"[SUCCESS] All data updated! (Matchups: {matchup_stats['success']}, Synergies: {synergy_stats['success']}, Scored: {champions_scored})"
         )
