@@ -431,3 +431,28 @@ class TestSQLiteDataSourceBanRecommendations:
         has_bans = data_source.pool_has_ban_recommendations("NonExistentPool")
         assert has_bans is False
         data_source.close()
+
+    def test_save_pool_ban_recommendations_delegates_to_database(self, temp_db):
+        """Test save_pool_ban_recommendations() delegates correctly to Database."""
+        data_source = SQLiteDataSource(str(temp_db))
+        data_source.connect()
+
+        # Sample ban data
+        ban_data = [
+            ("Darius", 15.5, -2.5, "Aatrox", 3),
+            ("Garen", 12.0, -1.5, "Camille", 4),
+        ]
+
+        # Save ban recommendations
+        saved_count = data_source.save_pool_ban_recommendations("MyPool", ban_data)
+
+        # Verify delegation worked
+        assert saved_count == 2
+
+        # Verify data was actually saved via Database layer
+        recommendations = data_source.get_pool_ban_recommendations("MyPool", limit=10)
+        assert len(recommendations) == 2
+        assert recommendations[0][0] == "Darius"
+        assert recommendations[1][0] == "Garen"
+
+        data_source.close()
