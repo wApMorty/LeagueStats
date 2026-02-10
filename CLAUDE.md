@@ -3,7 +3,7 @@
 **Projet**: LeagueStats Coach
 **Version**: 1.1.0-dev (Sprint 2 in progress)
 **Mainteneur**: @pj35
-**Dernière mise à jour**: 2026-01-16
+**Dernière mise à jour**: 2026-02-08
 
 ---
 
@@ -42,30 +42,43 @@ Ce projet utilise un système d'agents spécialisés pour orchestrer TOUT le dé
 
 | Agent | Fichier | Rôle | Output | Spawné par |
 |-------|---------|------|--------|------------|
-| **Orchestrateur** | `00-orchestrateur.md` | Routage automatique des tâches | Plan YAML (phases) | Tech Lead |
 | **Architecte** | `01-architecte.md` | Analyse besoins + 2-3 approches | Plan YAML (approaches) | Assistant (toi) |
-| **Tech Lead** | `02-tech-lead.md` | **Coordination workflow complet** | Verbeux (notifications) | Assistant (toi) |
-| **Python Expert** | `03-python-expert.md` | Développement Python | YAML silencieux | Tech Lead |
-| **Database Expert** | `04-database-expert.md` | Migrations Alembic + SQL | YAML silencieux | Tech Lead |
-| **QA Expert** | `05-qa-expert.md` | Tests (unitaires + régression) | YAML silencieux | Tech Lead |
-| **Scraping Expert** | `06-scraping-expert.md` | Selenium + XPath | YAML silencieux | Tech Lead |
-| **Build Expert** | `07-build-expert.md` | PyInstaller + packaging | YAML silencieux | Tech Lead |
-| **Git Expert** | `08-git-expert.md` | Commits Gitmoji + PR | YAML silencieux | Tech Lead |
-| **Windows Expert** | `09-windows-expert.md` | Task Scheduler + services | YAML silencieux | Tech Lead |
-| **LCU API Expert** | `10-lcu-api-expert.md` | League Client API | YAML silencieux | Tech Lead |
-| **Performance Expert** | `11-performance-expert.md` | Profiling + optimisation | YAML silencieux | Tech Lead |
+| **Tech Lead** | `02-tech-lead.md` | **Décomposition en TODOs tracés** | Plan YAML (TODOs + agents recommandés) | Assistant (toi) |
+| **Python Expert** | `03-python-expert.md` | Développement Python | YAML silencieux | Assistant (toi) |
+| **Database Expert** | `04-database-expert.md` | Migrations Alembic + SQL | YAML silencieux | Assistant (toi) |
+| **QA Expert** | `05-qa-expert.md` | Tests (unitaires + régression) | YAML silencieux | Assistant (toi) |
+| **Scraping Expert** | `06-scraping-expert.md` | Selenium + XPath | YAML silencieux | Assistant (toi) |
+| **Build Expert** | `07-build-expert.md` | PyInstaller + packaging | YAML silencieux | Assistant (toi) |
+| **Git Expert** | `08-git-expert.md` | Commits Gitmoji + PR | YAML silencieux | Assistant (toi) |
+| **Windows Expert** | `09-windows-expert.md` | Task Scheduler + services | YAML silencieux | Assistant (toi) |
+| **LCU API Expert** | `10-lcu-api-expert.md` | League Client API | YAML silencieux | Assistant (toi) |
+| **Performance Expert** | `11-performance-expert.md` | Profiling + optimisation | YAML silencieux | Assistant (toi) |
 
 **Hiérarchie**:
 ```
-Assistant (toi) → Spawne ARCHITECTE ou TECH LEAD
+Assistant (toi) → Spawne ARCHITECTE (si analyse requise)
                          ↓
-                   TECH LEAD → Spawne ORCHESTRATEUR
+                   Explore + Propose 2-3 approches
                          ↓
-                   ORCHESTRATEUR → Plan d'exécution
+                   Utilisateur valide approche
                          ↓
-                   TECH LEAD → Spawne EXPERTS (Python, DB, QA, Git, etc.)
+Assistant (toi) → Spawne TECH LEAD (avec approche validée)
                          ↓
-                   TECH LEAD → Valide + Notifie client
+                   Analyse + Décompose en TODOs tracés
+                         ↓
+                   Crée TODOs via TaskCreate
+                         ↓
+                   Retourne plan YAML (TODOs + agents recommandés)
+                         ↓
+Assistant (toi) → Lit TaskList et spawne EXPERTS séquentiellement
+                         ↓
+                   EXPERT → Exécute TODO → Retourne YAML
+                         ↓
+Assistant (toi) → Valide output + Mark TODO completed + Next TODO
+                         ↓
+                   Tous TODOs complétés
+                         ↓
+Assistant (toi) → Résumé + Demande validation utilisateur
 ```
 
 ### Matrice de Décision (Quick Reference)
@@ -93,12 +106,15 @@ Assistant: [Read alembic/...]
 Assistant: [Write alembic/versions/xxx.py]
 Assistant: [Bash alembic upgrade head]
 
-# ✅ OBLIGATOIRE (Spawner Tech Lead)
+# ✅ OBLIGATOIRE (Spawner Tech Lead puis experts)
 User: "Ajoute colonne lane à la BD"
 Assistant: [Task tool: Tech Lead avec description tâche]
-Tech Lead: [Spawne Database Expert]
+Tech Lead: [Crée TODOs T1-T4 avec agents recommandés, retourne plan YAML]
+Assistant: [Lit TaskList, spawne Database Expert pour T1]
 Database Expert: [Crée migration, teste, retourne YAML]
-Tech Lead: [Valide + continue workflow]
+Assistant: [Valide, mark T1 completed, spawne Python Expert pour T2]
+Python Expert: [Modifie code, retourne YAML]
+Assistant: [Continue jusqu'à T4 complété, présente résumé]
 ```
 
 #### 2. JAMAIS Coder/Tester/Commiter Directement
@@ -112,15 +128,18 @@ Tech Lead: [Valide + continue workflow]
 
 **L'assistant principal (toi) doit UNIQUEMENT**:
 - ✅ Spawner ARCHITECTE (si analyse requise)
-- ✅ Spawner TECH LEAD (coordination)
+- ✅ Spawner TECH LEAD (décomposition en TODOs)
+- ✅ Spawner EXPERTS séquentiellement (basé sur recommandations Tech Lead)
+- ✅ Valider outputs YAML des experts
+- ✅ Gérer TaskList (mark completed, next TODO)
 - ✅ Lire documentation (.claude/agents/*.md)
 - ✅ Communiquer avec utilisateur
 
-#### 3. Tech Lead = Point d'Entrée Principal
+#### 3. Tech Lead = Décomposeur de Tâches
 
 Pour **99% des tâches de développement**, spawner **Tech Lead** en premier (sauf si analyse architecturale nécessaire → Architecte).
 
-Le Tech Lead orchestrera **automatiquement** tous les autres agents.
+Le Tech Lead **décomposera** la tâche en TODOs tracés et **recommandera** les agents appropriés, mais **ne les spawnera pas**. C'est l'assistant principal (toi) qui spawnera ensuite chaque expert séquentiellement.
 
 #### 4. Toujours Lire l'Agent Avant de Spawner
 
