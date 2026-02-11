@@ -167,11 +167,18 @@ class SynergyConfig:
 
 @dataclass
 class APIConfig:
-    """Configuration for remote API data source (FastAPI backend)."""
+    """Configuration for remote API data source (PostgreSQL Direct backend).
+
+    Automatic mode detection:
+    - Development (python lol_coach.py): MODE = "sqlite_only" (local performance)
+    - Production (.exe compiled): MODE = "postgresql_only" (remote access)
+    """
 
     # API connectivity
-    ENABLED: bool = True  # Enable API data source (set False to use SQLite only)
-    BASE_URL: str = "https://leaguestats-adf4.onrender.com"  # FastAPI backend URL
+    ENABLED: bool = True  # Enable remote data source (PostgreSQL Direct)
+    BASE_URL: str = (
+        "https://leaguestats-adf4.onrender.com"  # Legacy (not used with PostgreSQL Direct)
+    )
 
     # HTTP client settings
     TIMEOUT: int = 10  # Request timeout in seconds
@@ -179,13 +186,35 @@ class APIConfig:
     RETRY_BACKOFF: float = 1.0  # Exponential backoff base (seconds)
 
     # Fallback behavior
-    FALLBACK_TO_SQLITE: bool = True  # Fall back to SQLite on API errors (hybrid mode)
+    FALLBACK_TO_SQLITE: bool = True  # Fall back to SQLite on errors (hybrid mode)
 
-    # Data source mode
-    MODE: str = "sqlite_only"  # Data source mode: "api_only", "sqlite_only", "hybrid"
-    # - "api_only": Use API only, fail if API unavailable
-    # - "sqlite_only": Use local SQLite only (offline mode)
-    # - "hybrid": Try API first, fallback to SQLite on error (default)
+    # Data source mode (auto-detected based on execution context)
+    MODE: str = field(default_factory=lambda: _get_default_mode())
+    # - "postgresql_only": Use PostgreSQL Neon only (production .exe)
+    # - "sqlite_only": Use local SQLite only (development mode)
+    # - "hybrid": Try PostgreSQL first, fallback to SQLite on error
+
+
+def _get_default_mode() -> str:
+    """Detect execution context and return appropriate data source mode.
+
+    Returns:
+        "postgresql_only" if running as compiled .exe (production)
+        "sqlite_only" if running as Python script (development)
+    """
+    import sys
+
+    # Check if running as PyInstaller compiled executable
+    is_compiled = getattr(sys, "frozen", False)
+
+    if is_compiled:
+        # Production: .exe compiled with PyInstaller
+        # Use PostgreSQL Direct for remote access (gaming café, travel)
+        return "postgresql_only"
+    else:
+        # Development: Running as Python script
+        # Use SQLite local for maximum performance (<10ms queries)
+        return "sqlite_only"
 
 
 # Global configuration instances
