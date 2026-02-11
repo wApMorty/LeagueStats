@@ -1,28 +1,29 @@
 """
-Hybrid Data Source implementation - API with SQLite fallback.
+Hybrid Data Source implementation - PostgreSQL with SQLite fallback.
 
-This module provides a composite data source that tries the API first and
+This module provides a composite data source that tries PostgreSQL first and
 falls back to SQLite on errors. It supports multiple modes:
-- api_only: Use API only, fail if unavailable
+- postgresql_only: Use PostgreSQL only, fail if unavailable
 - sqlite_only: Use SQLite only (offline mode)
-- hybrid: Try API first, fallback to SQLite (default)
+- hybrid: Try PostgreSQL first, fallback to SQLite (default)
 
 Design Pattern: Composite Pattern + Strategy Pattern
-- Composes APIDataSource + SQLiteDataSource
+- Composes PostgreSQLDataSource + SQLiteDataSource
 - Selects strategy based on api_config.MODE
-- Graceful degradation on API failures
+- Graceful degradation on PostgreSQL failures
 - Warning logs for diagnostics
 
 Author: @pj35
 Created: 2026-02-06
-Sprint: 2 - API Integration (Adapter Pattern Implementation)
+Updated: 2026-02-11 (PostgreSQL direct access, no API)
+Sprint: 2 - PostgreSQL Integration (Adapter Pattern Implementation)
 """
 
 import logging
 from typing import List, Optional, Dict, Union, Tuple
 
 from .data_source import DataSource
-from .api_data_source import APIDataSource
+from .postgresql_data_source import PostgreSQLDataSource
 from .sqlite_data_source import SQLiteDataSource
 from .config_constants import api_config
 from .models import Matchup, MatchupDraft, Synergy
@@ -33,18 +34,18 @@ logger = logging.getLogger(__name__)
 
 class HybridDataSource(DataSource):
     """
-    Hybrid data source with API-first strategy and SQLite fallback.
+    Hybrid data source with PostgreSQL-first strategy and SQLite fallback.
 
     This composite data source provides robust access to champion statistics
-    by trying the remote API first and falling back to local SQLite on errors.
+    by trying the remote PostgreSQL database first and falling back to local SQLite on errors.
 
     Modes (configurable via api_config.MODE):
-    - "hybrid": Try API first, fallback to SQLite (default)
-    - "api_only": Use API only, fail if unavailable
+    - "hybrid": Try PostgreSQL first, fallback to SQLite (default)
+    - "postgresql_only": Use PostgreSQL only, fail if unavailable
     - "sqlite_only": Use SQLite only (offline mode)
 
     Attributes:
-        api_source: APIDataSource instance (optional)
+        postgres_source: PostgreSQLDataSource instance (optional)
         sqlite_source: SQLiteDataSource instance
         _mode: Current operation mode
 
@@ -52,7 +53,7 @@ class HybridDataSource(DataSource):
         >>> # Default hybrid mode
         >>> data_source = HybridDataSource()
         >>> data_source.connect()
-        >>> champion_id = data_source.get_champion_id("Jinx")  # Try API, fallback SQLite
+        >>> champion_id = data_source.get_champion_id("Jinx")  # Try PostgreSQL, fallback SQLite
         >>> data_source.close()
 
         >>> # Force SQLite only
@@ -71,18 +72,18 @@ class HybridDataSource(DataSource):
         """
         self._mode = api_config.MODE
 
-        # Initialize API source (unless sqlite_only mode)
+        # Initialize PostgreSQL source (unless sqlite_only mode)
         if self._mode != "sqlite_only" and api_config.ENABLED:
             try:
-                self.api_source = APIDataSource()
+                self.postgres_source = PostgreSQLDataSource()
             except Exception as e:
-                logger.warning(f"[HYBRID] Failed to initialize API source: {e}")
-                self.api_source = None
+                logger.warning(f"[HYBRID] Failed to initialize PostgreSQL source: {e}")
+                self.postgres_source = None
         else:
-            self.api_source = None
+            self.postgres_source = None
 
-        # Initialize SQLite source (unless api_only mode)
-        if self._mode != "api_only":
+        # Initialize SQLite source (unless postgresql_only mode)
+        if self._mode != "postgresql_only":
             if database_path:
                 from .config import config
 
@@ -97,13 +98,13 @@ class HybridDataSource(DataSource):
 
     def connect(self) -> None:
         """Establish connections to available data sources."""
-        if self.api_source is not None:
+        if self.postgres_source is not None:
             try:
-                self.api_source.connect()
-                logger.info("[HYBRID] API source connected")
+                self.postgres_source.connect()
+                logger.info("[HYBRID] PostgreSQL source connected")
             except Exception as e:
-                logger.warning(f"[HYBRID] API source connection failed: {e}")
-                if self._mode == "api_only":
+                logger.warning(f"[HYBRID] PostgreSQL source connection failed: {e}")
+                if self._mode == "postgresql_only":
                     raise
 
         if self.sqlite_source is not None:
@@ -117,11 +118,11 @@ class HybridDataSource(DataSource):
 
     def close(self) -> None:
         """Close connections to all data sources."""
-        if self.api_source is not None:
+        if self.postgres_source is not None:
             try:
-                self.api_source.close()
+                self.postgres_source.close()
             except Exception as e:
-                logger.warning(f"[HYBRID] Error closing API source: {e}")
+                logger.warning(f"[HYBRID] Error closing PostgreSQL source: {e}")
 
         if self.sqlite_source is not None:
             try:
@@ -129,9 +130,9 @@ class HybridDataSource(DataSource):
             except Exception as e:
                 logger.warning(f"[HYBRID] Error closing SQLite source: {e}")
 
-    def _try_api_with_fallback(self, method_name: str, *args, **kwargs):
+    def _try_postgres_with_fallback(self, method_name: str, *args, **kwargs):
         """
-        Try API method first, fallback to SQLite on error.
+        Try PostgreSQL method first, fallback to SQLite on error.
 
         This is the core hybrid strategy logic. Logs warnings when fallback occurs.
 
@@ -141,20 +142,20 @@ class HybridDataSource(DataSource):
             **kwargs: Keyword arguments to pass to method
 
         Returns:
-            Result from API or SQLite (whichever succeeds)
+            Result from PostgreSQL or SQLite (whichever succeeds)
 
         Raises:
-            Exception: If both sources fail or in api_only mode
+            Exception: If both sources fail or in postgresql_only mode
         """
-        # Try API first (if available and not sqlite_only mode)
-        if self.api_source is not None and self._mode != "sqlite_only":
+        # Try PostgreSQL first (if available and not sqlite_only mode)
+        if self.postgres_source is not None and self._mode != "sqlite_only":
             try:
-                method = getattr(self.api_source, method_name)
+                method = getattr(self.postgres_source, method_name)
                 return method(*args, **kwargs)
             except Exception as e:
-                logger.warning(f"[HYBRID] API call failed for {method_name}: {e}")
-                if self._mode == "api_only":
-                    raise  # No fallback in api_only mode
+                logger.warning(f"[HYBRID] PostgreSQL call failed for {method_name}: {e}")
+                if self._mode == "postgresql_only":
+                    raise  # No fallback in postgresql_only mode
 
         # Fallback to SQLite
         if self.sqlite_source is not None:
@@ -171,82 +172,82 @@ class HybridDataSource(DataSource):
     # ==================== Champion Queries ====================
 
     def get_champion_id(self, champion: str) -> Optional[int]:
-        """Get champion ID by name (hybrid: API first, SQLite fallback)."""
-        return self._try_api_with_fallback("get_champion_id", champion)
+        """Get champion ID by name (hybrid: PostgreSQL first, SQLite fallback)."""
+        return self._try_postgres_with_fallback("get_champion_id", champion)
 
     def get_champion_by_id(self, id: int) -> Optional[str]:
-        """Get champion name by ID (hybrid: API first, SQLite fallback)."""
-        return self._try_api_with_fallback("get_champion_by_id", id)
+        """Get champion name by ID (hybrid: PostgreSQL first, SQLite fallback)."""
+        return self._try_postgres_with_fallback("get_champion_by_id", id)
 
     def get_all_champion_names(self) -> Dict[int, str]:
-        """Get mapping of all champion IDs to names (hybrid: API first, SQLite fallback)."""
-        return self._try_api_with_fallback("get_all_champion_names")
+        """Get mapping of all champion IDs to names (hybrid: PostgreSQL first, SQLite fallback)."""
+        return self._try_postgres_with_fallback("get_all_champion_names")
 
     def build_champion_cache(self) -> Dict[str, int]:
-        """Build cache of champion name -> ID mappings (hybrid: API first, SQLite fallback)."""
-        return self._try_api_with_fallback("build_champion_cache")
+        """Build cache of champion name -> ID mappings (hybrid: PostgreSQL first, SQLite fallback)."""
+        return self._try_postgres_with_fallback("build_champion_cache")
 
     # ==================== Matchup Queries ====================
 
     def get_champion_matchups_by_name(
         self, champion_name: str, as_dataclass: bool = True
     ) -> Union[List[Matchup], List[tuple]]:
-        """Get matchups for a champion by name (hybrid: API first, SQLite fallback)."""
-        return self._try_api_with_fallback(
+        """Get matchups for a champion by name (hybrid: PostgreSQL first, SQLite fallback)."""
+        return self._try_postgres_with_fallback(
             "get_champion_matchups_by_name", champion_name, as_dataclass
         )
 
     def get_champion_matchups_for_draft(
         self, champion_name: str, as_dataclass: bool = True
     ) -> Union[List[MatchupDraft], List[tuple]]:
-        """Get optimized matchups for draft (hybrid: API first, SQLite fallback)."""
-        return self._try_api_with_fallback(
+        """Get optimized matchups for draft (hybrid: PostgreSQL first, SQLite fallback)."""
+        return self._try_postgres_with_fallback(
             "get_champion_matchups_for_draft", champion_name, as_dataclass
         )
 
     def get_matchup_delta2(self, champion_name: str, enemy_name: str) -> Optional[float]:
-        """Get delta2 value for specific matchup (hybrid: API first, SQLite fallback)."""
-        return self._try_api_with_fallback("get_matchup_delta2", champion_name, enemy_name)
+        """Get delta2 value for specific matchup (hybrid: PostgreSQL first, SQLite fallback)."""
+        return self._try_postgres_with_fallback("get_matchup_delta2", champion_name, enemy_name)
 
     def get_all_matchups_bulk(self) -> Dict[Tuple[str, str], float]:
-        """Load all valid matchups in single query (hybrid: API first, SQLite fallback)."""
-        return self._try_api_with_fallback("get_all_matchups_bulk")
+        """Load all valid matchups in single query (hybrid: PostgreSQL first, SQLite fallback)."""
+        return self._try_postgres_with_fallback("get_all_matchups_bulk")
 
     def get_champion_base_winrate(self, champion_name: str) -> float:
-        """Calculate champion base winrate (hybrid: API first, SQLite fallback)."""
-        return self._try_api_with_fallback("get_champion_base_winrate", champion_name)
+        """Calculate champion base winrate (hybrid: PostgreSQL first, SQLite fallback)."""
+        return self._try_postgres_with_fallback("get_champion_base_winrate", champion_name)
 
     # ==================== Synergy Queries ====================
 
     def get_champion_synergies_by_name(
         self, champion_name: str, as_dataclass: bool = True
     ) -> Union[List[Synergy], List[tuple]]:
-        """Get synergies for a champion by name (hybrid: API first, SQLite fallback)."""
-        return self._try_api_with_fallback(
+        """Get synergies for a champion by name (hybrid: PostgreSQL first, SQLite fallback)."""
+        return self._try_postgres_with_fallback(
             "get_champion_synergies_by_name", champion_name, as_dataclass
         )
 
     def get_synergy_delta2(self, champion_name: str, ally_name: str) -> Optional[float]:
-        """Get delta2 value for specific synergy (hybrid: API first, SQLite fallback)."""
-        return self._try_api_with_fallback("get_synergy_delta2", champion_name, ally_name)
+        """Get delta2 value for specific synergy (hybrid: PostgreSQL first, SQLite fallback)."""
+        return self._try_postgres_with_fallback("get_synergy_delta2", champion_name, ally_name)
 
     def get_all_synergies_bulk(self) -> Dict[Tuple[str, str], float]:
-        """Load all valid synergies in single query (hybrid: API first, SQLite fallback)."""
-        return self._try_api_with_fallback("get_all_synergies_bulk")
+        """Load all valid synergies in single query (hybrid: PostgreSQL first, SQLite fallback)."""
+        return self._try_postgres_with_fallback("get_all_synergies_bulk")
 
     # ==================== Champion Scores ====================
 
     def get_champion_scores_by_name(self, champion_name: str) -> Optional[Dict[str, float]]:
-        """Get champion scores by champion name (hybrid: API first, SQLite fallback)."""
-        return self._try_api_with_fallback("get_champion_scores_by_name", champion_name)
+        """Get champion scores by champion name (hybrid: PostgreSQL first, SQLite fallback)."""
+        return self._try_postgres_with_fallback("get_champion_scores_by_name", champion_name)
 
     def get_all_champion_scores(self) -> List[tuple]:
-        """Get all champion scores with names (hybrid: API first, SQLite fallback)."""
-        return self._try_api_with_fallback("get_all_champion_scores")
+        """Get all champion scores with names (hybrid: PostgreSQL first, SQLite fallback)."""
+        return self._try_postgres_with_fallback("get_all_champion_scores")
 
     def champion_scores_table_exists(self) -> bool:
-        """Check if champion_scores data exists (hybrid: API first, SQLite fallback)."""
-        return self._try_api_with_fallback("champion_scores_table_exists")
+        """Check if champion_scores data exists (hybrid: PostgreSQL first, SQLite fallback)."""
+        return self._try_postgres_with_fallback("champion_scores_table_exists")
 
     def save_champion_scores(
         self,
@@ -280,12 +281,12 @@ class HybridDataSource(DataSource):
     # ==================== Ban Recommendations ====================
 
     def get_pool_ban_recommendations(self, pool_name: str, limit: int = 5) -> List[tuple]:
-        """Get pre-calculated ban recommendations (hybrid: API first, SQLite fallback)."""
-        return self._try_api_with_fallback("get_pool_ban_recommendations", pool_name, limit)
+        """Get pre-calculated ban recommendations (hybrid: PostgreSQL first, SQLite fallback)."""
+        return self._try_postgres_with_fallback("get_pool_ban_recommendations", pool_name, limit)
 
     def pool_has_ban_recommendations(self, pool_name: str) -> bool:
-        """Check if pool has ban recommendations (hybrid: API first, SQLite fallback)."""
-        return self._try_api_with_fallback("pool_has_ban_recommendations", pool_name)
+        """Check if pool has ban recommendations (hybrid: PostgreSQL first, SQLite fallback)."""
+        return self._try_postgres_with_fallback("pool_has_ban_recommendations", pool_name)
 
     def save_pool_ban_recommendations(self, pool_name: str, ban_data: List[tuple]) -> int:
         """Save ban recommendations to SQLite only (write operation).
