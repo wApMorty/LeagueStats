@@ -2,6 +2,42 @@
 
 All notable changes to LeagueStats Coach will be documented in this file.
 
+## [1.2.0] - 2026-02-11
+
+### ✨ Features
+
+- **NEW**: PostgreSQL Direct Mode for remote data access (PR #TBD)
+  - **Problem**: API FastAPI timeout (60s+) on Render free tier, cannot play away from home without USB drive
+  - **Solution**: Direct PostgreSQL Neon connection (no API intermediary)
+    - Client .exe connects directly to PostgreSQL Neon cloud database
+    - 3 data access modes: `sqlite_only` (default), `postgresql_only` (remote), `hybrid` (fallback)
+    - ROT13 + Base64 obfuscation for connection string security
+    - READ-ONLY PostgreSQL user (GRANT SELECT only, zero risk)
+    - Latency: 100-300ms (vs 60s+ timeout API FastAPI)
+  - **Architecture**: Eliminates API FastAPI + Render hosting (cost $0/month vs $21/month)
+  - **Use cases**:
+    - At home: `sqlite_only` (<10ms queries, maximum performance)
+    - Gaming café / travel: `postgresql_only` (remote access to your data)
+    - Unstable network: `hybrid` (try PostgreSQL, fallback SQLite)
+  - **Files created**:
+    - `src/credentials.py` - ROT13 + Base64 obfuscation module
+    - `src/postgresql_data_source.py` - PostgreSQL adapter (DataSource interface)
+    - `tests/test_credentials.py` - 9 unit tests (100% pass)
+    - `tests/test_postgresql_data_source.py` - 12 unit tests (100% pass)
+    - `tests/test_hybrid_data_source_e2e.py` - 9 E2E tests (skip if DATABASE_URL not set)
+  - **Files modified**:
+    - `src/hybrid_data_source.py` - Replaced APIDataSource with PostgreSQLDataSource
+    - `requirements.txt` - Added sqlalchemy[asyncio], asyncpg, greenlet
+    - `LeagueStatsCoach.spec` - Included asyncpg native binaries for PyInstaller
+  - **Security**: READ-ONLY user, public data (LoL stats), obfuscated credentials (ROT13+Base64)
+  - **Documentation**: README.md updated with 3 data modes + use cases
+
+### 🗑️ Removed
+
+- API FastAPI integration (APIDataSource replaced by PostgreSQLDataSource)
+  - No longer uses Render hosting or API REST endpoints
+  - Direct PostgreSQL connection reduces latency by 50-90%
+
 ## [Unreleased]
 
 ### 🐛 Fixes

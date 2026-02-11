@@ -28,6 +28,42 @@ python main.py
 - **Parallel Web Scraping** - ⚡ **87% faster** data updates (12min vs 90-120min) with 10 concurrent workers
 - **Live Progress Tracking** - Real-time podium display during trio optimization
 - **Standalone Distribution** - Portable executable for any Windows PC
+- **Remote Access** - 🌐 **PostgreSQL Direct Mode** for playing away from home (gaming café, travel)
+
+## Data Modes
+
+LeagueStats Coach supports **3 data access modes** configured in `src/config_constants.py`:
+
+### Mode 1: SQLite Local (Default)
+```python
+api_config.MODE = "sqlite_only"
+```
+- **Best for**: Home usage, maximum performance
+- **Data source**: Local SQLite database (`data/db.db`)
+- **Performance**: <10ms queries (instant)
+- **Offline**: Works without internet (after initial setup)
+
+### Mode 2: PostgreSQL Remote
+```python
+api_config.MODE = "postgresql_only"
+```
+- **Best for**: Gaming café, friend's house, travel
+- **Data source**: PostgreSQL Neon cloud database (direct connection)
+- **Performance**: 100-300ms queries (network latency)
+- **Requirements**: Internet connection
+
+### Mode 3: Hybrid (Fallback)
+```python
+api_config.MODE = "hybrid"
+```
+- **Best for**: Reliability (try remote, fallback local)
+- **Data source**: PostgreSQL primary, SQLite fallback
+- **Performance**: Varies (depends on network)
+- **Use case**: Unstable network conditions
+
+**Recommended**:
+- At home: `sqlite_only` (maximum performance)
+- Away from home: `postgresql_only` (access your data remotely)
 
 ## Distribution
 
