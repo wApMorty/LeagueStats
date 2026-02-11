@@ -128,7 +128,7 @@ ORDER BY table_name;
 
 Format:
 ```
-postgresql://leaguestats_readonly:wkevBSryeCxBKqjbmwZpxYyG@ep-curly-shadow-abkhu9hs-pooler.eu-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require:5432/neondb?sslmode=require
+postgresql://leaguestats_readonly:YOUR_PASSWORD@ep-curly-shadow-abkhu9hs-pooler.eu-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require:5432/neondb?sslmode=require
 ```
 
 Exemple complet:
