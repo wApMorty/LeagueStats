@@ -24,6 +24,7 @@
 | **3** | **Framework Tests Automatisés** | **13** | **13** | **1.00** | 🔴🔴 | ✅ **FAIT** |
 | **9** | **Migrations Base de Données (Alembic)** | **8** ⬆️ | **5** | **1.60** | 🔴 | ✅ **FAIT** |
 | **14** | **Migration Dataclass Immutables** | **5** | **5** | **1.00** | 🟡 | ✅ **FAIT** |
+| **17** | **Optimisation Performance API Neon** | **13** | **5** | **2.60** | 🔴 | ❌ |
 | **15** | **Support des Lanes** | **13** | **13** | **1.00** | 🟡 | ❌ |
 | **16** | **Support des Synergies** | **8** | **5** | **1.60** | 🟡 | ❌ |
 | **12** | **Architecture Client-Serveur + Web App** | **21** | **34** | **0.62** | 🟢 | ❌ |
@@ -1457,6 +1458,31 @@ CREATE INDEX idx_synergies_champion_lane ON synergies(champion, lane);
 - ✅ Tests isolés (simpler)
 
 **Durée totale**: 5-6 jours (séquentiel)
+
+---
+
+### Tâche #17: Optimisation Performance API Neon (Indexes + Pagination)
+**Status**: ❌ Not started
+**Effort**: 1 jour (6-8h)
+**Documenté**: ✅ `docs/API_PERFORMANCE_ISSUES.md`
+
+**Scores Fibonacci**:
+- 📈 **Plus-value**: **13** (endpoints critiques actuellement inutilisables)
+- 🔧 **Difficulté**: **5** (modéré - SQL indexes + pagination endpoints)
+- 🎯 **ROI**: **2.60** ⭐ **HAUTE VALEUR**
+
+**Problème**: Endpoints `/api/champions/{id}/matchups` et `/api/champions/{id}/synergies` timeout (60+ secondes) sur Render + Neon free tier.
+
+**Cause**: Pas d'indexes PostgreSQL + pas de pagination + filtre pickrate trop restrictif (0.5) + JOINs sur 40k lignes.
+
+**Solution**:
+1. Migration Alembic avec 8 indexes (champion_id, enemy_id, ally_id, pickrate)
+2. Ajout pagination (limit/offset) sur endpoints matchups/synergies
+3. Relâcher filtre pickrate : 0.5 → 0.1 ou optionnel
+
+**Impact attendu**: Requêtes 10-100x plus rapides (60s → <3s)
+
+**Documentation complète**: `docs/API_PERFORMANCE_ISSUES.md`
 
 ---
 
