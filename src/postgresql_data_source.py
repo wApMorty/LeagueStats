@@ -20,6 +20,7 @@ Created: 2026-02-11
 Sprint: 2 - PostgreSQL Integration (Adapter Pattern Implementation)
 """
 
+import os
 from typing import List, Optional, Dict, Union, Tuple
 
 from .data_source import DataSource
@@ -59,14 +60,19 @@ class PostgreSQLDataSource(DataSource):
         Initialize PostgreSQL data source with deobfuscated connection string.
 
         The connection string is deobfuscated from credentials.OBFUSCATED_READONLY_CONNECTION_STRING
-        at runtime using ROT13 + Base64 decoding.
+        at runtime using ROT13 + Base64 decoding, then set as DATABASE_URL environment variable
+        for the Database class to use.
         """
         # Deobfuscate connection string (ROT13 + Base64 decode)
         connection_string = deobfuscate(OBFUSCATED_READONLY_CONNECTION_STRING)
 
+        # Set DATABASE_URL environment variable for Database class
+        # Database class reads this via get_session_maker() in server/src/db.py
+        os.environ["DATABASE_URL"] = connection_string
+
         # Initialize Database class (from server/src/db.py)
         # Database provides synchronous wrapper around async SQLAlchemy
-        self._db = Database(connection_string)
+        self._db = Database()
 
     # ==================== Connection Management ====================
 

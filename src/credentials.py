@@ -81,12 +81,11 @@ def deobfuscate(obfuscated: str) -> str:
     return plaintext
 
 
-# Placeholder connection string for read-only PostgreSQL user
-# This will be replaced with the real connection string after T13 (manual setup)
-# Format: postgresql://username:password@host:port/database?sslmode=require
-OBFUSCATED_READONLY_CONNECTION_STRING = obfuscate(
-    "postgresql://leaguestats_readonly:PLACEHOLDER_PASSWORD@localhost:5432/leaguestats_test?sslmode=require"
-)
+# Obfuscated PostgreSQL connection string (READ-ONLY user)
+# Connection string for Neon PostgreSQL database (eu-west-2)
+# Obfuscated with ROT13 + Base64 to prevent trivial extraction from .exe
+# Original connection string stored in config/.env.neon (gitignored)
+OBFUSCATED_READONLY_CONNECTION_STRING = "Y2JmZ3RlcmZkeTovL3lybnRocmZnbmdmX2VybnFiYXlsOmp4cmlPRmVsclBrT1hkd296ak1ja0xsVEByYy1waGV5bC1mdW5xYmotbm94dWg5dWYtY2JieXJlLnJoLWpyZmctMi5uamYuYXJiYS5ncnB1OjU0MzIvYXJiYXFvP2ZmeXpicXI9ZXJkaHZlcg=="
 
 
 # Validation example (for development/testing only)
