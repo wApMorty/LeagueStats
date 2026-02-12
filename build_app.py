@@ -19,18 +19,14 @@ def main():
             shutil.rmtree(dir_name)
             print(f"Nettoye: {dir_name}")
     
-    # Build avec PyInstaller directement
-    print("\nConstruction de l'executable...")
-    
+    # Build avec PyInstaller using LeagueStatsCoach.spec
+    # Le .spec contient la configuration PostgreSQL Direct (asyncpg binaries)
+    print("\nConstruction de l'executable avec LeagueStatsCoach.spec...")
+
     cmd = [
         sys.executable, '-m', 'PyInstaller',
-        '--onefile',
         '--clean',
-        '--name', 'LeagueStatsCoach',
-        '--add-data', 'data/db.db;.',
-        '--add-data', 'README.md;.',
-        '--console',
-        'lol_coach.py'
+        'LeagueStatsCoach.spec'
     ]
     
     try:
