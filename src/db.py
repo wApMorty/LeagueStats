@@ -712,12 +712,10 @@ class Database:
         try:
             cursor = self.connection.cursor()
 
-            # Direct SQL join with aggregation for multi-lane data
-            # Formula: SUM(delta2 * games) / SUM(games)
+            # Direct SQL join - aggregation done in Python for consistency
             cursor.execute(
                 """
-                SELECT
-                    SUM(m.delta2 * m.games) / NULLIF(SUM(m.games), 0) as weighted_delta2
+                SELECT m.delta2, m.games
                 FROM matchups m
                 JOIN champions c1 ON m.champion = c1.id
                 JOIN champions c2 ON m.enemy = c2.id
@@ -729,13 +727,16 @@ class Database:
                 (champion_name, enemy_name),
             )
 
-            result = cursor.fetchone()
-
-            if result and result[0] is not None:
-                weighted_delta2 = result[0]
-                return float(weighted_delta2)
-            else:
+            rows = cursor.fetchall()
+            if not rows:
                 return None
+
+            # Python aggregation: weighted average by games
+            # Formula: SUM(delta2 * games) / SUM(games)
+            total_weighted = sum(row[0] * row[1] for row in rows)
+            total_games = sum(row[1] for row in rows)
+
+            return total_weighted / total_games if total_games > 0 else None
 
         except Exception as e:
             # Always log database errors - these are unexpected and need visibility
