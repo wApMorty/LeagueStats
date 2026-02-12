@@ -699,6 +699,7 @@ class Database:
         """
         Get delta2 value for a specific matchup using direct SQL query.
 
+        Aggregates multi-lane matchup data using weighted average by games.
         Optimized for reverse lookup approach - avoids loading all matchups.
 
         Args:
@@ -706,19 +707,21 @@ class Database:
             enemy_name: Name of enemy champion
 
         Returns:
-            delta2 value if matchup exists with sufficient data, None otherwise
+            Weighted average delta2 value if matchup exists with sufficient data, None otherwise
         """
         try:
             cursor = self.connection.cursor()
 
-            # Direct SQL join to get delta2 for specific matchup
+            # Direct SQL join with aggregation for multi-lane data
+            # Formula: SUM(delta2 * games) / SUM(games)
             cursor.execute(
                 """
-                SELECT m.delta2, m.pickrate, m.games
+                SELECT
+                    SUM(m.delta2 * m.games) / NULLIF(SUM(m.games), 0) as weighted_delta2
                 FROM matchups m
-                JOIN champions c1 ON m.champion = c1.id  
+                JOIN champions c1 ON m.champion = c1.id
                 JOIN champions c2 ON m.enemy = c2.id
-                WHERE c1.name = ? COLLATE NOCASE 
+                WHERE c1.name = ? COLLATE NOCASE
                 AND c2.name = ? COLLATE NOCASE
                 AND m.pickrate >= 0.5
                 AND m.games >= 200
@@ -728,9 +731,9 @@ class Database:
 
             result = cursor.fetchone()
 
-            if result:
-                delta2, pickrate, games = result
-                return float(delta2)
+            if result and result[0] is not None:
+                weighted_delta2 = result[0]
+                return float(weighted_delta2)
             else:
                 return None
 
