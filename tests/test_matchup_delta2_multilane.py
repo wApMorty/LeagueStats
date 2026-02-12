@@ -249,3 +249,19 @@ def test_multilane_weighted_average_calculation_manual():
 
     # Expected: (5.0*100 + 3.0*50) / (100+50) = 650/150 = 4.333...
     assert expected == pytest.approx(4.333, abs=0.01)
+
+
+def test_database_error_returns_none_gracefully(db_with_multilane_matchups):
+    """
+    Regression test: Database errors should be caught and return None gracefully.
+
+    Edge case: Connection closed/corrupted before query execution.
+    This test ensures defensive exception handling works correctly.
+    """
+    # Close connection to simulate database error
+    db_with_multilane_matchups.connection.close()
+
+    # Should handle error gracefully and return None (not raise exception)
+    result = db_with_multilane_matchups.get_matchup_delta2("Ahri", "Zed")
+
+    assert result is None  # Should not crash, return None instead
