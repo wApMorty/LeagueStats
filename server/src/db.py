@@ -567,14 +567,16 @@ class Database:
     def get_matchup_delta2(self, champion_name: str, enemy_name: str) -> Optional[float]:
         """Get delta2 score for a specific matchup.
 
+        Aggregates multi-lane matchup data using weighted average by games.
+
         Args:
             champion_name: Champion name
             enemy_name: Enemy champion name
 
         Returns:
-            Delta2 score if matchup exists with sufficient data, None otherwise
+            Weighted average delta2 score if matchup exists with sufficient data, None otherwise
         """
-        from sqlalchemy import select, and_
+        from sqlalchemy import select, and_, func
 
         async def _get():
             session_maker = get_session_maker()
@@ -593,9 +595,13 @@ class Database:
                 if champ_id is None or enemy_id is None:
                     return None
 
-                # Get matchup delta2
+                # Get matchup delta2 with weighted aggregation for multi-lane data
+                # Formula: SUM(delta2 * games) / SUM(games)
                 result = await session.execute(
-                    select(Matchup.delta2).where(
+                    select(
+                        func.sum(Matchup.delta2 * Matchup.games)
+                        / func.nullif(func.sum(Matchup.games), 0)
+                    ).where(
                         and_(
                             Matchup.champion_id == champ_id,
                             Matchup.enemy_id == enemy_id,
@@ -604,8 +610,8 @@ class Database:
                         )
                     )
                 )
-                delta2 = result.scalar_one_or_none()
-                return float(delta2) if delta2 is not None else None
+                weighted_delta2 = result.scalar_one_or_none()
+                return float(weighted_delta2) if weighted_delta2 is not None else None
 
         return self._run_async(_get())
 
