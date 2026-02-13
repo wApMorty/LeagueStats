@@ -1,10 +1,10 @@
 """
-Tests for HybridDataSource - API with SQLite fallback.
+Tests for HybridDataSource - PostgreSQL with SQLite fallback.
 
 This test suite verifies the hybrid data source correctly implements:
-- API-first strategy with SQLite fallback
-- Mode switching (api_only, sqlite_only, hybrid)
-- Graceful degradation on API failures
+- PostgreSQL-first strategy with SQLite fallback
+- Mode switching (postgresql_only, sqlite_only, hybrid)
+- Graceful degradation on PostgreSQL failures
 - Warning logs when fallback occurs
 
 Author: @pj35
@@ -21,12 +21,12 @@ from src.models import Matchup, MatchupDraft, Synergy
 
 
 @pytest.fixture
-def mock_api_source():
-    """Mock APIDataSource for testing."""
-    with patch("src.hybrid_data_source.APIDataSource") as mock_api_class:
-        mock_api = Mock()
-        mock_api_class.return_value = mock_api
-        yield mock_api
+def mock_postgres_source():
+    """Mock PostgreSQLDataSource for testing."""
+    with patch("src.hybrid_data_source.PostgreSQLDataSource") as mock_postgres_class:
+        mock_postgres = Mock()
+        mock_postgres_class.return_value = mock_postgres
+        yield mock_postgres
 
 
 @pytest.fixture
@@ -39,7 +39,7 @@ def mock_sqlite_source():
 
 
 @pytest.fixture
-def hybrid_source_hybrid_mode(mock_api_source, mock_sqlite_source):
+def hybrid_source_hybrid_mode(mock_postgres_source, mock_sqlite_source):
     """Create HybridDataSource in hybrid mode."""
     with patch("src.hybrid_data_source.api_config") as mock_config:
         mock_config.MODE = "hybrid"
@@ -50,10 +50,10 @@ def hybrid_source_hybrid_mode(mock_api_source, mock_sqlite_source):
 
 
 @pytest.fixture
-def hybrid_source_api_only(mock_api_source):
-    """Create HybridDataSource in api_only mode."""
+def hybrid_source_postgresql_only(mock_postgres_source):
+    """Create HybridDataSource in postgresql_only mode."""
     with patch("src.hybrid_data_source.api_config") as mock_config:
-        mock_config.MODE = "api_only"
+        mock_config.MODE = "postgresql_only"
         mock_config.ENABLED = True
         data_source = HybridDataSource()
         data_source.connect()
@@ -72,28 +72,28 @@ def hybrid_source_sqlite_only(mock_sqlite_source):
 
 
 class TestHybridDataSourceModes:
-    """Test different operation modes (hybrid, api_only, sqlite_only)."""
+    """Test different operation modes (hybrid, postgresql_only, sqlite_only)."""
 
-    def test_hybrid_mode_initializes_both_sources(self, mock_api_source, mock_sqlite_source):
-        """Test that hybrid mode initializes both API and SQLite sources."""
+    def test_hybrid_mode_initializes_both_sources(self, mock_postgres_source, mock_sqlite_source):
+        """Test that hybrid mode initializes both PostgreSQL and SQLite sources."""
         with patch("src.hybrid_data_source.api_config") as mock_config:
             mock_config.MODE = "hybrid"
             mock_config.ENABLED = True
 
             data_source = HybridDataSource()
 
-            assert data_source.api_source is not None
+            assert data_source.postgres_source is not None
             assert data_source.sqlite_source is not None
 
-    def test_api_only_mode_initializes_only_api_source(self, mock_api_source):
-        """Test that api_only mode initializes only API source."""
+    def test_postgresql_only_mode_initializes_only_postgres_source(self, mock_postgres_source):
+        """Test that postgresql_only mode initializes only PostgreSQL source."""
         with patch("src.hybrid_data_source.api_config") as mock_config:
-            mock_config.MODE = "api_only"
+            mock_config.MODE = "postgresql_only"
             mock_config.ENABLED = True
 
             data_source = HybridDataSource()
 
-            assert data_source.api_source is not None
+            assert data_source.postgres_source is not None
             assert data_source.sqlite_source is None
 
     def test_sqlite_only_mode_initializes_only_sqlite_source(self, mock_sqlite_source):
@@ -104,58 +104,66 @@ class TestHybridDataSourceModes:
 
             data_source = HybridDataSource()
 
-            assert data_source.api_source is None
+            assert data_source.postgres_source is None
             assert data_source.sqlite_source is not None
 
 
 class TestHybridDataSourceFallback:
     """Test fallback behavior in hybrid mode."""
 
-    def test_get_champion_id_uses_api_first(self, hybrid_source_hybrid_mode):
-        """Test that API is tried first in hybrid mode."""
-        hybrid_source_hybrid_mode.api_source.get_champion_id.return_value = 42
+    def test_get_champion_id_uses_postgres_first(self, hybrid_source_hybrid_mode):
+        """Test that PostgreSQL is tried first in hybrid mode."""
+        hybrid_source_hybrid_mode.postgres_source.get_champion_id.return_value = 42
 
         champion_id = hybrid_source_hybrid_mode.get_champion_id("Jinx")
 
         assert champion_id == 42
-        hybrid_source_hybrid_mode.api_source.get_champion_id.assert_called_once_with("Jinx")
-        # SQLite should not be called if API succeeds
+        hybrid_source_hybrid_mode.postgres_source.get_champion_id.assert_called_once_with("Jinx")
+        # SQLite should not be called if PostgreSQL succeeds
         hybrid_source_hybrid_mode.sqlite_source.get_champion_id.assert_not_called()
 
-    def test_get_champion_id_falls_back_to_sqlite_on_api_error(self, hybrid_source_hybrid_mode):
-        """Test that SQLite is used when API fails."""
-        # Simulate API failure
-        hybrid_source_hybrid_mode.api_source.get_champion_id.side_effect = Exception("API timeout")
+    def test_get_champion_id_falls_back_to_sqlite_on_postgres_error(
+        self, hybrid_source_hybrid_mode
+    ):
+        """Test that SQLite is used when PostgreSQL fails."""
+        # Simulate PostgreSQL failure
+        hybrid_source_hybrid_mode.postgres_source.get_champion_id.side_effect = Exception(
+            "PostgreSQL timeout"
+        )
         hybrid_source_hybrid_mode.sqlite_source.get_champion_id.return_value = 42
 
         champion_id = hybrid_source_hybrid_mode.get_champion_id("Jinx")
 
         assert champion_id == 42
         # Both sources should be tried
-        hybrid_source_hybrid_mode.api_source.get_champion_id.assert_called_once_with("Jinx")
+        hybrid_source_hybrid_mode.postgres_source.get_champion_id.assert_called_once_with("Jinx")
         hybrid_source_hybrid_mode.sqlite_source.get_champion_id.assert_called_once_with("Jinx")
 
     def test_fallback_logs_warning(self, hybrid_source_hybrid_mode, caplog):
         """Test that fallback logs a warning message."""
-        hybrid_source_hybrid_mode.api_source.get_champion_id.side_effect = Exception("API timeout")
+        hybrid_source_hybrid_mode.postgres_source.get_champion_id.side_effect = Exception(
+            "PostgreSQL timeout"
+        )
         hybrid_source_hybrid_mode.sqlite_source.get_champion_id.return_value = 42
 
         with caplog.at_level(logging.WARNING):
             hybrid_source_hybrid_mode.get_champion_id("Jinx")
 
         # Check that warning was logged
-        assert any("API call failed" in record.message for record in caplog.records)
+        assert any("PostgreSQL call failed" in record.message for record in caplog.records)
 
 
-class TestHybridDataSourceAPIOnly:
-    """Test api_only mode behavior."""
+class TestHybridDataSourcePostgreSQLOnly:
+    """Test postgresql_only mode behavior."""
 
-    def test_api_only_mode_raises_on_api_error(self, hybrid_source_api_only):
-        """Test that api_only mode raises exception when API fails (no fallback)."""
-        hybrid_source_api_only.api_source.get_champion_id.side_effect = Exception("API timeout")
+    def test_postgresql_only_mode_raises_on_postgres_error(self, hybrid_source_postgresql_only):
+        """Test that postgresql_only mode raises exception when PostgreSQL fails (no fallback)."""
+        hybrid_source_postgresql_only.postgres_source.get_champion_id.side_effect = Exception(
+            "PostgreSQL timeout"
+        )
 
-        with pytest.raises(Exception, match="API timeout"):
-            hybrid_source_api_only.get_champion_id("Jinx")
+        with pytest.raises(Exception, match="PostgreSQL timeout"):
+            hybrid_source_postgresql_only.get_champion_id("Jinx")
 
 
 class TestHybridDataSourceSQLiteOnly:
@@ -175,8 +183,8 @@ class TestHybridDataSourceChampionQueries:
     """Test champion-related queries with hybrid fallback."""
 
     def test_get_champion_by_id_with_fallback(self, hybrid_source_hybrid_mode):
-        """Test get_champion_by_id() falls back to SQLite on API error."""
-        hybrid_source_hybrid_mode.api_source.get_champion_by_id.side_effect = Exception(
+        """Test get_champion_by_id() falls back to SQLite on PostgreSQL error."""
+        hybrid_source_hybrid_mode.postgres_source.get_champion_by_id.side_effect = Exception(
             "Network error"
         )
         hybrid_source_hybrid_mode.sqlite_source.get_champion_by_id.return_value = "Jinx"
@@ -186,8 +194,8 @@ class TestHybridDataSourceChampionQueries:
         assert champion_name == "Jinx"
 
     def test_get_all_champion_names_with_fallback(self, hybrid_source_hybrid_mode):
-        """Test get_all_champion_names() falls back to SQLite on API error."""
-        hybrid_source_hybrid_mode.api_source.get_all_champion_names.side_effect = Exception(
+        """Test get_all_champion_names() falls back to SQLite on PostgreSQL error."""
+        hybrid_source_hybrid_mode.postgres_source.get_all_champion_names.side_effect = Exception(
             "Network error"
         )
         hybrid_source_hybrid_mode.sqlite_source.get_all_champion_names.return_value = {
@@ -200,8 +208,8 @@ class TestHybridDataSourceChampionQueries:
         assert names == {1: "Aatrox", 42: "Jinx"}
 
     def test_build_champion_cache_with_fallback(self, hybrid_source_hybrid_mode):
-        """Test build_champion_cache() falls back to SQLite on API error."""
-        hybrid_source_hybrid_mode.api_source.build_champion_cache.side_effect = Exception(
+        """Test build_champion_cache() falls back to SQLite on PostgreSQL error."""
+        hybrid_source_hybrid_mode.postgres_source.build_champion_cache.side_effect = Exception(
             "Network error"
         )
         hybrid_source_hybrid_mode.sqlite_source.build_champion_cache.return_value = {
@@ -218,9 +226,9 @@ class TestHybridDataSourceMatchupQueries:
     """Test matchup-related queries with hybrid fallback."""
 
     def test_get_champion_matchups_by_name_with_fallback(self, hybrid_source_hybrid_mode):
-        """Test get_champion_matchups_by_name() falls back to SQLite on API error."""
-        hybrid_source_hybrid_mode.api_source.get_champion_matchups_by_name.side_effect = Exception(
-            "Network error"
+        """Test get_champion_matchups_by_name() falls back to SQLite on PostgreSQL error."""
+        hybrid_source_hybrid_mode.postgres_source.get_champion_matchups_by_name.side_effect = (
+            Exception("Network error")
         )
         expected_matchups = [
             Matchup("Darius", 48.5, -150, -200, 8.5, 1500),
@@ -235,8 +243,8 @@ class TestHybridDataSourceMatchupQueries:
         assert matchups == expected_matchups
 
     def test_get_champion_matchups_for_draft_with_fallback(self, hybrid_source_hybrid_mode):
-        """Test get_champion_matchups_for_draft() falls back to SQLite on API error."""
-        hybrid_source_hybrid_mode.api_source.get_champion_matchups_for_draft.side_effect = (
+        """Test get_champion_matchups_for_draft() falls back to SQLite on PostgreSQL error."""
+        hybrid_source_hybrid_mode.postgres_source.get_champion_matchups_for_draft.side_effect = (
             Exception("Network error")
         )
         expected_matchups = [MatchupDraft("Darius", -200, 8.5, 1500)]
@@ -249,8 +257,8 @@ class TestHybridDataSourceMatchupQueries:
         assert matchups == expected_matchups
 
     def test_get_matchup_delta2_with_fallback(self, hybrid_source_hybrid_mode):
-        """Test get_matchup_delta2() falls back to SQLite on API error."""
-        hybrid_source_hybrid_mode.api_source.get_matchup_delta2.side_effect = Exception(
+        """Test get_matchup_delta2() falls back to SQLite on PostgreSQL error."""
+        hybrid_source_hybrid_mode.postgres_source.get_matchup_delta2.side_effect = Exception(
             "Network error"
         )
         hybrid_source_hybrid_mode.sqlite_source.get_matchup_delta2.return_value = -200.0
@@ -260,8 +268,8 @@ class TestHybridDataSourceMatchupQueries:
         assert delta2 == -200.0
 
     def test_get_all_matchups_bulk_with_fallback(self, hybrid_source_hybrid_mode):
-        """Test get_all_matchups_bulk() falls back to SQLite on API error."""
-        hybrid_source_hybrid_mode.api_source.get_all_matchups_bulk.side_effect = Exception(
+        """Test get_all_matchups_bulk() falls back to SQLite on PostgreSQL error."""
+        hybrid_source_hybrid_mode.postgres_source.get_all_matchups_bulk.side_effect = Exception(
             "Network error"
         )
         expected_cache = {("aatrox", "darius"): -200.0, ("aatrox", "garen"): 150.0}
@@ -272,8 +280,8 @@ class TestHybridDataSourceMatchupQueries:
         assert matchups_bulk == expected_cache
 
     def test_get_champion_base_winrate_with_fallback(self, hybrid_source_hybrid_mode):
-        """Test get_champion_base_winrate() falls back to SQLite on API error."""
-        hybrid_source_hybrid_mode.api_source.get_champion_base_winrate.side_effect = Exception(
+        """Test get_champion_base_winrate() falls back to SQLite on PostgreSQL error."""
+        hybrid_source_hybrid_mode.postgres_source.get_champion_base_winrate.side_effect = Exception(
             "Network error"
         )
         hybrid_source_hybrid_mode.sqlite_source.get_champion_base_winrate.return_value = 50.5
@@ -287,9 +295,9 @@ class TestHybridDataSourceSynergyQueries:
     """Test synergy-related queries with hybrid fallback."""
 
     def test_get_champion_synergies_by_name_with_fallback(self, hybrid_source_hybrid_mode):
-        """Test get_champion_synergies_by_name() falls back to SQLite on API error."""
-        hybrid_source_hybrid_mode.api_source.get_champion_synergies_by_name.side_effect = Exception(
-            "Network error"
+        """Test get_champion_synergies_by_name() falls back to SQLite on PostgreSQL error."""
+        hybrid_source_hybrid_mode.postgres_source.get_champion_synergies_by_name.side_effect = (
+            Exception("Network error")
         )
         expected_synergies = [Synergy("Malphite", 55.0, 200, 250, 8.5, 1000)]
         hybrid_source_hybrid_mode.sqlite_source.get_champion_synergies_by_name.return_value = (
@@ -301,8 +309,8 @@ class TestHybridDataSourceSynergyQueries:
         assert synergies == expected_synergies
 
     def test_get_synergy_delta2_with_fallback(self, hybrid_source_hybrid_mode):
-        """Test get_synergy_delta2() falls back to SQLite on API error."""
-        hybrid_source_hybrid_mode.api_source.get_synergy_delta2.side_effect = Exception(
+        """Test get_synergy_delta2() falls back to SQLite on PostgreSQL error."""
+        hybrid_source_hybrid_mode.postgres_source.get_synergy_delta2.side_effect = Exception(
             "Network error"
         )
         hybrid_source_hybrid_mode.sqlite_source.get_synergy_delta2.return_value = 250.0
@@ -312,8 +320,8 @@ class TestHybridDataSourceSynergyQueries:
         assert delta2 == 250.0
 
     def test_get_all_synergies_bulk_with_fallback(self, hybrid_source_hybrid_mode):
-        """Test get_all_synergies_bulk() falls back to SQLite on API error."""
-        hybrid_source_hybrid_mode.api_source.get_all_synergies_bulk.side_effect = Exception(
+        """Test get_all_synergies_bulk() falls back to SQLite on PostgreSQL error."""
+        hybrid_source_hybrid_mode.postgres_source.get_all_synergies_bulk.side_effect = Exception(
             "Network error"
         )
         expected_cache = {("yasuo", "malphite"): 250.0, ("yasuo", "gragas"): 120.0}
@@ -328,9 +336,9 @@ class TestHybridDataSourceChampionScores:
     """Test champion scores queries with hybrid fallback."""
 
     def test_get_champion_scores_by_name_with_fallback(self, hybrid_source_hybrid_mode):
-        """Test get_champion_scores_by_name() falls back to SQLite on API error."""
-        hybrid_source_hybrid_mode.api_source.get_champion_scores_by_name.side_effect = Exception(
-            "Network error"
+        """Test get_champion_scores_by_name() falls back to SQLite on PostgreSQL error."""
+        hybrid_source_hybrid_mode.postgres_source.get_champion_scores_by_name.side_effect = (
+            Exception("Network error")
         )
         expected_scores = {
             "avg_delta2": 150.5,
@@ -346,8 +354,8 @@ class TestHybridDataSourceChampionScores:
         assert scores == expected_scores
 
     def test_get_all_champion_scores_with_fallback(self, hybrid_source_hybrid_mode):
-        """Test get_all_champion_scores() falls back to SQLite on API error."""
-        hybrid_source_hybrid_mode.api_source.get_all_champion_scores.side_effect = Exception(
+        """Test get_all_champion_scores() falls back to SQLite on PostgreSQL error."""
+        hybrid_source_hybrid_mode.postgres_source.get_all_champion_scores.side_effect = Exception(
             "Network error"
         )
         expected_scores = [("Jinx", 150.5, 50.2, 0.85, 200.0, 30.5, 0.65)]
@@ -360,9 +368,9 @@ class TestHybridDataSourceChampionScores:
         assert all_scores == expected_scores
 
     def test_champion_scores_table_exists_with_fallback(self, hybrid_source_hybrid_mode):
-        """Test champion_scores_table_exists() falls back to SQLite on API error."""
-        hybrid_source_hybrid_mode.api_source.champion_scores_table_exists.side_effect = Exception(
-            "Network error"
+        """Test champion_scores_table_exists() falls back to SQLite on PostgreSQL error."""
+        hybrid_source_hybrid_mode.postgres_source.champion_scores_table_exists.side_effect = (
+            Exception("Network error")
         )
         hybrid_source_hybrid_mode.sqlite_source.champion_scores_table_exists.return_value = True
 
@@ -375,9 +383,9 @@ class TestHybridDataSourceBanRecommendations:
     """Test ban recommendations queries with hybrid fallback."""
 
     def test_get_pool_ban_recommendations_with_fallback(self, hybrid_source_hybrid_mode):
-        """Test get_pool_ban_recommendations() falls back to SQLite on API error."""
-        hybrid_source_hybrid_mode.api_source.get_pool_ban_recommendations.side_effect = Exception(
-            "Network error"
+        """Test get_pool_ban_recommendations() falls back to SQLite on PostgreSQL error."""
+        hybrid_source_hybrid_mode.postgres_source.get_pool_ban_recommendations.side_effect = (
+            Exception("Network error")
         )
         expected_bans = [("Zed", 85.5, -150.0, "Malzahar", 10)]
         hybrid_source_hybrid_mode.sqlite_source.get_pool_ban_recommendations.return_value = (
@@ -389,9 +397,9 @@ class TestHybridDataSourceBanRecommendations:
         assert bans == expected_bans
 
     def test_pool_has_ban_recommendations_with_fallback(self, hybrid_source_hybrid_mode):
-        """Test pool_has_ban_recommendations() falls back to SQLite on API error."""
-        hybrid_source_hybrid_mode.api_source.pool_has_ban_recommendations.side_effect = Exception(
-            "Network error"
+        """Test pool_has_ban_recommendations() falls back to SQLite on PostgreSQL error."""
+        hybrid_source_hybrid_mode.postgres_source.pool_has_ban_recommendations.side_effect = (
+            Exception("Network error")
         )
         hybrid_source_hybrid_mode.sqlite_source.pool_has_ban_recommendations.return_value = True
 
@@ -404,9 +412,9 @@ class TestHybridDataSourceConnectionManagement:
     """Test connection and cleanup."""
 
     def test_connect_connects_both_sources_in_hybrid_mode(
-        self, mock_api_source, mock_sqlite_source
+        self, mock_postgres_source, mock_sqlite_source
     ):
-        """Test that connect() connects both sources in hybrid mode."""
+        """Test that connect() connects both PostgreSQL and SQLite sources in hybrid mode."""
         with patch("src.hybrid_data_source.api_config") as mock_config:
             mock_config.MODE = "hybrid"
             mock_config.ENABLED = True
@@ -414,12 +422,12 @@ class TestHybridDataSourceConnectionManagement:
             data_source = HybridDataSource()
             data_source.connect()
 
-            mock_api_source.connect.assert_called_once()
+            mock_postgres_source.connect.assert_called_once()
             mock_sqlite_source.connect.assert_called_once()
 
     def test_close_closes_both_sources(self, hybrid_source_hybrid_mode):
         """Test that close() closes both sources."""
         hybrid_source_hybrid_mode.close()
 
-        hybrid_source_hybrid_mode.api_source.close.assert_called_once()
+        hybrid_source_hybrid_mode.postgres_source.close.assert_called_once()
         hybrid_source_hybrid_mode.sqlite_source.close.assert_called_once()

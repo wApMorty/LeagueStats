@@ -13,19 +13,19 @@ Assistant.precalculate_pool_bans() to fail when calling self.db.save_pool_ban_re
 - Added abstract save_pool_ban_recommendations method to DataSource interface (src/data_source.py:329-341)
 - Implemented save_pool_ban_recommendations in SQLiteDataSource (delegating to Database)
 - Implemented save_pool_ban_recommendations in HybridDataSource (writes to SQLite only)
-- Implemented save_pool_ban_recommendations in APIDataSource (raises NotImplementedError)
+- Implemented save_pool_ban_recommendations in PostgreSQLDataSource (raises NotImplementedError)
 
 **Test Objectives**:
 This test suite ensures the bug cannot regress by verifying:
 1. save_pool_ban_recommendations method exists in all DataSource implementations
-2. Write operations go to SQLite only (never to API)
+2. Write operations go to SQLite only (never to PostgreSQL)
 3. Assistant.precalculate_pool_bans() can call the method end-to-end
 4. Explicit error when SQLite source unavailable
-5. API source correctly raises NotImplementedError (read-only)
+5. PostgreSQL source correctly raises NotImplementedError (read-only)
 
 Author: @pj35
 Created: 2026-02-10
-Sprint: 2 - API Integration (DataSource Architecture Regression Tests)
+Sprint: 2 - PostgreSQL Integration (DataSource Architecture Regression Tests)
 Reference: Similar to test_hybrid_data_source_champion_scores.py
 """
 
@@ -36,7 +36,7 @@ import logging
 from src.data_source import DataSource
 from src.hybrid_data_source import HybridDataSource
 from src.sqlite_data_source import SQLiteDataSource
-from src.api_data_source import APIDataSource
+from src.postgresql_data_source import PostgreSQLDataSource
 from src.assistant import Assistant
 
 
@@ -144,7 +144,7 @@ class TestHybridDataSourceImplementation:
             mock_config.MODE = "hybrid"
             mock_config.ENABLED = True
 
-            with patch("src.hybrid_data_source.APIDataSource"):
+            with patch("src.hybrid_data_source.PostgreSQLDataSource"):
                 with patch("src.hybrid_data_source.SQLiteDataSource"):
                     hybrid_ds = HybridDataSource()
 
@@ -182,47 +182,47 @@ class TestHybridDataSourceImplementation:
         ), f"Method signature mismatch: expected {abstract_params}, got {hybrid_params}"
 
 
-class TestAPIDataSourceImplementation:
-    """Regression test: Verify APIDataSource correctly rejects write operations."""
+class TestPostgreSQLDataSourceImplementation:
+    """Regression test: Verify PostgreSQLDataSource correctly rejects write operations."""
 
-    def test_method_exists_in_api_data_source(self):
+    def test_method_exists_in_postgresql_data_source(self):
         """
-        Regression test: APIDataSource must implement save_pool_ban_recommendations.
+        Regression test: PostgreSQLDataSource must implement save_pool_ban_recommendations.
 
-        Even though API is read-only, it must implement the interface method
+        Even though PostgreSQL is read-only, it must implement the interface method
         to raise NotImplementedError with a clear message.
         """
-        api_ds = APIDataSource()
+        postgresql_ds = PostgreSQLDataSource()
 
         # Verify method exists
         assert hasattr(
-            api_ds, "save_pool_ban_recommendations"
-        ), "save_pool_ban_recommendations method missing from APIDataSource"
+            postgresql_ds, "save_pool_ban_recommendations"
+        ), "save_pool_ban_recommendations method missing from PostgreSQLDataSource"
 
         # Verify method is callable
         assert callable(
-            getattr(api_ds, "save_pool_ban_recommendations")
+            getattr(postgresql_ds, "save_pool_ban_recommendations")
         ), "save_pool_ban_recommendations is not callable"
 
-    def test_api_raises_not_implemented_error(self):
+    def test_postgresql_raises_not_implemented_error(self):
         """
-        Regression test: APIDataSource should raise NotImplementedError for writes.
+        Regression test: PostgreSQLDataSource should raise NotImplementedError for writes.
 
-        API is read-only, so write operations must fail with clear error message.
+        PostgreSQL is read-only, so write operations must fail with clear error message.
         """
-        api_ds = APIDataSource()
+        postgresql_ds = PostgreSQLDataSource()
 
         ban_data = [
             ("Darius", 15.5, -2.5, "Aatrox", 3),
             ("Garen", 12.0, -1.5, "Camille", 4),
         ]
 
-        with pytest.raises(NotImplementedError, match="APIDataSource is read-only"):
-            api_ds.save_pool_ban_recommendations("TestPool", ban_data)
+        with pytest.raises(NotImplementedError, match="PostgreSQLDataSource is READ-ONLY"):
+            postgresql_ds.save_pool_ban_recommendations("TestPool", ban_data)
 
 
 class TestHybridDataSourceWritesToSQLiteOnly:
-    """Regression test: Verify write operations go to SQLite only, never API."""
+    """Regression test: Verify write operations go to SQLite only, never PostgreSQL."""
 
     @pytest.fixture
     def mock_sqlite_source(self):
@@ -236,7 +236,7 @@ class TestHybridDataSourceWritesToSQLiteOnly:
             mock_config.MODE = "hybrid"
             mock_config.ENABLED = True
 
-            with patch("src.hybrid_data_source.APIDataSource"):
+            with patch("src.hybrid_data_source.PostgreSQLDataSource"):
                 with patch("src.hybrid_data_source.SQLiteDataSource") as mock_sqlite_class:
                     mock_sqlite_class.return_value = mock_sqlite_source
                     hybrid_ds = HybridDataSource()
@@ -247,15 +247,15 @@ class TestHybridDataSourceWritesToSQLiteOnly:
         self, hybrid_source_with_mocked_sqlite, mock_sqlite_source
     ):
         """
-        Regression test: Write operations must go to SQLite, never to API.
+        Regression test: Write operations must go to SQLite, never to PostgreSQL.
 
         Verify that HybridDataSource.save_pool_ban_recommendations() delegates to
-        sqlite_source.save_pool_ban_recommendations(), not to api_source.
+        sqlite_source.save_pool_ban_recommendations(), not to postgresql_source.
 
         This is critical because:
-        - API is read-only (no write endpoint exists)
+        - PostgreSQL is read-only (no write endpoint exists)
         - All writes must persist to local SQLite database
-        - Hybrid mode should never attempt to write to API
+        - Hybrid mode should never attempt to write to PostgreSQL
         """
         ban_data = [
             ("Darius", 15.5, -2.5, "Aatrox", 3),
@@ -271,16 +271,16 @@ class TestHybridDataSourceWritesToSQLiteOnly:
             "TopLane", ban_data
         )
 
-    def test_save_pool_ban_recommendations_never_calls_api_source(
+    def test_save_pool_ban_recommendations_never_calls_postgresql_source(
         self, hybrid_source_with_mocked_sqlite
     ):
         """
-        Regression test: Verify API source is NEVER called for write operations.
+        Regression test: Verify PostgreSQL source is NEVER called for write operations.
 
-        This test ensures that even if api_source exists, it is never used for writes.
+        This test ensures that even if postgresql_source exists, it is never used for writes.
         """
-        # Mock api_source to verify it's never called
-        hybrid_source_with_mocked_sqlite.api_source = MagicMock()
+        # Mock postgresql_source to verify it's never called
+        hybrid_source_with_mocked_sqlite.postgresql_source = MagicMock()
 
         ban_data = [
             ("Zed", 20.0, -3.0, "Lissandra", 5),
@@ -289,10 +289,10 @@ class TestHybridDataSourceWritesToSQLiteOnly:
         # Call save_pool_ban_recommendations
         hybrid_source_with_mocked_sqlite.save_pool_ban_recommendations("MidLane", ban_data)
 
-        # Verify API source was NEVER called
+        # Verify PostgreSQL source was NEVER called
         assert (
-            not hybrid_source_with_mocked_sqlite.api_source.save_pool_ban_recommendations.called
-        ), "save_pool_ban_recommendations should NEVER call API source (writes are SQLite-only)"
+            not hybrid_source_with_mocked_sqlite.postgresql_source.save_pool_ban_recommendations.called
+        ), "save_pool_ban_recommendations should NEVER call PostgreSQL source (writes are SQLite-only)"
 
     def test_save_pool_ban_recommendations_logs_write_operation(
         self, hybrid_source_with_mocked_sqlite, caplog
@@ -324,18 +324,18 @@ class TestHybridDataSourceErrorHandling:
         Regression test: Raise explicit error when SQLite source unavailable.
 
         HybridDataSource should raise RuntimeError with clear message
-        if sqlite_source is None (e.g., in api_only mode).
+        if sqlite_source is None (e.g., in postgresql_only mode).
 
         This prevents silent failures and provides clear diagnostics.
         """
         with patch("src.hybrid_data_source.api_config") as mock_config:
-            mock_config.MODE = "api_only"
+            mock_config.MODE = "postgresql_only"
             mock_config.ENABLED = True
 
-            with patch("src.hybrid_data_source.APIDataSource"):
+            with patch("src.hybrid_data_source.PostgreSQLDataSource"):
                 hybrid_ds = HybridDataSource()
 
-                # Verify sqlite_source is None in api_only mode
+                # Verify sqlite_source is None in postgresql_only mode
                 assert hybrid_ds.sqlite_source is None
 
                 ban_data = [
@@ -353,10 +353,10 @@ class TestHybridDataSourceErrorHandling:
         Logging ensures errors are visible in production diagnostics.
         """
         with patch("src.hybrid_data_source.api_config") as mock_config:
-            mock_config.MODE = "api_only"
+            mock_config.MODE = "postgresql_only"
             mock_config.ENABLED = True
 
-            with patch("src.hybrid_data_source.APIDataSource"):
+            with patch("src.hybrid_data_source.PostgreSQLDataSource"):
                 hybrid_ds = HybridDataSource()
 
                 ban_data = [
