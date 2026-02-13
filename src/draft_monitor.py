@@ -291,6 +291,10 @@ class DraftMonitor:
 
     def _handle_auto_ban_hover(self, state: DraftState):
         """Handle auto-ban-hover when it's our turn to ban."""
+        import sys
+
+        if getattr(sys, "frozen", False):
+            return  # Skip ban hover in .exe mode
         try:
             if self.verbose:
                 print(
@@ -1005,6 +1009,11 @@ class DraftMonitor:
 
     def _show_ban_recommendations_draft(self):
         """Show ban recommendations for current pool during draft."""
+        import sys
+
+        if getattr(sys, "frozen", False):
+            return  # Skip ban recommendations in .exe mode
+
         try:
             print(f"\n[BANS] 🛡️ STRATEGIC BAN RECOMMENDATIONS")
             print("-" * 50)
@@ -1048,6 +1057,10 @@ class DraftMonitor:
 
     def _show_adaptive_ban_recommendations(self, state: DraftState):
         """Show ban recommendations adapted to enemy picks."""
+        import sys
+
+        if getattr(sys, "frozen", False):
+            return  # Skip adaptive bans in .exe mode
         try:
             if not state.enemy_picks:
                 return
