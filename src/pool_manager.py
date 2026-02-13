@@ -188,7 +188,7 @@ class PoolManager:
             print(f"[INFO] Saved {len(custom_pools)} custom pools to {self.pools_file}")
 
             # Recalculate ban recommendations after successful save
-            if recalculate_bans and len(custom_pools) > 0:
+            if recalculate_bans and len(custom_pools) > 0 and not getattr(sys, "frozen", False):
                 print(
                     f"[INFO] Recalculating ban recommendations for {len(custom_pools)} custom pools..."
                 )
@@ -211,6 +211,8 @@ class PoolManager:
                 except Exception as e:
                     print(f"[WARNING] Failed to recalculate ban recommendations: {e}")
                     # Don't fail the save operation if ban recalculation fails
+            elif recalculate_bans and len(custom_pools) > 0:
+                print("[INFO] Skipping ban recalculation in .exe mode (PyInstaller frozen)")
 
             return True
         except Exception as e:
