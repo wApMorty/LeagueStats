@@ -623,12 +623,14 @@ class Database:
     def get_synergy_delta2(self, champion_name: str, ally_name: str) -> Optional[float]:
         """Get delta2 score for a specific champion-ally synergy.
 
+        Aggregates multi-lane synergy data using weighted average by games.
+
         Args:
             champion_name: Champion name
             ally_name: Ally champion name
 
         Returns:
-            Delta2 score if synergy exists with sufficient data, None otherwise
+            Weighted average delta2 score if synergy exists with sufficient data, None otherwise
         """
         from sqlalchemy import select, and_
 
@@ -649,9 +651,10 @@ class Database:
                 if champ_id is None or ally_id is None:
                     return None
 
-                # Get synergy delta2
+                # Get all synergy rows (multi-lane data)
+                # Aggregation will be done in Python for better separation of concerns
                 result = await session.execute(
-                    select(Synergy.delta2).where(
+                    select(Synergy.delta2, Synergy.games).where(
                         and_(
                             Synergy.champion_id == champ_id,
                             Synergy.ally_id == ally_id,
@@ -660,8 +663,16 @@ class Database:
                         )
                     )
                 )
-                delta2 = result.scalar_one_or_none()
-                return float(delta2) if delta2 is not None else None
+                rows = result.all()
+
+                if not rows:
+                    return None
+
+                # Calculate weighted average in Python: SUM(delta2 * games) / SUM(games)
+                total_weighted = sum(row.delta2 * row.games for row in rows)
+                total_games = sum(row.games for row in rows)
+
+                return total_weighted / total_games if total_games > 0 else None
 
         return self._run_async(_get())
 
