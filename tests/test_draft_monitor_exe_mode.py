@@ -54,9 +54,7 @@ def draft_state():
 class TestHandleAutoBanHoverExeMode:
     """Tests for _handle_auto_ban_hover() exe mode skipping."""
 
-    def test_handle_auto_ban_hover_skip_in_exe_mode(
-        self, draft_monitor, draft_state, capsys
-    ):
+    def test_handle_auto_ban_hover_skip_in_exe_mode(self, draft_monitor, draft_state, capsys):
         """
         Regression test for T9: _handle_auto_ban_hover() skips in .exe mode.
 
@@ -76,9 +74,7 @@ class TestHandleAutoBanHoverExeMode:
             assert "Getting recommendations" not in captured.out
             assert "pre-calculated bans" not in captured.out
 
-    def test_handle_auto_ban_hover_runs_in_normal_mode(
-        self, draft_monitor, draft_state, capsys
-    ):
+    def test_handle_auto_ban_hover_runs_in_normal_mode(self, draft_monitor, draft_state, capsys):
         """Verify that method still runs normally when NOT in .exe mode."""
         # Mock sys.frozen = False (normal mode)
         with patch("sys.frozen", False, create=True):
@@ -101,9 +97,7 @@ class TestHandleAutoBanHoverExeMode:
 class TestShowBanRecommendationsDraftExeMode:
     """Tests for _show_ban_recommendations_draft() exe mode skipping."""
 
-    def test_show_ban_recommendations_draft_skip_in_exe_mode(
-        self, draft_monitor, capsys
-    ):
+    def test_show_ban_recommendations_draft_skip_in_exe_mode(self, draft_monitor, capsys):
         """
         Regression test for T10: _show_ban_recommendations_draft() skips in .exe mode.
 
@@ -123,9 +117,7 @@ class TestShowBanRecommendationsDraftExeMode:
             # Verify no database calls were made
             draft_monitor.assistant.db.get_pool_ban_recommendations.assert_not_called()
 
-    def test_show_ban_recommendations_draft_runs_in_normal_mode(
-        self, draft_monitor, capsys
-    ):
+    def test_show_ban_recommendations_draft_runs_in_normal_mode(self, draft_monitor, capsys):
         """Verify that method still runs normally when NOT in .exe mode."""
         # Mock sys.frozen = False (normal mode)
         with patch("sys.frozen", False, create=True):

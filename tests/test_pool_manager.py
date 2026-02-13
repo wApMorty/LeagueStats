@@ -79,9 +79,9 @@ class TestPoolManagerBanRecalculation:
                     "Skipping ban recalculation in .exe mode" in call_str
                     for call_str in print_calls
                 )
-                assert skip_log_found, (
-                    "Expected log message 'Skipping ban recalculation in .exe mode' not found"
-                )
+                assert (
+                    skip_log_found
+                ), "Expected log message 'Skipping ban recalculation in .exe mode' not found"
 
     @patch("src.assistant.Assistant")
     @patch("src.db.Database")
@@ -101,14 +101,10 @@ class TestPoolManagerBanRecalculation:
         # Ensure sys.frozen is False or doesn't exist
         if hasattr(sys, "frozen"):
             with patch.object(sys, "frozen", False, create=True):
-                self._run_dev_mode_test(
-                    mock_print, mock_db_class, mock_assistant_class, tmp_path
-                )
+                self._run_dev_mode_test(mock_print, mock_db_class, mock_assistant_class, tmp_path)
         else:
             # sys.frozen doesn't exist (default dev behavior)
-            self._run_dev_mode_test(
-                mock_print, mock_db_class, mock_assistant_class, tmp_path
-            )
+            self._run_dev_mode_test(mock_print, mock_db_class, mock_assistant_class, tmp_path)
 
     def _run_dev_mode_test(self, mock_print, mock_db_class, mock_assistant_class, tmp_path):
         """Helper method to run dev mode test logic."""
@@ -131,9 +127,7 @@ class TestPoolManagerBanRecalculation:
             mock_db_class.return_value = mock_db_instance
 
             mock_assistant_instance = Mock()
-            mock_assistant_instance.precalculate_all_custom_pool_bans.return_value = {
-                "Dev Pool": 8
-            }
+            mock_assistant_instance.precalculate_all_custom_pool_bans.return_value = {"Dev Pool": 8}
             mock_assistant_class.return_value = mock_assistant_instance
 
             # WHEN: Save custom pools with recalculate_bans=True
@@ -163,9 +157,9 @@ class TestPoolManagerBanRecalculation:
                 "Recalculated" in call_str and "ban recommendations" in call_str
                 for call_str in print_calls
             )
-            assert success_log_found, (
-                "Expected success log message 'Recalculated ... ban recommendations' not found"
-            )
+            assert (
+                success_log_found
+            ), "Expected success log message 'Recalculated ... ban recommendations' not found"
 
     @patch("src.assistant.Assistant")
     @patch("src.db.Database")
@@ -265,8 +259,8 @@ class TestPoolManagerBanRecalculation:
             mock_db_class.return_value = mock_db_instance
 
             mock_assistant_instance = Mock()
-            mock_assistant_instance.precalculate_all_custom_pool_bans.side_effect = (
-                RuntimeError("Simulated database error")
+            mock_assistant_instance.precalculate_all_custom_pool_bans.side_effect = RuntimeError(
+                "Simulated database error"
             )
             mock_assistant_class.return_value = mock_assistant_instance
 
@@ -280,13 +274,10 @@ class TestPoolManagerBanRecalculation:
             # THEN: Warning message logged
             print_calls = [str(call_args) for call_args in mock_print.call_args_list]
             warning_found = any(
-                "WARNING" in call_str
-                and "Failed to recalculate ban recommendations" in call_str
+                "WARNING" in call_str and "Failed to recalculate ban recommendations" in call_str
                 for call_str in print_calls
             )
-            assert warning_found, (
-                "Expected warning log for ban recalculation failure not found"
-            )
+            assert warning_found, "Expected warning log for ban recalculation failure not found"
 
     @patch("builtins.open", side_effect=PermissionError("Write access denied"))
     @patch("builtins.print")

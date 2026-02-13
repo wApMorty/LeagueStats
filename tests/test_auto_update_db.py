@@ -184,7 +184,9 @@ class TestDotenvIntegration:
         # Mock Path to return our temp .env
         with patch("pathlib.Path") as mock_path_class:
             mock_path_instance = MagicMock()
-            mock_path_instance.__truediv__ = lambda self, other: env_file if other == ".env" else MagicMock()
+            mock_path_instance.__truediv__ = lambda self, other: (
+                env_file if other == ".env" else MagicMock()
+            )
             mock_path_class.return_value = mock_path_instance
 
             # Load dotenv manually (simulate lines 41-50)
