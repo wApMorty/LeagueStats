@@ -591,6 +591,76 @@ class Database:
             print(f"The error '{e}' occurred")
             return []
 
+    def get_reverse_matchups_for_draft(
+        self, champion_name: str, as_dataclass: bool = True
+    ) -> Union[List[MatchupDraft], List[tuple]]:
+        """
+        Get matchups where champion is in ENEMY position (reverse lookup).
+
+        Optimized for ban recommendations and reverse threat analysis.
+        Returns champions that PICK AGAINST this champion.
+
+        This method complements get_champion_matchups_for_draft() by inverting the perspective:
+        - get_champion_matchups_for_draft("Darius"): Who does Darius face? (Darius as picker)
+        - get_reverse_matchups_for_draft("Darius"): Who picks against Darius? (Darius as enemy)
+
+        Returns 4 columns for draft analysis:
+        - enemy_name (str): Champion that picks against the given champion
+        - delta2 (float): Delta2 performance metric (from picker's perspective)
+        - pickrate (float): Matchup pickrate percentage
+        - games (int): Number of games in sample
+
+        Args:
+            champion_name: Name of the champion (in enemy position)
+            as_dataclass: If True, return MatchupDraft objects. If False, return tuples.
+                         Default True for new code. Use False for backward compatibility.
+
+        Returns:
+            List of MatchupDraft objects or tuples: [(picker_name, delta2, pickrate, games), ...]
+            Empty list if champion not found or no matchups
+
+        Example:
+            >>> # Find who picks against Darius
+            >>> matchups = db.get_reverse_matchups_for_draft("Darius")
+            >>> for m in matchups:
+            ...     print(f"{m.enemy_name} picks against Darius: {m.delta2} delta2")
+
+            >>> # Tuple format for backward compatibility
+            >>> matchups = db.get_reverse_matchups_for_draft("Darius", as_dataclass=False)
+            >>> for picker, delta2, pickrate, games in matchups:
+            ...     print(f"{picker}: {delta2} delta2, {games} games")
+        """
+        champ_id = self.get_champion_id(champion_name)
+        if champ_id is None:
+            return []
+
+        cursor = self.connection.cursor()
+        try:
+            # Reverse lookup: find champions that pick against this champion
+            # WHERE enemy = champ_id (champion is in enemy position)
+            # JOIN on champion (the picker)
+            cursor.execute(
+                """
+                SELECT c.name, m.delta2, m.pickrate, m.games
+                FROM matchups m
+                JOIN champions c ON m.champion = c.id
+                WHERE m.enemy = ? AND m.pickrate >= 0.5 AND m.games >= 200
+            """,
+                (champ_id,),
+            )
+            result = cursor.fetchall()
+
+            # Convert to dataclasses if requested (default)
+            if as_dataclass:
+                # Note: We reuse MatchupDraft but enemy_name contains the "picker"
+                return [MatchupDraft.from_tuple(row) for row in result]
+            else:
+                # Backward compatibility: return tuples
+                return result
+        except Error as e:
+            print(f"The error '{e}' occurred")
+            return []
+
     def add_matchups_batch(
         self, matchup_data: List[tuple], champion_cache: Dict[str, int] = None
     ) -> int:
