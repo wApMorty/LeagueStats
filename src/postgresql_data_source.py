@@ -184,6 +184,80 @@ class PostgreSQLDataSource(DataSource):
             # Return tuples: (enemy_name, delta2, pickrate, games)
             return [(row[0], row[3], row[4], row[2]) for row in matchups]
 
+    def get_reverse_matchups_for_draft(
+        self, champion_name: str, as_dataclass: bool = True
+    ) -> Union[List, List[tuple]]:
+        """
+        Get matchups where champion is in ENEMY position (reverse lookup).
+
+        Optimized for ban recommendations and reverse threat analysis.
+        Returns champions that PICK AGAINST this champion.
+
+        Note:
+            This method is NOT implemented in Database class (server/src/db.py).
+            Implements SQL query directly using asyncio.
+
+        Args:
+            champion_name: Name of the champion (in enemy position)
+            as_dataclass: If True, return MatchupDraft objects. If False, return tuples.
+
+        Returns:
+            List of MatchupDraft objects or tuples: [(picker_name, delta2, pickrate, games), ...]
+        """
+        import asyncio
+        from sqlalchemy import select
+        from server.src.db import get_session_maker, Champion, Matchup
+
+        async def _get_reverse_matchups():
+            session_maker = get_session_maker()
+            async with session_maker() as session:
+                # Get champion ID first
+                result = await session.execute(
+                    select(Champion.id).where(Champion.name.ilike(champion_name))
+                )
+                champ_id = result.scalar_one_or_none()
+
+                if champ_id is None:
+                    return []
+
+                # Reverse lookup: find champions that pick against this champion
+                # WHERE enemy_id = champ_id (champion is in enemy position)
+                # JOIN on champion (the picker)
+                result = await session.execute(
+                    select(
+                        Champion.name,  # picker name
+                        Matchup.delta2,
+                        Matchup.pickrate,
+                        Matchup.games,
+                    )
+                    .join(Matchup, Matchup.champion_id == Champion.id)
+                    .where(Matchup.enemy_id == champ_id)
+                    .where(Matchup.pickrate >= 0.5)
+                    .where(Matchup.games >= 200)
+                )
+                return result.all()
+
+        # Run async query synchronously
+        rows = asyncio.run(_get_reverse_matchups())
+
+        if as_dataclass:
+            # Import MatchupDraft dataclass
+            from .models import MatchupDraft
+
+            # Note: In reverse matchups, "enemy_name" field contains the picker
+            return [
+                MatchupDraft(
+                    enemy_name=row[0],  # picker_name (champion picking against us)
+                    delta2=row[1],  # delta2
+                    pickrate=row[2],  # pickrate
+                    games=row[3],  # games
+                )
+                for row in rows
+            ]
+        else:
+            # Return tuples: (picker_name, delta2, pickrate, games)
+            return [(row[0], row[1], row[2], row[3]) for row in rows]
+
     def get_matchup_delta2(self, champion_name: str, enemy_name: str) -> Optional[float]:
         """Get delta2 value for specific matchup (delegates to Database)."""
         return self._db.get_matchup_delta2(champion_name, enemy_name)

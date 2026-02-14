@@ -92,6 +92,12 @@ class SQLiteDataSource(DataSource):
         """Get optimized matchups for draft analysis (delegates to Database)."""
         return self._db.get_champion_matchups_for_draft(champion_name, as_dataclass)
 
+    def get_reverse_matchups_for_draft(
+        self, champion_name: str, as_dataclass: bool = True
+    ) -> Union[List[MatchupDraft], List[tuple]]:
+        """Get reverse matchups for draft analysis (delegates to Database)."""
+        return self._db.get_reverse_matchups_for_draft(champion_name, as_dataclass)
+
     def get_matchup_delta2(self, champion_name: str, enemy_name: str) -> Optional[float]:
         """Get delta2 value for specific matchup (delegates to Database)."""
         return self._db.get_matchup_delta2(champion_name, enemy_name)
