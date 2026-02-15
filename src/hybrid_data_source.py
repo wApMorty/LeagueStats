@@ -205,6 +205,18 @@ class HybridDataSource(DataSource):
             "get_champion_matchups_for_draft", champion_name, as_dataclass
         )
 
+    def get_reverse_matchups_for_draft(
+        self, champion_name: str, as_dataclass: bool = True
+    ) -> Union[List[MatchupDraft], List[tuple]]:
+        """Get reverse matchups for draft (hybrid: PostgreSQL first, SQLite fallback).
+
+        Returns champions that pick AGAINST this champion (reverse lookup).
+        Used for ban recommendations and cache warmup.
+        """
+        return self._try_postgres_with_fallback(
+            "get_reverse_matchups_for_draft", champion_name, as_dataclass
+        )
+
     def get_matchup_delta2(self, champion_name: str, enemy_name: str) -> Optional[float]:
         """Get delta2 value for specific matchup (hybrid: PostgreSQL first, SQLite fallback)."""
         return self._try_postgres_with_fallback("get_matchup_delta2", champion_name, enemy_name)
