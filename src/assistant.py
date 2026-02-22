@@ -1458,34 +1458,6 @@ class Assistant:
         """Get champion input from user with consistent formatting."""
         return input(f"{team_name} - Champion {champion_number}: ")
 
-    def _calculate_and_display_recommendations(
-        self,
-        enemy_team: List[str],
-        ally_team: List[str],
-        nb_results: int,
-        champion_pool: List[str] = None,
-    ) -> None:
-        """Calculate champion recommendations and display top results."""
-        from .constants import SOLOQ_POOL
-
-        if champion_pool is None:
-            champion_pool = SOLOQ_POOL
-
-        scores = []
-
-        for champion in champion_pool:
-            if champion not in enemy_team and champion not in ally_team:
-                matchups = self.db.get_champion_matchups_by_name(champion)
-                if sum(m.games for m in matchups) < config.MIN_GAMES_COMPETITIVE:
-                    continue
-                score = self.score_against_team(matchups, enemy_team)
-                scores.append((str(champion), score))
-
-        scores.sort(key=lambda x: -x[1])
-
-        for index in range(min(nb_results, len(scores))):
-            print(scores[index])
-
     def _draft_red_side(self, enemy_team: List[str], ally_team: List[str], nb_results: int) -> None:
         """Handle red side draft sequence."""
         # Pick 1
