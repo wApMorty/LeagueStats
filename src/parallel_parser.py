@@ -100,6 +100,38 @@ class ParallelParser:
             f"ParallelParser initialized with {max_workers} workers, patch={self.patch_version}, headless={headless}"
         )
 
+    def _cleanup_existing_resources(self) -> None:
+        """Shutdown the existing executor and close all parsers before creating a new one.
+
+        This prevents resource leaks when parse_* methods are called multiple times on
+        the same ParallelParser instance (e.g. parsing matchups then synergies sequentially).
+        Without this, each call stacks a new ThreadPoolExecutor on top of the previous one,
+        leaving zombie Firefox + geckodriver processes running.
+
+        Thread-local safety note:
+            After shutdown(wait=True), all threads of the old executor are guaranteed dead
+            before this method returns. The new executor will therefore always create fresh
+            threads that have no thread_local.parser attribute, so _get_parser() will
+            correctly instantiate new Parser objects instead of reusing stale closed ones.
+            There is no risk of a recycled thread picking up a closed parser from
+            thread_local storage.
+        """
+        if self.executor is not None:
+            logger.info("Shutting down existing executor before creating a new one...")
+            self.executor.shutdown(wait=True)
+            self.executor = None
+            logger.info("Executor shut down")
+
+        if self.parsers:
+            logger.info(f"Closing {len(self.parsers)} existing parser(s)...")
+            for parser in self.parsers:
+                try:
+                    parser.close()
+                except Exception as e:
+                    logger.error(f"Error closing parser during cleanup: {e}")
+            self.parsers.clear()
+            logger.info("All existing parsers closed and cleared")
+
     def _get_parser(self) -> Parser:
         """Get or create a Parser instance for current thread.
 
@@ -288,6 +320,9 @@ class ParallelParser:
         champion_names = list(db.get_all_champion_names().values())
         logger.info(f"Starting parallel scraping of synergies for {len(champion_names)} champions")
 
+        # Close any existing executor/parsers before creating a new thread pool
+        self._cleanup_existing_resources()
+
         # Create thread pool and submit tasks
         self.executor = ThreadPoolExecutor(max_workers=self.max_workers)
         futures = {
@@ -384,6 +419,9 @@ class ParallelParser:
         # Get champion list dynamically from database (populated by Riot API)
         champion_names = list(db.get_all_champion_names().values())
         logger.info(f"Starting parallel scraping of {len(champion_names)} champions from Riot API")
+
+        # Close any existing executor/parsers before creating a new thread pool
+        self._cleanup_existing_resources()
 
         # Create thread pool and submit tasks
         self.executor = ThreadPoolExecutor(max_workers=self.max_workers)
@@ -503,6 +541,9 @@ class ParallelParser:
 
         db.init_matchups_table()
 
+        # Close any existing executor/parsers before creating a new thread pool
+        self._cleanup_existing_resources()
+
         # Create thread pool and submit tasks
         self.executor = ThreadPoolExecutor(max_workers=self.max_workers)
 
@@ -591,6 +632,9 @@ class ParallelParser:
 
         # Initialize synergies table
         db.init_synergies_table()
+
+        # Close any existing executor/parsers before creating a new thread pool
+        self._cleanup_existing_resources()
 
         # Create thread pool and submit tasks
         self.executor = ThreadPoolExecutor(max_workers=self.max_workers)
