@@ -715,6 +715,7 @@ class ParallelParser:
         # Shutdown thread pool
         if self.executor:
             self.executor.shutdown(wait=True)
+            self.executor = None
 
         # Close all parser webdrivers
         for parser in self.parsers:
