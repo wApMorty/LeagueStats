@@ -219,6 +219,12 @@ class ParallelParser:
             except Exception as e:
                 logger.error(f"Database write error for {champion}: {e}")
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((WebDriverException, TimeoutException)),
+        reraise=True,
+    )
     def _scrape_champion_synergies_with_retry(
         self, champion: str, normalize_func
     ) -> List[Tuple[str, float, float, float, float, int]]:
@@ -715,6 +721,7 @@ class ParallelParser:
         # Shutdown thread pool
         if self.executor:
             self.executor.shutdown(wait=True)
+            self.executor = None
 
         # Close all parser webdrivers
         for parser in self.parsers:
