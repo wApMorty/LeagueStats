@@ -1,3 +1,4 @@
+import random
 from time import sleep
 from typing import List
 import lxml.html
@@ -17,6 +18,7 @@ from selenium.common.exceptions import (
     TimeoutException,
 )
 
+from .cloudflare_detector import CloudflareException, detect_cloudflare
 from .config import config
 from .config_constants import scraping_config, xpath_config
 from .error_ids import (
@@ -56,6 +58,14 @@ class Parser:
         else:
             # Normal mode with window manager integration (Komorebi)
             options.add_argument("--start-maximized")
+
+        # Masquer les indicateurs de bot pour éviter Cloudflare
+        options.set_preference("dom.webdriver.enabled", False)
+        options.set_preference("useAutomationExtension", False)
+        options.set_preference(
+            "general.useragent.override",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0",
+        )
 
         self.webdriver = webdriver.Firefox(options=options)
         self.headless = headless
@@ -254,6 +264,7 @@ class Parser:
 
         try:
             self.webdriver.get(url)
+            detect_cloudflare(self.webdriver, url=url)  # Raises CloudflareException si bloqué
             tree = lxml.html.fromstring(self.webdriver.page_source)
 
             # Try to extract winrate with fallback paths
@@ -273,6 +284,8 @@ class Parser:
             games = int(games_elements[0].replace(",", ""))
             return winrate, games
 
+        except CloudflareException:
+            raise  # Re-raise pour que tenacity puisse retry
         except (ValueError, IndexError) as e:
             print(f"Error parsing data for {champion} vs {enemy}: {e}")
             return None, None
@@ -295,12 +308,15 @@ class Parser:
             url = f"https://lolalytics.com/lol/{champion}/build/?tier=diamond_plus&patch={patch}"
 
         self.webdriver.get(url)
+        detect_cloudflare(self.webdriver, url=url)  # Raises CloudflareException si bloqué
 
-        sleep(scraping_config.PAGE_LOAD_DELAY)
+        sleep(
+            random.uniform(scraping_config.PAGE_LOAD_DELAY_MIN, scraping_config.PAGE_LOAD_DELAY_MAX)
+        )
 
         self.webdriver.execute_script(f"window.scrollTo(0,{scraping_config.MATCHUP_SCROLL_Y})")
 
-        sleep(scraping_config.SCROLL_DELAY)
+        sleep(random.uniform(scraping_config.SCROLL_DELAY_MIN, scraping_config.SCROLL_DELAY_MAX))
 
         # region Accepting cookies
         self._accept_cookies()
@@ -425,7 +441,10 @@ class Parser:
             url = f"https://lolalytics.com/lol/{champion}/build/?tier=diamond_plus&patch={patch}"
 
         self.webdriver.get(url)
-        sleep(scraping_config.PAGE_LOAD_DELAY)
+        detect_cloudflare(self.webdriver, url=url)  # Raises CloudflareException si bloqué
+        sleep(
+            random.uniform(scraping_config.PAGE_LOAD_DELAY_MIN, scraping_config.PAGE_LOAD_DELAY_MAX)
+        )
 
         # Accept cookies before clicking Synergies button
         self._accept_cookies()
@@ -444,7 +463,11 @@ class Parser:
             first_synergy_row_xpath = "/html/body/main/div[6]/div[1]/div[2]/div[2]/div"
             wait.until(EC.presence_of_element_located((By.XPATH, first_synergy_row_xpath)))
             logger.info(f"Synergies data loaded for {champion}")
-            sleep(scraping_config.PAGE_LOAD_DELAY)  # Additional wait for stability
+            sleep(
+                random.uniform(
+                    scraping_config.PAGE_LOAD_DELAY_MIN, scraping_config.PAGE_LOAD_DELAY_MAX
+                )
+            )  # Additional wait for stability
         except NoSuchElementException:
             logger.warning(
                 f"Synergies button not found for {champion}. "
@@ -463,7 +486,7 @@ class Parser:
 
         # Scroll to synergies section (same scroll position as matchups)
         self.webdriver.execute_script(f"window.scrollTo(0,{scraping_config.MATCHUP_SCROLL_Y})")
-        sleep(scraping_config.SCROLL_DELAY)
+        sleep(random.uniform(scraping_config.SCROLL_DELAY_MIN, scraping_config.SCROLL_DELAY_MAX))
 
         # Parse synergies (4 rows instead of 5 for matchups)
         for index in range(2, 6):
