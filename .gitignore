@@ -28,6 +28,9 @@ config/.env.neon
 tmpclaude-*-cwd
 outputs/
 
+# claude-flow swarm memory (local session state)
+.swarm/
+
 # Claude Flow tool artifacts
 .claude-flow/
 NUL
