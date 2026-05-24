@@ -21,6 +21,8 @@ import pytest
 from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import Mock, patch
 
+from src.cloudflare_detector import CloudflareException
+
 
 class TestCloseResetsExecutorToNone:
     """Regression tests for Bug 1: close() must set self.executor = None."""
@@ -180,3 +182,48 @@ class TestScrapeChampionSynergiesWithRetryHasRetryDecorator:
             f"_scrape_champion_with_retry ({type(matchup_method.retry)}). "
             "Both methods should use an identical tenacity retry configuration."
         )
+
+
+class TestSynergiesRetryOnCloudflareException:
+    """Regression test: _scrape_champion_synergies_with_retry must retry on CloudflareException."""
+
+    def test_synergies_retry_on_cloudflare_exception(self):
+        """
+        Regression: _scrape_champion_synergies_with_retry must retry on CloudflareException.
+
+        Before fix: CloudflareException was not listed in retry_if_exception_type, so the first
+                    Cloudflare block immediately propagated without any retry attempt.
+        After fix:  CloudflareException is included in the @retry decorator's
+                    retry_if_exception_type tuple, so tenacity retries up to 3 times.
+
+        Test approach (behavioural, no tenacity introspection):
+            - Mock _get_parser() to return a parser whose get_champion_synergies_on_patch()
+              always raises CloudflareException.
+            - Call _scrape_champion_synergies_with_retry() and catch the final re-raised exception.
+            - Assert the underlying scrape method was called more than once, proving retries happened.
+        """
+        with patch("src.parallel_parser.Parser") as mock_parser_class:
+            mock_parser_class.return_value = Mock()
+
+            from src.parallel_parser import ParallelParser
+
+            pp = ParallelParser(max_workers=1)
+
+            # Build a mock parser whose synergy-scrape method always raises CloudflareException
+            mock_inner_parser = Mock()
+            mock_inner_parser.get_champion_synergies_on_patch.side_effect = CloudflareException(
+                "Cloudflare block detected"
+            )
+
+            # Patch _get_parser so no real Firefox is created
+            with patch.object(pp, "_get_parser", return_value=mock_inner_parser):
+                with pytest.raises(CloudflareException):
+                    pp._scrape_champion_synergies_with_retry("Aatrox", lambda x: x)
+
+            # THEN: the scrape was attempted more than once (tenacity retried)
+            call_count = mock_inner_parser.get_champion_synergies_on_patch.call_count
+            assert call_count >= 2, (
+                f"Expected at least 2 scrape attempts (retry), but got {call_count}. "
+                "Before the fix, CloudflareException was not in retry_if_exception_type, "
+                "so it propagated immediately on the first attempt without any retry."
+            )
