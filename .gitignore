@@ -27,3 +27,7 @@ config/.env.neon
 # Claude Code temporary files
 tmpclaude-*-cwd
 outputs/
+
+# Claude Flow tool artifacts
+.claude-flow/
+NUL
