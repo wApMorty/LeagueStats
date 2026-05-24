@@ -35,7 +35,7 @@ class ScrapingConfig:
     MATCHUP_CAROUSEL_SCROLL_X: int = 460
 
     # Parallel scraping configuration
-    DEFAULT_MAX_WORKERS: int = 10  # Optimal for i5-14600KF (20 threads, 50% usage)
+    DEFAULT_MAX_WORKERS: int = 5  # Optimal for i5-14600KF (20 threads, 50% usage)
     FIREFOX_STARTUP_DELAY: float = 1.0  # Minimal delay for Firefox initialization
 
 
