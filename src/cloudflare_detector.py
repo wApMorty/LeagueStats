@@ -19,12 +19,28 @@ from .config_constants import scraping_config
 
 logger = logging.getLogger(__name__)
 
-# Titles that indicate a Cloudflare challenge page (case-insensitive match)
+# Titles that indicate a Cloudflare challenge page (case-insensitive match).
+# Includes common localisations: Cloudflare switches the UI language based on
+# browser Accept-Language, so headless Firefox may receive a French page even
+# when the target site is in English.
 _CF_TITLES = (
+    # English
     "just a moment",
     "attention required",
     "please wait",
     "checking your browser",
+    # French
+    "un instant",
+    "vérification",
+    # Spanish / Portuguese
+    "un momento",
+    "verificando",
+    # German
+    "einen moment",
+    # Italian
+    "attendere",
+    # Dutch
+    "even geduld",
 )
 
 

@@ -246,16 +246,27 @@ class TestDetectCloudflareDriverErrors:
 @pytest.mark.parametrize(
     "cf_title",
     [
+        # English
         "Just a moment...",
         "Attention Required! | Cloudflare",
         "Please Wait... | Cloudflare",
         "Checking your browser before accessing the site.",
+        # French — Cloudflare switches locale based on Accept-Language header;
+        # headless Firefox can receive the French challenge page even for
+        # English-language target sites (regression: was not in _CF_TITLES).
+        "Un instant…",
+        "Vérification de votre navigateur",
+        # Spanish / Portuguese
+        "Un momento...",
+        # German
+        "Einen Moment...",
     ],
 )
 def test_all_cf_title_variants_raise_with_cdn_cgi(cf_title):
     """
-    All four Cloudflare title variants must raise CloudflareException when
-    paired with a /cdn-cgi/ URL and the challenge does not resolve.
+    All Cloudflare title variants (English + localisations) must raise
+    CloudflareException when paired with a /cdn-cgi/ URL and the challenge
+    does not resolve.
     """
     driver = make_mock_driver(
         title=cf_title,
