@@ -139,6 +139,13 @@ def detect_cloudflare(
             secondary_signal,
             url or driver.current_url,
         )
+        # Print to stdout so the user sees it in the console even if log level filters warnings
+        print(
+            f"\n[CLOUDFLARE] Challenge detected for {url or 'page'}\n"
+            f"  → If a Firefox window is open, click 'Verify you are human'.\n"
+            f"  → Waiting up to {timeout}s for the challenge to resolve...\n",
+            flush=True,
+        )
         try:
             WebDriverWait(driver, timeout).until(
                 lambda d: not any(cf_title in d.title.lower().strip() for cf_title in _CF_TITLES)

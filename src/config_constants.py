@@ -21,7 +21,10 @@ class ScrapingConfig:
     SCROLL_DELAY: float = 2.0
 
     # Cloudflare handling
-    CLOUDFLARE_WAIT_SECONDS: int = 30  # Wait before retrying after Cloudflare block
+    # How long to wait for the CF JS challenge to auto-resolve.
+    # Set to 120s so the user has time to manually click "Verify" if CF shows
+    # a Managed Challenge (CAPTCHA) instead of auto-resolving.
+    CLOUDFLARE_WAIT_SECONDS: int = 120
 
     # Random delay ranges (replace fixed delays with ranges for anti-detection)
     PAGE_LOAD_DELAY_MIN: float = 1.5
