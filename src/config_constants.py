@@ -35,7 +35,7 @@ class ScrapingConfig:
     TIMEOUT: int = 30
 
     # Scroll position for matchup data
-    MATCHUP_SCROLL_Y: int = 1000
+    MATCHUP_SCROLL_Y: int = 3000
 
     # Scroll distance for horizontal matchup carousel
     MATCHUP_CAROUSEL_SCROLL_X: int = 460

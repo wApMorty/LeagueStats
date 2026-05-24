@@ -322,9 +322,30 @@ class Parser:
         self._accept_cookies()
         # endregion
 
+        # Wait for the first matchup row to render (JS lazy-loading)
+        first_row_path = xpath_config.MATCHUP_ROW_BASE.format(index=2)
+        try:
+            WebDriverWait(self.webdriver, 15).until(
+                EC.presence_of_element_located((By.XPATH, f"{first_row_path}/*[1]"))
+            )
+        except TimeoutException:
+            logger.warning(
+                "Matchup section did not render after scrolling to y=%d. "
+                "Try increasing MATCHUP_SCROLL_Y in config_constants.py.",
+                scraping_config.MATCHUP_SCROLL_Y,
+            )
+
         for index in range(2, 7):
-            path = f"/html/body/main/div[6]/div[1]/div[{index}]/div[2]/div"
+            path = xpath_config.MATCHUP_ROW_BASE.format(index=index)
             row = self.webdriver.find_elements(By.XPATH, f"{path}/*")
+            if not row:
+                logger.warning(
+                    "No elements at matchup row index=%d (path=%s). "
+                    "LoLalytics DOM may have changed — update MATCHUP_ROW_BASE in config_constants.py.",
+                    index,
+                    path,
+                )
+                continue
             actions = ActionChains(self.webdriver)
             actions.move_to_element_with_offset(
                 row[0], scraping_config.MATCHUP_CAROUSEL_SCROLL_X, 0
@@ -488,10 +509,31 @@ class Parser:
         self.webdriver.execute_script(f"window.scrollTo(0,{scraping_config.MATCHUP_SCROLL_Y})")
         sleep(random.uniform(scraping_config.SCROLL_DELAY_MIN, scraping_config.SCROLL_DELAY_MAX))
 
+        # Wait for the first synergy row to render (JS lazy-loading)
+        first_row_path = xpath_config.MATCHUP_ROW_BASE.format(index=2)
+        try:
+            WebDriverWait(self.webdriver, 15).until(
+                EC.presence_of_element_located((By.XPATH, f"{first_row_path}/*[1]"))
+            )
+        except TimeoutException:
+            logger.warning(
+                "Synergy section did not render after scrolling to y=%d. "
+                "Try increasing MATCHUP_SCROLL_Y in config_constants.py.",
+                scraping_config.MATCHUP_SCROLL_Y,
+            )
+
         # Parse synergies (4 rows instead of 5 for matchups)
         for index in range(2, 6):
-            path = f"/html/body/main/div[6]/div[1]/div[{index}]/div[2]/div"
+            path = xpath_config.MATCHUP_ROW_BASE.format(index=index)
             row = self.webdriver.find_elements(By.XPATH, f"{path}/*")
+            if not row:
+                logger.warning(
+                    "No elements at synergy row index=%d (path=%s). "
+                    "LoLalytics DOM may have changed — update MATCHUP_ROW_BASE in config_constants.py.",
+                    index,
+                    path,
+                )
+                continue
             actions = ActionChains(self.webdriver)
             actions.move_to_element_with_offset(
                 row[0], scraping_config.MATCHUP_CAROUSEL_SCROLL_X, 0
