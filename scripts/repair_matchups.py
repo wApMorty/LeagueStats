@@ -55,6 +55,7 @@ except ImportError:
 
 from src.db import Database
 from src.config import config
+from src.config_constants import scraping_config
 from src.constants import normalize_champion_name_for_url
 from src.parser import Parser
 
@@ -357,14 +358,30 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--headless",
         action="store_true",
-        default=True,
-        help="Run Firefox in headless mode (default: True)",
+        default=False,
+        help=(
+            "Run Firefox in headless mode. Default: False for repair script "
+            "(GUI mode bypasses Cloudflare detection better). "
+            "Automated services should use --headless with --firefox-profile."
+        ),
     )
     parser.add_argument(
         "--no-headless",
         action="store_false",
         dest="headless",
-        help="Run Firefox with a visible GUI (disables headless mode)",
+        help="Run Firefox with a visible GUI (default for repair script)",
+    )
+    parser.add_argument(
+        "--firefox-profile",
+        type=str,
+        default="",
+        metavar="PATH",
+        help=(
+            "Firefox profile directory containing cf_clearance cookies for lolalytics.com. "
+            "Overrides FIREFOX_PROFILE_PATH in config_constants.py. "
+            "Use with --headless for automated headless scraping. "
+            r"Example: C:\Users\Paul\AppData\Roaming\Mozilla\Firefox\Profiles\xxxxxxxx.lolalytics"
+        ),
     )
     parser.add_argument(
         "--patch",
@@ -390,12 +407,17 @@ def main() -> int:
     args = parse_args()
     logger = _setup_logging(log_to_file=True)
 
+    # Override profile path from CLI if provided
+    if args.firefox_profile:
+        scraping_config.FIREFOX_PROFILE_PATH = args.firefox_profile
+
     logger.info("=" * 70)
     logger.info("LeagueStats Coach - Repair Matchups")
     logger.info("=" * 70)
     logger.info(f"Patch version : {args.patch}")
     logger.info(f"Max workers   : {args.max_workers}")
     logger.info(f"Headless mode : {args.headless}")
+    logger.info(f"Firefox profile: {scraping_config.FIREFOX_PROFILE_PATH or '(none — fresh profile)'}")
     logger.info(f"Dry run       : {args.dry_run}")
 
     db: Optional[Database] = None

@@ -1,6 +1,9 @@
+import os
+import shutil
+import tempfile
 import random
 from time import sleep
-from typing import List
+from typing import List, Optional
 import lxml.html
 import logging
 
@@ -66,6 +69,25 @@ class Parser:
             "general.useragent.override",
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0",
         )
+        # Force English Accept-Language so CF serves the English challenge page
+        # (prevents false-negative when CF switches to French "Un instant…")
+        options.set_preference("intl.accept_languages", "en-US,en;q=0.9")
+
+        # Copy CF clearance cookies from a real Firefox profile (if configured).
+        # Each parser instance gets its own copy to avoid Firefox profile lock
+        # conflicts when multiple workers run in parallel.
+        self._profile_tmpdir: Optional[str] = None
+        profile_src = scraping_config.FIREFOX_PROFILE_PATH
+        if profile_src and os.path.isdir(profile_src):
+            tmpdir = tempfile.mkdtemp(prefix="lolalytics_ff_")
+            self._profile_tmpdir = tmpdir
+            for fname in ("cookies.sqlite", "cookies.sqlite-wal", "cookies.sqlite-shm"):
+                src = os.path.join(profile_src, fname)
+                if os.path.exists(src):
+                    shutil.copy2(src, os.path.join(tmpdir, fname))
+            options.add_argument("-profile")
+            options.add_argument(tmpdir)
+            logger.info("Using CF cookie profile copy from %s", profile_src)
 
         self.webdriver = webdriver.Firefox(options=options)
         self.headless = headless
@@ -85,6 +107,9 @@ class Parser:
 
     def close(self) -> None:
         self.webdriver.quit()
+        if self._profile_tmpdir and os.path.isdir(self._profile_tmpdir):
+            shutil.rmtree(self._profile_tmpdir, ignore_errors=True)
+            logger.debug("Removed temp Firefox profile: %s", self._profile_tmpdir)
 
     def _accept_cookies(self) -> None:
         """Accept cookies banner using dynamic element detection.

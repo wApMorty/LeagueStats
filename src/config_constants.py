@@ -45,6 +45,23 @@ class ScrapingConfig:
     FIREFOX_STARTUP_DELAY: float = 1.0  # Minimal delay for Firefox initialization
     HEADLESS: bool = True  # Run Firefox in headless mode (no GUI, better performance)
 
+    # Firefox profile path for Cloudflare bypass via cf_clearance cookie reuse.
+    # Set to an existing Firefox profile that has already solved CF challenges on
+    # lolalytics.com.  The scraper copies only cookies.sqlite from this directory
+    # so parallel workers don't conflict with Firefox's profile lock.
+    #
+    # How to set up:
+    #   1. Open Firefox → about:profiles → Create a New Profile named "lolalytics"
+    #   2. Launch that profile, browse to lolalytics.com, solve any CF challenge
+    #   3. Navigate a few champion pages to accumulate cf_clearance cookies
+    #   4. Close Firefox (important: releases the profile lock)
+    #   5. Open Firefox → about:profiles, click "Open Folder" for the profile
+    #   6. Paste that path here (raw string, forward slashes or escaped backslashes)
+    #
+    # Example (Windows):
+    #   FIREFOX_PROFILE_PATH: str = r"C:\Users\Paul\AppData\Roaming\Mozilla\Firefox\Profiles\xxxxxxxx.lolalytics"
+    FIREFOX_PROFILE_PATH: str = ""
+
 
 @dataclass
 class AnalysisConfig:
