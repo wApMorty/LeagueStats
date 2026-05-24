@@ -40,6 +40,7 @@ from tqdm import tqdm
 from selenium.common.exceptions import WebDriverException, TimeoutException
 
 from .parser import Parser
+from .cloudflare_detector import CloudflareException
 from .db import Database
 from .config_constants import scraping_config
 
@@ -155,7 +156,7 @@ class ParallelParser:
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type((WebDriverException, TimeoutException)),
+        retry=retry_if_exception_type((WebDriverException, TimeoutException, CloudflareException)),
         reraise=True,
     )
     def _scrape_champion_with_retry(
@@ -186,7 +187,7 @@ class ParallelParser:
                 f"Successfully scraped {champion} (patch {self.patch_version}): {len(matchups)} matchups"
             )
             return champion, matchups
-        except (WebDriverException, TimeoutException) as e:
+        except (WebDriverException, TimeoutException, CloudflareException) as e:
             logger.warning(f"Retry triggered for {champion}: {e}")
             raise
         except Exception as e:
@@ -219,13 +220,19 @@ class ParallelParser:
             except Exception as e:
                 logger.error(f"Database write error for {champion}: {e}")
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((WebDriverException, TimeoutException, CloudflareException)),
+        reraise=True,
+    )
     def _scrape_champion_synergies_with_retry(
         self, champion: str, normalize_func
     ) -> List[Tuple[str, float, float, float, float, int]]:
         """Scrape champion synergies with automatic retry on failure.
 
         Uses exponential backoff: 2s, 4s, 8s (max 10s) between retries.
-        Retries up to 3 times on WebDriverException or TimeoutException.
+        Retries up to 3 times on WebDriverException, TimeoutException, or CloudflareException.
 
         Args:
             champion: Champion name to scrape
@@ -237,6 +244,7 @@ class ParallelParser:
         Raises:
             WebDriverException: After 3 failed attempts
             TimeoutException: After 3 failed attempts
+            CloudflareException: After 3 failed attempts
         """
         parser = self._get_parser()
 
@@ -249,7 +257,7 @@ class ParallelParser:
                 f"Successfully scraped synergies for {champion} (patch {self.patch_version}): {len(synergies)} allies"
             )
             return champion, synergies
-        except (WebDriverException, TimeoutException) as e:
+        except (WebDriverException, TimeoutException, CloudflareException) as e:
             logger.warning(f"Retry triggered for {champion} synergies: {e}")
             raise
         except Exception as e:
