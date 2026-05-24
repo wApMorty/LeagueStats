@@ -24,6 +24,7 @@
 | **3** | **Framework Tests Automatisés** | **13** | **13** | **1.00** | 🔴🔴 | ✅ **FAIT** |
 | **9** | **Migrations Base de Données (Alembic)** | **8** ⬆️ | **5** | **1.60** | 🔴 | ✅ **FAIT** |
 | **14** | **Migration Dataclass Immutables** | **5** | **5** | **1.00** | 🟡 | ✅ **FAIT** |
+| **18** | **Migration Playwright (CF bypass)** | **21** | **13** | **1.62** | 🔴🔴 | 🔄 **EN COURS** |
 | **17** | **Optimisation Performance API Neon** | **13** | **5** | **2.60** | 🔴 | ❌ |
 | **15** | **Support des Lanes** | **13** | **13** | **1.00** | 🟡 | ❌ |
 | **16** | **Support des Synergies** | **8** | **5** | **1.60** | 🟡 | ❌ |
@@ -2540,6 +2541,74 @@ R: Le script échoue gracieusement et réessaiera à la prochaine exécution pla
 - **Cloud Sync** - Synchronisation pools entre devices (Plus-value: 5, Difficulté: 13)
 - **Mobile App** - React Native (Plus-value: 8, Difficulté: 21)
 - **Monitoring Dashboard** - Sentry + Grafana pour prod (Plus-value: 5, Difficulté: 8)
+
+---
+
+## 🔄 SPRINT 2 - EN COURS
+
+### ⭐ Tâche #18: Migration Playwright (CF bypass)
+**Status**: 🔄 **EN COURS** (démarré 2026-05-24)
+**ADR**: `docs/adr/ADR-018-playwright-migration.md`
+**Branch**: `feature/playwright-migration`
+
+**Scores Fibonacci**:
+- 📈 **Plus-value**: **21** (bloquant critique — DB vide sans scraping fonctionnel)
+- 🔧 **Difficulté**: **13** (réécriture `parser.py` + migration tests)
+- 🎯 **ROI**: **1.62**
+
+**Contexte**:
+Depuis mai 2026, LoLalytics utilise Cloudflare Managed Challenge (Turnstile). Selenium Firefox
+expose `navigator.webdriver = true` via geckodriver même en mode GUI, déclenchant une boucle
+infinie de challenges. 172/172 champions échouent → DB vide.
+
+**Décision**: Migrer vers **Playwright 1.40+ + Chromium + playwright-stealth** qui masque
+nativement les signaux de détection Cloudflare.
+
+**Sous-tâches**:
+
+#### A. Infrastructure (simple)
+- [ ] Créer branch `feature/playwright-migration` depuis master
+- [ ] `requirements.txt` : ajouter `playwright>=1.40.0,<2.0.0`, `playwright-stealth>=1.0.0,<2.0.0` ; retirer `selenium`
+- [ ] `src/config_constants.py` : ajouter `PLAYWRIGHT_STORAGE_STATE_PATH: str = ""`
+- [ ] `src/parallel_parser.py` : remplacer imports `selenium.common.exceptions` par `playwright.sync_api`
+
+#### B. Réécriture `src/parser.py` (~400 lignes)
+- [ ] Remplacer `webdriver.Firefox` par `sync_playwright().start()` + `chromium.launch()`
+- [ ] Appliquer `playwright-stealth` sur chaque `Page`
+- [ ] `storage_state.json` pour réutiliser `cf_clearance` entre sessions
+- [ ] Conserver API publique identique (7 méthodes publiques + `__init__` + `close`)
+- [ ] Migrer tous les sélecteurs Selenium → Playwright (voir mapping dans ADR-018)
+- [ ] Conserver logique anti-détection (human-like delays, random mouse moves)
+
+#### C. Mise à jour `src/cloudflare_detector.py`
+- [ ] Type hint `webdriver.Firefox` → `Page` (playwright)
+- [ ] `driver.title` → `page.title()`
+- [ ] `driver.current_url` → `page.url`
+- [ ] `find_elements(By.CSS_SELECTOR, sel)` → `page.query_selector_all(sel)`
+- [ ] `find_elements(By.XPATH, x)` → `page.query_selector_all(f'xpath={x}')`
+- [ ] `WebDriverWait` poll → boucle `time.time()` avec `page.title()`
+- [ ] Retirer imports `selenium`
+
+#### D. Tests
+- [ ] `tests/test_cloudflare_detector.py` : mocks `MagicMock` Firefox → mock `Page` Playwright
+  - `driver.title` (property) → `page.title()` (method call)
+  - `driver.current_url` (property) → `page.url` (property — inchangé)
+  - `find_elements(By.X, sel)` → `query_selector_all(sel)` (returns list)
+  - `WebDriverWait` → retirer mock, simuler via `page.title()` side_effect
+- [ ] `tests/regression/test_regression_cloudflare_*.py` : idem
+- [ ] Vérifier tous les tests passent (`pytest tests/ -v`)
+
+#### E. Validation
+- [ ] `playwright install chromium`
+- [ ] Test manuel `repair_matchups.py --max-workers 1` sur 1 champion
+- [ ] Validation 5 champions avec `--max-workers 5`
+- [ ] PR + merge après validation
+
+**Critères d'acceptation**:
+- ✅ `pytest tests/ -v` → tout vert
+- ✅ `repair_matchups.py` complète sans CF exception sur au moins 1 champion
+- ✅ DB contient matchups pour champions réparés
+- ✅ API publique `Parser` inchangée (pas de breaking change pour callers)
 
 ---
 

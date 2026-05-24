@@ -1,127 +1,134 @@
-import random
-from time import sleep
-from typing import List
-import lxml.html
-import logging
+"""Web scraper for LoLalytics champion matchup and synergy data.
 
-from selenium import webdriver
-from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.common.by import By
-from selenium.webdriver.firefox.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import (
-    NoSuchElementException,
-    ElementNotInteractableException,
-    InvalidSessionIdException,
-    WebDriverException,
-    TimeoutException,
+Uses Playwright (Chromium) + playwright-stealth to bypass Cloudflare detection.
+Replaces the previous Selenium/Firefox implementation (ADR-018).
+
+Public API is identical to the old Selenium parser — drop-in replacement.
+"""
+
+import os
+import random
+import time
+import logging
+import lxml.html
+from typing import List
+
+from playwright.sync_api import (
+    sync_playwright,
+    Page,
+    Browser,
+    BrowserContext,
+    TimeoutError as PlaywrightTimeoutError,
+    Error as PlaywrightError,
 )
+from playwright_stealth import Stealth
 
 from .cloudflare_detector import CloudflareException, detect_cloudflare
 from .config import config
 from .config_constants import scraping_config, xpath_config
-from .error_ids import (
-    ERR_COOKIE_001,
-    ERR_COOKIE_002,
-    ERR_COOKIE_003,
-    ERR_COOKIE_004,
-    ERR_COOKIE_005,
-    ERR_COOKIE_006,
-    ERR_COOKIE_007,
-)
 
 logger = logging.getLogger(__name__)
 
 
 class Parser:
     def __init__(self, headless: bool = False) -> None:
-        """Initialize Parser with optional headless mode.
+        """Initialize Parser with Playwright Chromium + stealth.
 
         Args:
-            headless: If True, run Firefox in headless mode (no GUI).
+            headless: If True, run Chromium in headless mode (no GUI).
                      Useful for Task Scheduler, background tasks, or CI/CD.
-                     Default: False (normal GUI mode with fullscreen).
+                     Default: False (normal GUI mode).
         """
-        options = Options()
-        options.binary_location = config.get_firefox_path()
-
         if headless:
-            # Headless mode for background execution (Task Scheduler, pythonw.exe)
-            options.add_argument("--headless")
-            # Force 1920x1080 resolution to match GUI fullscreen behavior.
-            # Note: Coordinate-based cookie fallback is SKIPPED in headless mode.
-            # We rely exclusively on DOM-based strategies (ID, CSS, XPath).
-            options.add_argument("--width=1920")
-            options.add_argument("--height=1080")
-            print("[PARSER] Headless mode enabled - Firefox will run without GUI (1920x1080)")
-        else:
-            # Normal mode with window manager integration (Komorebi)
-            options.add_argument("--start-maximized")
+            print("[PARSER] Headless mode enabled - Chromium will run without GUI (1920x1080)")
 
-        # Masquer les indicateurs de bot pour éviter Cloudflare
-        options.set_preference("dom.webdriver.enabled", False)
-        options.set_preference("useAutomationExtension", False)
-        options.set_preference(
-            "general.useragent.override",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0",
+        self._playwright = sync_playwright().start()
+        self._browser: Browser = self._playwright.chromium.launch(
+            headless=headless,
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+            ],
         )
 
-        self.webdriver = webdriver.Firefox(options=options)
+        # Load persistent storage state (cf_clearance cookie reuse) if configured
+        storage_state = scraping_config.PLAYWRIGHT_STORAGE_STATE_PATH or None
+        if storage_state and not os.path.exists(storage_state):
+            # First run: file doesn't exist yet — ignore it
+            storage_state = None
+
+        self._context: BrowserContext = self._browser.new_context(
+            storage_state=storage_state,
+            viewport={"width": 1920, "height": 1080},
+            user_agent=(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/124.0.0.0 Safari/537.36"
+            ),
+            locale="en-US",
+            timezone_id="America/New_York",
+        )
+        self._page: Page = self._context.new_page()
+        Stealth().apply_stealth_sync(self._page)
         self.headless = headless
 
-        # Fullscreen only in GUI mode (not needed in headless)
-        if not headless:
-            try:
-                self.webdriver.fullscreen_window()
-            except Exception as e:
-                # Fallback to maximize if fullscreen not supported
-                print(f"[DEBUG] Fullscreen failed, falling back to maximize: {e}")
-                self.webdriver.maximize_window()
-
-        # Minimal delay for Firefox initialization
-        # NOTE: Komorebi should have Firefox in float_rules to avoid window manager interference
-        sleep(scraping_config.FIREFOX_STARTUP_DELAY)
-
     def close(self) -> None:
-        self.webdriver.quit()
+        """Close browser and persist storage state (cf_clearance cookie)."""
+        storage_path = scraping_config.PLAYWRIGHT_STORAGE_STATE_PATH
+        if storage_path:
+            try:
+                self._context.storage_state(path=storage_path)
+                logger.info("Storage state saved to %s", storage_path)
+            except Exception as exc:
+                logger.warning("Could not save storage state: %s", exc)
+        try:
+            self._context.close()
+        except Exception:
+            pass
+        try:
+            self._browser.close()
+        except Exception:
+            pass
+        try:
+            self._playwright.stop()
+        except Exception:
+            pass
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    def _navigate(self, url: str) -> None:
+        """Navigate to URL and run Cloudflare detection."""
+        self._page.goto(url, wait_until="domcontentloaded", timeout=30000)
+        detect_cloudflare(self._page, url=url)
+
+    def _human_mouse_move(self) -> None:
+        """Simulate a human-like random mouse movement."""
+        x = random.randint(200, 1700)
+        y = random.randint(200, 800)
+        self._page.mouse.move(x, y)
 
     def _accept_cookies(self) -> None:
-        """Accept cookies banner using dynamic element detection.
+        """Dismiss cookie banner using multiple strategies (Playwright version).
 
-        Tries multiple strategies in order:
-        1. Find button by ID (didomi-notice-agree-button)
-        2. Find button by CSS selector (common patterns)
-        3. Find button by text content
-        4. Fallback to hardcoded coordinates (Bug #1 legacy method)
+        Tries in order:
+        1. Button by ID (didomi-notice-agree-button)
+        2. CSS selectors (common GDPR patterns)
+        3. XPath with text content
         """
-        # Strategy 1: Find by ID (most reliable)
+        # Strategy 1: By ID
         try:
-            cookie_button = self.webdriver.find_element(By.ID, "didomi-notice-agree-button")
-            cookie_button.click()
-            logger.info("Cookie banner dismissed via ID selector")
-            return
-        except NoSuchElementException:
-            # Expected - element not found, try next strategy
-            pass
-        except ElementNotInteractableException:
-            ERR_COOKIE_004.log(logger, "Cookie button found but not clickable via ID selector")
-            pass
-        except (InvalidSessionIdException, WebDriverException) as e:
-            # CRITICAL: WebDriver crashed - cannot continue
-            ERR_COOKIE_007.log(
-                logger,
-                f"FATAL: WebDriver session lost in ID strategy: {type(e).__name__}",
-                exc_info=e,
-            )
-            raise  # Re-raise to abort scraping
-        except Exception as e:
-            ERR_COOKIE_001.log(
-                logger, f"Unexpected error in ID strategy: {type(e).__name__}: {e}", exc_info=e
-            )
-            pass
+            btn = self._page.query_selector("#didomi-notice-agree-button")
+            if btn:
+                btn.click()
+                logger.info("Cookie banner dismissed via ID selector")
+                return
+        except Exception as exc:
+            logger.debug("Cookie ID strategy failed: %s", exc)
 
-        # Strategy 2: Find by CSS selector (button with specific text)
+        # Strategy 2: CSS selectors
         selectors = [
             "button[aria-label*='agree' i]",
             "button[aria-label*='accept' i]",
@@ -130,35 +137,15 @@ class Parser:
         ]
         for selector in selectors:
             try:
-                cookie_button = self.webdriver.find_element(By.CSS_SELECTOR, selector)
-                cookie_button.click()
-                logger.info(f"Cookie banner dismissed via CSS selector: {selector}")
-                return
-            except NoSuchElementException:
-                # Expected - try next selector
-                continue
-            except ElementNotInteractableException:
-                ERR_COOKIE_004.log(
-                    logger, f"Cookie button found but not clickable via CSS: {selector}"
-                )
-                continue
-            except (InvalidSessionIdException, WebDriverException) as e:
-                # CRITICAL: WebDriver crashed - cannot continue
-                ERR_COOKIE_007.log(
-                    logger,
-                    f"FATAL: WebDriver session lost in CSS strategy: {type(e).__name__}",
-                    exc_info=e,
-                )
-                raise  # Re-raise to abort scraping
-            except Exception as e:
-                ERR_COOKIE_002.log(
-                    logger,
-                    f"Unexpected error in CSS strategy ({selector}): {type(e).__name__}: {e}",
-                    exc_info=e,
-                )
-                continue
+                btn = self._page.query_selector(selector)
+                if btn:
+                    btn.click()
+                    logger.info("Cookie banner dismissed via CSS selector: %s", selector)
+                    return
+            except Exception as exc:
+                logger.debug("Cookie CSS strategy (%s) failed: %s", selector, exc)
 
-        # Strategy 3: Find button by XPath with text content
+        # Strategy 3: XPath with text
         xpath_patterns = [
             "//button[contains(translate(text(), 'ACCEPT', 'accept'), 'accept')]",
             "//button[contains(translate(text(), 'AGREE', 'agree'), 'agree')]",
@@ -166,131 +153,123 @@ class Parser:
         ]
         for xpath in xpath_patterns:
             try:
-                cookie_button = self.webdriver.find_element(By.XPATH, xpath)
-                cookie_button.click()
-                logger.info(f"Cookie banner dismissed via XPath")
-                return
-            except NoSuchElementException:
-                # Expected - try next XPath
-                continue
-            except ElementNotInteractableException:
-                ERR_COOKIE_004.log(logger, f"Cookie button found but not clickable via XPath")
-                continue
-            except (InvalidSessionIdException, WebDriverException) as e:
-                # CRITICAL: WebDriver crashed - cannot continue
-                ERR_COOKIE_007.log(
-                    logger,
-                    f"FATAL: WebDriver session lost in XPath strategy: {type(e).__name__}",
-                    exc_info=e,
-                )
-                raise  # Re-raise to abort scraping
-            except Exception as e:
-                ERR_COOKIE_003.log(
-                    logger,
-                    f"Unexpected error in XPath strategy: {type(e).__name__}: {e}",
-                    exc_info=e,
-                )
-                continue
+                btn = self._page.query_selector(f"xpath={xpath}")
+                if btn:
+                    btn.click()
+                    logger.info("Cookie banner dismissed via XPath")
+                    return
+            except Exception as exc:
+                logger.debug("Cookie XPath strategy failed: %s", exc)
 
-        # Skip coordinate-based fallbacks in headless mode
-        # Reason: LoLalytics cookie banner likely doesn't appear in headless,
-        # or coordinates may be out of bounds despite viewport size
-        if self.headless:
-            # All DOM-based strategies failed, but this is expected in headless
-            # Cookie banner is likely auto-accepted or doesn't exist
-            logger.info(
-                "Skipping coordinate-based cookie fallback in headless mode (DOM strategies sufficient)"
-            )
+        logger.info("No cookie banner found or all strategies exhausted")
 
-            # Verify page is actually loaded and not stuck on cookie banner
+    def _parse_carousel_row(self, path: str, result: list, is_synergy: bool = False) -> float:
+        """Parse one carousel row and append unique entries to result.
+
+        Args:
+            path: XPath base path for the row container.
+            result: Accumulator list (modified in-place).
+            is_synergy: If True, parse synergy href format instead of matchup.
+
+        Returns:
+            Last pickrate seen (used to decide when to stop scrolling).
+        """
+        row_elements = self._page.query_selector_all(f"xpath={path}/*")
+        if not row_elements:
+            return float("inf")
+
+        pickrate = float("inf")
+        for idx, elem in enumerate(row_elements, start=1):
             try:
-                self.webdriver.find_element(By.TAG_NAME, "body")
-                logger.info("Page structure verified - cookie banner handled successfully")
-            except NoSuchElementException:
-                ERR_COOKIE_005.log(
-                    logger,
-                    "CRITICAL: Page failed to load despite cookie banner attempts",
-                    exc_info=True,
-                )
-            return
+                # Champion / ally name
+                anchor = elem.query_selector("a")
+                if anchor is None:
+                    continue
+                href = anchor.get_attribute("href") or ""
+                if is_synergy:
+                    # Synergy href: /lol/{ally}/build/...
+                    champ = href.split("/lol/")[1].split("/build")[0]
+                else:
+                    # Matchup href: /lol/{champ}/vs/{enemy}/build/...
+                    champ = href.split("vs/")[1].split("/build")[0]
 
-        # Strategy 4: Fallback to hardcoded coordinates (Bug #1 legacy)
-        # GUI mode only - coordinates are screen-dependent
-        try:
-            self.webdriver.execute_script(
-                f"""
-                var event = new MouseEvent('click', {{
-                    view: window,
-                    bubbles: true,
-                    cancelable: true,
-                    clientX: {scraping_config.COOKIE_CLICK_X},
-                    clientY: {scraping_config.COOKIE_CLICK_Y}
-                }});
-                document.elementFromPoint({scraping_config.COOKIE_CLICK_X}, {scraping_config.COOKIE_CLICK_Y}).dispatchEvent(event);
-            """
-            )
-            logger.info("Cookie banner dismissed via JavaScript coordinates click")
-        except Exception as e:
-            # Final fallback to ActionChains
-            ERR_COOKIE_006.log(
-                logger,
-                f"JavaScript coordinate click failed, trying ActionChains: {type(e).__name__}",
-                exc_info=e,
-            )
-            try:
-                actions = ActionChains(self.webdriver)
-                actions.move_by_offset(
-                    scraping_config.COOKIE_CLICK_X, scraping_config.COOKIE_CLICK_Y
-                ).click().perform()
-                actions = ActionChains(self.webdriver)
-                actions.move_by_offset(
-                    -scraping_config.COOKIE_CLICK_X, -scraping_config.COOKIE_CLICK_Y
-                ).perform()
-                logger.info("Cookie banner dismissed via ActionChains coordinates click")
-            except Exception as e2:
-                ERR_COOKIE_006.log(
-                    logger,
-                    f"ActionChains coordinate click also failed: {type(e2).__name__}",
-                    exc_info=e2,
+                # Winrate: first <span> inside div[1] of this row entry
+                wr_elem = elem.query_selector(f"xpath={path}/div[{idx}]/div[1]/span")
+                if wr_elem is None:
+                    continue
+                winrate = float(wr_elem.inner_html().split("%")[0])
+
+                # Delta / pickrate from .my-1 children
+                my1_elements = elem.query_selector_all(".my-1")
+                if len(my1_elements) < 7:
+                    logger.warning(
+                        "Insufficient .my-1 elements for %s (found %d, expected ≥7). Skipping.",
+                        champ,
+                        len(my1_elements),
+                    )
+                    continue
+
+                delta1 = float(my1_elements[4].inner_html())
+                delta2 = float(my1_elements[5].inner_html())
+                pickrate = float(my1_elements[6].inner_html())
+
+                # Games count from .text-\[9px\] element
+                games_elem = elem.query_selector(r".text-\[9px\]")
+                if games_elem is None:
+                    continue
+                games = int("".join(games_elem.inner_html().split()).replace(",", ""))
+
+                entry = (champ, winrate, delta1, delta2, pickrate, games)
+                if not self._contains(result, *entry):
+                    result.append(entry)
+
+            except (IndexError, ValueError) as exc:
+                logger.warning(
+                    "Failed to parse carousel element: %s: %s. Skipping.",
+                    type(exc).__name__,
+                    exc,
                 )
-                # Give up gracefully - page may still load
+                continue
+
+        return pickrate
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
 
     def get_matchup_data(self, champion: str, enemy: str) -> float:
         return self.get_matchup_data_on_patch(config.CURRENT_PATCH, champion, enemy)
 
     def get_matchup_data_on_patch(self, patch: str, champion: str, enemy: str) -> tuple:
-        """Get matchup data for specific champions and patch with error handling."""
-        url = f"https://lolalytics.com/lol/{champion}/vs/{enemy}/build/?tier=diamond_plus&patch={patch}"
-
+        """Get head-to-head winrate and games for a specific matchup and patch."""
+        url = (
+            f"https://lolalytics.com/lol/{champion}/vs/{enemy}/build/"
+            f"?tier=diamond_plus&patch={patch}"
+        )
         try:
-            self.webdriver.get(url)
-            detect_cloudflare(self.webdriver, url=url)  # Raises CloudflareException si bloqué
-            tree = lxml.html.fromstring(self.webdriver.page_source)
+            self._navigate(url)
+            tree = lxml.html.fromstring(self._page.content())
 
-            # Try to extract winrate with fallback paths
             winrate_elements = tree.xpath(xpath_config.WINRATE_XPATH)
             if not winrate_elements:
                 print(f"Warning: Could not find winrate for {champion} vs {enemy}")
                 return None, None
-
             winrate = float(winrate_elements[0])
 
-            # Try to extract games with fallback paths
             games_elements = tree.xpath(xpath_config.GAMES_XPATH)
             if not games_elements:
                 print(f"Warning: Could not find games count for {champion} vs {enemy}")
                 return winrate, 0
-
             games = int(games_elements[0].replace(",", ""))
             return winrate, games
 
         except CloudflareException:
-            raise  # Re-raise pour que tenacity puisse retry
-        except (ValueError, IndexError) as e:
-            print(f"Error parsing data for {champion} vs {enemy}: {e}")
+            raise
+        except (ValueError, IndexError) as exc:
+            print(f"Error parsing data for {champion} vs {enemy}: {exc}")
             return None, None
-        except Exception as e:
-            print(f"Unexpected error for {champion} vs {enemy}: {e}")
+        except Exception as exc:
+            print(f"Unexpected error for {champion} vs {enemy}: {exc}")
             return None, None
 
     def get_champion_data(self, champion: str, lane: str = None) -> List[tuple]:
@@ -299,106 +278,53 @@ class Parser:
     def get_champion_data_on_patch(
         self, patch: str, champion: str, lane: str = None
     ) -> List[tuple]:
-        result = []
+        """Scrape all matchup data for a champion on a given patch."""
+        result: List[tuple] = []
 
-        # Build URL with optional lane parameter
         if lane:
-            url = f"https://lolalytics.com/lol/{champion}/build/?lane={lane}&tier=diamond_plus&patch={patch}"
+            url = (
+                f"https://lolalytics.com/lol/{champion}/build/"
+                f"?lane={lane}&tier=diamond_plus&patch={patch}"
+            )
         else:
-            url = f"https://lolalytics.com/lol/{champion}/build/?tier=diamond_plus&patch={patch}"
+            url = (
+                f"https://lolalytics.com/lol/{champion}/build/" f"?tier=diamond_plus&patch={patch}"
+            )
 
-        self.webdriver.get(url)
-        detect_cloudflare(self.webdriver, url=url)  # Raises CloudflareException si bloqué
-
-        sleep(
+        self._navigate(url)
+        time.sleep(
             random.uniform(scraping_config.PAGE_LOAD_DELAY_MIN, scraping_config.PAGE_LOAD_DELAY_MAX)
         )
-
-        self.webdriver.execute_script(f"window.scrollTo(0,{scraping_config.MATCHUP_SCROLL_Y})")
-
-        sleep(random.uniform(scraping_config.SCROLL_DELAY_MIN, scraping_config.SCROLL_DELAY_MAX))
-
-        # region Accepting cookies
+        self._page.evaluate(f"window.scrollTo(0, {scraping_config.MATCHUP_SCROLL_Y})")
+        time.sleep(
+            random.uniform(scraping_config.SCROLL_DELAY_MIN, scraping_config.SCROLL_DELAY_MAX)
+        )
         self._accept_cookies()
-        # endregion
+        self._human_mouse_move()
 
         for index in range(2, 7):
             path = f"/html/body/main/div[6]/div[1]/div[{index}]/div[2]/div"
-            row = self.webdriver.find_elements(By.XPATH, f"{path}/*")
-            actions = ActionChains(self.webdriver)
-            actions.move_to_element_with_offset(
-                row[0], scraping_config.MATCHUP_CAROUSEL_SCROLL_X, 0
-            ).perform()
             enough_data = False
             while not enough_data:
-                for elem in row:
-                    try:
-                        index = row.index(elem) + 1
-                        champ = (
-                            elem.find_element(By.TAG_NAME, "a")
-                            .get_dom_attribute("href")
-                            .split("vs/")[1]
-                            .split("/build")[0]
-                        )
-                        winrate = float(
-                            elem.find_element(By.XPATH, f"{path}/div[{index}]/div[1]/span")
-                            .get_attribute("innerHTML")
-                            .split("%")[0]
-                        )
-
-                        # Get all "my-1" elements and validate size before accessing indices
-                        my1_elements = elem.find_elements(By.CLASS_NAME, "my-1")
-                        if len(my1_elements) < 7:
-                            logger.warning(
-                                f"Insufficient 'my-1' elements for {champ} matchup "
-                                f"(found {len(my1_elements)}, expected ≥7). Skipping."
-                            )
-                            continue
-
-                        delta1 = float(my1_elements[4].get_attribute("innerHTML"))
-                        delta2 = float(my1_elements[5].get_attribute("innerHTML"))
-                        pickrate = float(my1_elements[6].get_attribute("innerHTML"))
-
-                        games = int(
-                            "".join(
-                                elem.find_element(By.CLASS_NAME, r"text-\[9px\]")
-                                .get_attribute("innerHTML")
-                                .split()
-                            ).replace(
-                                ",", ""
-                            )  # Remove thousands separator
-                        )
-                        if not self.contains(
-                            result, champ, winrate, delta1, delta2, pickrate, games
-                        ):
-                            result.append((champ, winrate, delta1, delta2, pickrate, games))
-                    except (IndexError, ValueError, NoSuchElementException) as e:
-                        logger.warning(
-                            f"Failed to parse matchup element: {type(e).__name__}: {e}. Skipping."
-                        )
-                        continue
-                actions = ActionChains(self.webdriver)
-                actions.click_and_hold().move_by_offset(
-                    -scraping_config.MATCHUP_CAROUSEL_SCROLL_X, 0
-                ).release().move_by_offset(scraping_config.MATCHUP_CAROUSEL_SCROLL_X, 0).perform()
+                pickrate = self._parse_carousel_row(path, result, is_synergy=False)
+                # Scroll carousel horizontally
+                self._page.evaluate(
+                    f"""
+                    (function() {{
+                        var el = document.evaluate(
+                            "{path}",
+                            document,
+                            null,
+                            XPathResult.FIRST_ORDERED_NODE_TYPE,
+                            null
+                        ).singleNodeValue;
+                        if (el) el.scrollLeft += {scraping_config.MATCHUP_CAROUSEL_SCROLL_X};
+                    }})();
+                    """
+                )
                 enough_data = pickrate < config.MIN_PICKRATE
-        return result
 
-    def contains(self, list, champ, winrate, d1, d2, pick, games) -> bool:
-        ctns = False
-        for i in range(len(list)):
-            l_champ, l_winrate, l_delta1, l_delta2, l_pickrate, l_games = list[i]
-            if (
-                l_champ == champ
-                and l_winrate == winrate
-                and l_delta1 == d1
-                and l_delta2 == d2
-                and l_pickrate == pick
-                and l_games == games
-            ):
-                ctns = True
-                break
-        return ctns
+        return result
 
     def get_champion_synergies(self, champion: str, lane: str = None) -> List[tuple]:
         """Parse champion synergies (WITH allies) from LoLalytics.
@@ -412,10 +338,6 @@ class Parser:
 
         Returns:
             List of tuples (ally_name, winrate, delta1, delta2, pickrate, games)
-
-        Example:
-            >>> parser.get_champion_synergies("yasuo", "mid")
-            [('malphite', 55.0, 180.0, 220.0, 15.0, 1200), ...]
         """
         return self.get_champion_synergies_on_patch(config.CURRENT_PATCH, champion, lane)
 
@@ -432,121 +354,121 @@ class Parser:
         Returns:
             List of tuples (ally_name, winrate, delta1, delta2, pickrate, games)
         """
-        result = []
+        result: List[tuple] = []
 
-        # Build URL (same as matchups)
         if lane:
-            url = f"https://lolalytics.com/lol/{champion}/build/?lane={lane}&tier=diamond_plus&patch={patch}"
+            url = (
+                f"https://lolalytics.com/lol/{champion}/build/"
+                f"?lane={lane}&tier=diamond_plus&patch={patch}"
+            )
         else:
-            url = f"https://lolalytics.com/lol/{champion}/build/?tier=diamond_plus&patch={patch}"
+            url = (
+                f"https://lolalytics.com/lol/{champion}/build/" f"?tier=diamond_plus&patch={patch}"
+            )
 
-        self.webdriver.get(url)
-        detect_cloudflare(self.webdriver, url=url)  # Raises CloudflareException si bloqué
-        sleep(
+        self._navigate(url)
+        time.sleep(
             random.uniform(scraping_config.PAGE_LOAD_DELAY_MIN, scraping_config.PAGE_LOAD_DELAY_MAX)
         )
-
-        # Accept cookies before clicking Synergies button
         self._accept_cookies()
 
-        # Click "Synergies" button to switch tabs
+        # Click "Synergies" (Common Teammates) button to switch tabs
         try:
-            synergies_button = self.webdriver.find_element(
-                By.XPATH, xpath_config.SYNERGIES_BUTTON_XPATH
-            )
-            synergies_button.click()
-            logger.info(f"Clicked Synergies button for {champion}")
+            btn = self._page.query_selector(f"xpath={xpath_config.SYNERGIES_BUTTON_XPATH}")
+            if btn is None:
+                logger.warning(
+                    "Synergies button not found for %s. XPath: %s",
+                    champion,
+                    xpath_config.SYNERGIES_BUTTON_XPATH,
+                )
+                return []
+            btn.click()
+            logger.info("Clicked Synergies button for %s", champion)
 
-            # Explicit wait for synergies data to load (wait for first row)
-            # Wait up to 10 seconds for the first synergy row to be present
-            wait = WebDriverWait(self.webdriver, 10)
-            first_synergy_row_xpath = "/html/body/main/div[6]/div[1]/div[2]/div[2]/div"
-            wait.until(EC.presence_of_element_located((By.XPATH, first_synergy_row_xpath)))
-            logger.info(f"Synergies data loaded for {champion}")
-            sleep(
+            # Wait for first synergy row to appear
+            first_row_xpath = "/html/body/main/div[6]/div[1]/div[2]/div[2]/div"
+            self._page.wait_for_selector(f"xpath={first_row_xpath}", timeout=10000)
+            logger.info("Synergies data loaded for %s", champion)
+            time.sleep(
                 random.uniform(
                     scraping_config.PAGE_LOAD_DELAY_MIN, scraping_config.PAGE_LOAD_DELAY_MAX
                 )
-            )  # Additional wait for stability
-        except NoSuchElementException:
-            logger.warning(
-                f"Synergies button not found for {champion}. "
-                f"XPath: {xpath_config.SYNERGIES_BUTTON_XPATH}"
             )
-            return []  # Return empty if button not found
-        except TimeoutException:
+
+        except PlaywrightTimeoutError:
             logger.error(
-                f"Synergies data failed to load for {champion} after clicking button. "
-                f"Timeout waiting for first synergy row."
+                "Synergies data failed to load for %s after clicking button. "
+                "Timeout waiting for first synergy row.",
+                champion,
             )
             return []
-        except Exception as e:
-            logger.error(f"Failed to click Synergies button for {champion}: {e}")
+        except PlaywrightError as exc:
+            logger.error("Failed to click Synergies button for %s: %s", champion, exc)
+            return []
+        except Exception as exc:
+            logger.error("Unexpected error clicking Synergies button for %s: %s", champion, exc)
             return []
 
-        # Scroll to synergies section (same scroll position as matchups)
-        self.webdriver.execute_script(f"window.scrollTo(0,{scraping_config.MATCHUP_SCROLL_Y})")
-        sleep(random.uniform(scraping_config.SCROLL_DELAY_MIN, scraping_config.SCROLL_DELAY_MAX))
+        # Scroll to synergies section
+        self._page.evaluate(f"window.scrollTo(0, {scraping_config.MATCHUP_SCROLL_Y})")
+        time.sleep(
+            random.uniform(scraping_config.SCROLL_DELAY_MIN, scraping_config.SCROLL_DELAY_MAX)
+        )
+        self._human_mouse_move()
 
-        # Parse synergies (4 rows instead of 5 for matchups)
+        # Parse synergies (4 rows, not 5 like matchups)
         for index in range(2, 6):
             path = f"/html/body/main/div[6]/div[1]/div[{index}]/div[2]/div"
-            row = self.webdriver.find_elements(By.XPATH, f"{path}/*")
-            actions = ActionChains(self.webdriver)
-            actions.move_to_element_with_offset(
-                row[0], scraping_config.MATCHUP_CAROUSEL_SCROLL_X, 0
-            ).perform()
             enough_data = False
-            pickrate = float("inf")  # Initialize to continue scrolling if all elements fail
+            pickrate = float("inf")
             while not enough_data:
-                for elem in row:
-                    try:
-                        index = row.index(elem) + 1
-                        # Extract ally name from href
-                        # Synergies URL format: /lol/{champion}/build/?lane=...
-                        # (different from matchups which use /lol/yasuo/vs/{enemy}/build)
-                        href = elem.find_element(By.TAG_NAME, "a").get_dom_attribute("href")
-                        ally = href.split("/lol/")[1].split("/build")[0]
-                        winrate = float(
-                            elem.find_element(By.XPATH, f"{path}/div[{index}]/div[1]/span")
-                            .get_attribute("innerHTML")
-                            .split("%")[0]
-                        )
-
-                        # Get all "my-1" elements and validate size
-                        my1_elements = elem.find_elements(By.CLASS_NAME, "my-1")
-                        if len(my1_elements) < 7:
-                            logger.warning(
-                                f"Insufficient 'my-1' elements for {ally} synergy "
-                                f"(found {len(my1_elements)}, expected ≥7). Skipping."
-                            )
-                            continue
-
-                        delta1 = float(my1_elements[4].get_attribute("innerHTML"))
-                        delta2 = float(my1_elements[5].get_attribute("innerHTML"))
-                        pickrate = float(my1_elements[6].get_attribute("innerHTML"))
-
-                        games = int(
-                            "".join(
-                                elem.find_element(By.CLASS_NAME, r"text-\[9px\]")
-                                .get_attribute("innerHTML")
-                                .split()
-                            ).replace(
-                                ",", ""
-                            )  # Remove thousands separator
-                        )
-                        if not self.contains(
-                            result, ally, winrate, delta1, delta2, pickrate, games
-                        ):
-                            result.append((ally, winrate, delta1, delta2, pickrate, games))
-                    except (IndexError, ValueError, NoSuchElementException) as e:
-                        logger.warning(
-                            f"Failed to parse synergy element: {type(e).__name__}: {e}. Skipping."
-                        )
-                        continue
-                actions = ActionChains(self.webdriver)
-                actions.click_and_hold().move_by_offset(
-                    -scraping_config.MATCHUP_CAROUSEL_SCROLL_X, 0
-                ).release().move_by_offset(scraping_config.MATCHUP_CAROUSEL_SCROLL_X, 0).perform()
+                pickrate = self._parse_carousel_row(path, result, is_synergy=True)
+                self._page.evaluate(
+                    f"""
+                    (function() {{
+                        var el = document.evaluate(
+                            "{path}",
+                            document,
+                            null,
+                            XPathResult.FIRST_ORDERED_NODE_TYPE,
+                            null
+                        ).singleNodeValue;
+                        if (el) el.scrollLeft += {scraping_config.MATCHUP_CAROUSEL_SCROLL_X};
+                    }})();
+                    """
+                )
                 enough_data = pickrate < config.MIN_PICKRATE
+
         return result
+
+    # ------------------------------------------------------------------
+    # Utilities
+    # ------------------------------------------------------------------
+
+    def _contains(
+        self,
+        lst: list,
+        champ: str,
+        winrate: float,
+        d1: float,
+        d2: float,
+        pick: float,
+        games: int,
+    ) -> bool:
+        """Return True if an identical entry already exists in lst."""
+        for entry in lst:
+            l_champ, l_winrate, l_delta1, l_delta2, l_pickrate, l_games = entry
+            if (
+                l_champ == champ
+                and l_winrate == winrate
+                and l_delta1 == d1
+                and l_delta2 == d2
+                and l_pickrate == pick
+                and l_games == games
+            ):
+                return True
+        return False
+
+    # Legacy alias for backward-compatibility.
+    def contains(self, lst, champ, winrate, d1, d2, pick, games) -> bool:
+        return self._contains(lst, champ, winrate, d1, d2, pick, games)

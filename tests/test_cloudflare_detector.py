@@ -1,21 +1,18 @@
 """
-Tests for cloudflare_detector module.
+Tests for cloudflare_detector module (Playwright version).
 
-Validates detect_cloudflare() behaviour:
+Validates detect_cloudflare(page) behaviour:
 - Returns silently when the page title is not suspicious (fast path).
-- Returns silently when the title is suspicious but no secondary signal is found
-  (avoids false positives on slow-loading pages).
-- Waits for the Cloudflare JS challenge to auto-resolve when detected.
-- Raises CloudflareException only when the wait timeout expires.
-- Never propagates exceptions from the WebDriver itself.
+- Returns silently when suspicious title but no secondary signal (avoids false positives).
+- Waits for Cloudflare challenge to auto-resolve when detected.
+- Raises CloudflareException only when wait timeout expires.
+- Never propagates exceptions from the Page itself.
 """
 
 import logging
 
 import pytest
-from unittest.mock import MagicMock, patch, PropertyMock
-from selenium.webdriver.common.by import By
-from selenium.common.exceptions import TimeoutException as SeleniumTimeoutException
+from unittest.mock import MagicMock, patch
 
 from src.cloudflare_detector import CloudflareException, detect_cloudflare
 
@@ -25,46 +22,35 @@ from src.cloudflare_detector import CloudflareException, detect_cloudflare
 # ---------------------------------------------------------------------------
 
 
-def make_mock_driver(
+def make_mock_page(
     title="LoLAlytics - Champion Stats",
-    current_url="https://lolalytics.com/lol/aatrox/build/",
+    url="https://lolalytics.com/lol/aatrox/build/",
     dom_elements=None,
     title_raises=None,
-    url_raises=None,
-    find_elements_raises=None,
 ):
     """
-    Build a MagicMock WebDriver with configurable behaviour.
+    Build a MagicMock Playwright Page with configurable behaviour.
 
     Args:
-        title: Value returned by driver.title.
-        current_url: Value returned by driver.current_url.
-        dom_elements: List returned by driver.find_elements() (default: empty).
-        title_raises: If set, driver.title access raises this exception.
-        url_raises: If set, driver.current_url access raises this exception.
-        find_elements_raises: If set, driver.find_elements() raises this exception.
+        title: Value returned by page.title().
+        url: Value of page.url attribute.
+        dom_elements: List returned by page.query_selector_all() (default: []).
+        title_raises: If set, page.title() raises this exception.
 
     Returns:
         Configured MagicMock instance.
     """
-    driver = MagicMock()
+    page = MagicMock()
 
     if title_raises is not None:
-        type(driver).title = property(lambda self: (_ for _ in ()).throw(title_raises))
+        page.title.side_effect = title_raises
     else:
-        type(driver).title = property(lambda self: title)
+        page.title.return_value = title
 
-    if url_raises is not None:
-        type(driver).current_url = property(lambda self: (_ for _ in ()).throw(url_raises))
-    else:
-        type(driver).current_url = property(lambda self: current_url)
+    page.url = url
+    page.query_selector_all.return_value = dom_elements if dom_elements is not None else []
 
-    if find_elements_raises is not None:
-        driver.find_elements.side_effect = find_elements_raises
-    else:
-        driver.find_elements.return_value = dom_elements if dom_elements is not None else []
-
-    return driver
+    return page
 
 
 # ---------------------------------------------------------------------------
@@ -77,36 +63,32 @@ class TestDetectCloudflareNormal:
 
     def test_normal_lolalytics_title_no_exception(self):
         """Legitimate LoLAlytics title must not trigger CloudflareException."""
-        driver = make_mock_driver(title="LoLAlytics - Aatrox Build")
-        # Must complete without raising
-        detect_cloudflare(driver, url="https://lolalytics.com/lol/aatrox/")
+        page = make_mock_page(title="LoLAlytics - Aatrox Build")
+        detect_cloudflare(page, url="https://lolalytics.com/lol/aatrox/")
 
     def test_empty_title_no_exception(self):
         """Empty page title must not trigger CloudflareException."""
-        driver = make_mock_driver(title="")
-        detect_cloudflare(driver, url="https://lolalytics.com/")
+        page = make_mock_page(title="")
+        detect_cloudflare(page, url="https://lolalytics.com/")
 
     def test_partial_match_title_no_exception(self):
-        """Title that partially overlaps with CF keywords but does not contain them must not raise."""
-        # "moment" alone is not in _CF_TITLES; the full phrase "just a moment" is required.
-        driver = make_mock_driver(title="The moment you've been waiting for")
-        detect_cloudflare(driver, url="https://lolalytics.com/")
+        """Title overlapping with CF keywords (but not containing them) must not raise."""
+        page = make_mock_page(title="The moment you've been waiting for")
+        detect_cloudflare(page, url="https://lolalytics.com/")
 
     def test_suspicious_title_no_secondary_signal_no_exception(self):
         """Suspicious title without any secondary signal must NOT raise (avoids false positives)."""
-        driver = make_mock_driver(
-            title="Just a Moment...",  # Matches _CF_TITLES
-            current_url="https://lolalytics.com/lol/aatrox/",  # No /cdn-cgi/
-            dom_elements=[],  # No CF DOM elements
+        page = make_mock_page(
+            title="Just a Moment...",
+            url="https://lolalytics.com/lol/aatrox/",  # No /cdn-cgi/
+            dom_elements=[],
         )
-        # find_elements returns [] for every selector -> no secondary signal
-        detect_cloudflare(driver, url="https://lolalytics.com/lol/aatrox/")
+        detect_cloudflare(page, url="https://lolalytics.com/lol/aatrox/")
 
-    def test_driver_title_raises_exception_silently_ignored(self):
-        """When driver.title itself raises, detect_cloudflare must return silently."""
-        driver = make_mock_driver(title_raises=RuntimeError("session dead"))
-        # Must NOT propagate RuntimeError
-        detect_cloudflare(driver, url="https://lolalytics.com/")
+    def test_page_title_raises_silently_ignored(self):
+        """When page.title() raises, detect_cloudflare must return silently."""
+        page = make_mock_page(title_raises=RuntimeError("session dead"))
+        detect_cloudflare(page, url="https://lolalytics.com/")
 
 
 # ---------------------------------------------------------------------------
@@ -117,157 +99,151 @@ class TestDetectCloudflareNormal:
 class TestDetectCloudflareBlocked:
     """Verify detect_cloudflare() raises CloudflareException when challenge does not resolve.
 
-    All tests use wait_timeout=0 so WebDriverWait times out instantly — no 30s waits in CI.
+    All tests use wait_timeout=0 so the poll loop times out instantly.
     """
 
     def test_just_a_moment_with_cdn_cgi_url_raises(self):
         """'Just a moment' title + /cdn-cgi/ in URL must raise CloudflareException."""
-        driver = make_mock_driver(
+        page = make_mock_page(
             title="Just a moment...",
-            current_url="https://lolalytics.com/cdn-cgi/challenge-platform/h/b/orchestrate/jsch/v1",
+            url="https://lolalytics.com/cdn-cgi/challenge-platform/h/b/orchestrate/jsch/v1",
         )
         with pytest.raises(CloudflareException):
-            detect_cloudflare(driver, url="https://lolalytics.com/lol/aatrox/", wait_timeout=0)
+            detect_cloudflare(page, url="https://lolalytics.com/lol/aatrox/", wait_timeout=0)
 
     def test_attention_required_with_cf_wrapper_dom_raises(self):
         """'Attention Required!' + #cf-wrapper DOM element must raise CloudflareException."""
-        cf_element = MagicMock()
-        driver = make_mock_driver(
+        page = make_mock_page(
             title="Attention Required!",
-            current_url="https://lolalytics.com/lol/aatrox/",
+            url="https://lolalytics.com/lol/aatrox/",
         )
 
-        def find_elements_side_effect(by, selector):
-            if by == By.ID and selector == "cf-wrapper":
-                return [cf_element]
+        def qsa_side_effect(selector):
+            if selector == "#cf-wrapper":
+                return [MagicMock()]
             return []
 
-        driver.find_elements.side_effect = find_elements_side_effect
+        page.query_selector_all.side_effect = qsa_side_effect
 
         with pytest.raises(CloudflareException):
-            detect_cloudflare(driver, url="https://lolalytics.com/lol/aatrox/", wait_timeout=0)
+            detect_cloudflare(page, url="https://lolalytics.com/lol/aatrox/", wait_timeout=0)
 
     def test_please_wait_with_challenge_form_raises(self):
         """'please wait' title + #challenge-form DOM element must raise CloudflareException."""
-        cf_element = MagicMock()
-        driver = make_mock_driver(
+        page = make_mock_page(
             title="please wait",
-            current_url="https://lolalytics.com/lol/aatrox/",
+            url="https://lolalytics.com/lol/aatrox/",
         )
 
-        def find_elements_side_effect(by, selector):
-            if by == By.ID and selector == "challenge-form":
-                return [cf_element]
+        def qsa_side_effect(selector):
+            if selector == "#challenge-form":
+                return [MagicMock()]
             return []
 
-        driver.find_elements.side_effect = find_elements_side_effect
+        page.query_selector_all.side_effect = qsa_side_effect
 
         with pytest.raises(CloudflareException):
-            detect_cloudflare(driver, url="https://lolalytics.com/lol/aatrox/", wait_timeout=0)
+            detect_cloudflare(page, url="https://lolalytics.com/lol/aatrox/", wait_timeout=0)
 
     def test_checking_your_browser_with_meta_noindex_raises(self):
         """'Checking your browser' + meta robots=noindex must raise CloudflareException."""
-        meta_element = MagicMock()
-        driver = make_mock_driver(
+        page = make_mock_page(
             title="Checking your browser",
-            current_url="https://lolalytics.com/lol/aatrox/",
+            url="https://lolalytics.com/lol/aatrox/",
         )
 
-        def find_elements_side_effect(by, selector):
-            if by == By.XPATH:
-                return [meta_element]
+        def qsa_side_effect(selector):
+            if "robots" in selector:
+                return [MagicMock()]
             return []
 
-        driver.find_elements.side_effect = find_elements_side_effect
+        page.query_selector_all.side_effect = qsa_side_effect
 
         with pytest.raises(CloudflareException):
-            detect_cloudflare(driver, url="https://lolalytics.com/lol/aatrox/", wait_timeout=0)
+            detect_cloudflare(page, url="https://lolalytics.com/lol/aatrox/", wait_timeout=0)
 
     def test_exception_message_contains_detected_title(self):
         """CloudflareException message must include the suspicious title that was detected."""
-        driver = make_mock_driver(
+        page = make_mock_page(
             title="Just a moment...",
-            current_url="https://lolalytics.com/cdn-cgi/challenge",
+            url="https://lolalytics.com/cdn-cgi/challenge",
         )
         with pytest.raises(CloudflareException, match="just a moment"):
-            detect_cloudflare(driver, url="https://lolalytics.com/lol/aatrox/", wait_timeout=0)
+            detect_cloudflare(page, url="https://lolalytics.com/lol/aatrox/", wait_timeout=0)
 
 
 # ---------------------------------------------------------------------------
-# Class 3 — Driver errors during secondary signal checks
+# Class 3 — Page errors during secondary signal checks
 # ---------------------------------------------------------------------------
 
 
-class TestDetectCloudflareDriverErrors:
-    """Verify that WebDriver errors inside secondary signal checks are silenced."""
+class TestDetectCloudflarePageErrors:
+    """Verify that Page errors inside secondary signal checks are silenced."""
 
-    def test_current_url_raises_does_not_block_dom_signals(self):
-        """When driver.current_url raises, DOM signals must still be evaluated."""
-        cf_element = MagicMock()
-        driver = make_mock_driver(
-            title="just a moment",
-            url_raises=RuntimeError("url unavailable"),
-        )
+    def test_url_error_does_not_block_dom_signals(self):
+        """When page.url access errors, DOM signals must still be evaluated."""
+        page = make_mock_page(title="just a moment")
+        # Assign non-string url so `"/cdn-cgi/" in page.url` raises TypeError (caught)
+        page.url = 42
 
-        def find_elements_side_effect(by, selector):
-            if by == By.ID and selector == "cf-wrapper":
-                return [cf_element]
+        def qsa_side_effect(selector):
+            if selector == "#cf-wrapper":
+                return [MagicMock()]
             return []
 
-        driver.find_elements.side_effect = find_elements_side_effect
+        page.query_selector_all.side_effect = qsa_side_effect
 
         with pytest.raises(CloudflareException):
-            detect_cloudflare(driver, url="https://lolalytics.com/lol/aatrox/", wait_timeout=0)
+            detect_cloudflare(page, url="https://lolalytics.com/lol/aatrox/", wait_timeout=0)
 
-    def test_find_elements_raises_does_not_block_meta_signal(self):
-        """When find_elements() raises for DOM selectors, meta XPATH check must still run."""
-        meta_element = MagicMock()
-        driver = make_mock_driver(
+    def test_query_selector_raises_for_css_does_not_block_meta_signal(self):
+        """When query_selector_all raises for CSS selectors, meta XPath check must still run."""
+        page = make_mock_page(
             title="attention required",
-            current_url="https://lolalytics.com/lol/aatrox/",
+            url="https://lolalytics.com/lol/aatrox/",
         )
 
-        def find_elements_side_effect(by, selector):
-            if by == By.XPATH:
-                return [meta_element]
+        def qsa_side_effect(selector):
+            if "robots" in selector:
+                return [MagicMock()]
             raise RuntimeError("DOM lookup failed")
 
-        driver.find_elements.side_effect = find_elements_side_effect
+        page.query_selector_all.side_effect = qsa_side_effect
 
         with pytest.raises(CloudflareException):
-            detect_cloudflare(driver, url="https://lolalytics.com/lol/aatrox/", wait_timeout=0)
+            detect_cloudflare(page, url="https://lolalytics.com/lol/aatrox/", wait_timeout=0)
 
 
 # ---------------------------------------------------------------------------
-# Parametric test — all four known CF title variants
+# Parametric test — all known CF title variants (including multilingual)
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
     "cf_title",
     [
+        # English
         "Just a moment...",
         "Attention Required! | Cloudflare",
         "Please Wait... | Cloudflare",
         "Checking your browser before accessing the site.",
+        # French
+        "Un instant...",
+        "Vérification de votre navigateur",
+        # Spanish
+        "Un momento...",
+        # German
+        "Einen Moment bitte...",
     ],
 )
 def test_all_cf_title_variants_raise_with_cdn_cgi(cf_title):
-    """
-    All four Cloudflare title variants must raise CloudflareException when
-    paired with a /cdn-cgi/ URL and the challenge does not resolve.
-    """
-    driver = make_mock_driver(
+    """All Cloudflare title variants must raise CloudflareException with /cdn-cgi/ URL."""
+    page = make_mock_page(
         title=cf_title,
-        current_url="https://lolalytics.com/cdn-cgi/challenge-platform/h/b",
+        url="https://lolalytics.com/cdn-cgi/challenge-platform/h/b",
     )
     with pytest.raises(CloudflareException):
-        detect_cloudflare(driver, url="https://lolalytics.com/lol/aatrox/", wait_timeout=0)
-
-
-# ---------------------------------------------------------------------------
-# Logging tests
-# ---------------------------------------------------------------------------
+        detect_cloudflare(page, url="https://lolalytics.com/lol/aatrox/", wait_timeout=0)
 
 
 # ---------------------------------------------------------------------------
@@ -276,79 +252,76 @@ def test_all_cf_title_variants_raise_with_cdn_cgi(cf_title):
 
 
 class TestDetectCloudflareWaitForChallenge:
-    """Verify the wait-for-redirect mechanism added to detect_cloudflare()."""
+    """Verify the wait-for-resolve mechanism in detect_cloudflare()."""
 
     def test_challenge_resolves_returns_normally(self):
         """When the CF challenge auto-resolves, detect_cloudflare() must return without raising."""
-        # Simulate: first few calls return CF title, then real title after challenge resolves.
-        # Use a clamped function to avoid StopIteration inside generator expressions (PEP 479).
-        _titles = ["Just a moment...", "Just a moment...", "LoLAlytics - Aatrox Build"]
-        _idx = [0]
+        _calls = [0]
 
         def title_side_effect():
-            val = _titles[min(_idx[0], len(_titles) - 1)]
-            _idx[0] += 1
-            return val
+            _calls[0] += 1
+            if _calls[0] <= 2:
+                return "Just a moment..."
+            return "LoLAlytics - Aatrox Build"
 
-        driver = MagicMock()
-        type(driver).title = PropertyMock(side_effect=title_side_effect)
-        type(driver).current_url = PropertyMock(
-            return_value="https://lolalytics.com/cdn-cgi/challenge"
-        )
-        driver.find_elements.return_value = []
+        page = make_mock_page(url="https://lolalytics.com/cdn-cgi/challenge")
+        page.title.side_effect = title_side_effect
 
-        # Should not raise — challenge resolves after a few polls
-        detect_cloudflare(driver, url="https://lolalytics.com/lol/aatrox/", wait_timeout=5)
+        with patch("src.cloudflare_detector.time.sleep"):
+            with patch("src.cloudflare_detector.time.monotonic", side_effect=[0, 1, 2]):
+                detect_cloudflare(page, url="https://lolalytics.com/lol/aatrox/", wait_timeout=5)
 
     def test_challenge_timeout_raises_cloudflare_exception(self):
         """When the CF challenge never resolves, CloudflareException must be raised."""
-        driver = make_mock_driver(
+        page = make_mock_page(
             title="Just a moment...",
-            current_url="https://lolalytics.com/cdn-cgi/challenge",
+            url="https://lolalytics.com/cdn-cgi/challenge",
         )
         with pytest.raises(CloudflareException):
-            detect_cloudflare(driver, url="https://lolalytics.com/lol/aatrox/", wait_timeout=0)
+            detect_cloudflare(page, url="https://lolalytics.com/lol/aatrox/", wait_timeout=0)
 
     def test_wait_timeout_parameter_overrides_default(self):
         """The wait_timeout parameter must be used instead of scraping_config default."""
-        driver = make_mock_driver(
+        page = make_mock_page(
             title="Just a moment...",
-            current_url="https://lolalytics.com/cdn-cgi/challenge",
+            url="https://lolalytics.com/cdn-cgi/challenge",
         )
-        # wait_timeout=0 forces immediate timeout — test would hang 30s without this parameter
         with pytest.raises(CloudflareException):
-            detect_cloudflare(driver, wait_timeout=0)
+            detect_cloudflare(page, wait_timeout=0)
 
     def test_no_wait_when_no_secondary_signal(self):
-        """When only a suspicious title is present (no secondary signal), must return without waiting."""
-        driver = make_mock_driver(
+        """Suspicious title with no secondary signal must return immediately without waiting."""
+        page = make_mock_page(
             title="Just a moment...",
-            current_url="https://lolalytics.com/lol/aatrox/",
+            url="https://lolalytics.com/lol/aatrox/",
             dom_elements=[],
         )
-        # Must return immediately — no secondary signal means no CloudflareException, no wait
-        detect_cloudflare(driver, url="https://lolalytics.com/lol/aatrox/")
+        detect_cloudflare(page, url="https://lolalytics.com/lol/aatrox/")
 
     def test_info_log_when_challenge_resolves(self, caplog):
         """When challenge resolves, an INFO log must be emitted."""
         caplog.set_level(logging.INFO, logger="src.cloudflare_detector")
-        _titles = ["Just a moment...", "Just a moment...", "LoLAlytics - Aatrox Build"]
-        _idx = [0]
+        _calls = [0]
 
         def title_side_effect():
-            val = _titles[min(_idx[0], len(_titles) - 1)]
-            _idx[0] += 1
-            return val
+            _calls[0] += 1
+            if _calls[0] <= 2:
+                return "Just a moment..."
+            return "LoLAlytics - Aatrox Build"
 
-        driver = MagicMock()
-        type(driver).title = PropertyMock(side_effect=title_side_effect)
-        type(driver).current_url = PropertyMock(
-            return_value="https://lolalytics.com/cdn-cgi/challenge"
-        )
-        driver.find_elements.return_value = []
+        page = make_mock_page(url="https://lolalytics.com/cdn-cgi/challenge")
+        page.title.side_effect = title_side_effect
 
-        detect_cloudflare(driver, url="https://lolalytics.com/lol/aatrox/", wait_timeout=5)
+        with patch("src.cloudflare_detector.time.sleep"):
+            with patch("src.cloudflare_detector.time.monotonic", side_effect=[0, 1, 2]):
+                detect_cloudflare(page, url="https://lolalytics.com/lol/aatrox/", wait_timeout=5)
+
         assert "resolved" in caplog.text.lower()
+
+
+# ---------------------------------------------------------------------------
+# Class 5 — Logging
+# ---------------------------------------------------------------------------
 
 
 class TestDetectCloudflareLogging:
@@ -357,28 +330,28 @@ class TestDetectCloudflareLogging:
     def test_no_log_on_clean_title(self, caplog):
         """Fast-path exit on clean title must produce no log output."""
         caplog.set_level(logging.DEBUG, logger="src.cloudflare_detector")
-        driver = make_mock_driver(title="LoLAlytics - Champion Stats")
-        detect_cloudflare(driver)
+        page = make_mock_page(title="LoLAlytics - Champion Stats")
+        detect_cloudflare(page)
         assert caplog.text == ""
 
     def test_debug_log_when_suspicious_title_no_secondary_signal(self, caplog):
         """Suspicious title with no secondary signal must log a debug-level message."""
         caplog.set_level(logging.DEBUG, logger="src.cloudflare_detector")
-        driver = make_mock_driver(
+        page = make_mock_page(
             title="just a moment",
-            current_url="https://lolalytics.com/lol/aatrox/",
+            url="https://lolalytics.com/lol/aatrox/",
             dom_elements=[],
         )
-        detect_cloudflare(driver)
+        detect_cloudflare(page)
         assert "suspicious title" in caplog.text.lower() or "false positive" in caplog.text.lower()
 
     def test_warning_log_on_detection(self, caplog):
         """Confirmed CF detection must emit a WARNING log."""
         caplog.set_level(logging.WARNING, logger="src.cloudflare_detector")
-        driver = make_mock_driver(
+        page = make_mock_page(
             title="Just a moment...",
-            current_url="https://lolalytics.com/cdn-cgi/challenge",
+            url="https://lolalytics.com/cdn-cgi/challenge",
         )
         with pytest.raises(CloudflareException):
-            detect_cloudflare(driver, url="https://lolalytics.com/lol/aatrox/", wait_timeout=0)
+            detect_cloudflare(page, url="https://lolalytics.com/lol/aatrox/", wait_timeout=0)
         assert any(r.levelno >= logging.WARNING for r in caplog.records)

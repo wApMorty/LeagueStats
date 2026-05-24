@@ -9,22 +9,35 @@ JS challenge to auto-resolve and redirect to the real page before raising.
 """
 
 import logging
+import time
 
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.common.exceptions import TimeoutException
+from playwright.sync_api import Page
 
 from .config_constants import scraping_config
 
 logger = logging.getLogger(__name__)
 
-# Titles that indicate a Cloudflare challenge page (case-insensitive match)
+# Titles that indicate a Cloudflare challenge page (case-insensitive match).
+# Includes common localisations: Cloudflare switches the UI language based on
+# browser Accept-Language, so the scraper may receive a non-English page.
 _CF_TITLES = (
+    # English
     "just a moment",
     "attention required",
     "please wait",
     "checking your browser",
+    # French
+    "un instant",
+    "vérification",
+    # Spanish / Portuguese
+    "un momento",
+    "verificando",
+    # German
+    "einen moment",
+    # Italian
+    "attendere",
+    # Dutch
+    "even geduld",
 )
 
 
@@ -34,9 +47,7 @@ class CloudflareException(Exception):
     pass
 
 
-def detect_cloudflare(
-    driver: webdriver.Firefox, url: str = "", wait_timeout: int | None = None
-) -> None:
+def detect_cloudflare(page: Page, url: str = "", wait_timeout: int | None = None) -> None:
     """
     Detects Cloudflare protection pages and waits for the challenge to resolve.
 
@@ -46,10 +57,10 @@ def detect_cloudflare(
     CloudflareException if the challenge does not resolve within that window.
 
     Args:
-        driver: Active Firefox WebDriver instance.
+        page: Active Playwright Page instance.
         url: URL that was loaded, used for logging purposes only.
         wait_timeout: Seconds to wait for challenge resolution. Defaults to
-            scraping_config.CLOUDFLARE_WAIT_SECONDS (30s).
+            scraping_config.CLOUDFLARE_WAIT_SECONDS (120s).
 
     Raises:
         CloudflareException: When Cloudflare challenge did not resolve within
@@ -57,7 +68,7 @@ def detect_cloudflare(
     """
     # --- Signal 1: page title ---
     try:
-        title = driver.title.lower().strip()
+        title = page.title().lower().strip()
     except Exception as exc:  # noqa: BLE001
         logger.debug("cloudflare_detector: could not read page title: %s", exc)
         return
@@ -65,7 +76,6 @@ def detect_cloudflare(
     title_is_suspicious = any(cf_title in title for cf_title in _CF_TITLES)
 
     if not title_is_suspicious:
-        # Title alone clears us; no need to inspect further signals.
         return
 
     # Title is suspicious — look for at least one corroborating signal.
@@ -73,7 +83,7 @@ def detect_cloudflare(
 
     # --- Signal 2: URL contains /cdn-cgi/ (Cloudflare Turnstile redirect) ---
     try:
-        current_url = driver.current_url
+        current_url = page.url
         if "/cdn-cgi/" in current_url:
             secondary_signal = f"URL contains /cdn-cgi/ ({current_url})"
     except Exception as exc:  # noqa: BLE001
@@ -82,13 +92,13 @@ def detect_cloudflare(
     # --- Signal 3: Cloudflare DOM elements ---
     if secondary_signal is None:
         cf_selectors = [
-            (By.ID, "cf-wrapper"),
-            (By.CSS_SELECTOR, "div.cf-browser-verification"),
-            (By.ID, "challenge-form"),
+            "#cf-wrapper",
+            "div.cf-browser-verification",
+            "#challenge-form",
         ]
-        for by, selector in cf_selectors:
+        for selector in cf_selectors:
             try:
-                elements = driver.find_elements(by, selector)
+                elements = page.query_selector_all(selector)
                 if elements:
                     secondary_signal = f"DOM element found: {selector}"
                     break
@@ -102,9 +112,8 @@ def detect_cloudflare(
     # --- Signal 4: <meta name="robots" content="noindex"> ---
     if secondary_signal is None:
         try:
-            meta_elements = driver.find_elements(
-                By.XPATH,
-                "//meta[@name='robots' and contains(@content,'noindex')]",
+            meta_elements = page.query_selector_all(
+                "xpath=//meta[@name='robots' and contains(@content,'noindex')]"
             )
             if meta_elements:
                 secondary_signal = "meta robots=noindex present with suspicious title"
@@ -121,23 +130,34 @@ def detect_cloudflare(
             timeout,
             title,
             secondary_signal,
-            url or driver.current_url,
+            url or page.url,
         )
-        try:
-            WebDriverWait(driver, timeout).until(
-                lambda d: not any(cf_title in d.title.lower().strip() for cf_title in _CF_TITLES)
-            )
-            logger.info(
-                "cloudflare_detector: challenge resolved automatically (new title=%r, url=%s)",
-                driver.title,
-                url,
-            )
-            return
-        except TimeoutException:
-            raise CloudflareException(
-                f"Cloudflare challenge did not resolve in {timeout}s: "
-                f"title={title!r}, signal={secondary_signal}, url={url}"
-            )
+        print(
+            f"\n[CLOUDFLARE] Challenge detected for {url or 'page'}\n"
+            f"  → If a browser window is open, click 'Verify you are human'.\n"
+            f"  → Waiting up to {timeout}s for the challenge to resolve...\n",
+            flush=True,
+        )
+
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            try:
+                current_title = page.title().lower().strip()
+                if not any(cf_title in current_title for cf_title in _CF_TITLES):
+                    logger.info(
+                        "cloudflare_detector: challenge resolved (new title=%r, url=%s)",
+                        current_title,
+                        url,
+                    )
+                    return
+            except Exception:  # noqa: BLE001
+                pass
+            time.sleep(1)
+
+        raise CloudflareException(
+            f"Cloudflare challenge did not resolve in {timeout}s: "
+            f"title={title!r}, signal={secondary_signal}, url={url}"
+        )
 
     # Title matched but no secondary signal found — log a debug notice and
     # do NOT raise (avoids false positives on slow-loading pages).

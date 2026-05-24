@@ -45,6 +45,12 @@ class ScrapingConfig:
     FIREFOX_STARTUP_DELAY: float = 1.0  # Minimal delay for Firefox initialization
     HEADLESS: bool = True  # Run Firefox in headless mode (no GUI, better performance)
 
+    # Playwright migration (ADR-018) - kept alongside FIREFOX_PROFILE_PATH until Selenium is fully removed
+    FIREFOX_PROFILE_PATH: str = ""  # Legacy Selenium Firefox profile path (kept during migration)
+    # Path to Playwright storage_state.json for cf_clearance cookie reuse across sessions.
+    # When set, Playwright will load this file on browser launch to bypass Cloudflare challenges.
+    PLAYWRIGHT_STORAGE_STATE_PATH: str = ""
+
 
 @dataclass
 class AnalysisConfig:
