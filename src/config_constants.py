@@ -20,6 +20,15 @@ class ScrapingConfig:
     PAGE_LOAD_DELAY: float = 2.0
     SCROLL_DELAY: float = 2.0
 
+    # Cloudflare handling
+    CLOUDFLARE_WAIT_SECONDS: int = 30  # Wait before retrying after Cloudflare block
+
+    # Random delay ranges (replace fixed delays with ranges for anti-detection)
+    PAGE_LOAD_DELAY_MIN: float = 1.5
+    PAGE_LOAD_DELAY_MAX: float = 3.5
+    SCROLL_DELAY_MIN: float = 1.5
+    SCROLL_DELAY_MAX: float = 3.5
+
     # Scraping loop delays
     SCRAPING_DELAY_BETWEEN_CHAMPIONS: int = 1
     RETRY_ATTEMPTS: int = 3
