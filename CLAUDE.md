@@ -3,211 +3,60 @@
 **Projet**: LeagueStats Coach
 **Version**: 1.1.0-dev (Sprint 2 in progress)
 **Mainteneur**: @pj35
-**Dernière mise à jour**: 2026-02-08
+**Dernière mise à jour**: 2026-05-24
 
 ---
 
 ## 📋 Table des Matières
 
-1. [🔴 Système d'Agents Custom - RÈGLE CRITIQUE](#-système-dagents-custom---règle-critique)
-2. [🔵 claude-flow (RuFlo) - Orchestration & Mémoire](#-claude-flow-ruflo---orchestration--mémoire)
-3. [Contexte du Projet](#contexte-du-projet)
-4. [Workflow de Développement](#workflow-de-développement)
-5. [Standards de Code](#standards-de-code)
-6. [Conventions Git](#conventions-git)
-7. [Process de Code Review](#process-de-code-review)
-8. [Approche Dette Technique First](#approche-dette-technique-first)
-9. [Fichiers Importants](#fichiers-importants)
-10. [Commandes Utiles](#commandes-utiles)
+1. [🔵 Workflow claude-flow](#-workflow-claude-flow)
+2. [Contexte du Projet](#contexte-du-projet)
+3. [Workflow de Développement](#workflow-de-développement)
+4. [Standards de Code](#standards-de-code)
+5. [Conventions Git](#conventions-git)
+6. [Process de Code Review](#process-de-code-review)
+7. [Fichiers Importants](#fichiers-importants)
+8. [Commandes Utiles](#commandes-utiles)
 
 ---
 
-## 🔴 Système d'Agents Custom - RÈGLE CRITIQUE
+## 🔵 Workflow claude-flow
 
-### ⚠️ WORKFLOW OBLIGATOIRE ⚠️
+claude-flow est l'infrastructure d'orchestration et de mémoire persistante du projet. Tout le développement s'appuie sur ses outils MCP.
 
-**AVANT toute action de développement, TOUJOURS utiliser les agents custom définis dans `.claude/agents/`**
+### Début de Session (Obligatoire)
 
-Ce projet utilise un système d'agents spécialisés pour orchestrer TOUT le développement. L'assistant principal (toi) ne doit JAMAIS coder/tester/commiter directement.
-
-### Principe Fondamental
-
-```
-❌ INTERDIT: Travailler directement (Read → Edit → Write → Bash pytest → git commit)
-✅ OBLIGATOIRE: Spawner les agents appropriés via Task tool (ou claude-flow swarm pour le parallèle)
-✅ OPTIONNEL: Utiliser claude-flow memory pour persistance cross-session
-```
-
-### Architecture des Agents
-
-**Agents disponibles dans `.claude/agents/`**:
-
-| Agent | Fichier | Rôle | Output | Spawné par |
-|-------|---------|------|--------|------------|
-| **Architecte** | `01-architecte.md` | Analyse besoins + 2-3 approches | Plan YAML (approaches) | Assistant (toi) |
-| **Tech Lead** | `02-tech-lead.md` | **Décomposition en TODOs tracés** | Plan YAML (TODOs + agents recommandés) | Assistant (toi) |
-| **Python Expert** | `03-python-expert.md` | Développement Python | YAML silencieux | Assistant (toi) |
-| **Database Expert** | `04-database-expert.md` | Migrations Alembic + SQL | YAML silencieux | Assistant (toi) |
-| **QA Expert** | `05-qa-expert.md` | Tests (unitaires + régression) | YAML silencieux | Assistant (toi) |
-| **Scraping Expert** | `06-scraping-expert.md` | Selenium + XPath | YAML silencieux | Assistant (toi) |
-| **Build Expert** | `07-build-expert.md` | PyInstaller + packaging | YAML silencieux | Assistant (toi) |
-| **Git Expert** | `08-git-expert.md` | Commits Gitmoji + PR | YAML silencieux | Assistant (toi) |
-| **Windows Expert** | `09-windows-expert.md` | Task Scheduler + services | YAML silencieux | Assistant (toi) |
-| **LCU API Expert** | `10-lcu-api-expert.md` | League Client API | YAML silencieux | Assistant (toi) |
-| **Performance Expert** | `11-performance-expert.md` | Profiling + optimisation | YAML silencieux | Assistant (toi) |
-
-**Hiérarchie**:
-```
-Assistant (toi) → Spawne ARCHITECTE (si analyse requise)
-                         ↓
-                   Explore + Propose 2-3 approches
-                         ↓
-                   Utilisateur valide approche
-                         ↓
-Assistant (toi) → Spawne TECH LEAD (avec approche validée)
-                         ↓
-                   Analyse + Décompose en TODOs tracés
-                         ↓
-                   Crée TODOs via TaskCreate
-                         ↓
-                   Retourne plan YAML (TODOs + agents recommandés)
-                         ↓
-Assistant (toi) → Lit TaskList et spawne EXPERTS séquentiellement
-                         ↓
-                   EXPERT → Exécute TODO → Retourne YAML
-                         ↓
-Assistant (toi) → Valide output + Mark TODO completed + Next TODO
-                         ↓
-                   Tous TODOs complétés
-                         ↓
-Assistant (toi) → Résumé + Demande validation utilisateur
-```
-
-### Matrice de Décision (Quick Reference)
-
-| Demande Utilisateur | Premier Agent | Justification |
-|---------------------|---------------|---------------|
-| **"Ajoute feature X"** | Architecte | Besoin d'analyse d'approches (2-3 options) |
-| **"Implémente Tâche #N"** (complexe) | Architecte | Besoin d'exploration codebase + trade-offs |
-| **"Implémente Tâche #N"** (plan clair) | Tech Lead | Plan déjà défini dans TODO.md |
-| **"Corrige bug Y"** (simple) | Tech Lead | Bug connu, correction directe |
-| **"Corrige bug Y"** (cause inconnue) | Architecte | Investigation requise (exploration) |
-| **"Optimise performance Z"** | Architecte | Profiling + analyse approches |
-| **"Ajoute migration BD"** | Tech Lead | Tâche technique directe |
-| **"Ajoute tests pour X"** | Tech Lead | Tests après développement existant |
-| **"Refactor module Y"** | Architecte | Analyse impact + approches |
-
-### 🔴 RÈGLES CRITIQUES
-
-#### 1. Délégation Obligatoire
+**TOUJOURS** commencer par récupérer le contexte mémorisé :
 
 ```python
-# ❌ INTERDIT (Assistant travaille directement)
-User: "Ajoute colonne lane à la BD"
-Assistant: [Read alembic/...]
-Assistant: [Write alembic/versions/xxx.py]
-Assistant: [Bash alembic upgrade head]
-
-# ✅ OBLIGATOIRE (Spawner Tech Lead puis experts)
-User: "Ajoute colonne lane à la BD"
-Assistant: [Task tool: Tech Lead avec description tâche]
-Tech Lead: [Crée TODOs T1-T4 avec agents recommandés, retourne plan YAML]
-Assistant: [Lit TaskList, spawne Database Expert pour T1]
-Database Expert: [Crée migration, teste, retourne YAML]
-Assistant: [Valide, mark T1 completed, spawne Python Expert pour T2]
-Python Expert: [Modifie code, retourne YAML]
-Assistant: [Continue jusqu'à T4 complété, présente résumé]
+mcp__claude-flow__memory_search(query="projet leaguestats état sprint", smart=True)
+mcp__claude-flow__memory_search(query="décisions architecture récentes", namespace="architecture")
 ```
 
-#### 2. JAMAIS Coder/Tester/Commiter Directement
+### Mémoire Persistante : Ce qu'on Stocke
 
-**L'assistant principal (toi) ne doit JAMAIS**:
-- ❌ Edit/Write du code Python
-- ❌ Créer migrations Alembic
-- ❌ Écrire tests pytest
-- ❌ Exécuter git commit
-- ❌ Créer PR avec gh CLI
-
-**L'assistant principal (toi) doit UNIQUEMENT**:
-- ✅ Spawner ARCHITECTE (si analyse requise)
-- ✅ Spawner TECH LEAD (décomposition en TODOs)
-- ✅ Spawner EXPERTS séquentiellement (basé sur recommandations Tech Lead)
-- ✅ Valider outputs YAML des experts
-- ✅ Gérer TaskList (mark completed, next TODO)
-- ✅ Lire documentation (.claude/agents/*.md)
-- ✅ Communiquer avec utilisateur
-
-#### 3. Tech Lead = Décomposeur de Tâches
-
-Pour **99% des tâches de développement**, spawner **Tech Lead** en premier (sauf si analyse architecturale nécessaire → Architecte).
-
-Le Tech Lead **décomposera** la tâche en TODOs tracés et **recommandera** les agents appropriés, mais **ne les spawnera pas**. C'est l'assistant principal (toi) qui spawnera ensuite chaque expert séquentiellement.
-
-#### 4. Toujours Lire l'Agent Avant de Spawner
-
-Avant de spawner un agent, **TOUJOURS lire son fichier .md** dans `.claude/agents/` pour comprendre :
-- Son rôle exact
-- Son OUTPUT FORMAT attendu
-- Ses outils autorisés/interdits
-- Ses règles critiques
-
-### Exemples d'Utilisation
-
-**📖 Voir `.claude/agents/EXAMPLES.md` pour des exemples détaillés de workflows complets**
-
----
-
-## 🔵 claude-flow (RuFlo) - Orchestration & Mémoire
-
-claude-flow est la couche d'infrastructure qui **complète** le système d'agents custom. Les agents métier (Architecte, Tech Lead, experts) restent inchangés — claude-flow leur apporte orchestration parallèle et mémoire persistante.
-
-### Quand utiliser claude-flow ?
-
-| Besoin | Outil claude-flow | Quand |
-|--------|-------------------|-------|
-| **Mémoire cross-session** | `mcp__claude-flow__memory_store/retrieve/search` | Après chaque décision architecturale, bug résolu, pattern appris |
-| **Agents parallèles** | `mcp__claude-flow__swarm_init + agent_spawn + task_orchestrate` | Quand le Tech Lead identifie des `parallel_groups` |
-| **Contexte projet** | `mcp__claude-flow__memory_search` | En début de session pour récupérer l'état du projet |
-| **Patterns appris** | `mcp__claude-flow__neural_patterns` | Pour détecter des patterns récurrents dans le code |
-
-### Workflow Mis à Jour avec claude-flow
-
-```
-Début de session
-       ↓
-[claude-flow memory_search] → Récupérer contexte projet (décisions, patterns, bugs)
-       ↓
-Assistant → Spawne ARCHITECTE (si analyse requise)
-       ↓
-[claude-flow memory_store] → Mémoriser l'approche validée
-       ↓
-Assistant → Spawne TECH LEAD → Retourne TODOs avec parallel_groups
-       ↓
-Si parallel_groups :
-  [claude-flow swarm_init + agent_spawn] → Orchestrer experts en parallèle
-Sinon :
-  Assistant → Spawne experts séquentiellement via Task tool (comme avant)
-       ↓
-[claude-flow memory_store] → Mémoriser les patterns/solutions trouvés
-       ↓
-Résumé + validation utilisateur
-```
-
-### Mémoire Projet : Ce qu'on Stocke
+Après chaque décision importante ou bug résolu, stocker en mémoire pour les futures sessions :
 
 ```python
-# Après validation d'une approche architecturale
+# Décision architecturale validée
 mcp__claude-flow__memory_store(
     key="arch_decision_cloudflare_2026_05",
-    value="Approche 1 choisie : patch Firefox dom.webdriver.enabled=False + CloudflareDetector",
+    value="Approche choisie : wait-for-redirect dans detect_cloudflare()",
     namespace="architecture"
 )
 
-# Après résolution d'un bug
+# Bug résolu
 mcp__claude-flow__memory_store(
     key="bug_executor_leak_fix",
     value="Réduire MAX_WORKERS à 5, ThreadPoolExecutor dans with block",
     namespace="bugs"
+)
+
+# Pattern établi
+mcp__claude-flow__memory_store(
+    key="pattern_retry_decorator",
+    value="@retry(stop=stop_after_attempt(3), wait=wait_exponential(min=2, max=10), reraise=True)",
+    namespace="patterns"
 )
 ```
 
@@ -218,14 +67,24 @@ mcp__claude-flow__memory_store(
 | `architecture` | Décisions d'architecture validées |
 | `bugs` | Bugs résolus et leurs causes |
 | `patterns` | Patterns de code établis dans le projet |
-| `sprint` | État courant du sprint (TODOs en cours, bloquants) |
+| `sprint` | État courant du sprint (bloquants, en cours) |
 
-### Règles d'Utilisation
+### Travail Direct
 
-1. ✅ **Stocker en mémoire** toute décision architecturale validée par l'utilisateur
-2. ✅ **Rechercher en mémoire** en début de session avant de proposer des solutions
-3. ✅ **Swarm pour le parallèle** : quand Tech Lead identifie `parallel_groups`, utiliser claude-flow swarm plutôt que Task tool séquentiel
-4. ❌ **Ne pas remplacer les agents custom** par des agents génériques claude-flow — les agents `.claude/agents/` ont la connaissance projet
+L'assistant travaille directement avec les outils disponibles (Read, Edit, Write, Bash, Grep, Glob). Pas de workflow d'agents intermédiaires obligatoire.
+
+Pour les tâches complexes nécessitant plusieurs angles en parallèle, utiliser claude-flow swarm :
+
+```python
+# Tâches parallèles
+mcp__claude-flow__swarm_init(topology="hierarchical", maxAgents=4)
+mcp__claude-flow__agent_spawn(type="researcher", task="Explorer l'approche A")
+mcp__claude-flow__agent_spawn(type="researcher", task="Explorer l'approche B")
+```
+
+### Proposer des Approches
+
+Pour toute décision architecturale non triviale, **toujours proposer 2-3 approches** avec trade-offs avant d'implémenter, et **attendre la validation** de l'utilisateur.
 
 ---
 
@@ -253,11 +112,7 @@ LeagueStats Coach est un outil d'analyse et de coaching pour League of Legends q
 **🔴 Sprint 2 - Performance & Features (EN COURS)**:
 - Tâche #4: Web Scraping Parallèle ✅ **FAIT** (2025-12-20)
 - Tâche #11: Auto-Update BD (Service Windows) ✅ **FAIT** (2025-12-22)
-- Tâche #16: Support des Synergies 🔴 **EN COURS**
-
-### Philosophie: Dette Technique First
-
-**Principe**: Résoudre dette technique AVANT features = Vélocité élevée ensuite
+- Tâche #16: Support des Synergies ✅ **FAIT** (2026-01-16)
 
 ---
 
@@ -331,7 +186,7 @@ python -m black --check --diff src/ tests/ scripts/
 - **Black formatting**: Appliquer `python -m black` sur TOUT code modifié avant commit
 - Type hints sur toutes les fonctions publiques
 - Docstrings pour classes et méthodes publiques
-- Maximum 500 lignes par fichier (objectif Dette Technique First)
+- Maximum 500 lignes par fichier
 
 **Imports**:
 ```python
@@ -379,21 +234,20 @@ cursor.execute("SELECT * FROM champions WHERE name = ?", (name,))
 ### Tests
 
 **Framework**: pytest + pytest-cov + pytest-mock
-**Couverture**: **89% du module analysis (objectif 70%+ largement dépassé)
+**Couverture**: 89% du module analysis (objectif 70%+ largement dépassé)
 
 **Structure**:
 ```
 tests/
 ├── __init__.py
-├── conftest.py              # Fixtures partagées
-├── test_scoring.py          # 27 tests - 95% coverage
-├── test_tier_list.py        # 18 tests - 100% coverage
-└── test_team_analysis.py    # 13 tests - 97% coverage
+├── conftest.py
+├── regression/              # Tests de régression (bugs fixes)
+└── test_*.py
 ```
 
 ### Tests de Régression (Bug Fix Tests)
 
-**🔴 RÈGLE CRITIQUE**: Pour chaque bug remonté par l'utilisateur et corrigé, **TOUJOURS** créer un test automatisé qui vérifie que ce bug ne revient jamais.
+**RÈGLE CRITIQUE**: Pour chaque bug remonté par l'utilisateur et corrigé, **TOUJOURS** créer un test automatisé qui vérifie que ce bug ne revient jamais.
 
 **Workflow**:
 1. ✅ L'utilisateur remonte un bug avec message d'erreur/logs
@@ -466,8 +320,8 @@ gh pr create --title "🎯 Tâche #X: Titre de la tâche" \
 gh pr merge --squash
 
 # 4. Pull changes
-git checkout inspiring-rhodes
-git pull origin inspiring-rhodes
+git checkout master
+git pull origin master
 git branch -d feature/task-name
 ```
 
@@ -478,37 +332,9 @@ git branch -d feature/task-name
 ### Validation GitHub
 
 **L'assistant NE mergera JAMAIS sans**:
-- ✅ Approbation explicite sur GitHub ("Approved")
+- ✅ Approbation explicite de l'utilisateur
 - ✅ Aucun "Request changes" en attente
 - ✅ Validation utilisateur claire
-
----
-
-## 🔴 Approche Dette Technique First
-
-### Principe
-
-**Résoudre dette technique AVANT features** = Vélocité élevée ensuite
-
-### Sprint 1 - Dette Technique (COMPLÉTÉ ✅)
-
-**Objectif**: Fondations solides
-
-**Tâches**:
-1. ✅ **Tâche #1**: Refactoring fichiers monolithiques
-2. ✅ **Tâche #3**: Framework Tests Automatisés (89% couverture)
-3. ✅ **Tâche #9**: Migrations Base de Données (Alembic 1.17.2)
-
-**Impact**: Code maintenable + tests auto (89%) + migrations = Base saine ✅
-
-### Métriques Cibles Sprint 1
-
-| Métrique | Avant | Après Sprint 1 | Statut |
-|----------|-------|----------------|--------|
-| Largest File | 2,381 lignes | **<500 lignes** | ✅ Atteint |
-| Test Coverage | ~5% | **89%** (analysis module) | ✅ Dépassé |
-| Migrations BD | Non | **Alembic 1.13+** | ✅ Opérationnel |
-| Hardcoded Values | ~20 | **0** | ✅ Complété |
 
 ---
 
@@ -517,7 +343,6 @@ git branch -d feature/task-name
 ### Documentation
 
 - `CLAUDE.md` - **CE FICHIER** - Instructions pour assistant IA
-- `.claude/agents/EXAMPLES.md` - Exemples détaillés de workflows agents
 - `docs/alembic_guide.md` - Guide complet commandes Alembic
 - `.github/PULL_REQUEST_TEMPLATE.md` - Template PR
 - `TODO.md` - Backlog Agile avec scores Fibonacci
@@ -536,14 +361,16 @@ git branch -d feature/task-name
 
 **Web Scraping (Sprint 2 ✅)**:
 - `src/parallel_parser.py` - Scraping parallèle (87% plus rapide)
+- `src/cloudflare_detector.py` - Détection pages Cloudflare
 
 **Autres modules**:
 - `src/db.py` - Database layer
 - `src/draft_monitor.py` - Real-time draft coach
 
-### Tests (Sprint 1 ✅)
+### Tests
 
 - `tests/` - Framework pytest avec 89% coverage
+- `tests/regression/` - Tests de régression bugs
 
 ---
 
@@ -609,16 +436,19 @@ python -m alembic revision -m "Description"
 
 ### TOUJOURS
 
-1. ✅ **Feature branch DEPUIS MASTER** (`git checkout -b feature/name origin/master`)
-2. ✅ **Commits atomiques** et fréquents
-3. ✅ **Tests pour nouvelles fonctionnalités**
-4. ✅ **Test de régression** pour chaque bug corrigé (OBLIGATOIRE)
-5. ✅ **Tous les tests passent** avant PR (`pytest tests/ -v`)
-6. ✅ **Formatage Black appliqué** avant PR (`python -m black src/ tests/`)
-7. ✅ **Code review** AVANT tout merge
-8. ✅ **Validation utilisateur** explicite requise
-9. ✅ **Requêtes SQL paramétrées** (sécurité)
-10. ✅ **config_constants.py** pour valeurs hardcodées
+1. ✅ **Rechercher mémoire claude-flow** en début de session
+2. ✅ **Stocker en mémoire** toute décision architecturale validée
+3. ✅ **Feature branch DEPUIS MASTER** (`git checkout -b feature/name origin/master`)
+4. ✅ **Commits atomiques** et fréquents
+5. ✅ **Tests pour nouvelles fonctionnalités**
+6. ✅ **Test de régression** pour chaque bug corrigé (OBLIGATOIRE)
+7. ✅ **Tous les tests passent** avant PR (`pytest tests/ -v`)
+8. ✅ **Formatage Black appliqué** avant PR (`python -m black src/ tests/`)
+9. ✅ **Code review** AVANT tout merge
+10. ✅ **Validation utilisateur** explicite requise avant merge
+11. ✅ **Requêtes SQL paramétrées** (sécurité)
+12. ✅ **config_constants.py** pour valeurs hardcodées
+13. ✅ **Proposer 2-3 approches** pour toute décision architecturale non triviale
 
 ### JAMAIS
 
@@ -626,13 +456,12 @@ python -m alembic revision -m "Description"
 2. ❌ Commits directs sur branche principale
 3. ❌ Valeurs hardcodées dans le code
 4. ❌ Interpolation string dans SQL
-5. ❌ Fichiers >500 lignes (après Sprint 1)
+5. ❌ Fichiers >500 lignes
 6. ❌ Code non testé en production
 7. ❌ Breaking changes sans migration
-8. ❌ Features AVANT dette technique (Sprint 1)
 
 ---
 
-**Dernière mise à jour**: 2026-01-16
-**Maintenu par**: Claude Code (Sonnet 4.5)
+**Dernière mise à jour**: 2026-05-24
+**Maintenu par**: Claude Code (Sonnet 4.6)
 **Pour**: @pj35 - LeagueStats Coach v1.1.0-dev
