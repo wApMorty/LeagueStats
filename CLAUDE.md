@@ -10,14 +10,15 @@
 ## 📋 Table des Matières
 
 1. [🔴 Système d'Agents Custom - RÈGLE CRITIQUE](#-système-dagents-custom---règle-critique)
-2. [Contexte du Projet](#contexte-du-projet)
-3. [Workflow de Développement](#workflow-de-développement)
-4. [Standards de Code](#standards-de-code)
-5. [Conventions Git](#conventions-git)
-6. [Process de Code Review](#process-de-code-review)
-7. [Approche Dette Technique First](#approche-dette-technique-first)
-8. [Fichiers Importants](#fichiers-importants)
-9. [Commandes Utiles](#commandes-utiles)
+2. [🔵 claude-flow (RuFlo) - Orchestration & Mémoire](#-claude-flow-ruflo---orchestration--mémoire)
+3. [Contexte du Projet](#contexte-du-projet)
+4. [Workflow de Développement](#workflow-de-développement)
+5. [Standards de Code](#standards-de-code)
+6. [Conventions Git](#conventions-git)
+7. [Process de Code Review](#process-de-code-review)
+8. [Approche Dette Technique First](#approche-dette-technique-first)
+9. [Fichiers Importants](#fichiers-importants)
+10. [Commandes Utiles](#commandes-utiles)
 
 ---
 
@@ -33,7 +34,8 @@ Ce projet utilise un système d'agents spécialisés pour orchestrer TOUT le dé
 
 ```
 ❌ INTERDIT: Travailler directement (Read → Edit → Write → Bash pytest → git commit)
-✅ OBLIGATOIRE: Spawner les agents appropriés via Task tool
+✅ OBLIGATOIRE: Spawner les agents appropriés via Task tool (ou claude-flow swarm pour le parallèle)
+✅ OPTIONNEL: Utiliser claude-flow memory pour persistance cross-session
 ```
 
 ### Architecture des Agents
@@ -152,6 +154,78 @@ Avant de spawner un agent, **TOUJOURS lire son fichier .md** dans `.claude/agent
 ### Exemples d'Utilisation
 
 **📖 Voir `.claude/agents/EXAMPLES.md` pour des exemples détaillés de workflows complets**
+
+---
+
+## 🔵 claude-flow (RuFlo) - Orchestration & Mémoire
+
+claude-flow est la couche d'infrastructure qui **complète** le système d'agents custom. Les agents métier (Architecte, Tech Lead, experts) restent inchangés — claude-flow leur apporte orchestration parallèle et mémoire persistante.
+
+### Quand utiliser claude-flow ?
+
+| Besoin | Outil claude-flow | Quand |
+|--------|-------------------|-------|
+| **Mémoire cross-session** | `mcp__claude-flow__memory_store/retrieve/search` | Après chaque décision architecturale, bug résolu, pattern appris |
+| **Agents parallèles** | `mcp__claude-flow__swarm_init + agent_spawn + task_orchestrate` | Quand le Tech Lead identifie des `parallel_groups` |
+| **Contexte projet** | `mcp__claude-flow__memory_search` | En début de session pour récupérer l'état du projet |
+| **Patterns appris** | `mcp__claude-flow__neural_patterns` | Pour détecter des patterns récurrents dans le code |
+
+### Workflow Mis à Jour avec claude-flow
+
+```
+Début de session
+       ↓
+[claude-flow memory_search] → Récupérer contexte projet (décisions, patterns, bugs)
+       ↓
+Assistant → Spawne ARCHITECTE (si analyse requise)
+       ↓
+[claude-flow memory_store] → Mémoriser l'approche validée
+       ↓
+Assistant → Spawne TECH LEAD → Retourne TODOs avec parallel_groups
+       ↓
+Si parallel_groups :
+  [claude-flow swarm_init + agent_spawn] → Orchestrer experts en parallèle
+Sinon :
+  Assistant → Spawne experts séquentiellement via Task tool (comme avant)
+       ↓
+[claude-flow memory_store] → Mémoriser les patterns/solutions trouvés
+       ↓
+Résumé + validation utilisateur
+```
+
+### Mémoire Projet : Ce qu'on Stocke
+
+```python
+# Après validation d'une approche architecturale
+mcp__claude-flow__memory_store(
+    key="arch_decision_cloudflare_2026_05",
+    value="Approche 1 choisie : patch Firefox dom.webdriver.enabled=False + CloudflareDetector",
+    namespace="architecture"
+)
+
+# Après résolution d'un bug
+mcp__claude-flow__memory_store(
+    key="bug_executor_leak_fix",
+    value="Réduire MAX_WORKERS à 5, ThreadPoolExecutor dans with block",
+    namespace="bugs"
+)
+```
+
+### Espaces Mémoire (Namespaces)
+
+| Namespace | Contenu |
+|-----------|---------|
+| `architecture` | Décisions d'architecture validées |
+| `bugs` | Bugs résolus et leurs causes |
+| `patterns` | Patterns de code établis dans le projet |
+| `sprint` | État courant du sprint (TODOs en cours, bloquants) |
+
+### Règles d'Utilisation
+
+1. ✅ **Stocker en mémoire** toute décision architecturale validée par l'utilisateur
+2. ✅ **Rechercher en mémoire** en début de session avant de proposer des solutions
+3. ✅ **Swarm pour le parallèle** : quand Tech Lead identifie `parallel_groups`, utiliser claude-flow swarm plutôt que Task tool séquentiel
+4. ❌ **Ne pas remplacer les agents custom** par des agents génériques claude-flow — les agents `.claude/agents/` ont la connaissance projet
 
 ---
 
