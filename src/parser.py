@@ -330,6 +330,7 @@ class Parser:
                     path,
                 )
                 continue
+            self.webdriver.execute_script("arguments[0].scrollIntoView(true);", row[0])
             actions = ActionChains(self.webdriver)
             actions.move_to_element_with_offset(
                 row[0], scraping_config.MATCHUP_CAROUSEL_SCROLL_X, 0
@@ -511,6 +512,7 @@ class Parser:
                     path,
                 )
                 continue
+            self.webdriver.execute_script("arguments[0].scrollIntoView(true);", row[0])
             actions = ActionChains(self.webdriver)
             actions.move_to_element_with_offset(
                 row[0], scraping_config.MATCHUP_CAROUSEL_SCROLL_X, 0
