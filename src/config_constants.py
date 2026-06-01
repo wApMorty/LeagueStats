@@ -37,8 +37,10 @@ class ScrapingConfig:
     RETRY_ATTEMPTS: int = 3
     TIMEOUT: int = 30
 
-    # Scroll position for matchup data
-    MATCHUP_SCROLL_Y: int = 3000
+    # Scroll position to trigger lazy-loading of the matchup/synergy section.
+    # The section is at absolute Y ~2200. Scrolling to 1700 places it at
+    # viewport Y ~500 (center of a 994px viewport), triggering IntersectionObserver.
+    MATCHUP_SCROLL_Y: int = 1700
 
     # Scroll distance for horizontal matchup carousel
     MATCHUP_CAROUSEL_SCROLL_X: int = 460

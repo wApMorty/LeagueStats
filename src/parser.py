@@ -13,6 +13,7 @@ from selenium.common.exceptions import (
     NoSuchElementException,
     ElementNotInteractableException,
     InvalidSessionIdException,
+    StaleElementReferenceException,
     WebDriverException,
     TimeoutException,
 )
@@ -288,58 +289,63 @@ class Parser:
     ) -> List[tuple]:
         result = []
 
-        # Build URL with optional lane parameter
         if lane:
             url = f"https://lolalytics.com/lol/{champion}/build/?lane={lane}&tier=diamond_plus&patch={patch}"
         else:
             url = f"https://lolalytics.com/lol/{champion}/build/?tier=diamond_plus&patch={patch}"
 
         self.webdriver.get(url)
-
         sleep(scraping_config.PAGE_LOAD_DELAY)
 
-        self.webdriver.execute_script(f"window.scrollTo(0,{scraping_config.MATCHUP_SCROLL_Y})")
-
+        # Scroll to trigger lazy-loading of the matchup section.
+        # MATCHUP_SCROLL_Y must place the section (~Y=2200) inside the viewport.
+        self.webdriver.execute_script(f"window.scrollTo(0, {scraping_config.MATCHUP_SCROLL_Y})")
         sleep(scraping_config.SCROLL_DELAY)
 
-        # region Accepting cookies
         self._accept_cookies()
-        # endregion
 
-        # Wait for the first matchup row to render (JS lazy-loading)
+        # Wait for the first tier row container to exist in the DOM.
         first_row_path = xpath_config.MATCHUP_ROW_BASE.format(index=2)
         try:
-            WebDriverWait(self.webdriver, 15).until(
-                EC.presence_of_element_located((By.XPATH, f"{first_row_path}/*[1]"))
+            WebDriverWait(self.webdriver, 10).until(
+                EC.presence_of_element_located((By.XPATH, first_row_path))
             )
         except TimeoutException:
-            logger.warning(
-                "Matchup section did not render after scrolling to y=%d. "
-                "Try increasing MATCHUP_SCROLL_Y in config_constants.py.",
-                scraping_config.MATCHUP_SCROLL_Y,
-            )
-
-        for index in range(2, 7):
-            path = xpath_config.MATCHUP_ROW_BASE.format(index=index)
-            row = self.webdriver.find_elements(By.XPATH, f"{path}/*")
-            if not row:
-                logger.warning(
-                    "No elements at matchup row index=%d (path=%s). "
-                    "LoLalytics DOM may have changed — update MATCHUP_ROW_BASE in config_constants.py.",
-                    index,
-                    path,
+            # Fallback: scrollIntoView the main section to trigger the lazy-loader
+            try:
+                section = self.webdriver.find_element(By.XPATH, "/html/body/main/div[6]")
+                self.webdriver.execute_script("arguments[0].scrollIntoView(true);", section)
+                sleep(2)
+                WebDriverWait(self.webdriver, 5).until(
+                    EC.presence_of_element_located((By.XPATH, first_row_path))
                 )
+            except (TimeoutException, NoSuchElementException):
+                logger.warning("Matchup section never rendered for %s. Returning empty.", champion)
+                return result
+
+        for row_idx in range(2, 7):
+            path = xpath_config.MATCHUP_ROW_BASE.format(index=row_idx)
+
+            # Bring this tier row into the center of the viewport
+            try:
+                container = self.webdriver.find_element(By.XPATH, path)
+            except NoSuchElementException:
+                logger.warning("Matchup row %d missing for %s.", row_idx, champion)
                 continue
-            self.webdriver.execute_script("arguments[0].scrollIntoView(true);", row[0])
-            actions = ActionChains(self.webdriver)
-            actions.move_to_element_with_offset(
-                row[0], scraping_config.MATCHUP_CAROUSEL_SCROLL_X, 0
-            ).perform()
-            enough_data = False
-            while not enough_data:
-                for elem in row:
+            self.webdriver.execute_script(
+                "arguments[0].scrollIntoView({block: 'center'});", container
+            )
+            sleep(0.3)
+
+            pickrate = float("inf")
+
+            while True:
+                # Refresh elements each pass (carousel may add items after scroll)
+                row = self.webdriver.find_elements(By.XPATH, f"{path}/*")
+                prev_count = len(result)
+
+                for elem_idx, elem in enumerate(row, start=1):
                     try:
-                        index = row.index(elem) + 1
                         champ = (
                             elem.find_element(By.TAG_NAME, "a")
                             .get_dom_attribute("href")
@@ -347,47 +353,52 @@ class Parser:
                             .split("/build")[0]
                         )
                         winrate = float(
-                            elem.find_element(By.XPATH, f"{path}/div[{index}]/div[1]/span")
+                            elem.find_element(By.XPATH, f"{path}/div[{elem_idx}]/div[1]/span")
                             .get_attribute("innerHTML")
                             .split("%")[0]
                         )
-
-                        # Get all "my-1" elements and validate size before accessing indices
                         my1_elements = elem.find_elements(By.CLASS_NAME, "my-1")
                         if len(my1_elements) < 7:
                             logger.warning(
-                                f"Insufficient 'my-1' elements for {champ} matchup "
-                                f"(found {len(my1_elements)}, expected ≥7). Skipping."
+                                "Insufficient my-1 elements for %s matchup (%d). Skipping.",
+                                champ,
+                                len(my1_elements),
                             )
                             continue
-
                         delta1 = float(my1_elements[4].get_attribute("innerHTML"))
                         delta2 = float(my1_elements[5].get_attribute("innerHTML"))
                         pickrate = float(my1_elements[6].get_attribute("innerHTML"))
-
                         games = int(
                             "".join(
                                 elem.find_element(By.CLASS_NAME, r"text-\[9px\]")
                                 .get_attribute("innerHTML")
                                 .split()
-                            ).replace(
-                                ",", ""
-                            )  # Remove thousands separator
+                            ).replace(",", "")
                         )
-                        if not self.contains(
-                            result, champ, winrate, delta1, delta2, pickrate, games
-                        ):
+                        if not self.contains(result, champ, winrate, delta1, delta2, pickrate, games):
                             result.append((champ, winrate, delta1, delta2, pickrate, games))
+                    except StaleElementReferenceException:
+                        break  # row became stale mid-pass; re-fetch on next iteration
                     except (IndexError, ValueError, NoSuchElementException) as e:
                         logger.warning(
-                            f"Failed to parse matchup element: {type(e).__name__}: {e}. Skipping."
+                            "Failed to parse matchup element: %s: %s. Skipping.",
+                            type(e).__name__,
+                            e,
                         )
                         continue
-                actions = ActionChains(self.webdriver)
-                actions.click_and_hold().move_by_offset(
-                    -scraping_config.MATCHUP_CAROUSEL_SCROLL_X, 0
-                ).release().move_by_offset(scraping_config.MATCHUP_CAROUSEL_SCROLL_X, 0).perform()
-                enough_data = pickrate < config.MIN_PICKRATE
+
+                # Stop if we have low-pickrate data or the carousel added nothing new
+                if pickrate < config.MIN_PICKRATE or len(result) == prev_count:
+                    break
+
+                # Scroll carousel right to reveal the next batch of items
+                self.webdriver.execute_script(
+                    "arguments[0].scrollLeft += arguments[1];",
+                    container,
+                    scraping_config.MATCHUP_CAROUSEL_SCROLL_X,
+                )
+                sleep(0.5)
+
         return result
 
     def contains(self, list, champ, winrate, d1, d2, pick, games) -> bool:
@@ -448,126 +459,115 @@ class Parser:
 
         self.webdriver.get(url)
         sleep(scraping_config.PAGE_LOAD_DELAY)
-
-        # Accept cookies before clicking Synergies button
         self._accept_cookies()
 
-        # Click "Synergies" button to switch tabs
+        # Click "Synergies" / "Common Teammates" tab
         try:
             synergies_button = self.webdriver.find_element(
                 By.XPATH, xpath_config.SYNERGIES_BUTTON_XPATH
             )
             synergies_button.click()
-            logger.info(f"Clicked Synergies button for {champion}")
-
-            # Explicit wait for synergies data to load (wait for first row)
-            # Wait up to 10 seconds for the first synergy row to be present
-            wait = WebDriverWait(self.webdriver, 10)
-            first_synergy_row_xpath = "/html/body/main/div[6]/div[1]/div[2]/div[2]/div"
-            wait.until(EC.presence_of_element_located((By.XPATH, first_synergy_row_xpath)))
-            logger.info(f"Synergies data loaded for {champion}")
-            sleep(scraping_config.PAGE_LOAD_DELAY)  # Additional wait for stability
+            logger.info("Clicked Synergies button for %s", champion)
         except NoSuchElementException:
             logger.warning(
-                f"Synergies button not found for {champion}. "
-                f"XPath: {xpath_config.SYNERGIES_BUTTON_XPATH}"
-            )
-            return []  # Return empty if button not found
-        except TimeoutException:
-            logger.error(
-                f"Synergies data failed to load for {champion} after clicking button. "
-                f"Timeout waiting for first synergy row."
+                "Synergies button not found for %s (XPath: %s).",
+                champion,
+                xpath_config.SYNERGIES_BUTTON_XPATH,
             )
             return []
         except Exception as e:
-            logger.error(f"Failed to click Synergies button for {champion}: {e}")
+            logger.error("Failed to click Synergies button for %s: %s", champion, e)
             return []
 
-        # Scroll to synergies section (same scroll position as matchups)
-        self.webdriver.execute_script(f"window.scrollTo(0,{scraping_config.MATCHUP_SCROLL_Y})")
+        # Scroll to trigger lazy-loading, then wait for the first synergy row
+        self.webdriver.execute_script(f"window.scrollTo(0, {scraping_config.MATCHUP_SCROLL_Y})")
         sleep(scraping_config.SCROLL_DELAY)
 
-        # Wait for the first synergy row to render (JS lazy-loading)
         first_row_path = xpath_config.MATCHUP_ROW_BASE.format(index=2)
         try:
-            WebDriverWait(self.webdriver, 15).until(
-                EC.presence_of_element_located((By.XPATH, f"{first_row_path}/*[1]"))
+            WebDriverWait(self.webdriver, 10).until(
+                EC.presence_of_element_located((By.XPATH, first_row_path))
             )
+            logger.info("Synergies data loaded for %s", champion)
         except TimeoutException:
-            logger.warning(
-                "Synergy section did not render after scrolling to y=%d. "
-                "Try increasing MATCHUP_SCROLL_Y in config_constants.py.",
-                scraping_config.MATCHUP_SCROLL_Y,
-            )
-
-        # Parse synergies (4 rows instead of 5 for matchups)
-        for index in range(2, 6):
-            path = xpath_config.MATCHUP_ROW_BASE.format(index=index)
-            row = self.webdriver.find_elements(By.XPATH, f"{path}/*")
-            if not row:
-                logger.warning(
-                    "No elements at synergy row index=%d (path=%s). "
-                    "LoLalytics DOM may have changed — update MATCHUP_ROW_BASE in config_constants.py.",
-                    index,
-                    path,
+            try:
+                section = self.webdriver.find_element(By.XPATH, "/html/body/main/div[6]")
+                self.webdriver.execute_script("arguments[0].scrollIntoView(true);", section)
+                sleep(2)
+                WebDriverWait(self.webdriver, 5).until(
+                    EC.presence_of_element_located((By.XPATH, first_row_path))
                 )
+            except (TimeoutException, NoSuchElementException):
+                logger.warning("Synergy section never rendered for %s. Returning empty.", champion)
+                return []
+
+        # Parse synergies (4 tier rows, not 5 like matchups)
+        for row_idx in range(2, 6):
+            path = xpath_config.MATCHUP_ROW_BASE.format(index=row_idx)
+
+            try:
+                container = self.webdriver.find_element(By.XPATH, path)
+            except NoSuchElementException:
+                logger.warning("Synergy row %d missing for %s.", row_idx, champion)
                 continue
-            self.webdriver.execute_script("arguments[0].scrollIntoView(true);", row[0])
-            actions = ActionChains(self.webdriver)
-            actions.move_to_element_with_offset(
-                row[0], scraping_config.MATCHUP_CAROUSEL_SCROLL_X, 0
-            ).perform()
-            enough_data = False
-            pickrate = float("inf")  # Initialize to continue scrolling if all elements fail
-            while not enough_data:
-                for elem in row:
+            self.webdriver.execute_script(
+                "arguments[0].scrollIntoView({block: 'center'});", container
+            )
+            sleep(0.3)
+
+            pickrate = float("inf")
+
+            while True:
+                row = self.webdriver.find_elements(By.XPATH, f"{path}/*")
+                prev_count = len(result)
+
+                for elem_idx, elem in enumerate(row, start=1):
                     try:
-                        index = row.index(elem) + 1
-                        # Extract ally name from href
-                        # Synergies URL format: /lol/{champion}/build/?lane=...
-                        # (different from matchups which use /lol/yasuo/vs/{enemy}/build)
                         href = elem.find_element(By.TAG_NAME, "a").get_dom_attribute("href")
                         ally = href.split("/lol/")[1].split("/build")[0]
                         winrate = float(
-                            elem.find_element(By.XPATH, f"{path}/div[{index}]/div[1]/span")
+                            elem.find_element(By.XPATH, f"{path}/div[{elem_idx}]/div[1]/span")
                             .get_attribute("innerHTML")
                             .split("%")[0]
                         )
-
-                        # Get all "my-1" elements and validate size
                         my1_elements = elem.find_elements(By.CLASS_NAME, "my-1")
                         if len(my1_elements) < 7:
                             logger.warning(
-                                f"Insufficient 'my-1' elements for {ally} synergy "
-                                f"(found {len(my1_elements)}, expected ≥7). Skipping."
+                                "Insufficient my-1 elements for %s synergy (%d). Skipping.",
+                                ally,
+                                len(my1_elements),
                             )
                             continue
-
                         delta1 = float(my1_elements[4].get_attribute("innerHTML"))
                         delta2 = float(my1_elements[5].get_attribute("innerHTML"))
                         pickrate = float(my1_elements[6].get_attribute("innerHTML"))
-
                         games = int(
                             "".join(
                                 elem.find_element(By.CLASS_NAME, r"text-\[9px\]")
                                 .get_attribute("innerHTML")
                                 .split()
-                            ).replace(
-                                ",", ""
-                            )  # Remove thousands separator
+                            ).replace(",", "")
                         )
-                        if not self.contains(
-                            result, ally, winrate, delta1, delta2, pickrate, games
-                        ):
+                        if not self.contains(result, ally, winrate, delta1, delta2, pickrate, games):
                             result.append((ally, winrate, delta1, delta2, pickrate, games))
+                    except StaleElementReferenceException:
+                        break
                     except (IndexError, ValueError, NoSuchElementException) as e:
                         logger.warning(
-                            f"Failed to parse synergy element: {type(e).__name__}: {e}. Skipping."
+                            "Failed to parse synergy element: %s: %s. Skipping.",
+                            type(e).__name__,
+                            e,
                         )
                         continue
-                actions = ActionChains(self.webdriver)
-                actions.click_and_hold().move_by_offset(
-                    -scraping_config.MATCHUP_CAROUSEL_SCROLL_X, 0
-                ).release().move_by_offset(scraping_config.MATCHUP_CAROUSEL_SCROLL_X, 0).perform()
-                enough_data = pickrate < config.MIN_PICKRATE
+
+                if pickrate < config.MIN_PICKRATE or len(result) == prev_count:
+                    break
+
+                self.webdriver.execute_script(
+                    "arguments[0].scrollLeft += arguments[1];",
+                    container,
+                    scraping_config.MATCHUP_CAROUSEL_SCROLL_X,
+                )
+                sleep(0.5)
+
         return result
