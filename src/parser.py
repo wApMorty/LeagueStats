@@ -1,9 +1,5 @@
-import os
-import shutil
-import tempfile
-import random
 from time import sleep
-from typing import List, Optional
+from typing import List
 import lxml.html
 import logging
 
@@ -21,7 +17,6 @@ from selenium.common.exceptions import (
     TimeoutException,
 )
 
-from .cloudflare_detector import CloudflareException, detect_cloudflare
 from .config import config
 from .config_constants import scraping_config, xpath_config
 from .error_ids import (
@@ -62,33 +57,6 @@ class Parser:
             # Normal mode with window manager integration (Komorebi)
             options.add_argument("--start-maximized")
 
-        # Masquer les indicateurs de bot pour éviter Cloudflare
-        options.set_preference("dom.webdriver.enabled", False)
-        options.set_preference("useAutomationExtension", False)
-        options.set_preference(
-            "general.useragent.override",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0",
-        )
-        # Force English Accept-Language so CF serves the English challenge page
-        # (prevents false-negative when CF switches to French "Un instant…")
-        options.set_preference("intl.accept_languages", "en-US,en;q=0.9")
-
-        # Copy CF clearance cookies from a real Firefox profile (if configured).
-        # Each parser instance gets its own copy to avoid Firefox profile lock
-        # conflicts when multiple workers run in parallel.
-        self._profile_tmpdir: Optional[str] = None
-        profile_src = scraping_config.FIREFOX_PROFILE_PATH
-        if profile_src and os.path.isdir(profile_src):
-            tmpdir = tempfile.mkdtemp(prefix="lolalytics_ff_")
-            self._profile_tmpdir = tmpdir
-            for fname in ("cookies.sqlite", "cookies.sqlite-wal", "cookies.sqlite-shm"):
-                src = os.path.join(profile_src, fname)
-                if os.path.exists(src):
-                    shutil.copy2(src, os.path.join(tmpdir, fname))
-            options.add_argument("-profile")
-            options.add_argument(tmpdir)
-            logger.info("Using CF cookie profile copy from %s", profile_src)
-
         self.webdriver = webdriver.Firefox(options=options)
         self.headless = headless
 
@@ -107,9 +75,6 @@ class Parser:
 
     def close(self) -> None:
         self.webdriver.quit()
-        if self._profile_tmpdir and os.path.isdir(self._profile_tmpdir):
-            shutil.rmtree(self._profile_tmpdir, ignore_errors=True)
-            logger.debug("Removed temp Firefox profile: %s", self._profile_tmpdir)
 
     def _accept_cookies(self) -> None:
         """Accept cookies banner using dynamic element detection.
@@ -289,7 +254,6 @@ class Parser:
 
         try:
             self.webdriver.get(url)
-            detect_cloudflare(self.webdriver, url=url)  # Raises CloudflareException si bloqué
             tree = lxml.html.fromstring(self.webdriver.page_source)
 
             # Try to extract winrate with fallback paths
@@ -309,8 +273,6 @@ class Parser:
             games = int(games_elements[0].replace(",", ""))
             return winrate, games
 
-        except CloudflareException:
-            raise  # Re-raise pour que tenacity puisse retry
         except (ValueError, IndexError) as e:
             print(f"Error parsing data for {champion} vs {enemy}: {e}")
             return None, None
@@ -333,15 +295,12 @@ class Parser:
             url = f"https://lolalytics.com/lol/{champion}/build/?tier=diamond_plus&patch={patch}"
 
         self.webdriver.get(url)
-        detect_cloudflare(self.webdriver, url=url)  # Raises CloudflareException si bloqué
 
-        sleep(
-            random.uniform(scraping_config.PAGE_LOAD_DELAY_MIN, scraping_config.PAGE_LOAD_DELAY_MAX)
-        )
+        sleep(scraping_config.PAGE_LOAD_DELAY)
 
         self.webdriver.execute_script(f"window.scrollTo(0,{scraping_config.MATCHUP_SCROLL_Y})")
 
-        sleep(random.uniform(scraping_config.SCROLL_DELAY_MIN, scraping_config.SCROLL_DELAY_MAX))
+        sleep(scraping_config.SCROLL_DELAY)
 
         # region Accepting cookies
         self._accept_cookies()
@@ -487,10 +446,7 @@ class Parser:
             url = f"https://lolalytics.com/lol/{champion}/build/?tier=diamond_plus&patch={patch}"
 
         self.webdriver.get(url)
-        detect_cloudflare(self.webdriver, url=url)  # Raises CloudflareException si bloqué
-        sleep(
-            random.uniform(scraping_config.PAGE_LOAD_DELAY_MIN, scraping_config.PAGE_LOAD_DELAY_MAX)
-        )
+        sleep(scraping_config.PAGE_LOAD_DELAY)
 
         # Accept cookies before clicking Synergies button
         self._accept_cookies()
@@ -509,11 +465,7 @@ class Parser:
             first_synergy_row_xpath = "/html/body/main/div[6]/div[1]/div[2]/div[2]/div"
             wait.until(EC.presence_of_element_located((By.XPATH, first_synergy_row_xpath)))
             logger.info(f"Synergies data loaded for {champion}")
-            sleep(
-                random.uniform(
-                    scraping_config.PAGE_LOAD_DELAY_MIN, scraping_config.PAGE_LOAD_DELAY_MAX
-                )
-            )  # Additional wait for stability
+            sleep(scraping_config.PAGE_LOAD_DELAY)  # Additional wait for stability
         except NoSuchElementException:
             logger.warning(
                 f"Synergies button not found for {champion}. "
@@ -532,7 +484,7 @@ class Parser:
 
         # Scroll to synergies section (same scroll position as matchups)
         self.webdriver.execute_script(f"window.scrollTo(0,{scraping_config.MATCHUP_SCROLL_Y})")
-        sleep(random.uniform(scraping_config.SCROLL_DELAY_MIN, scraping_config.SCROLL_DELAY_MAX))
+        sleep(scraping_config.SCROLL_DELAY)
 
         # Wait for the first synergy row to render (JS lazy-loading)
         first_row_path = xpath_config.MATCHUP_ROW_BASE.format(index=2)
