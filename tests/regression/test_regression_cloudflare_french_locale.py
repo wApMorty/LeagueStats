@@ -21,9 +21,7 @@ from src.cloudflare_detector import CloudflareException, detect_cloudflare
 def _make_driver_with_cdn_cgi(title: str) -> MagicMock:
     driver = MagicMock()
     type(driver).title = PropertyMock(return_value=title)
-    type(driver).current_url = PropertyMock(
-        return_value="https://lolalytics.com/cdn-cgi/challenge"
-    )
+    type(driver).current_url = PropertyMock(return_value="https://lolalytics.com/cdn-cgi/challenge")
     driver.find_elements.return_value = []
     return driver
 

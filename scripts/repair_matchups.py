@@ -417,7 +417,9 @@ def main() -> int:
     logger.info(f"Patch version : {args.patch}")
     logger.info(f"Max workers   : {args.max_workers}")
     logger.info(f"Headless mode : {args.headless}")
-    logger.info(f"Firefox profile: {scraping_config.FIREFOX_PROFILE_PATH or '(none — fresh profile)'}")
+    logger.info(
+        f"Firefox profile: {scraping_config.FIREFOX_PROFILE_PATH or '(none — fresh profile)'}"
+    )
     logger.info(f"Dry run       : {args.dry_run}")
 
     db: Optional[Database] = None
