@@ -40,6 +40,38 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### 🔴 Horizon 1 — Pipeline de données fiable (2026-06-12)
+
+Implémentation de `docs/ROADMAP_2026.md` §3 H1 : données complètes, fraîches,
+multi-lane, sans intervention manuelle.
+
+- **🗃️ Database**: migration Alembic `b7e41c9a3f02` — colonne `lane` (TEXT, nullable) sur
+  `matchups`/`synergies` + index composites `(champion|enemy|ally, lane, pickrate)` +
+  table `db_meta` (clé/valeur). Les lignes multi-lane sont enfin distinguables
+  (fondation Tâche #15) ; migration testée upgrade+downgrade sur copie de la BD réelle
+- **✨ Feature**: découverte dynamique des lanes (`src/lane_discovery.py`) — la répartition
+  des lanes est extraite du HTML brut LoLalytics (SSR Qwik) en simple HTTP `requests`,
+  sans Selenium ; seules les lanes à pickrate >10% sont scrapées
+  (`LANE_PICKRATE_THRESHOLD`). Décision validée le 2026-06-12
+- **✨ Feature**: orchestration multi-lane (`src/multilane.py`) — scrape matchups+synergies
+  par groupe (lane, champions) avec tag `lane` en BD ; fallback lane par défaut (lane=NULL)
+  si la découverte échoue pour un champion
+- **✨ Feature**: `scripts/update_all.py` — successeur industrialisé de `fill_db.py` /
+  `auto_update_db.py` : scrape multi-lane → gate de complétude → recalcul
+  `champion_scores` → recalcul `pool_ban_recommendations` → métadonnées fraîcheur →
+  notifications (toast Windows + webhook Discord). Patch depuis `config.CURRENT_PATCH`
+  (fin du `PATCH = "14"` hardcodé), SQLite uniquement (plus de sync Neon — Décision C)
+- **✅ Test**: gate de complétude volumétrique (`src/data_quality.py`) — échec bruyant
+  (exit 1 + notification, fraîcheur non avancée) si la volumétrie est sous les seuils
+  `DataQualityConfig` ; la perte silencieuse 40k→16k du 01/06 ne peut plus se reproduire
+- **✨ Feature**: bandeau de fraîcheur au lancement de l'app (`src/data_freshness.py`) —
+  âge des données + volumétrie à chaque affichage du menu, `[ALERTE]` si >7 jours
+  (le garde-fou qui manquait quand l'auto-update est mort silencieusement le 19/03)
+- **🔧 Chore**: `scripts/setup_auto_update.ps1` re-ciblé sur `update_all.py`
+  (Task Scheduler quotidien)
+- **📝 Docs**: `docs/runbook_scraping.md` — diagnostic DOM, sélecteurs à vérifier,
+  recalibration des seuils, marche à suivre si Cloudflare réapparaît
+
 ### 🚨 Horizon 0 — Stabilisation (2026-06-12)
 
 Voir `docs/AUDIT_2026_06.md` et `docs/ROADMAP_2026.md` (décisions stratégiques A/B/C tranchées le 2026-06-11).

@@ -196,7 +196,7 @@ class ParallelParser:
             return champion, []
 
     def _write_matchups_thread_safe(
-        self, db: Database, champion: str, matchups: List[Tuple]
+        self, db: Database, champion: str, matchups: List[Tuple], lane: Optional[str] = None
     ) -> None:
         """Write matchup data to database with thread-safe locking.
 
@@ -204,6 +204,8 @@ class ParallelParser:
             db: Database instance
             champion: Champion name
             matchups: List of matchup tuples
+            lane: Optional lane tag for the whole batch (multi-lane pipeline).
+                  None = default/unknown lane (legacy behavior).
         """
         with self.db_lock:
             try:
@@ -217,7 +219,7 @@ class ParallelParser:
                 if not hasattr(self, "_champion_cache"):
                     self._champion_cache = db.build_champion_cache()
 
-                db.add_matchups_batch(matchup_batch, self._champion_cache)
+                db.add_matchups_batch(matchup_batch, self._champion_cache, lane=lane)
             except Exception as e:
                 logger.error(f"Database write error for {champion}: {e}")
 
@@ -266,7 +268,7 @@ class ParallelParser:
             return champion, []
 
     def _write_synergies_thread_safe(
-        self, db: Database, champion: str, synergies: List[Tuple]
+        self, db: Database, champion: str, synergies: List[Tuple], lane: Optional[str] = None
     ) -> None:
         """Write synergy data to database with thread-safe locking.
 
@@ -274,6 +276,8 @@ class ParallelParser:
             db: Database instance
             champion: Champion name
             synergies: List of synergy tuples (ally, winrate, delta1, delta2, pickrate, games)
+            lane: Optional lane tag for the whole batch (multi-lane pipeline).
+                  None = default/unknown lane (legacy behavior).
         """
         with self.db_lock:
             try:
@@ -287,7 +291,7 @@ class ParallelParser:
                 if not hasattr(self, "_champion_cache"):
                     self._champion_cache = db.build_champion_cache()
 
-                db.add_synergies_batch(synergy_batch)
+                db.add_synergies_batch(synergy_batch, lane=lane)
             except Exception as e:
                 logger.error(f"Database write error for {champion} synergies: {e}")
 
@@ -519,15 +523,28 @@ class ParallelParser:
         return stats
 
     def parse_champions_by_role(
-        self, db: Database, champion_list: List[str], lane: str, normalize_func
+        self,
+        db: Database,
+        champion_list: List[str],
+        lane: Optional[str],
+        normalize_func,
+        init_tables: bool = True,
     ) -> dict:
         """Parse champions for a specific role/lane in parallel.
+
+        Matchups are tagged with the lane in the database (multi-lane pipeline,
+        Horizon 1). With lane=None, the LoLalytics default lane is scraped and
+        rows are stored untagged.
 
         Args:
             db: Database instance (must be connected)
             champion_list: List of champion names for this role
-            lane: Lane name (top, jungle, middle, bottom, support)
+            lane: Lane name (top, jungle, middle, bottom, support) or None
             normalize_func: Function to normalize champion names for URLs
+            init_tables: If True (legacy default), refresh champions from the
+                Riot API and DROP+recreate the matchups table. MUST be False
+                when called once per lane in the multi-lane pipeline, otherwise
+                each lane wipes the previous one.
 
         Returns:
             dict: Statistics with keys 'success', 'failed', 'total', 'duration'
@@ -536,19 +553,23 @@ class ParallelParser:
 
         start_time = time.time()
 
-        logger.info(f"Starting parallel scraping of {len(champion_list)} champions for {lane}")
+        lane_label = lane or "default"
+        logger.info(
+            f"Starting parallel scraping of {len(champion_list)} champions for {lane_label}"
+        )
 
-        # Initialize database tables (use Alembic-compatible schema)
-        # Note: init_champion_table() is deprecated and breaks Alembic migrations
-        # Use Riot API integration instead to populate champions table
-        if not db.create_riot_champions_table():
-            logger.warning("Failed to create/update champions table schema")
+        if init_tables:
+            # Initialize database tables (use Alembic-compatible schema)
+            # Note: init_champion_table() is deprecated and breaks Alembic migrations
+            # Use Riot API integration instead to populate champions table
+            if not db.create_riot_champions_table():
+                logger.warning("Failed to create/update champions table schema")
 
-        # Always update champions from Riot API to ensure new champions (like Zaahen) are included
-        logger.info("Updating champions from Riot API...")
-        db.update_champions_from_riot_api()
+            # Always update champions from Riot API to ensure new champions are included
+            logger.info("Updating champions from Riot API...")
+            db.update_champions_from_riot_api()
 
-        db.init_matchups_table()
+            db.init_matchups_table()
 
         # Close any existing executor/parsers before creating a new thread pool
         self._cleanup_existing_resources()
@@ -565,11 +586,11 @@ class ParallelParser:
                     self.patch_version, normalized_champion, lane
                 )
                 logger.info(
-                    f"Successfully scraped {champion} ({lane}, patch {self.patch_version}): {len(matchups)} matchups"
+                    f"Successfully scraped {champion} ({lane_label}, patch {self.patch_version}): {len(matchups)} matchups"
                 )
                 return champion, matchups
             except Exception as e:
-                logger.error(f"Error scraping {champion} ({lane}): {e}")
+                logger.error(f"Error scraping {champion} ({lane_label}): {e}")
                 return champion, []
 
         futures = {
@@ -583,19 +604,22 @@ class ParallelParser:
         # Disable tqdm in headless mode (pythonw.exe, Task Scheduler)
         disable_tqdm = _is_headless_mode()
         if disable_tqdm:
-            logger.info(f"Headless mode detected - tqdm progress bar disabled for {lane}")
+            logger.info(f"Headless mode detected - tqdm progress bar disabled for {lane_label}")
 
         with tqdm(
-            total=len(champion_list), desc=f"Scraping {lane}", unit="champ", disable=disable_tqdm
+            total=len(champion_list),
+            desc=f"Scraping {lane_label}",
+            unit="champ",
+            disable=disable_tqdm,
         ) as pbar:
             for future in as_completed(futures):
                 champion = futures[future]
                 try:
                     champ_name, matchups = future.result()
-                    self._write_matchups_thread_safe(db, champ_name, matchups)
+                    self._write_matchups_thread_safe(db, champ_name, matchups, lane=lane)
                     success_count += 1
                 except Exception as e:
-                    logger.error(f"Failed to scrape {champion} ({lane}): {e}")
+                    logger.error(f"Failed to scrape {champion} ({lane_label}): {e}")
                     failed_count += 1
                 finally:
                     pbar.update(1)
@@ -618,15 +642,27 @@ class ParallelParser:
         return stats
 
     def parse_synergies_by_role(
-        self, db: Database, champion_list: List[str], lane: str, normalize_func
+        self,
+        db: Database,
+        champion_list: List[str],
+        lane: Optional[str],
+        normalize_func,
+        init_tables: bool = True,
     ) -> dict:
         """Parse champion synergies for a specific role/lane in parallel.
+
+        Synergies are tagged with the lane in the database (multi-lane
+        pipeline, Horizon 1). With lane=None, the LoLalytics default lane is
+        scraped and rows are stored untagged.
 
         Args:
             db: Database instance (must be connected)
             champion_list: List of champion names for this role
-            lane: Lane name (top, jungle, middle, bottom, support)
+            lane: Lane name (top, jungle, middle, bottom, support) or None
             normalize_func: Function to normalize champion names for URLs
+            init_tables: If True (legacy default), DROP+recreate the synergies
+                table. MUST be False when called once per lane in the
+                multi-lane pipeline, otherwise each lane wipes the previous one.
 
         Returns:
             dict: Statistics with keys 'success', 'failed', 'total', 'duration'
@@ -635,12 +671,14 @@ class ParallelParser:
 
         start_time = time.time()
 
+        lane_label = lane or "default"
         logger.info(
-            f"Starting parallel scraping of synergies for {len(champion_list)} champions for {lane}"
+            f"Starting parallel scraping of synergies for {len(champion_list)} champions for {lane_label}"
         )
 
-        # Initialize synergies table
-        db.init_synergies_table()
+        if init_tables:
+            # Initialize synergies table
+            db.init_synergies_table()
 
         # Close any existing executor/parsers before creating a new thread pool
         self._cleanup_existing_resources()
@@ -657,11 +695,11 @@ class ParallelParser:
                     self.patch_version, normalized_champion, lane
                 )
                 logger.info(
-                    f"Successfully scraped synergies for {champion} ({lane}, patch {self.patch_version}): {len(synergies)} allies"
+                    f"Successfully scraped synergies for {champion} ({lane_label}, patch {self.patch_version}): {len(synergies)} allies"
                 )
                 return champion, synergies
             except Exception as e:
-                logger.error(f"Error scraping synergies for {champion} ({lane}): {e}")
+                logger.error(f"Error scraping synergies for {champion} ({lane_label}): {e}")
                 return champion, []
 
         futures = {
@@ -676,11 +714,13 @@ class ParallelParser:
         # Disable tqdm in headless mode (pythonw.exe, Task Scheduler)
         disable_tqdm = _is_headless_mode()
         if disable_tqdm:
-            logger.info(f"Headless mode detected - tqdm progress bar disabled for {lane} synergies")
+            logger.info(
+                f"Headless mode detected - tqdm progress bar disabled for {lane_label} synergies"
+            )
 
         with tqdm(
             total=len(champion_list),
-            desc=f"Scraping {lane} synergies",
+            desc=f"Scraping {lane_label} synergies",
             unit="champ",
             disable=disable_tqdm,
         ) as pbar:
@@ -688,10 +728,10 @@ class ParallelParser:
                 champion = futures[future]
                 try:
                     champ_name, synergies = future.result()
-                    self._write_synergies_thread_safe(db, champ_name, synergies)
+                    self._write_synergies_thread_safe(db, champ_name, synergies, lane=lane)
                     success_count += 1
                 except Exception as e:
-                    logger.error(f"Failed to scrape synergies for {champion} ({lane}): {e}")
+                    logger.error(f"Failed to scrape synergies for {champion} ({lane_label}): {e}")
                     failed_count += 1
                 finally:
                     pbar.update(1)

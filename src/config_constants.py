@@ -50,6 +50,23 @@ class ScrapingConfig:
     FIREFOX_STARTUP_DELAY: float = 1.0  # Minimal delay for Firefox initialization
     HEADLESS: bool = True  # Run Firefox in headless mode (no GUI, better performance)
 
+    # ── Multi-lane scraping (Horizon 1) ──────────────────────────────────────
+    # LoLalytics lane identifiers, as used in ?lane= URLs and stored in the
+    # matchups/synergies `lane` column.
+    LANES: tuple = ("top", "jungle", "middle", "bottom", "support")
+
+    # A lane is scraped for a champion when its share of the champion's games
+    # exceeds this threshold (ROADMAP_2026.md H1: « lanes à pickrate >10% »).
+    LANE_PICKRATE_THRESHOLD: float = 10.0
+
+    # Lane discovery is plain HTTP (the distribution is in the SSR HTML,
+    # no JS rendering needed) — much cheaper than a Selenium page load.
+    LANE_DISCOVERY_TIMEOUT: int = 20
+    LANE_DISCOVERY_MAX_WORKERS: int = 8
+    LANE_DISCOVERY_USER_AGENT: str = (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0"
+    )
+
     # Firefox profile path for Cloudflare bypass via cf_clearance cookie reuse.
     # Set to an existing Firefox profile that has already solved CF challenges on
     # lolalytics.com.  The scraper copies only cookies.sqlite from this directory
@@ -197,6 +214,38 @@ class SynergyConfig:
 
 
 @dataclass
+class DataQualityConfig:
+    """Volumetric completeness thresholds for the scraping pipeline (Horizon 1).
+
+    Goal: a silent data loss like 2026-06-01 (40k -> 16k matchups, nobody
+    noticed for 10 days) must make the pipeline fail LOUDLY instead.
+
+    Calibration notes (2026-06-12):
+    - A single LoLalytics lane page yields ~94 matchups above the 0.5%
+      pickrate cutoff, so a champion playing 1 lane lands around ~90.
+    - Mono-lane DB (the failure mode): 16 179 matchups / 12 943 synergies.
+    - Multi-lane with the >10% lane threshold is estimated at ~25k matchups.
+      MIN_TOTAL_MATCHUPS sits between the two; recalibrate upward after the
+      first nightly runs (see docs/runbook_scraping.md).
+    """
+
+    # Every champion in the champions table must have at least this many
+    # matchup rows, all lanes combined. Catches per-champion scrape failures.
+    MIN_MATCHUPS_PER_CHAMPION: int = 75
+    MIN_SYNERGIES_PER_CHAMPION: int = 50
+
+    # Global volumetry. Catches the mono-lane regression (16k rows) without
+    # tripping on legitimate multi-lane runs (~25k+ rows).
+    MIN_TOTAL_MATCHUPS: int = 20000
+    MIN_TOTAL_SYNERGIES: int = 15000
+
+    # Data freshness: warn at app startup when the last successful update
+    # is older than this (the guard-rail that was missing when auto-update
+    # silently died on 2026-03-19).
+    FRESHNESS_WARNING_DAYS: int = 7
+
+
+@dataclass
 class APIConfig:
     """Configuration for remote API data source (PostgreSQL Direct backend).
 
@@ -256,4 +305,5 @@ ui_config = UIConfig()
 xpath_config = XPathConfig()
 pool_stats_config = PoolStatisticsConfig()
 synergy_config = SynergyConfig()
+data_quality_config = DataQualityConfig()
 api_config = APIConfig()

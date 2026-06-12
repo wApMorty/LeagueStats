@@ -18,6 +18,8 @@ from src.ui.menu_system import print_banner, print_main_menu, print_requirements
 from src.ui.draft_coach_ui import run_draft_coach
 from src.ui.champion_data_ui import update_champion_data
 from src.utils.console import clear_console, set_clear_enabled, clear_and_banner
+from src.config import config
+from src.data_freshness import get_freshness_info, format_freshness_banner
 
 # Import legacy functions not yet refactored
 from src.ui.lol_coach_legacy import (
@@ -106,6 +108,10 @@ def main():
         )
         return
 
+    # Data freshness guard-rail (Horizon 1): computed once at startup,
+    # displayed on every menu iteration so a dead auto-update is visible.
+    freshness_banner = format_freshness_banner(get_freshness_info(config.DATABASE_PATH))
+
     # Main menu mode
     while True:
         # Clear console and re-display banner on every loop iteration
@@ -113,6 +119,8 @@ def main():
             clear_and_banner(print_banner)
         else:
             clear_console()  # Clear even without banner
+
+        print(freshness_banner + "\n")
 
         try:
             choice = print_main_menu()
