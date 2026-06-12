@@ -201,6 +201,14 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
 
+      # data/db.db is gitignored (personal data) but the PyInstaller spec embeds
+      # it — generate an empty schema so the packaging smoke test can run
+      - name: Generate empty database schema
+        run: |
+          New-Item -ItemType Directory -Force data | Out-Null
+          python -m alembic upgrade head
+        shell: pwsh
+
       # Build with PyInstaller
       - name: Build executable
         run: |
