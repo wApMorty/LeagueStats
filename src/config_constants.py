@@ -214,6 +214,38 @@ class SynergyConfig:
 
 
 @dataclass
+class DataQualityConfig:
+    """Volumetric completeness thresholds for the scraping pipeline (Horizon 1).
+
+    Goal: a silent data loss like 2026-06-01 (40k -> 16k matchups, nobody
+    noticed for 10 days) must make the pipeline fail LOUDLY instead.
+
+    Calibration notes (2026-06-12):
+    - A single LoLalytics lane page yields ~94 matchups above the 0.5%
+      pickrate cutoff, so a champion playing 1 lane lands around ~90.
+    - Mono-lane DB (the failure mode): 16 179 matchups / 12 943 synergies.
+    - Multi-lane with the >10% lane threshold is estimated at ~25k matchups.
+      MIN_TOTAL_MATCHUPS sits between the two; recalibrate upward after the
+      first nightly runs (see docs/runbook_scraping.md).
+    """
+
+    # Every champion in the champions table must have at least this many
+    # matchup rows, all lanes combined. Catches per-champion scrape failures.
+    MIN_MATCHUPS_PER_CHAMPION: int = 75
+    MIN_SYNERGIES_PER_CHAMPION: int = 50
+
+    # Global volumetry. Catches the mono-lane regression (16k rows) without
+    # tripping on legitimate multi-lane runs (~25k+ rows).
+    MIN_TOTAL_MATCHUPS: int = 20000
+    MIN_TOTAL_SYNERGIES: int = 15000
+
+    # Data freshness: warn at app startup when the last successful update
+    # is older than this (the guard-rail that was missing when auto-update
+    # silently died on 2026-03-19).
+    FRESHNESS_WARNING_DAYS: int = 7
+
+
+@dataclass
 class APIConfig:
     """Configuration for remote API data source (PostgreSQL Direct backend).
 
@@ -273,4 +305,5 @@ ui_config = UIConfig()
 xpath_config = XPathConfig()
 pool_stats_config = PoolStatisticsConfig()
 synergy_config = SynergyConfig()
+data_quality_config = DataQualityConfig()
 api_config = APIConfig()
