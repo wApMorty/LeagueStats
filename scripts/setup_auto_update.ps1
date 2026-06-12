@@ -2,13 +2,14 @@
 # LeagueStats Coach - Auto-Update Task Scheduler Setup
 # =============================================================================
 # This script creates a Windows Task Scheduler task to automatically update
-# the champion database daily at 3 AM using the ParallelParser.
+# the champion database daily at 3 AM using the multi-lane pipeline
+# (scripts/update_all.py — Horizon 1).
 #
 # REQUIREMENTS:
 # - Administrator privileges (for Task Scheduler)
 # - Python 3.13+ installed
 # - LeagueStats Coach installed
-# - Web Scraping Parallèle (Tâche #4) completed
+# - Horizon 1 pipeline (lane discovery + update_all.py)
 #
 # USAGE:
 #   Run as Administrator:
@@ -36,14 +37,14 @@ Write-Host ""
 # Detect project root directory
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectRoot = Split-Path -Parent $scriptDir
-$autoUpdateScript = Join-Path $projectRoot "scripts\auto_update_db.py"
+$autoUpdateScript = Join-Path $projectRoot "scripts\update_all.py"
 
 Write-Host "[INFO] Project root: $projectRoot" -ForegroundColor Gray
-Write-Host "[INFO] Auto-update script: $autoUpdateScript" -ForegroundColor Gray
+Write-Host "[INFO] Pipeline script: $autoUpdateScript" -ForegroundColor Gray
 
-# Check if auto_update_db.py exists
+# Check if update_all.py exists
 if (-not (Test-Path $autoUpdateScript)) {
-    Write-Host "ERROR: auto_update_db.py not found at $autoUpdateScript" -ForegroundColor Red
+    Write-Host "ERROR: update_all.py not found at $autoUpdateScript" -ForegroundColor Red
     pause
     exit 1
 }
@@ -88,7 +89,7 @@ Write-Host ""
 
 # Configuration
 $taskName = "LeagueStats Auto-Update"
-$taskDescription = "Automatically updates LeagueStats Coach champion database daily using parallel scraping (12min background process)"
+$taskDescription = "Nightly LeagueStats multi-lane pipeline: lane discovery, scraping, scores, bans, completeness check, notifications (update_all.py)"
 
 # Prompt for schedule time
 Write-Host "==============================================================================" -ForegroundColor Cyan
@@ -97,7 +98,7 @@ Write-Host "====================================================================
 Write-Host ""
 Write-Host "When should the auto-update run?" -ForegroundColor Yellow
 Write-Host "  Recommended: 3 AM (low PC usage time)" -ForegroundColor Gray
-Write-Host "  Duration: ~12 minutes (background process, low priority)" -ForegroundColor Gray
+Write-Host "  Duration: ~20-40 minutes multi-lane (background process, low priority)" -ForegroundColor Gray
 Write-Host ""
 
 $scheduleTime = Read-Host "Enter time (HH:MM format, e.g., 03:00)"
@@ -167,11 +168,11 @@ try {
     Write-Host "  Script: $autoUpdateScript" -ForegroundColor White
     Write-Host "  Python: $pythonExe" -ForegroundColor White
     Write-Host "  Priority: Low (background execution)" -ForegroundColor White
-    Write-Host "  Duration: ~12 minutes" -ForegroundColor White
+    Write-Host "  Duration: ~20-40 minutes (multi-lane)" -ForegroundColor White
     Write-Host ""
     Write-Host "Next Steps:" -ForegroundColor Cyan
     Write-Host "  1. Task will run daily at $scheduleTime automatically" -ForegroundColor White
-    Write-Host "  2. Check logs at: $projectRoot\logs\auto_update.log" -ForegroundColor White
+    Write-Host "  2. Check logs at: $projectRoot\logs\update_all.log" -ForegroundColor White
     Write-Host "  3. Test manually: Right-click task in Task Scheduler → Run" -ForegroundColor White
     Write-Host "  4. Disable/Enable: Use Task Scheduler GUI (taskschd.msc)" -ForegroundColor White
     Write-Host ""
@@ -184,7 +185,7 @@ try {
     if ($testNow -eq 'y' -or $testNow -eq 'Y') {
         Write-Host ""
         Write-Host "[INFO] Starting auto-update task (background)..." -ForegroundColor Gray
-        Write-Host "[INFO] Check logs/auto_update.log for progress" -ForegroundColor Gray
+        Write-Host "[INFO] Check logs/update_all.log for progress" -ForegroundColor Gray
         Start-ScheduledTask -TaskName $taskName
         Write-Host "[OK] Task started! Check Task Scheduler for status" -ForegroundColor Green
     }
