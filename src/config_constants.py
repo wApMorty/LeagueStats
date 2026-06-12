@@ -50,6 +50,23 @@ class ScrapingConfig:
     FIREFOX_STARTUP_DELAY: float = 1.0  # Minimal delay for Firefox initialization
     HEADLESS: bool = True  # Run Firefox in headless mode (no GUI, better performance)
 
+    # ── Multi-lane scraping (Horizon 1) ──────────────────────────────────────
+    # LoLalytics lane identifiers, as used in ?lane= URLs and stored in the
+    # matchups/synergies `lane` column.
+    LANES: tuple = ("top", "jungle", "middle", "bottom", "support")
+
+    # A lane is scraped for a champion when its share of the champion's games
+    # exceeds this threshold (ROADMAP_2026.md H1: « lanes à pickrate >10% »).
+    LANE_PICKRATE_THRESHOLD: float = 10.0
+
+    # Lane discovery is plain HTTP (the distribution is in the SSR HTML,
+    # no JS rendering needed) — much cheaper than a Selenium page load.
+    LANE_DISCOVERY_TIMEOUT: int = 20
+    LANE_DISCOVERY_MAX_WORKERS: int = 8
+    LANE_DISCOVERY_USER_AGENT: str = (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0"
+    )
+
     # Firefox profile path for Cloudflare bypass via cf_clearance cookie reuse.
     # Set to an existing Firefox profile that has already solved CF challenges on
     # lolalytics.com.  The scraper copies only cookies.sqlite from this directory
