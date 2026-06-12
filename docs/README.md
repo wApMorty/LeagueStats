@@ -6,6 +6,10 @@ Documentation complète du projet League Stats Coach.
 
 ## 📚 Index de la documentation
 
+### **État du Projet & Direction** (2026-06-11)
+- [AUDIT_2026_06.md](AUDIT_2026_06.md) - Audit complet vérifié sur pièces (remplace AUDIT_REPORT.md)
+- [ROADMAP_2026.md](ROADMAP_2026.md) - Roadmap et décisions stratégiques (remplace la priorisation de TODO.md)
+
 ### **Architecture & Structure**
 - [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) - Structure générale du projet et organisation des fichiers
 
@@ -57,7 +61,7 @@ Documentation complète du projet League Stats Coach.
 
 ## 🔄 Mise à jour de cette doc
 
-Dernière mise à jour : 3 octobre 2025
+Dernière mise à jour : 11 juin 2026
 
 Lorsque vous ajoutez une nouvelle documentation :
 1. Créer le fichier dans `docs/`

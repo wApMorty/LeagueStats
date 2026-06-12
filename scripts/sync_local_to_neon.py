@@ -33,16 +33,19 @@ project_root = Path(__file__).parent.parent
 server_root = project_root / "server"
 sys.path.insert(0, str(server_root))
 
-# Load environment variables from server/.env before importing config
-try:
-    from dotenv import load_dotenv
+# Load environment variables from server/.env before importing config.
+# SYNC_SKIP_DOTENV=1 disables this (used by tests to stay hermetic: without it,
+# a local server/.env silently provides DATABASE_URL and the script syncs for real).
+if os.environ.get("SYNC_SKIP_DOTENV") != "1":
+    try:
+        from dotenv import load_dotenv
 
-    env_path = server_root / ".env"
-    if env_path.exists():
-        load_dotenv(env_path)
-except ImportError:
-    # python-dotenv not installed, rely on environment variables
-    pass
+        env_path = server_root / ".env"
+        if env_path.exists():
+            load_dotenv(env_path)
+    except ImportError:
+        # python-dotenv not installed, rely on environment variables
+        pass
 
 # Set dummy DATABASE_URL if not present (to allow config.py import)
 # Real validation happens in main_async()

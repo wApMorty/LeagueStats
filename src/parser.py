@@ -375,7 +375,9 @@ class Parser:
                                 .split()
                             ).replace(",", "")
                         )
-                        if not self.contains(result, champ, winrate, delta1, delta2, pickrate, games):
+                        if not self.contains(
+                            result, champ, winrate, delta1, delta2, pickrate, games
+                        ):
                             result.append((champ, winrate, delta1, delta2, pickrate, games))
                     except StaleElementReferenceException:
                         break  # row became stale mid-pass; re-fetch on next iteration
@@ -548,7 +550,9 @@ class Parser:
                                 .split()
                             ).replace(",", "")
                         )
-                        if not self.contains(result, ally, winrate, delta1, delta2, pickrate, games):
+                        if not self.contains(
+                            result, ally, winrate, delta1, delta2, pickrate, games
+                        ):
                             result.append((ally, winrate, delta1, delta2, pickrate, games))
                     except StaleElementReferenceException:
                         break

@@ -143,7 +143,7 @@ jobs:
     name: Performance Benchmarks
     runs-on: windows-latest
     timeout-minutes: 15
-    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/master'
 
     steps:
       - name: Checkout code
@@ -184,7 +184,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 20
     needs: [quality, tests]  # Only if quality + tests pass
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/inspiring-rhodes')
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
 
     steps:
       - name: Checkout code
