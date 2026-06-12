@@ -442,10 +442,9 @@ class Assistant:
 
     # ==================== Recommendations ====================
     # Delegated to analysis.recommendations.RecommendationEngine
-
-    def draft(self, nb_results: int) -> None:
-        """Interactive draft recommendation (legacy simple version)."""
-        return self.recommender.draft_simple(nb_results)
+    # NOTE: draft() is NOT delegated — the active implementation lives in the
+    # "Draft & Competitive Methods" section below (a shadowed duplicate that
+    # delegated to recommender.draft_simple was removed; pylint E0102).
 
     def _calculate_and_display_recommendations(
         self,
