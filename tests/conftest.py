@@ -49,8 +49,20 @@ def temp_db(tmp_path):
             pickrate REAL NOT NULL,
             games INTEGER NOT NULL,
             patch TEXT,
+            lane TEXT,
             FOREIGN KEY (champion) REFERENCES champions(id),
             FOREIGN KEY (enemy) REFERENCES champions(id)
+        )
+    """
+    )
+
+    # db_meta table (data freshness monitoring — migration b7e41c9a3f02)
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS db_meta (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """
     )

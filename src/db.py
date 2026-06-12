@@ -81,6 +81,24 @@ class Database:
                     )
                     created_indexes.append("idx_matchups_enemy_pickrate")
 
+                # Lane-aware composite indexes (Horizon 1 — multi-lane pipeline).
+                # Only created if the lane column exists (post-migration b7e41c9a3f02).
+                cursor.execute("PRAGMA table_info(matchups)")
+                matchup_columns = {col[1] for col in cursor.fetchall()}
+                if "lane" in matchup_columns:
+                    if "idx_matchups_champion_lane_pickrate" not in existing_indexes:
+                        cursor.execute(
+                            "CREATE INDEX idx_matchups_champion_lane_pickrate "
+                            "ON matchups(champion, lane, pickrate)"
+                        )
+                        created_indexes.append("idx_matchups_champion_lane_pickrate")
+                    if "idx_matchups_enemy_lane_pickrate" not in existing_indexes:
+                        cursor.execute(
+                            "CREATE INDEX idx_matchups_enemy_lane_pickrate "
+                            "ON matchups(enemy, lane, pickrate)"
+                        )
+                        created_indexes.append("idx_matchups_enemy_lane_pickrate")
+
             self.connection.commit()
 
             # Only log if indexes were actually created
@@ -135,6 +153,7 @@ class Database:
             delta2 REAL NOT NULL,
             pickrate REAL NOT NULL,
             games INTEGER NOT NULL,
+            lane TEXT,
             FOREIGN KEY (champion) REFERENCES champions(id) ON DELETE CASCADE,
             FOREIGN KEY (enemy) REFERENCES champions(id) ON DELETE CASCADE
         )"""
@@ -160,6 +179,7 @@ class Database:
             delta2 REAL NOT NULL,
             pickrate REAL NOT NULL,
             games INTEGER NOT NULL,
+            lane TEXT,
             FOREIGN KEY (champion) REFERENCES champions(id) ON DELETE CASCADE,
             FOREIGN KEY (ally) REFERENCES champions(id) ON DELETE CASCADE
         )"""
@@ -173,6 +193,12 @@ class Database:
             "CREATE INDEX idx_synergies_champion_pickrate ON synergies(champion, pickrate)"
         )
         cursor.execute("CREATE INDEX idx_synergies_ally_pickrate ON synergies(ally, pickrate)")
+        cursor.execute(
+            "CREATE INDEX idx_synergies_champion_lane_pickrate ON synergies(champion, lane, pickrate)"
+        )
+        cursor.execute(
+            "CREATE INDEX idx_synergies_ally_lane_pickrate ON synergies(ally, lane, pickrate)"
+        )
 
     def init_champion_scores_table(self) -> None:
         """Create or reset champion_scores table for tier list calculations."""
@@ -662,7 +688,10 @@ class Database:
             return []
 
     def add_matchups_batch(
-        self, matchup_data: List[tuple], champion_cache: Dict[str, int] = None
+        self,
+        matchup_data: List[tuple],
+        champion_cache: Dict[str, int] = None,
+        lane: Optional[str] = None,
     ) -> int:
         """
         Add multiple matchups in a single transaction for much better performance.
@@ -670,6 +699,8 @@ class Database:
         Args:
             matchup_data: List of tuples (champion_name, enemy_name, winrate, delta1, delta2, pickrate, games)
             champion_cache: Optional pre-built cache of champion name->ID mappings
+            lane: Optional lane tag applied to every row of the batch
+                  (one batch = one champion scraped on one lane). None = legacy/default lane.
 
         Returns:
             Number of matchups successfully inserted
@@ -699,7 +730,7 @@ class Database:
                     and all(x is not None for x in [winrate, delta1, delta2, pickrate, games])
                 ):
                     batch_data.append(
-                        (champ_id, enemy_id, winrate, delta1, delta2, pickrate, games)
+                        (champ_id, enemy_id, winrate, delta1, delta2, pickrate, games, lane)
                     )
                 else:
                     skipped += 1
@@ -715,8 +746,8 @@ class Database:
             # Single transaction with batch insert (much faster!)
             cursor.executemany(
                 """
-                INSERT INTO matchups (champion, enemy, winrate, delta1, delta2, pickrate, games) 
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO matchups (champion, enemy, winrate, delta1, delta2, pickrate, games, lane)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
                 batch_data,
             )
@@ -957,12 +988,16 @@ class Database:
             return []
 
     def add_synergies_batch(
-        self, synergies: List[Tuple[str, str, float, float, float, float, int]]
+        self,
+        synergies: List[Tuple[str, str, float, float, float, float, int]],
+        lane: Optional[str] = None,
     ) -> None:
         """Batch insert synergies for performance.
 
         Args:
             synergies: List of tuples (champion, ally, winrate, delta1, delta2, pickrate, games)
+            lane: Optional lane tag applied to every row of the batch
+                  (one batch = one champion scraped on one lane). None = legacy/default lane.
         """
         cursor = self.connection.cursor()
         try:
@@ -973,12 +1008,12 @@ class Database:
                 ally_id = self.get_champion_id(ally)
                 if champ_id and ally_id:
                     synergy_data.append(
-                        (champ_id, ally_id, winrate, delta1, delta2, pickrate, games)
+                        (champ_id, ally_id, winrate, delta1, delta2, pickrate, games, lane)
                     )
 
             # Batch insert
             cursor.executemany(
-                "INSERT INTO synergies (champion, ally, winrate, delta1, delta2, pickrate, games) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO synergies (champion, ally, winrate, delta1, delta2, pickrate, games, lane) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 synergy_data,
             )
             self.connection.commit()
@@ -1086,6 +1121,43 @@ class Database:
         except Exception as e:
             print(f"[ERROR] Failed to load bulk synergies: {e}")
             return {}
+
+    # ========== db_meta Methods (data freshness monitoring) ==========
+
+    def set_meta(self, key: str, value: str) -> None:
+        """Store a key/value pair in db_meta (created by migration b7e41c9a3f02).
+
+        Used by scripts/update_all.py to record pipeline metadata such as
+        last_update_utc and scrape volumetry.
+        """
+        cursor = self.connection.cursor()
+        try:
+            cursor.execute(
+                """
+                INSERT INTO db_meta (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(key) DO UPDATE SET value = excluded.value,
+                                               updated_at = CURRENT_TIMESTAMP
+                """,
+                (key, str(value)),
+            )
+            self.connection.commit()
+        except Error as e:
+            print(f"[ERROR] Failed to set db_meta '{key}': {e}")
+
+    def get_meta(self, key: str) -> Optional[str]:
+        """Read a value from db_meta. Returns None if the key (or table) is missing.
+
+        Missing table is tolerated so the app keeps working on a database
+        that predates migration b7e41c9a3f02 (freshness check falls back
+        to the db file mtime in that case).
+        """
+        cursor = self.connection.cursor()
+        try:
+            cursor.execute("SELECT value FROM db_meta WHERE key = ?", (key,))
+            result = cursor.fetchone()
+            return result[0] if result else None
+        except Error:
+            return None
 
     # ========== Champion Scores Methods ==========
 
