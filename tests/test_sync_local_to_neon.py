@@ -31,9 +31,11 @@ def test_sync_script_fails_without_database_url():
     This is a critical safety check - the script should never try to connect
     to a database without a valid connection string.
     """
-    # Ensure DATABASE_URL is not set
+    # Ensure DATABASE_URL is not set, and prevent the script from loading it
+    # back from a local server/.env (would trigger a REAL Neon sync)
     env = os.environ.copy()
     env.pop("DATABASE_URL", None)
+    env["SYNC_SKIP_DOTENV"] = "1"
 
     result = subprocess.run(
         [sys.executable, str(SYNC_SCRIPT)],
