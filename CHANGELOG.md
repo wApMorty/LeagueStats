@@ -40,6 +40,29 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### 🚨 Horizon 0 — Stabilisation (2026-06-12)
+
+Voir `docs/AUDIT_2026_06.md` et `docs/ROADMAP_2026.md` (décisions stratégiques A/B/C tranchées le 2026-06-11).
+
+- **🐛 Fix**: `CloudflareException` était avalée par le `except Exception` générique dans
+  `parallel_parser.py` (matchups et synergies) — elle est maintenant dans le tuple
+  `retry_if_exception_type` et re-levée (le test de régression passe à nouveau)
+- **🐛 Fix**: `Assistant.draft()` défini deux fois (pylint E0102 faisait échouer la CI) —
+  suppression du stub mort masqué, comportement runtime inchangé
+- **🐛 Fix**: test `sync_local_to_neon` hermétique — `SYNC_SKIP_DOTENV=1` empêche le script
+  de recharger `DATABASE_URL` depuis `server/.env` (et de lancer une vraie sync Neon en plein test)
+- **🔧 Chore**: suppression de `.github/workflows/scraping.yml` (cancelled à 2h chaque nuit,
+  ~60h de minutes Actions/mois gaspillées, destinataire Neon abandonné — Décision C)
+- **🔧 Chore**: jobs `build` et `performance` de la CI ciblent `refs/heads/master`
+  (le build n'avait **jamais** tourné : il visait `main`/`inspiring-rhodes`)
+- **🔧 Chore**: `fill_db.log` écrit dans `logs/` au lieu de la racine
+- **🎨 Style**: Black appliqué aux 3 fichiers laissés non formatés par le rewrite du 01/06
+  (`src/parser.py` faisait échouer le job quality)
+- **🗃️ Data**: `champion_scores` (172/172) et `pool_ban_recommendations` (3 pools custom)
+  recalculés sur les données du 2026-06-01
+- **🔀 Git**: branche `feature/playwright-migration` archivée (tag `archive/playwright-migration`)
+  puis supprimée — chantier annulé, Cloudflare a retiré son challenge (Décision A)
+
 ### 🐛 Fixes
 
 - **CRITICAL**: Fixed auto-update scraping failure in Task Scheduler (PR #TBD)
