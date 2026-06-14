@@ -9,15 +9,9 @@ lxml>=5.1.0,<6.0.0
 # Note: NumPy 2.x required for Python 3.13 (pre-built wheels available)
 numpy>=2.0.0,<3.0.0
 
-# Database - PostgreSQL async (Sprint 2 - Neon PostgreSQL Integration)
-sqlalchemy[asyncio]==2.0.46  # Async SQLAlchemy with asyncio support
-asyncpg==0.31.0  # Async PostgreSQL driver
-greenlet>=3.0.0  # Required for SQLAlchemy async support
-
-# HTTP requests
+# HTTP requests (Riot data fetch, LCU client, Discord notifications)
 requests>=2.31.0,<3.0.0
 urllib3>=2.0.0,<3.0.0
-httpx>=0.27.0,<1.0.0  # Async HTTP client for API data source (Sprint 2 - API Integration)
 
 # System and process management
 psutil>=5.9.6,<6.0.0

@@ -7,9 +7,8 @@ seamless switching between data sources without modifying client code.
 
 Architecture Pattern: Adapter Pattern
 - DataSource: Abstract interface (this file)
-- SQLiteDataSource: Adapter for local SQLite database
-- APIDataSource: Adapter for remote FastAPI backend
-- HybridDataSource: Composite adapter with fallback logic
+- SQLiteDataSource: Adapter for local SQLite database (the only backend
+  since the remote PostgreSQL/Neon layer was decommissioned in Horizon 2)
 
 Author: @pj35
 Created: 2026-02-06

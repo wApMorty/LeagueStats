@@ -21,7 +21,7 @@ def main():
             print(f"Nettoye: {dir_name}")
 
     # Build avec PyInstaller using LeagueStatsCoach.spec
-    # Le .spec contient la configuration PostgreSQL Direct (asyncpg binaries)
+    # La BD SQLite locale (data/db.db) est embarquee dans l'executable
     print("\nConstruction de l'executable avec LeagueStatsCoach.spec...")
 
     cmd = [sys.executable, "-m", "PyInstaller", "--clean", "LeagueStatsCoach.spec"]

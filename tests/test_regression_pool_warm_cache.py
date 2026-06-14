@@ -4,14 +4,17 @@ Regression test for bug: AttributeError when warm_cache() called with custom poo
 Bug description:
     When DraftMonitor selected a custom pool and called warm_cache(), the Assistant
     attempted to call self.db.get_reverse_matchups_for_draft(champion) which was
-    missing from HybridDataSource, causing an AttributeError.
+    missing from the active data source, causing an AttributeError.
 
-    Error: AttributeError: 'HybridDataSource' object has no attribute 'get_reverse_matchups_for_draft'
+    Error: AttributeError: object has no attribute 'get_reverse_matchups_for_draft'
 
 Fixed in: TODO #3 (2026-02-15)
-    - Added get_reverse_matchups_for_draft() method to HybridDataSource
-    - Method delegates to PostgreSQL with SQLite fallback
+    - Ensured get_reverse_matchups_for_draft() is part of the data source contract
     - Enables bidirectional cache warmup for pool champions
+
+Updated: 2026-06-14 (Horizon 2)
+    - Remote PostgreSQL/Neon data layer decommissioned; the regression is now
+      asserted against the generic DataSource contract used by Assistant.
 
 Test approach:
     Verify that warm_cache() can successfully pre-load matchups for all champions
@@ -20,16 +23,15 @@ Test approach:
 """
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
-from typing import List
+from unittest.mock import Mock
 
 from src.assistant import Assistant
 from src.models import MatchupDraft
 
 
 @pytest.fixture
-def mock_hybrid_data_source():
-    """Mock HybridDataSource with all required methods for warm_cache()."""
+def mock_data_source():
+    """Mock data source with all required methods for warm_cache()."""
     mock_db = Mock()
 
     # Mock direct matchups method (champion as picker)
@@ -53,10 +55,10 @@ def mock_hybrid_data_source():
 
 
 @pytest.fixture
-def assistant_with_mock_db(mock_hybrid_data_source):
-    """Create Assistant instance with mocked HybridDataSource via dependency injection."""
+def assistant_with_mock_db(mock_data_source):
+    """Create Assistant instance with mocked data source via dependency injection."""
     # Use dependency injection to provide mock database (no patching needed)
-    assistant = Assistant(data_source=mock_hybrid_data_source, verbose=False)
+    assistant = Assistant(data_source=mock_data_source, verbose=False)
     return assistant
 
 
@@ -67,7 +69,7 @@ class TestWarmCacheWithCustomPool:
         """
         Regression test: warm_cache() should work with custom pool selection.
 
-        Before fix: AttributeError: 'HybridDataSource' object has no attribute 'get_reverse_matchups_for_draft'
+        Before fix: AttributeError: object has no attribute 'get_reverse_matchups_for_draft'
         After fix: warm_cache() successfully pre-loads bidirectional matchups for all pool champions
 
         Scenario:
@@ -170,91 +172,3 @@ class TestWarmCacheWithCustomPool:
         # THEN: Cache data should be valid (non-empty lists)
         assert len(assistant_with_mock_db._matchups_cache["Aatrox"]) > 0
         assert len(assistant_with_mock_db._reverse_cache["Aatrox"]) > 0
-
-
-class TestHybridDataSourceReverseMatchupMethod:
-    """Tests for HybridDataSource.get_reverse_matchups_for_draft() method existence."""
-
-    def test_hybrid_data_source_has_reverse_matchups_method(self):
-        """
-        Regression test: Verify HybridDataSource has get_reverse_matchups_for_draft() method.
-
-        Before fix: Method did not exist, causing AttributeError
-        After fix: Method exists with correct signature
-        """
-        # GIVEN: Import HybridDataSource class
-        from src.hybrid_data_source import HybridDataSource
-
-        # THEN: Class should have the get_reverse_matchups_for_draft method
-        assert hasattr(HybridDataSource, "get_reverse_matchups_for_draft")
-
-        # THEN: Method should be callable
-        assert callable(getattr(HybridDataSource, "get_reverse_matchups_for_draft"))
-
-    def test_hybrid_data_source_reverse_matchups_signature(self):
-        """
-        Regression test: Verify get_reverse_matchups_for_draft() has correct signature.
-
-        Expected signature: get_reverse_matchups_for_draft(champion_name: str, as_dataclass: bool = True)
-        """
-        # GIVEN: Import HybridDataSource class
-        from src.hybrid_data_source import HybridDataSource
-        import inspect
-
-        # WHEN: Get method signature
-        method = getattr(HybridDataSource, "get_reverse_matchups_for_draft")
-        sig = inspect.signature(method)
-
-        # THEN: Should have 3 parameters (self, champion_name, as_dataclass)
-        params = list(sig.parameters.keys())
-        assert len(params) == 3
-        assert params[0] == "self"
-        assert params[1] == "champion_name"
-        assert params[2] == "as_dataclass"
-
-        # THEN: as_dataclass should have default value True
-        as_dataclass_param = sig.parameters["as_dataclass"]
-        assert as_dataclass_param.default is True
-
-    def test_hybrid_data_source_reverse_matchups_delegates_to_fallback(self):
-        """
-        Regression test: Verify get_reverse_matchups_for_draft() uses fallback strategy.
-
-        The method should use _try_postgres_with_fallback() to delegate to PostgreSQL
-        with SQLite fallback (hybrid pattern).
-        """
-        # GIVEN: Mock both PostgreSQL and SQLite sources
-        with (
-            patch("src.hybrid_data_source.PostgreSQLDataSource") as mock_postgres_class,
-            patch("src.hybrid_data_source.SQLiteDataSource") as mock_sqlite_class,
-            patch("src.hybrid_data_source.api_config") as mock_config,
-        ):
-
-            mock_config.MODE = "hybrid"
-            mock_config.ENABLED = True
-
-            # Setup mocks
-            mock_postgres = Mock()
-            # MatchupDraft signature: (enemy_name, delta2, pickrate, games)
-            mock_postgres.get_reverse_matchups_for_draft.return_value = [
-                MatchupDraft("Picker1", 120.0, 9.0, 900)
-            ]
-            mock_postgres_class.return_value = mock_postgres
-
-            mock_sqlite = Mock()
-            mock_sqlite_class.return_value = mock_sqlite
-
-            # WHEN: Create HybridDataSource and call get_reverse_matchups_for_draft()
-            from src.hybrid_data_source import HybridDataSource
-
-            hybrid_source = HybridDataSource()
-            hybrid_source.connect()
-
-            result = hybrid_source.get_reverse_matchups_for_draft("Aatrox")
-
-            # THEN: PostgreSQL method should be called first (hybrid strategy)
-            mock_postgres.get_reverse_matchups_for_draft.assert_called_once_with("Aatrox", True)
-
-            # THEN: Result should be returned from PostgreSQL
-            assert len(result) == 1
-            assert result[0].enemy_name == "Picker1"

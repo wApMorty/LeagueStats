@@ -26,12 +26,10 @@ Version: 1.1.0-dev
 
 import sys
 import os
-import subprocess
 from pathlib import Path
 from datetime import datetime
 import json
 import traceback
-import requests
 from typing import Optional, Tuple
 
 # Add project root to path
@@ -433,79 +431,14 @@ def main() -> int:
         assistant = None
         logger.log("SUCCESS", "Champion scores recalculated")
 
-        # 9. Sync to PostgreSQL Neon (non-blocking - local DB is primary)
-        neon_sync_status = "Not attempted"
-        try:
-            logger.log("INFO", "Syncing to PostgreSQL Neon...")
-            sync_script = project_root / "scripts" / "sync_local_to_neon.py"
-
-            result = subprocess.run(
-                [sys.executable, str(sync_script)],
-                cwd=str(project_root),
-                capture_output=True,
-                timeout=300,  # 5 min max
-                text=True,
-            )
-
-            if result.returncode == 0:
-                # Extract stats from stdout
-                logger.log("SUCCESS", "Neon sync completed")
-                for line in result.stdout.strip().split("\n"):
-                    if line.strip():
-                        logger.log("INFO", f"  {line.strip()}")
-                neon_sync_status = "✅ Success"
-            else:
-                logger.log("WARNING", "Neon sync failed (local DB still updated)")
-                logger.log("WARNING", f"Error: {result.stderr.strip()}")
-                neon_sync_status = "⚠️ Failed (check logs)"
-
-        except subprocess.TimeoutExpired:
-            logger.log("WARNING", "Neon sync timeout after 5 minutes (local DB still updated)")
-            neon_sync_status = "⚠️ Timeout (>5 min)"
-        except Exception as e:
-            logger.log("WARNING", f"Neon sync error: {e} (local DB still updated)")
-            neon_sync_status = f"⚠️ Error: {str(e)[:50]}"
-
-        # 10. Trigger API refresh (force pool recycle on Render)
-        api_refresh_status = "Not attempted"
-        try:
-            logger.log("INFO", "Triggering API pool refresh...")
-            api_url = "https://leaguestats-adf4.onrender.com/admin/refresh-db"
-            api_key = os.getenv("ADMIN_API_KEY")
-
-            if not api_key:
-                logger.log("WARNING", "ADMIN_API_KEY not configured - skipping API refresh")
-                api_refresh_status = "⚠️ Skipped (no API key)"
-            else:
-                response = requests.post(api_url, headers={"X-API-Key": api_key}, timeout=30)
-
-                if response.status_code == 200:
-                    logger.log("SUCCESS", "API pool refreshed successfully")
-                    api_refresh_status = "✅ Success"
-                elif response.status_code == 403:
-                    logger.log("ERROR", "API refresh failed: Invalid API key")
-                    api_refresh_status = "❌ Invalid API key"
-                else:
-                    logger.log("WARNING", f"API refresh failed: HTTP {response.status_code}")
-                    api_refresh_status = f"⚠️ HTTP {response.status_code}"
-
-        except requests.exceptions.Timeout:
-            logger.log("WARNING", "API refresh timeout after 30s")
-            api_refresh_status = "⚠️ Timeout"
-        except Exception as e:
-            logger.log("WARNING", f"API refresh error: {e}")
-            api_refresh_status = f"⚠️ Error: {str(e)[:30]}"
-
-        # 11. Success notification with synergies, Neon sync, and API refresh status
+        # 9. Success notification with matchups + synergies status
         total_time = (synergies_end_time - start_time).total_seconds() / 60
         logger.log("SUCCESS", f"Auto-update completed successfully in {total_time:.1f} minutes")
         notifier.notify(
             "LeagueStats Coach ✅",
             f"BD mise à jour avec succès!\n"
             f"Matchups: {success_count}/{total_count} ({duration_min:.1f} min)\n"
-            f"Synergies: {synergies_success_count}/{synergies_total_count} ({synergies_duration_min:.1f} min)\n"
-            f"Neon Sync: {neon_sync_status}\n"
-            f"API Refresh: {api_refresh_status}",
+            f"Synergies: {synergies_success_count}/{synergies_total_count} ({synergies_duration_min:.1f} min)",
             duration=15,
         )
 

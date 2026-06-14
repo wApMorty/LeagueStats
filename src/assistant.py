@@ -40,13 +40,10 @@ class Assistant:
     Delegates to specialized modules while maintaining backward compatibility
     with the original monolithic API.
 
-    Data Source Modes (new in v1.1.0):
-    - The Assistant now supports dependency injection of data sources
-    - Default behavior: Uses HybridDataSource (API with SQLite fallback)
-    - Configure mode via src.config_constants.api_config.MODE:
-      * "hybrid": Try API first, fallback to SQLite (default)
-      * "api_only": Use API only, fail if unavailable
-      * "sqlite_only": Use local SQLite only (offline mode)
+    Data Source:
+    - The Assistant supports dependency injection of a DataSource.
+    - Default behavior: local SQLite (the only supported backend since the
+      remote PostgreSQL/Neon layer was decommissioned in Horizon 2).
     """
 
     def __init__(self, data_source: Optional["DataSource"] = None, verbose: bool = False) -> None:
@@ -55,22 +52,17 @@ class Assistant:
 
         Args:
             data_source: Optional DataSource instance to use for data access.
-                        If None, creates HybridDataSource instance (default).
+                        If None, creates a SQLiteDataSource instance (default).
                         For backward compatibility, you can also pass a Database instance.
             verbose: Enable verbose logging
 
         Examples:
-            >>> # Default: Hybrid mode (API with SQLite fallback)
+            >>> # Default: local SQLite
             >>> assistant = Assistant()
 
-            >>> # Explicit SQLite-only mode
+            >>> # Explicit SQLite data source
             >>> from src.sqlite_data_source import SQLiteDataSource
             >>> data_source = SQLiteDataSource("data/db.db")
-            >>> assistant = Assistant(data_source=data_source)
-
-            >>> # Explicit API-only mode
-            >>> from src.api_data_source import APIDataSource
-            >>> data_source = APIDataSource()
             >>> assistant = Assistant(data_source=data_source)
 
             >>> # Backward compatibility: Database instance still works
@@ -99,10 +91,10 @@ class Assistant:
                 self.db = data_source
                 self.db.connect()
         else:
-            # Default: HybridDataSource (API with SQLite fallback)
-            from .hybrid_data_source import HybridDataSource
+            # Default: local SQLite (only supported backend since Horizon 2)
+            from .sqlite_data_source import SQLiteDataSource
 
-            self.db = HybridDataSource()
+            self.db = SQLiteDataSource()
             self.db.connect()
 
         self.verbose = verbose

@@ -41,13 +41,18 @@ class SQLiteDataSource(DataSource):
         >>> data_source.close()
     """
 
-    def __init__(self, database_path: str) -> None:
+    def __init__(self, database_path: Optional[str] = None) -> None:
         """
         Initialize SQLite data source.
 
         Args:
-            database_path: Path to SQLite database file (e.g., "data/db.db")
+            database_path: Path to SQLite database file (e.g., "data/db.db").
+                           Defaults to ``config.DATABASE_PATH`` when not provided.
         """
+        if database_path is None:
+            from .config import config
+
+            database_path = config.DATABASE_PATH
         self._db = Database(database_path)
 
     # ==================== Connection Management ====================

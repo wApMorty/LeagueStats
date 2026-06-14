@@ -4,12 +4,14 @@ Tests for Assistant integration with DataSource abstraction.
 This test suite verifies that:
 - Assistant accepts DataSource via dependency injection
 - Backward compatibility with Database instances
-- HybridDataSource is used by default
+- SQLiteDataSource is used by default (the only backend since the remote
+  PostgreSQL/Neon layer was decommissioned in Horizon 2)
 - All data source types work correctly with Assistant
 
 Author: @pj35
 Created: 2026-02-06
 Sprint: 2 - API Integration (Adapter Pattern Implementation)
+Updated: 2026-06-14 (Horizon 2 - remote data layer decommissioned)
 """
 
 import pytest
@@ -17,8 +19,6 @@ from unittest.mock import Mock, patch
 
 from src.assistant import Assistant
 from src.sqlite_data_source import SQLiteDataSource
-from src.api_data_source import APIDataSource
-from src.hybrid_data_source import HybridDataSource
 
 
 class TestAssistantDataSourceInjection:
@@ -32,23 +32,19 @@ class TestAssistantDataSourceInjection:
         assert assistant.db is data_source
         assistant.close()
 
-    def test_assistant_uses_hybrid_by_default(self):
-        """Test that Assistant uses HybridDataSource by default when no data_source provided."""
-        # Patch where HybridDataSource is imported (dynamically in __init__)
-        with patch("src.hybrid_data_source.HybridDataSource") as mock_hybrid_class:
-            mock_hybrid = Mock()
-            mock_hybrid_class.return_value = mock_hybrid
+    def test_assistant_uses_sqlite_by_default(self):
+        """Test that Assistant uses SQLiteDataSource by default when no data_source provided."""
+        # Patch where SQLiteDataSource is imported (dynamically in __init__)
+        with patch("src.sqlite_data_source.SQLiteDataSource") as mock_sqlite_class:
+            mock_sqlite = Mock()
+            mock_sqlite_class.return_value = mock_sqlite
 
-            # Also mock api_config to avoid real connections
-            with patch("src.hybrid_data_source.api_config") as mock_config:
-                mock_config.MODE = "hybrid"
-                mock_config.ENABLED = True
+            assistant = Assistant()
 
-                assistant = Assistant()
-
-                # Verify HybridDataSource was instantiated and connected
-                assert assistant.db is mock_hybrid
-                mock_hybrid.connect.assert_called_once()
+            # Verify SQLiteDataSource was instantiated (default path) and connected
+            mock_sqlite_class.assert_called_once_with()
+            assert assistant.db is mock_sqlite
+            mock_sqlite.connect.assert_called_once()
 
     def test_assistant_connects_data_source_on_init(self, temp_db):
         """Test that Assistant connects data source on initialization."""
@@ -123,42 +119,6 @@ class TestAssistantWithMockedDataSource:
         assert assistant.tier_list_gen is not None
         assert assistant.recommender is not None
         assert assistant.team_analyzer is not None
-
-
-class TestAssistantModeConfiguration:
-    """Test Assistant behavior with different data source modes."""
-
-    def test_assistant_with_api_only_mode(self):
-        """Test Assistant with API-only mode."""
-        with patch("src.hybrid_data_source.HybridDataSource") as mock_hybrid_class:
-            mock_hybrid = Mock()
-            mock_hybrid_class.return_value = mock_hybrid
-
-            # Set API-only mode
-            with patch("src.hybrid_data_source.api_config") as mock_config:
-                mock_config.MODE = "api_only"
-                mock_config.ENABLED = True
-
-                assistant = Assistant()
-
-                # Verify HybridDataSource was created (it will handle mode internally)
-                assert assistant.db is mock_hybrid
-
-    def test_assistant_with_sqlite_only_mode(self):
-        """Test Assistant with SQLite-only mode."""
-        with patch("src.hybrid_data_source.HybridDataSource") as mock_hybrid_class:
-            mock_hybrid = Mock()
-            mock_hybrid_class.return_value = mock_hybrid
-
-            # Set SQLite-only mode
-            with patch("src.hybrid_data_source.api_config") as mock_config:
-                mock_config.MODE = "sqlite_only"
-                mock_config.ENABLED = True
-
-                assistant = Assistant()
-
-                # Verify HybridDataSource was created (it will handle mode internally)
-                assert assistant.db is mock_hybrid
 
 
 class TestAssistantWithRealDataSources:

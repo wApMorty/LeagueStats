@@ -40,6 +40,37 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### 🟠 Horizon 2 — Dette technique 2.0 (2026-06-14)
+
+Implémentation de `docs/ROADMAP_2026.md` §3 H2. **Chantier #1 — décommission de la
+couche données distante** (Décisions B « outil personnel » + C « SQLite uniquement »,
+tranchées le 2026-06-11).
+
+- **🗑️ Removed**: couche données distante supprimée intégralement côté client —
+  `src/api_data_source.py` (zombie post-1.2.0), `src/postgresql_data_source.py`,
+  `src/hybrid_data_source.py`, `src/credentials.py` (la chaîne de connexion committée
+  disparaît — règle le point sécurité de l'audit §6), `scripts/sync_local_to_neon.py`
+  et le script admin Neon `scripts/test_readonly_permissions.py`
+- **🗑️ Removed**: `APIConfig` / `api_config` (mode auto `sys.frozen` →
+  `postgresql_only`/`sqlite_only`/`hybrid`) retiré de `src/config_constants.py` ;
+  plus de bascule de mode selon le contexte d'exécution
+- **♻️ Refactor**: `Assistant` ne dépend plus que de `SQLiteDataSource` (défaut quand
+  aucune source n'est injectée) ; `SQLiteDataSource()` accepte désormais un chemin
+  optionnel (défaut `config.DATABASE_PATH`)
+- **🗑️ Removed**: appels de sync Neon dans `src/ui/lol_coach_legacy.py` (fonction
+  `sync_to_neon()` + 6 sites d'appel) et bloc « sync Neon » + « refresh API Render »
+  (`ADMIN_API_KEY`) de `scripts/auto_update_db.py`
+- **🔧 Chore**: dépendances client allégées — `sqlalchemy[asyncio]`, `asyncpg`,
+  `greenlet`, `httpx` retirées de `requirements.txt` (SQLAlchemy reste disponible via
+  Alembic en dev) ; `LeagueStatsCoach.spec` ne collecte plus les binaires asyncpg/greenlet
+- **✅ Test**: tests de l'ancienne couche supprimés (api/postgresql/hybrid/credentials/
+  sync_local_to_neon/admin-refresh) ; `test_assistant_integration.py` et
+  `test_regression_pool_warm_cache.py` recâblés sur `SQLiteDataSource` / le contrat
+  générique `DataSource`. Suite : 512 tests verts
+- **Note**: la suppression de `server/` et la fermeture de la base Neon (chantier #2)
+  feront l'objet d'une PR distincte ; `tests/test_admin_endpoint.py` (couplé à `server/`)
+  reste en place jusque-là
+
 ### 🔴 Horizon 1 — Pipeline de données fiable (2026-06-12)
 
 Implémentation de `docs/ROADMAP_2026.md` §3 H1 : données complètes, fraîches,
