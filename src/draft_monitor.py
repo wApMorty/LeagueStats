@@ -2,6 +2,9 @@ import time
 import json
 import subprocess
 import os
+import logging
+import tempfile
+from pathlib import Path
 from typing import Dict, List, Optional, Set
 from dataclasses import dataclass, field
 from .lcu_client import LCUClient
@@ -11,6 +14,27 @@ from .utils.console import clear_console
 from .constants import SOLOQ_POOL, ROLE_POOLS, normalize_champion_name_for_onetricks
 from .config import config
 from .config_constants import draft_config
+
+# Dedicated logger for memory diagnostics. Writes to logs/draft_monitor_memory.log
+# so the RSS trace survives the frequent console clears during a draft session.
+_mem_logger = logging.getLogger("leaguestats.draft_monitor.memory")
+
+
+def _get_memory_logger() -> logging.Logger:
+    """Lazily attach a file handler for the memory diagnostics logger."""
+    if not _mem_logger.handlers:
+        try:
+            log_dir = Path(__file__).resolve().parent.parent / "logs"
+            log_dir.mkdir(exist_ok=True)
+            handler = logging.FileHandler(log_dir / "draft_monitor_memory.log", encoding="utf-8")
+            handler.setFormatter(logging.Formatter("[%(asctime)s] %(message)s"))
+            _mem_logger.addHandler(handler)
+            _mem_logger.setLevel(logging.INFO)
+            _mem_logger.propagate = False
+        except Exception:
+            # Diagnostics must never break the monitor; degrade silently.
+            _mem_logger.addHandler(logging.NullHandler())
+    return _mem_logger
 
 
 @dataclass
@@ -83,6 +107,14 @@ class DraftMonitor:
         self.ready_check_accepted_time = 0  # Track when we accepted ready check
         self.player_champion = None  # Track the player's selected champion
 
+        # OneTricks browser window recycling: keep a single handle so each new
+        # draft replaces the previous window instead of stacking tabs/processes
+        # (otherwise Brave accumulates one tab per game → system OOM on long sessions).
+        self._onetricks_proc: Optional[subprocess.Popen] = None
+
+        # Memory diagnostics: count poll-loop iterations to log RSS periodically.
+        self._loop_count = 0
+
     def start_monitoring(self):
         """Start monitoring champion select."""
         print("[BOT] League Draft Coach - Starting...")
@@ -120,17 +152,61 @@ class DraftMonitor:
             print("   🌐 [ONETRICKS] Open champion page on draft completion is ENABLED")
         print("   (Press Ctrl+C to stop)")
 
+        # Log a baseline RSS measurement at startup for diagnostics.
+        self._log_memory_usage(force=True)
+
         try:
             while self.is_monitoring:
                 self._monitor_loop()
+                self._loop_count += 1
+                self._log_memory_usage()
                 time.sleep(draft_config.POLL_INTERVAL)  # Check draft state periodically
         except KeyboardInterrupt:
             print("\n[STOP] Stopping draft monitor...")
         finally:
             self.cleanup()
 
+    def _onetricks_profile_dir(self) -> str:
+        """Return the dedicated, reused Brave profile dir for the OneTricks window.
+
+        Using a dedicated ``--user-data-dir`` makes the launched Brave a standalone
+        process we fully control (and can terminate). Without it, Brave merges the
+        request into the user's main instance, our handle exits immediately, and we
+        lose the ability to close the previous tab — which is what caused tabs to
+        pile up across games. The directory is fixed (not per-call) so it is reused.
+        """
+        return os.path.join(tempfile.gettempdir(), "leaguestats_onetricks_profile")
+
+    def _close_onetricks_window(self) -> None:
+        """Terminate the previously opened OneTricks window, if any.
+
+        Guarantees at most one OneTricks window is alive at a time, preventing the
+        per-game tab/process accumulation that drove system memory growth.
+        """
+        proc = self._onetricks_proc
+        if proc is None:
+            return
+        try:
+            if proc.poll() is None:  # still running
+                proc.terminate()
+                try:
+                    proc.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                    proc.wait(timeout=5)
+        except Exception as e:
+            if self.verbose:
+                print(f"[ONETRICKS] Failed to close previous window: {e}")
+        finally:
+            self._onetricks_proc = None
+
     def _open_champion_page_on_onetricks(self):
-        """Open the player's champion page on OneTriks.gg using Brave browser."""
+        """Open the player's champion page on OneTriks.gg, recycling a single window.
+
+        Each completed draft replaces the previous OneTricks window instead of
+        opening a new tab, so Brave does not accumulate one tab per game over a
+        long Draft Monitor session.
+        """
         try:
             if not self.player_champion:
                 if self.verbose:
@@ -147,15 +223,25 @@ class DraftMonitor:
             except FileNotFoundError:
                 if self.verbose:
                     print("[ONETRICKS] Brave browser not found, trying default browser")
-                # Fallback to default browser
+                # Fallback to default browser. Note: we cannot recycle the default
+                # browser's tabs, so accumulation is only fully prevented with Brave.
                 import webbrowser
 
                 webbrowser.open(onetricks_url)
                 return
 
-            # Open with Brave browser
-            subprocess.Popen(
-                [brave_path, onetricks_url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            # Close the previous OneTricks window before opening a new one.
+            self._close_onetricks_window()
+
+            # Launch a dedicated, killable Brave app window (see _onetricks_profile_dir).
+            self._onetricks_proc = subprocess.Popen(
+                [
+                    brave_path,
+                    f"--app={onetricks_url}",
+                    f"--user-data-dir={self._onetricks_profile_dir()}",
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
             )
 
         except Exception as e:
@@ -167,6 +253,35 @@ class DraftMonitor:
     def stop_monitoring(self):
         """Stop monitoring."""
         self.is_monitoring = False
+
+    # Log RSS roughly every 5 minutes (POLL_INTERVAL is 1s by default).
+    _MEMORY_LOG_INTERVAL = 300
+
+    def _log_memory_usage(self, force: bool = False) -> None:
+        """Record the process RSS to logs/draft_monitor_memory.log periodically.
+
+        This is a lightweight diagnostic to determine whether the monitor's own
+        Python process grows over a long session (a leak to bisect) or stays flat
+        (pointing at an external cause such as accumulating browser tabs).
+
+        Args:
+            force: If True, log immediately regardless of the interval.
+        """
+        if not force and self._loop_count % self._MEMORY_LOG_INTERVAL != 0:
+            return
+        try:
+            import psutil
+
+            rss_mb = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
+            _get_memory_logger().info(
+                "iteration=%d rss=%.1fMB onetricks_window=%s",
+                self._loop_count,
+                rss_mb,
+                "open" if self._onetricks_proc and self._onetricks_proc.poll() is None else "none",
+            )
+        except Exception:
+            # Diagnostics must never interrupt monitoring.
+            pass
 
     def _monitor_loop(self):
         """Main monitoring loop."""
@@ -1387,6 +1502,8 @@ class DraftMonitor:
 
     def cleanup(self):
         """Clean up resources."""
+        # Close the recycled OneTricks window so it doesn't outlive the monitor.
+        self._close_onetricks_window()
         if self.lcu:
             self.lcu.disconnect()
         if self.assistant:
