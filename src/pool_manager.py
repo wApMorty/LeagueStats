@@ -75,8 +75,93 @@ class PoolManager:
         self._load_default_pools()
         self._load_custom_pools()
 
+    # Maps a LoLalytics lane name (src.config_constants.scraping_config.LANES,
+    # as tagged on matchups/synergies rows by the multi-lane pipeline) to the
+    # role key used by system pools.
+    _LANE_TO_ROLE = {
+        "top": "top",
+        "jungle": "jungle",
+        "middle": "mid",
+        "bottom": "adc",
+        "support": "support",
+    }
+
+    _ROLE_DESCRIPTIONS = {
+        "top": "Complete list of viable top lane champions",
+        "jungle": "Complete list of viable jungle champions",
+        "mid": "Complete list of viable mid lane champions",
+        "adc": "Complete list of viable ADC champions",
+        "support": "Complete list of viable support champions",
+    }
+
+    _ROLE_LABELS = {
+        "top": "Top",
+        "jungle": "Jungle",
+        "mid": "Mid",
+        "adc": "ADC",
+        "support": "Support",
+    }
+
+    def _load_role_pools_from_db(self) -> Dict[str, List[str]]:
+        """Group champions by role using the lane data already scraped into the DB.
+
+        The multi-lane pipeline (src/multilane.py, src/lane_discovery.py) tags
+        every matchup row with the lane it was scraped on, discovered
+        dynamically per champion from live pickrates. Reusing that data keeps
+        the "All X Champions" system pools in sync with the current meta
+        without a separate hardcoded list to maintain.
+
+        Returns:
+            Mapping role -> sorted champion names, only for roles that have at
+            least one tagged row. Roles missing from the result (or the whole
+            dict if empty) should fall back to the hardcoded constants.py
+            pools -- this happens on a fresh install, in tests, or before the
+            first multi-lane scrape has run.
+        """
+        from .config import config
+        from .db import Database
+
+        if not os.path.exists(config.DATABASE_PATH):
+            return {}
+
+        role_pools: Dict[str, List[str]] = {}
+        db = None
+        try:
+            db = Database(config.DATABASE_PATH)
+            db.connect()
+            cursor = db.connection.cursor()
+            cursor.execute(
+                """
+                SELECT DISTINCT m.lane, c.name
+                FROM matchups m
+                JOIN champions c ON m.champion = c.id
+                WHERE m.lane IS NOT NULL
+                ORDER BY c.name
+                """
+            )
+            for lane, champion in cursor.fetchall():
+                role = self._LANE_TO_ROLE.get(lane)
+                if role:
+                    role_pools.setdefault(role, []).append(champion)
+        except Exception as e:
+            print(f"[INFO] Could not load role pools from DB, using fallback pools: {e}")
+            return {}
+        finally:
+            if db is not None:
+                try:
+                    db.close()
+                except Exception:
+                    pass
+
+        return role_pools
+
     def _load_default_pools(self):
-        """Load default pools from constants."""
+        """Load default system pools.
+
+        Each role pool is computed from champions the DB has actually tagged
+        with that lane (multi-lane pipeline). Roles with no DB data yet fall
+        back individually to the hardcoded lists in constants.py.
+        """
         from .constants import (
             TOP_SOLOQ_POOL,
             JUNGLE_SOLOQ_POOL,
@@ -84,57 +169,31 @@ class PoolManager:
             ADC_SOLOQ_POOL,
             SUPPORT_SOLOQ_POOL,
             CHAMPION_POOL,
-            TOP_EXTENDED_POOL,
-            SUPPORT_EXTENDED_POOL,
-            JUNGLE_EXTENDED_POOL,
-            MID_EXTENDED_POOL,
-            ADC_EXTENDED_POOL,
         )
 
-        # Create default pools - Complete champion lists by role
+        fallback_pools = {
+            "top": TOP_SOLOQ_POOL,
+            "jungle": JUNGLE_SOLOQ_POOL,
+            "mid": MID_SOLOQ_POOL,
+            "adc": ADC_SOLOQ_POOL,
+            "support": SUPPORT_SOLOQ_POOL,
+        }
+        db_pools = self._load_role_pools_from_db()
+
         default_pools = [
-            # Complete role pools
             ChampionPool(
-                "All Top Champions",
-                TOP_SOLOQ_POOL,
-                "Complete list of viable top lane champions",
-                "top",
+                f"All {self._ROLE_LABELS[role]} Champions",
+                db_pools.get(role) or fallback_pools[role],
+                self._ROLE_DESCRIPTIONS[role],
+                role,
                 "system",
-                ["complete", "top"],
-            ),
-            ChampionPool(
-                "All Jungle Champions",
-                JUNGLE_SOLOQ_POOL,
-                "Complete list of viable jungle champions",
-                "jungle",
-                "system",
-                ["complete", "jungle"],
-            ),
-            ChampionPool(
-                "All Mid Champions",
-                MID_SOLOQ_POOL,
-                "Complete list of viable mid lane champions",
-                "mid",
-                "system",
-                ["complete", "mid"],
-            ),
-            ChampionPool(
-                "All ADC Champions",
-                ADC_SOLOQ_POOL,
-                "Complete list of viable ADC champions",
-                "adc",
-                "system",
-                ["complete", "adc"],
-            ),
-            ChampionPool(
-                "All Support Champions",
-                SUPPORT_SOLOQ_POOL,
-                "Complete list of viable support champions",
-                "support",
-                "system",
-                ["complete", "support"],
-            ),
-            # Meta/competitive pool
+                ["complete", role],
+            )
+            for role in ("top", "jungle", "mid", "adc", "support")
+        ]
+
+        # Meta/competitive pool
+        default_pools.append(
             ChampionPool(
                 "Meta Picks",
                 CHAMPION_POOL,
@@ -142,8 +201,8 @@ class PoolManager:
                 "custom",
                 "system",
                 ["meta", "competitive"],
-            ),
-        ]
+            )
+        )
 
         for pool in default_pools:
             self.pools[pool.name] = pool

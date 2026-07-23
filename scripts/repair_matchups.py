@@ -14,6 +14,15 @@ DETECTION METHOD:
     Uses SQL LEFT JOIN between champions and matchups tables to find champions
     with zero matchup rows.
 
+LANE HANDLING:
+    Reuses the same dynamic lane discovery as the nightly multi-lane pipeline
+    (src/lane_discovery.py, src/multilane.py) instead of scraping an untagged
+    default lane: missing champions are grouped by their actually-played
+    lane(s) (>10% pickrate) and each (champion, lane) page is scraped and
+    tagged accordingly, exactly like scripts/update_all.py. Champions whose
+    lane discovery fails fall back to the untagged default lane, same as the
+    nightly pipeline.
+
 USAGE:
     python scripts/repair_matchups.py
     python scripts/repair_matchups.py --dry-run
@@ -36,7 +45,7 @@ from pathlib import Path
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Lock, local
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 import time
 
 # Add project root to path
@@ -57,6 +66,8 @@ from src.db import Database
 from src.config import config
 from src.config_constants import scraping_config
 from src.constants import normalize_champion_name_for_url
+from src.lane_discovery import discover_lanes_for_champions
+from src.multilane import group_champions_by_lane
 from src.parser import Parser
 
 # Thread-local storage: one Firefox driver per worker thread
@@ -159,8 +170,9 @@ def _scrape_champion_matchups(
     champion: str,
     patch_version: str,
     headless: bool,
-) -> Tuple[str, list]:
-    """Scrape matchup data for a single champion.
+    lane: Optional[str],
+) -> Tuple[str, Optional[str], list]:
+    """Scrape matchup data for a single (champion, lane) page.
 
     Retries up to 3 times on transient WebDriver / Timeout errors before
     giving up and returning an empty list.
@@ -169,9 +181,11 @@ def _scrape_champion_matchups(
         champion: Champion name (as stored in the DB, e.g. "AurelionSol")
         patch_version: Patch window string (e.g. "14")
         headless: Whether to run Firefox headless
+        lane: Lane to scrape (top/jungle/middle/bottom/support), or None to
+              scrape LoLalytics' default lane (lane discovery failure fallback)
 
     Returns:
-        Tuple of (champion_name, matchups_list). matchups_list contains
+        Tuple of (champion_name, lane, matchups_list). matchups_list contains
         tuples of (enemy, winrate, delta1, delta2, pickrate, games).
         Returns empty list on failure.
     """
@@ -179,114 +193,138 @@ def _scrape_champion_matchups(
 
     parser = _get_or_create_parser(headless)
     normalized = normalize_champion_name_for_url(champion)
+    lane_label = lane or "default"
 
     for attempt in range(1, 4):
         try:
-            matchups = parser.get_champion_data_on_patch(patch_version, normalized)
-            return champion, matchups
+            matchups = parser.get_champion_data_on_patch(patch_version, normalized, lane)
+            return champion, lane, matchups
         except (WebDriverException, TimeoutException) as exc:
             if attempt < 3:
                 wait_secs = 2**attempt  # 2s, 4s
                 logging.getLogger(__name__).warning(
-                    f"Attempt {attempt}/3 failed for {champion} matchups: {exc} "
+                    f"Attempt {attempt}/3 failed for {champion} matchups ({lane_label}): {exc} "
                     f"-- retrying in {wait_secs}s"
                 )
                 time.sleep(wait_secs)
             else:
                 logging.getLogger(__name__).error(
-                    f"All 3 attempts failed for {champion} matchups: {exc}"
+                    f"All 3 attempts failed for {champion} matchups ({lane_label}): {exc}"
                 )
-                return champion, []
+                return champion, lane, []
         except Exception as exc:
             logging.getLogger(__name__).error(
-                f"Unexpected error scraping {champion} matchups: {exc}"
+                f"Unexpected error scraping {champion} matchups ({lane_label}): {exc}"
             )
-            return champion, []
+            return champion, lane, []
 
-    return champion, []  # unreachable but satisfies type checker
+    return champion, lane, []  # unreachable but satisfies type checker
 
 
 def repair_matchups_parallel(
     db: Database,
-    champions: List[str],
+    groups: Dict[Optional[str], List[str]],
     patch_version: str,
     max_workers: int,
     headless: bool,
     logger: logging.Logger,
 ) -> dict:
-    """Re-scrape and insert matchups for the given champions in parallel.
+    """Re-scrape and insert matchups for the given (lane -> champions) groups in parallel.
 
-    For each champion this function:
+    Groups come from group_champions_by_lane(discover_lanes_for_champions(...)),
+    the same helpers used by the nightly multi-lane pipeline (src/multilane.py),
+    so a champion playing several lanes is scraped and tagged once per lane
+    just like a full update_all.py run.
+
+    For each (champion, lane) page this function:
     1. Scrapes matchup data using a dedicated thread-local Firefox driver
-    2. Clears existing (empty) matchup rows for that champion via
-       db.clear_matchups_for_champion() (safe -- does NOT drop the table)
-    3. Inserts new rows via db.add_matchups_batch() inside a shared lock
+    2. Clears existing (empty) matchup rows for that champion, once per
+       champion, via db.clear_matchups_for_champion() (safe -- does NOT drop
+       the table) -- done once even if the champion has several lanes, so a
+       second lane's insert never wipes the first lane's freshly-written rows
+    3. Inserts new rows via db.add_matchups_batch(lane=...) inside a shared lock
 
     NEVER calls parse_all_champions() or init_matchups_table().
 
     Args:
         db: Connected Database instance
-        champions: List of champion names to repair
+        groups: Mapping lane (or None for the discovery-failure fallback) to
+                the list of champions to scrape on that lane
         patch_version: Patch window string (e.g. "14")
         max_workers: Number of parallel Firefox workers
         headless: Whether to run Firefox headless
         logger: Logger instance
 
     Returns:
-        dict with keys 'success', 'failed', 'total', 'duration'
+        dict with keys 'success', 'failed', 'total', 'duration' (champion-level counts)
     """
     db_lock = Lock()
     champion_cache = db.build_champion_cache()
+    cleared_champions: set = set()
 
-    success_count = 0
-    failed_count = 0
+    all_champions = sorted({champ for champs in groups.values() for champ in champs})
+    work_items = [(champ, lane) for lane, champs in groups.items() for champ in champs]
+
+    success_champions: set = set()
+    failed_pages = 0
     start_time = time.time()
 
     logger.info(
-        f"Starting parallel matchup repair: {len(champions)} champions, "
-        f"{max_workers} workers, headless={headless}"
+        f"Starting parallel matchup repair: {len(all_champions)} champions, "
+        f"{len(work_items)} (champion, lane) pages, {max_workers} workers, headless={headless}"
     )
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {
-            executor.submit(_scrape_champion_matchups, champ, patch_version, headless): champ
-            for champ in champions
+            executor.submit(_scrape_champion_matchups, champ, patch_version, headless, lane): (
+                champ,
+                lane,
+            )
+            for champ, lane in work_items
         }
 
         for future in as_completed(futures):
-            champion = futures[future]
+            champion, lane = futures[future]
+            lane_label = lane or "default"
             try:
-                champ_name, matchups = future.result(timeout=120)
+                champ_name, champ_lane, matchups = future.result(timeout=120)
 
                 if not matchups:
-                    logger.warning(f"No matchup data returned for {champ_name} -- skipping insert")
-                    failed_count += 1
+                    logger.warning(
+                        f"No matchup data returned for {champ_name} ({lane_label}) -- skipping insert"
+                    )
+                    failed_pages += 1
                     continue
 
-                # Thread-safe DB write: clear old (empty) rows then insert fresh data
+                # Thread-safe DB write: clear old (empty) rows once per champion, then insert
                 with db_lock:
-                    db.clear_matchups_for_champion(champ_name, champion_cache)
+                    if champ_name not in cleared_champions:
+                        db.clear_matchups_for_champion(champ_name, champion_cache)
+                        cleared_champions.add(champ_name)
 
                     # Convert to batch format: [(champion, enemy, wr, d1, d2, pick, games), ...]
                     matchup_batch = [
                         (champ_name, enemy, winrate, d1, d2, pick, games)
                         for enemy, winrate, d1, d2, pick, games in matchups
                     ]
-                    db.add_matchups_batch(matchup_batch, champion_cache)
+                    db.add_matchups_batch(matchup_batch, champion_cache, lane=champ_lane)
 
-                logger.info(f"Repaired {champ_name}: {len(matchups)} matchups inserted")
-                success_count += 1
+                logger.info(
+                    f"Repaired {champ_name} ({lane_label}): {len(matchups)} matchups inserted"
+                )
+                success_champions.add(champ_name)
 
             except Exception as exc:
-                logger.error(f"Failed to repair {champion}: {exc}")
-                failed_count += 1
+                logger.error(f"Failed to repair {champion} ({lane_label}): {exc}")
+                failed_pages += 1
 
     duration = time.time() - start_time
+    failed_champions = [c for c in all_champions if c not in success_champions]
 
     return {
-        "success": success_count,
-        "failed": failed_count,
-        "total": len(champions),
+        "success": len(success_champions),
+        "failed": len(failed_champions),
+        "total": len(all_champions),
         "duration": duration,
     }
 
@@ -468,10 +506,28 @@ def main() -> int:
             logger.info("Dry-run mode: no scraping performed.")
             return 0
 
+        # ---- Discover lanes for missing champions (same method as update_all.py) ----
+        logger.info("Discovering lanes for champions missing matchups...")
+        lane_map = discover_lanes_for_champions(
+            missing, args.patch, normalize_champion_name_for_url, max_workers=args.max_workers
+        )
+        discovery_failures = sorted(champ for champ, lanes in lane_map.items() if not lanes)
+        if discovery_failures:
+            logger.warning(
+                f"Lane discovery failed for {len(discovery_failures)} champion(s) "
+                f"(default-lane fallback): {', '.join(discovery_failures)}"
+            )
+
+        groups = group_champions_by_lane(lane_map)
+        logger.info(
+            "Repair plan: %s",
+            {lane or "default": len(champs) for lane, champs in groups.items()},
+        )
+
         # ---- Repair: parallel scrape + targeted DB write ----
         stats = repair_matchups_parallel(
             db=db,
-            champions=missing,
+            groups=groups,
             patch_version=args.patch,
             max_workers=args.max_workers,
             headless=args.headless,
