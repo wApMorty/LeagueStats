@@ -61,6 +61,19 @@ All notable changes to LeagueStats Coach will be documented in this file.
 - **✅ Test**: `tests/test_pool_manager_system_pools.py` (pools calculés depuis la BD
   + fallback par rôle) et `tests/test_repair_scripts_lane_handling.py` (découverte de
   lane, groupement, non-écrasement multi-lane)
+- **🐛 Fix**: le menu principal (`src/ui/lol_coach_legacy.py`, option 3 « Parse Match
+  Statistics ») taguait **toutes** les données scrapées pour un pool avec `lane="top"`
+  en dur, quel que soit le rôle réel du pool sélectionné (ex. sélectionner « All Jungle
+  Champions » taguait les matchups/synergies comme `top`) — et les options « All
+  Champions » scrapaient une lane par défaut non taguée. Les 6 fonctions concernées
+  (`parse_champion_pool`, `parse_all_champions`, `parse_synergies_pool`,
+  `parse_synergies_all`, `parse_all_data_pool`, `parse_all_data_all`) passent
+  désormais par le nouvel helper `_scrape_by_discovered_lane()`, qui réutilise
+  `discover_lanes_for_champions()` + `group_champions_by_lane()` — même méthode que
+  `scripts/update_all.py` et les scripts repair. Parité comportementale conservée
+  (rafraîchissement Riot API, pré-calcul des bans) pour les variantes « All Champions »
+- **✅ Test**: `tests/test_menu_lane_handling.py` — preuve de régression sur un pool
+  Jungle/Support/ADC (le bug se reproduisait avant le fix : lane taguée `top`)
 
 ### 🟠 Horizon 2 — Dette technique 2.0 (2026-06-14)
 

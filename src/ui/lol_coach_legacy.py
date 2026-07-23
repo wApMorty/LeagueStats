@@ -281,6 +281,53 @@ def _recalculate_champion_scores():
         traceback.print_exc()
 
 
+def _scrape_by_discovered_lane(champions, patch_version, normalize_func, role_fn):
+    """Scrape `champions` grouped by their actually-played lane(s).
+
+    Uses the same dynamic lane discovery as scripts/update_all.py and the
+    repair scripts (src/lane_discovery.py, src/multilane.py) instead of a
+    hardcoded lane or an untagged scrape, so every menu-triggered parse is
+    tagged with the champion's real lane(s).
+
+    Args:
+        champions: Champion names to scrape (a pool, or the full roster)
+        patch_version: Patch window string, or None for config.CURRENT_PATCH
+        normalize_func: Champion name -> URL-normalized name
+        role_fn: Callable(champs_for_lane, lane) -> stats dict, e.g.
+                 ``lambda champs, lane: parallel_parser.parse_champions_by_role(
+                     db, champs, lane, normalize_func, init_tables=False)``
+
+    Returns:
+        dict with keys 'success', 'failed', 'total' aggregated across lanes
+    """
+    from src.config import config
+    from src.lane_discovery import discover_lanes_for_champions
+    from src.multilane import group_champions_by_lane
+
+    lane_map = discover_lanes_for_champions(
+        champions, patch_version or config.CURRENT_PATCH, normalize_func
+    )
+    discovery_failures = sorted(champ for champ, lanes in lane_map.items() if not lanes)
+    if discovery_failures:
+        print(
+            f"[WARNING] Lane discovery failed for {len(discovery_failures)} champion(s) "
+            f"(default-lane fallback): {', '.join(discovery_failures)}"
+        )
+
+    groups = group_champions_by_lane(lane_map)
+    print(
+        "[INFO] Scrape plan: "
+        + ", ".join(f"{lane or 'default'}: {len(champs)}" for lane, champs in groups.items())
+    )
+
+    aggregated = {"success": 0, "failed": 0, "total": 0}
+    for lane, champs in groups.items():
+        stats = role_fn(champs, lane)
+        for key in aggregated:
+            aggregated[key] += stats.get(key, 0)
+    return aggregated
+
+
 def parse_match_statistics():
     """Parse match statistics from web sources with submenu."""
     clear_console()  # Clear console at start
@@ -392,8 +439,13 @@ def parse_champion_pool(patch_version=None):
         print(
             f"\n[INFO] Starting parallel scraping with {scraping_config.DEFAULT_MAX_WORKERS} workers (patch {patch_version or config.CURRENT_PATCH})..."
         )
-        stats = parallel_parser.parse_champions_by_role(
-            db, pool_champions, "top", normalize_champion_name_for_url
+        stats = _scrape_by_discovered_lane(
+            pool_champions,
+            patch_version,
+            normalize_champion_name_for_url,
+            lambda champs, lane: parallel_parser.parse_champions_by_role(
+                db, champs, lane, normalize_champion_name_for_url, init_tables=False
+            ),
         )
 
         parallel_parser.close()
@@ -445,22 +497,18 @@ def parse_all_champions(patch_version=None):
         return
 
     try:
-        from src.constants import CHAMPIONS_LIST, normalize_champion_name_for_url
+        from src.constants import normalize_champion_name_for_url
         from src.config import config
         import time
 
         db = Database(config.DATABASE_PATH)
         db.connect()
 
-        # Ensure champions are up to date
-        cursor = db.connection.cursor()
-        cursor.execute("SELECT COUNT(*) FROM champions")
-        champion_count = cursor.fetchone()[0]
-
-        if champion_count == 0:
-            print("[INFO] No champions found, updating from Riot API first...")
-            db.create_riot_champions_table()
-            db.update_champions_from_riot_api()
+        # Always refresh from Riot API (same as scripts/update_all.py)
+        if not db.create_riot_champions_table():
+            print("[WARNING] Failed to create/update champions table schema")
+        print("[INFO] Updating champions from Riot API...")
+        db.update_champions_from_riot_api()
 
         # Initialize tables (clears old data)
         db.init_matchups_table()
@@ -479,16 +527,22 @@ def parse_all_champions(patch_version=None):
         print(
             f"\n[INFO] Starting parallel scraping with {scraping_config.DEFAULT_MAX_WORKERS} workers (patch {patch_version or config.CURRENT_PATCH})..."
         )
-        print(f"[INFO] Parsing champions from Riot API...")
+        champion_names = list(db.get_all_champion_names().values())
 
-        stats = parallel_parser.parse_all_champions(db, normalize_champion_name_for_url)
+        stats = _scrape_by_discovered_lane(
+            champion_names,
+            patch_version,
+            normalize_champion_name_for_url,
+            lambda champs, lane: parallel_parser.parse_champions_by_role(
+                db, champs, lane, normalize_champion_name_for_url, init_tables=False
+            ),
+        )
 
         parallel_parser.close()
         duration = time.time() - start_time
 
         # Display statistics
-        total_count = stats.get("total", 0)
-        print(f"[INFO] Parsed {total_count} champions from Riot API")
+        print(f"[INFO] Parsed {len(champion_names)} champions from Riot API")
         print("\n" + "=" * 60)
         print("PARALLEL SCRAPING COMPLETED")
         print("=" * 60)
@@ -497,6 +551,19 @@ def parse_all_champions(patch_version=None):
         print(f"Failed: {stats['failed']}")
         print(f"Duration: {duration:.1f}s ({duration/60:.1f}min)")
         print("=" * 60)
+
+        # Pre-calculate ban recommendations for custom pools (parity with the
+        # previous parallel_parser.parse_all_champions() behavior)
+        print("\n[INFO] Pre-calculating ban recommendations for custom pools...")
+        try:
+            assistant_bans = Assistant(db, verbose=False)
+            ban_results = assistant_bans.precalculate_all_custom_pool_bans()
+            print(
+                f"[INFO] Ban pre-calc: "
+                f"{sum(1 for c in ban_results.values() if c > 0)}/{len(ban_results)} pools"
+            )
+        except Exception as e:
+            print(f"[WARNING] Failed to pre-calculate ban recommendations: {e}")
 
         # Calculate global scores for tier lists
         print("\n[INFO] Calculating global champion scores for tier lists...")
@@ -585,8 +652,13 @@ def parse_synergies_pool(patch_version=None):
         print(
             f"\n[INFO] Starting parallel synergy scraping with {scraping_config.DEFAULT_MAX_WORKERS} workers (patch {patch_version or config.CURRENT_PATCH})..."
         )
-        stats = parallel_parser.parse_synergies_by_role(
-            db, pool_champions, "top", normalize_champion_name_for_url
+        stats = _scrape_by_discovered_lane(
+            pool_champions,
+            patch_version,
+            normalize_champion_name_for_url,
+            lambda champs, lane: parallel_parser.parse_synergies_by_role(
+                db, champs, lane, normalize_champion_name_for_url, init_tables=False
+            ),
         )
 
         parallel_parser.close()
@@ -646,6 +718,9 @@ def parse_synergies_all(patch_version=None):
             db.create_riot_champions_table()
             db.update_champions_from_riot_api()
 
+        # Initialize synergies table (clears old data)
+        db.init_synergies_table()
+
         # Use parallel scraping
         from src.config_constants import scraping_config
 
@@ -659,16 +734,22 @@ def parse_synergies_all(patch_version=None):
         print(
             f"\n[INFO] Starting parallel synergy scraping with {scraping_config.DEFAULT_MAX_WORKERS} workers (patch {patch_version or config.CURRENT_PATCH})..."
         )
-        print(f"[INFO] Parsing champions from Riot API...")
+        champion_names = list(db.get_all_champion_names().values())
 
-        stats = parallel_parser.parse_all_synergies(db, normalize_champion_name_for_url)
+        stats = _scrape_by_discovered_lane(
+            champion_names,
+            patch_version,
+            normalize_champion_name_for_url,
+            lambda champs, lane: parallel_parser.parse_synergies_by_role(
+                db, champs, lane, normalize_champion_name_for_url, init_tables=False
+            ),
+        )
 
         parallel_parser.close()
         duration = time.time() - start_time
 
         # Display statistics
-        total_count = stats.get("total", 0)
-        print(f"[INFO] Parsed {total_count} champions from Riot API")
+        print(f"[INFO] Parsed {len(champion_names)} champions from Riot API")
         print("\n" + "=" * 60)
         print("PARALLEL SYNERGY SCRAPING COMPLETED")
         print("=" * 60)
@@ -764,8 +845,13 @@ def parse_all_data_pool(patch_version=None):
             f"\n[INFO] Step 1/2: Starting matchup scraping with {scraping_config.DEFAULT_MAX_WORKERS} workers..."
         )
         start_time = time.time()
-        matchup_stats = parallel_parser.parse_champions_by_role(
-            db, pool_champions, "top", normalize_champion_name_for_url
+        matchup_stats = _scrape_by_discovered_lane(
+            pool_champions,
+            patch_version,
+            normalize_champion_name_for_url,
+            lambda champs, lane: parallel_parser.parse_champions_by_role(
+                db, champs, lane, normalize_champion_name_for_url, init_tables=False
+            ),
         )
         matchup_duration = time.time() - start_time
 
@@ -774,8 +860,13 @@ def parse_all_data_pool(patch_version=None):
             f"\n[INFO] Step 2/2: Starting synergy scraping with {scraping_config.DEFAULT_MAX_WORKERS} workers..."
         )
         start_time = time.time()
-        synergy_stats = parallel_parser.parse_synergies_by_role(
-            db, pool_champions, "top", normalize_champion_name_for_url
+        synergy_stats = _scrape_by_discovered_lane(
+            pool_champions,
+            patch_version,
+            normalize_champion_name_for_url,
+            lambda champs, lane: parallel_parser.parse_synergies_by_role(
+                db, champs, lane, normalize_champion_name_for_url, init_tables=False
+            ),
         )
         synergy_duration = time.time() - start_time
 
@@ -843,15 +934,11 @@ def parse_all_data_all(patch_version=None):
         db = Database(config.DATABASE_PATH)
         db.connect()
 
-        # Ensure champions are up to date
-        cursor = db.connection.cursor()
-        cursor.execute("SELECT COUNT(*) FROM champions")
-        champion_count = cursor.fetchone()[0]
-
-        if champion_count == 0:
-            print("[INFO] No champions found, updating from Riot API first...")
-            db.create_riot_champions_table()
-            db.update_champions_from_riot_api()
+        # Always refresh from Riot API (same as scripts/update_all.py)
+        if not db.create_riot_champions_table():
+            print("[WARNING] Failed to create/update champions table schema")
+        print("[INFO] Updating champions from Riot API...")
+        db.update_champions_from_riot_api()
 
         # Initialize tables
         db.init_matchups_table()
@@ -866,6 +953,7 @@ def parse_all_data_all(patch_version=None):
             patch_version=patch_version,
             headless=scraping_config.HEADLESS,
         )
+        champion_names = list(db.get_all_champion_names().values())
 
         # Parse matchups
         print(
@@ -873,7 +961,14 @@ def parse_all_data_all(patch_version=None):
         )
         print(f"[INFO] Parsing champions from Riot API...")
         start_time = time.time()
-        matchup_stats = parallel_parser.parse_all_champions(db, normalize_champion_name_for_url)
+        matchup_stats = _scrape_by_discovered_lane(
+            champion_names,
+            patch_version,
+            normalize_champion_name_for_url,
+            lambda champs, lane: parallel_parser.parse_champions_by_role(
+                db, champs, lane, normalize_champion_name_for_url, init_tables=False
+            ),
+        )
         matchup_duration = time.time() - start_time
 
         # Parse synergies
@@ -882,7 +977,14 @@ def parse_all_data_all(patch_version=None):
         )
         print(f"[INFO] Parsing champions from Riot API...")
         start_time = time.time()
-        synergy_stats = parallel_parser.parse_all_synergies(db, normalize_champion_name_for_url)
+        synergy_stats = _scrape_by_discovered_lane(
+            champion_names,
+            patch_version,
+            normalize_champion_name_for_url,
+            lambda champs, lane: parallel_parser.parse_synergies_by_role(
+                db, champs, lane, normalize_champion_name_for_url, init_tables=False
+            ),
+        )
         synergy_duration = time.time() - start_time
 
         parallel_parser.close()
@@ -904,6 +1006,19 @@ def parse_all_data_all(patch_version=None):
         print(f"  - Duration: {synergy_duration:.1f}s ({synergy_duration/60:.1f}min)")
         print(f"\nTotal Duration: {total_duration:.1f}s ({total_duration/60:.1f}min)")
         print("=" * 60)
+
+        # Pre-calculate ban recommendations for custom pools (parity with the
+        # previous parallel_parser.parse_all_champions() behavior)
+        print("\n[INFO] Pre-calculating ban recommendations for custom pools...")
+        try:
+            assistant_bans = Assistant(db, verbose=False)
+            ban_results = assistant_bans.precalculate_all_custom_pool_bans()
+            print(
+                f"[INFO] Ban pre-calc: "
+                f"{sum(1 for c in ban_results.values() if c > 0)}/{len(ban_results)} pools"
+            )
+        except Exception as e:
+            print(f"[WARNING] Failed to pre-calculate ban recommendations: {e}")
 
         # Calculate global scores for tier lists
         print("\n[INFO] Calculating global champion scores for tier lists...")
