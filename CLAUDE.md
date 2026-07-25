@@ -9,78 +9,19 @@
 
 ## 📋 Table des Matières
 
-1. [🔵 Workflow claude-flow](#-workflow-claude-flow)
-2. [Contexte du Projet](#contexte-du-projet)
-3. [Workflow de Développement](#workflow-de-développement)
-4. [Standards de Code](#standards-de-code)
-5. [Conventions Git](#conventions-git)
-6. [Process de Code Review](#process-de-code-review)
-7. [Fichiers Importants](#fichiers-importants)
-8. [Commandes Utiles](#commandes-utiles)
+1. [Contexte du Projet](#contexte-du-projet)
+2. [Workflow de Développement](#workflow-de-développement)
+3. [Standards de Code](#standards-de-code)
+4. [Conventions Git](#conventions-git)
+5. [Process de Code Review](#process-de-code-review)
+6. [Fichiers Importants](#fichiers-importants)
+7. [Commandes Utiles](#commandes-utiles)
 
 ---
 
-## 🔵 Workflow claude-flow
-
-claude-flow est l'infrastructure d'orchestration et de mémoire persistante du projet. Tout le développement s'appuie sur ses outils MCP.
-
-### Début de Session (Obligatoire)
-
-**TOUJOURS** commencer par récupérer le contexte mémorisé :
-
-```python
-mcp__claude-flow__memory_search(query="projet leaguestats état sprint", smart=True)
-mcp__claude-flow__memory_search(query="décisions architecture récentes", namespace="architecture")
-```
-
-### Mémoire Persistante : Ce qu'on Stocke
-
-Après chaque décision importante ou bug résolu, stocker en mémoire pour les futures sessions :
-
-```python
-# Décision architecturale validée
-mcp__claude-flow__memory_store(
-    key="arch_decision_cloudflare_2026_05",
-    value="Approche choisie : wait-for-redirect dans detect_cloudflare()",
-    namespace="architecture"
-)
-
-# Bug résolu
-mcp__claude-flow__memory_store(
-    key="bug_executor_leak_fix",
-    value="Réduire MAX_WORKERS à 5, ThreadPoolExecutor dans with block",
-    namespace="bugs"
-)
-
-# Pattern établi
-mcp__claude-flow__memory_store(
-    key="pattern_retry_decorator",
-    value="@retry(stop=stop_after_attempt(3), wait=wait_exponential(min=2, max=10), reraise=True)",
-    namespace="patterns"
-)
-```
-
-### Espaces Mémoire (Namespaces)
-
-| Namespace | Contenu |
-|-----------|---------|
-| `architecture` | Décisions d'architecture validées |
-| `bugs` | Bugs résolus et leurs causes |
-| `patterns` | Patterns de code établis dans le projet |
-| `sprint` | État courant du sprint (bloquants, en cours) |
-
-### Travail Direct
+## 🧭 Méthode de Travail
 
 L'assistant travaille directement avec les outils disponibles (Read, Edit, Write, Bash, Grep, Glob). Pas de workflow d'agents intermédiaires obligatoire.
-
-Pour les tâches complexes nécessitant plusieurs angles en parallèle, utiliser claude-flow swarm :
-
-```python
-# Tâches parallèles
-mcp__claude-flow__swarm_init(topology="hierarchical", maxAgents=4)
-mcp__claude-flow__agent_spawn(type="researcher", task="Explorer l'approche A")
-mcp__claude-flow__agent_spawn(type="researcher", task="Explorer l'approche B")
-```
 
 ### Proposer des Approches
 
@@ -436,19 +377,17 @@ python -m alembic revision -m "Description"
 
 ### TOUJOURS
 
-1. ✅ **Rechercher mémoire claude-flow** en début de session
-2. ✅ **Stocker en mémoire** toute décision architecturale validée
-3. ✅ **Feature branch DEPUIS MASTER** (`git checkout -b feature/name origin/master`)
-4. ✅ **Commits atomiques** et fréquents
-5. ✅ **Tests pour nouvelles fonctionnalités**
-6. ✅ **Test de régression** pour chaque bug corrigé (OBLIGATOIRE)
-7. ✅ **Tous les tests passent** avant PR (`pytest tests/ -v`)
-8. ✅ **Formatage Black appliqué** avant PR (`python -m black src/ tests/`)
-9. ✅ **Code review** AVANT tout merge
-10. ✅ **Validation utilisateur** explicite requise avant merge
-11. ✅ **Requêtes SQL paramétrées** (sécurité)
-12. ✅ **config_constants.py** pour valeurs hardcodées
-13. ✅ **Proposer 2-3 approches** pour toute décision architecturale non triviale
+1. ✅ **Feature branch DEPUIS MASTER** (`git checkout -b feature/name origin/master`)
+2. ✅ **Commits atomiques** et fréquents
+3. ✅ **Tests pour nouvelles fonctionnalités**
+4. ✅ **Test de régression** pour chaque bug corrigé (OBLIGATOIRE)
+5. ✅ **Tous les tests passent** avant PR (`pytest tests/ -v`)
+6. ✅ **Formatage Black appliqué** avant PR (`python -m black src/ tests/`)
+7. ✅ **Code review** AVANT tout merge
+8. ✅ **Validation utilisateur** explicite requise avant merge
+9. ✅ **Requêtes SQL paramétrées** (sécurité)
+10. ✅ **config_constants.py** pour valeurs hardcodées
+11. ✅ **Proposer 2-3 approches** pour toute décision architecturale non triviale
 
 ### JAMAIS
 

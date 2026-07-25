@@ -6,8 +6,7 @@ icon followed by the share of the champion's games on that lane
 (e.g. ``75.1%``). This module fetches that HTML with plain ``requests``
 (no Selenium, no JS rendering) and extracts the distribution.
 
-Architecture decision (validated 2026-06-12, stored in claude-flow memory
-``arch_decision_h1_lane_discovery_2026_06``): lanes to scrape are discovered
+Architecture decision (validated 2026-06-12): lanes to scrape are discovered
 dynamically per champion, keeping only lanes above
 ``scraping_config.LANE_PICKRATE_THRESHOLD`` (>10%, per ROADMAP_2026.md H1).
 
