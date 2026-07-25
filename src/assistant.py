@@ -5,16 +5,13 @@ This is the new modular version that delegates to specialized modules while
 maintaining backward compatibility with the original API.
 """
 
-from typing import Dict, List, Optional, TYPE_CHECKING
+from typing import Dict, List, Optional
 from tqdm import tqdm
 
 from .config import config
 from .config_constants import analysis_config
+from .db import Database
 from .models import Matchup, MatchupDraft
-
-# Import DataSource for type hints
-if TYPE_CHECKING:
-    from .data_source import DataSource
 
 # Import specialized modules
 from .analysis.scoring import ChampionScorer
@@ -40,62 +37,31 @@ class Assistant:
     Delegates to specialized modules while maintaining backward compatibility
     with the original monolithic API.
 
-    Data Source:
-    - The Assistant supports dependency injection of a DataSource.
-    - Default behavior: local SQLite (the only supported backend since the
-      remote PostgreSQL/Neon layer was decommissioned in Horizon 2).
+    Data access goes through a local SQLite ``Database`` — the only supported
+    backend since the remote PostgreSQL/Neon layer was decommissioned (H2).
     """
 
-    def __init__(self, data_source: Optional["DataSource"] = None, verbose: bool = False) -> None:
+    def __init__(self, db: Optional[Database] = None, verbose: bool = False) -> None:
         """
         Initialize Assistant and all sub-components.
 
         Args:
-            data_source: Optional DataSource instance to use for data access.
-                        If None, creates a SQLiteDataSource instance (default).
-                        For backward compatibility, you can also pass a Database instance.
+            db: Optional Database instance to use for data access. Defaults to
+                a Database on ``config.DATABASE_PATH``. Connected on init.
             verbose: Enable verbose logging
 
         Examples:
-            >>> # Default: local SQLite
+            >>> # Default: local SQLite at config.DATABASE_PATH
             >>> assistant = Assistant()
 
-            >>> # Explicit SQLite data source
-            >>> from src.sqlite_data_source import SQLiteDataSource
-            >>> data_source = SQLiteDataSource("data/db.db")
-            >>> assistant = Assistant(data_source=data_source)
-
-            >>> # Backward compatibility: Database instance still works
+            >>> # Explicit database (e.g. a test fixture)
             >>> from src.db import Database
-            >>> from src.sqlite_data_source import SQLiteDataSource
-            >>> db = Database("data/db.db")
-            >>> # Wrap Database in SQLiteDataSource adapter
-            >>> assistant = Assistant(data_source=SQLiteDataSource(db.path))
+            >>> assistant = Assistant(Database("data/db.db"))
         """
         self.MIN_GAMES = analysis_config.MIN_GAMES_THRESHOLD
 
-        # Handle data source initialization with backward compatibility
-        if data_source is not None:
-            # Check if it's a legacy Database instance (for backward compatibility)
-            from .db import Database
-
-            if isinstance(data_source, Database):
-                # Wrap Database in SQLiteDataSource adapter
-                from .sqlite_data_source import SQLiteDataSource
-
-                print("[COMPAT] Database instance detected - wrapping in SQLiteDataSource adapter")
-                self.db = SQLiteDataSource(data_source.path)
-                self.db.connect()
-            else:
-                # Modern DataSource interface
-                self.db = data_source
-                self.db.connect()
-        else:
-            # Default: local SQLite (only supported backend since Horizon 2)
-            from .sqlite_data_source import SQLiteDataSource
-
-            self.db = SQLiteDataSource()
-            self.db.connect()
+        self.db = db if db is not None else Database(config.DATABASE_PATH)
+        self.db.connect()
 
         self.verbose = verbose
 

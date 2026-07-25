@@ -1,141 +1,115 @@
 """
-Tests for Assistant integration with DataSource abstraction.
+Tests for Assistant database wiring.
 
 This test suite verifies that:
-- Assistant accepts DataSource via dependency injection
-- Backward compatibility with Database instances
-- SQLiteDataSource is used by default (the only backend since the remote
-  PostgreSQL/Neon layer was decommissioned in Horizon 2)
-- All data source types work correctly with Assistant
+- Assistant accepts a Database via dependency injection
+- Assistant defaults to a Database on config.DATABASE_PATH
+- The injected database is connected on init and closed by Assistant.close()
 
 Author: @pj35
 Created: 2026-02-06
-Sprint: 2 - API Integration (Adapter Pattern Implementation)
-Updated: 2026-06-14 (Horizon 2 - remote data layer decommissioned)
+Sprint: 2 - API Integration
+Updated: 2026-07-25 (DataSource adapter layer removed - SQLite only)
 """
 
 import pytest
 from unittest.mock import Mock, patch
 
 from src.assistant import Assistant
-from src.sqlite_data_source import SQLiteDataSource
+from src.db import Database
 
 
-class TestAssistantDataSourceInjection:
-    """Test data source dependency injection."""
+class TestAssistantDatabaseInjection:
+    """Test database dependency injection."""
 
-    def test_assistant_accepts_sqlite_data_source(self, temp_db):
-        """Test that Assistant accepts SQLiteDataSource via dependency injection."""
-        data_source = SQLiteDataSource(str(temp_db))
-        assistant = Assistant(data_source=data_source)
+    def test_assistant_accepts_database(self, temp_db):
+        """Test that Assistant accepts a Database via dependency injection."""
+        db = Database(str(temp_db))
+        assistant = Assistant(db)
 
-        assert assistant.db is data_source
+        assert assistant.db is db
         assistant.close()
 
-    def test_assistant_uses_sqlite_by_default(self):
-        """Test that Assistant uses SQLiteDataSource by default when no data_source provided."""
-        # Patch where SQLiteDataSource is imported (dynamically in __init__)
-        with patch("src.sqlite_data_source.SQLiteDataSource") as mock_sqlite_class:
-            mock_sqlite = Mock()
-            mock_sqlite_class.return_value = mock_sqlite
+    def test_assistant_uses_config_path_by_default(self):
+        """Test that Assistant builds a Database on config.DATABASE_PATH by default."""
+        with patch("src.assistant.Database") as mock_db_class:
+            mock_db = Mock()
+            mock_db_class.return_value = mock_db
 
             assistant = Assistant()
 
-            # Verify SQLiteDataSource was instantiated (default path) and connected
-            mock_sqlite_class.assert_called_once_with()
-            assert assistant.db is mock_sqlite
-            mock_sqlite.connect.assert_called_once()
+            from src.config import config
 
-    def test_assistant_connects_data_source_on_init(self, temp_db):
-        """Test that Assistant connects data source on initialization."""
-        data_source = Mock(spec=SQLiteDataSource)
-        assistant = Assistant(data_source=data_source)
+            mock_db_class.assert_called_once_with(config.DATABASE_PATH)
+            assert assistant.db is mock_db
+            mock_db.connect.assert_called_once()
 
-        data_source.connect.assert_called_once()
+    def test_assistant_connects_database_on_init(self, temp_db):
+        """Test that Assistant connects the database on initialization."""
+        db = Mock(spec=Database)
+        Assistant(db)
 
-    def test_assistant_close_closes_data_source(self, temp_db):
-        """Test that Assistant.close() closes data source connection."""
-        data_source = SQLiteDataSource(str(temp_db))
-        data_source.connect()
-        assistant = Assistant(data_source=data_source)
+        db.connect.assert_called_once()
+
+    def test_assistant_close_closes_database(self, temp_db):
+        """Test that Assistant.close() closes the database connection."""
+        db = Mock(spec=Database)
+        assistant = Assistant(db)
 
         assistant.close()
 
-        # After close, connection should be None
-        # (SQLite doesn't provide a clean way to check, but no exception means success)
+        db.close.assert_called_once()
 
 
-class TestAssistantBackwardCompatibility:
-    """Test backward compatibility with Database instances."""
-
-    def test_assistant_wraps_database_instance_in_adapter(self, temp_db):
-        """Test that Assistant wraps legacy Database in SQLiteDataSource adapter."""
-        from src.db import Database
-
-        db = Database(str(temp_db))
-
-        # Patch where SQLiteDataSource is imported (dynamically in __init__)
-        with patch("src.sqlite_data_source.SQLiteDataSource") as mock_sqlite_class:
-            mock_sqlite = Mock()
-            mock_sqlite_class.return_value = mock_sqlite
-
-            assistant = Assistant(data_source=db)
-
-            # Verify Database was wrapped in SQLiteDataSource
-            mock_sqlite_class.assert_called_once_with(db.path)
-            mock_sqlite.connect.assert_called_once()
-
-
-class TestAssistantWithMockedDataSource:
-    """Test Assistant functionality with mocked data sources."""
+class TestAssistantWithMockedDatabase:
+    """Test Assistant functionality with a mocked database."""
 
     @pytest.fixture
-    def mock_data_source(self):
-        """Create mock data source for testing."""
-        mock_ds = Mock()
-        mock_ds.get_champion_id.return_value = 42
-        mock_ds.get_champion_matchups_for_draft.return_value = []
-        mock_ds.get_champion_matchups_by_name.return_value = []
-        mock_ds.get_all_matchups_bulk.return_value = {}
-        mock_ds.build_champion_cache.return_value = {"Jinx": 42}
-        return mock_ds
+    def mock_db(self):
+        """Create mock database for testing."""
+        mock = Mock()
+        mock.get_champion_id.return_value = 42
+        mock.get_champion_matchups_for_draft.return_value = []
+        mock.get_champion_matchups_by_name.return_value = []
+        mock.get_all_matchups_bulk.return_value = {}
+        mock.build_champion_cache.return_value = {"Jinx": 42}
+        return mock
 
-    def test_assistant_uses_data_source_for_queries(self, mock_data_source):
-        """Test that Assistant uses injected data source for queries."""
-        assistant = Assistant(data_source=mock_data_source)
+    def test_assistant_uses_database_for_queries(self, mock_db):
+        """Test that Assistant uses the injected database for queries."""
+        assistant = Assistant(mock_db)
 
-        # Warm cache should call data source methods
+        # Warm cache should call database methods
         assistant.warm_cache(["Jinx"])
 
-        # Verify data source was used
-        mock_data_source.get_champion_matchups_for_draft.assert_called()
+        # Verify database was used
+        mock_db.get_champion_matchups_for_draft.assert_called()
 
-    def test_assistant_delegates_to_specialized_modules(self, mock_data_source):
-        """Test that Assistant initializes specialized modules with data source."""
-        assistant = Assistant(data_source=mock_data_source)
+    def test_assistant_delegates_to_specialized_modules(self, mock_db):
+        """Test that Assistant initializes specialized modules with the database."""
+        assistant = Assistant(mock_db)
 
-        # Verify specialized components were initialized with data source
         assert assistant.scorer is not None
         assert assistant.tier_list_gen is not None
         assert assistant.recommender is not None
         assert assistant.team_analyzer is not None
 
 
-class TestAssistantWithRealDataSources:
-    """Integration tests with real data sources (using temp database)."""
+class TestAssistantWithRealDatabase:
+    """Integration tests with a real database (using temp database)."""
 
-    def test_assistant_works_with_real_sqlite_data_source(self, temp_db, sample_champions):
-        """Test Assistant works with real SQLiteDataSource."""
-        data_source = SQLiteDataSource(str(temp_db))
-        data_source.connect()
+    def test_assistant_works_with_real_database(self, temp_db, sample_champions):
+        """Test Assistant works with a real Database."""
+        db = Database(str(temp_db))
+        db.connect()
 
         # Insert sample champions
-        cursor = data_source._db.connection.cursor()
+        cursor = db.connection.cursor()
         for champ in sample_champions:
             cursor.execute("INSERT OR IGNORE INTO champions (name) VALUES (?)", (champ,))
-        data_source._db.connection.commit()
+        db.connection.commit()
 
-        assistant = Assistant(data_source=data_source)
+        assistant = Assistant(db)
 
         # Test basic functionality
         champion_id = assistant.db.get_champion_id("Aatrox")

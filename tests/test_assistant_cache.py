@@ -47,7 +47,7 @@ class TestAssistantCacheBidirectional:
     def assistant(self, mock_db):
         """Create Assistant instance with mocked database via dependency injection."""
         # Use dependency injection to provide mock database
-        asst = Assistant(data_source=mock_db, verbose=False)
+        asst = Assistant(db=mock_db, verbose=False)
         return asst
 
     # ==================== Initialization Tests ====================

@@ -12,7 +12,7 @@ Industrialized successor of fill_db.py / auto_update_db.py:
 Differences with the legacy scripts (per ROADMAP_2026.md decisions):
     - Patch version comes from config.CURRENT_PATCH (no more hardcoded "14")
     - SQLite only: no Neon sync, no Render API refresh (Decisions B & C)
-    - Explicit SQLiteDataSource for score recalculation (never Hybrid/remote)
+    - Explicit local Database for score recalculation (never remote)
 
 USAGE:
     python scripts/update_all.py                  # full nightly run
@@ -185,9 +185,8 @@ def main() -> int:
 
         # ── 3 & 4. Scores + ban recommendations (SQLite only, Decision C) ───
         from src.assistant import Assistant
-        from src.sqlite_data_source import SQLiteDataSource
 
-        assistant = Assistant(data_source=SQLiteDataSource(config.DATABASE_PATH), verbose=False)
+        assistant = Assistant(Database(config.DATABASE_PATH), verbose=False)
         scores_count = assistant.calculate_global_scores()
         logger.info("champion_scores recalculated: %d champions", scores_count)
 

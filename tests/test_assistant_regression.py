@@ -39,7 +39,7 @@ from src.assistant import Assistant
 
 @pytest.fixture
 def mock_data_source():
-    """Mock DataSource with all methods required by Assistant.__init__."""
+    """Mock Database with all methods required by Assistant.__init__."""
     mock_db = Mock()
     mock_db.connect.return_value = None
     mock_db.close.return_value = None
@@ -52,7 +52,7 @@ def mock_data_source():
 @pytest.fixture
 def assistant_instance(mock_data_source):
     """Create an Assistant with mocked data source via dependency injection."""
-    return Assistant(data_source=mock_data_source, verbose=False)
+    return Assistant(db=mock_data_source, verbose=False)
 
 
 class TestCalculateAndDisplayRecommendationsRegression:

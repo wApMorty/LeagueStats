@@ -14,7 +14,7 @@ Fixed in: TODO #3 (2026-02-15)
 
 Updated: 2026-06-14 (Horizon 2)
     - Remote PostgreSQL/Neon data layer decommissioned; the regression is now
-      asserted against the generic DataSource contract used by Assistant.
+      asserted against the Database contract used by Assistant.
 
 Test approach:
     Verify that warm_cache() can successfully pre-load matchups for all champions
@@ -58,7 +58,7 @@ def mock_data_source():
 def assistant_with_mock_db(mock_data_source):
     """Create Assistant instance with mocked data source via dependency injection."""
     # Use dependency injection to provide mock database (no patching needed)
-    assistant = Assistant(data_source=mock_data_source, verbose=False)
+    assistant = Assistant(db=mock_data_source, verbose=False)
     return assistant
 
 

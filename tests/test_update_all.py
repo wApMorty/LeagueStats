@@ -102,7 +102,6 @@ class TestUpdateAllMain:
             sys.modules,
             {
                 "src.assistant": MagicMock(Assistant=MagicMock(return_value=assistant)),
-                "src.sqlite_data_source": MagicMock(),
             },
         ):
             exit_code = module.main()

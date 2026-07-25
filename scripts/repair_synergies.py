@@ -527,10 +527,8 @@ def main() -> int:
             logger.info("Recalculating champion scores...")
             try:
                 from src.assistant import Assistant
-                from src.sqlite_data_source import SQLiteDataSource
 
-                data_source = SQLiteDataSource(db_path)
-                assistant = Assistant(data_source=data_source, verbose=False)
+                assistant = Assistant(Database(db_path), verbose=False)
                 assistant.calculate_global_scores()
                 logger.info("Champion scores recalculated successfully")
             except Exception as exc:
