@@ -40,6 +40,41 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### 🐛 Fix — Pools Système dynamiques & homogénéisation lane (issue #41, 2026-07-23)
+
+- **♻️ Refactor**: les pools Système (`All Top/Jungle/Mid/ADC/Support Champions`)
+  ne sont plus des listes en dur dans `src/constants.py` — `PoolManager` les calcule
+  désormais depuis la colonne `lane` déjà taguée en BD par le pipeline multi-lane
+  (`src/lane_discovery.py`), rôle par rôle. Chaque rôle sans données BD retombe
+  individuellement sur la liste `constants.py` correspondante (fresh install, tests,
+  avant le premier scrape multi-lane)
+- **♻️ Refactor**: `scripts/repair_matchups.py` et `scripts/repair_synergies.py`
+  réutilisent désormais `discover_lanes_for_champions()` +
+  `group_champions_by_lane()` (les mêmes fonctions que `scripts/update_all.py`) au
+  lieu de scraper une lane par défaut non taguée pour les champions manquants —
+  élimine la divergence de comportement entre les scripts de réparation et le
+  pipeline nightly
+- **🐛 Fix**: un champion joué sur plusieurs lanes (ex. Pyke top/support) n'efface
+  plus les lignes de la première lane lors de la réparation — le nettoyage
+  (`clear_matchups_for_champion`/`clear_synergies_for_champion`) n'a désormais lieu
+  qu'une fois par champion, pas une fois par lane
+- **✅ Test**: `tests/test_pool_manager_system_pools.py` (pools calculés depuis la BD
+  + fallback par rôle) et `tests/test_repair_scripts_lane_handling.py` (découverte de
+  lane, groupement, non-écrasement multi-lane)
+- **🐛 Fix**: le menu principal (`src/ui/lol_coach_legacy.py`, option 3 « Parse Match
+  Statistics ») taguait **toutes** les données scrapées pour un pool avec `lane="top"`
+  en dur, quel que soit le rôle réel du pool sélectionné (ex. sélectionner « All Jungle
+  Champions » taguait les matchups/synergies comme `top`) — et les options « All
+  Champions » scrapaient une lane par défaut non taguée. Les 6 fonctions concernées
+  (`parse_champion_pool`, `parse_all_champions`, `parse_synergies_pool`,
+  `parse_synergies_all`, `parse_all_data_pool`, `parse_all_data_all`) passent
+  désormais par le nouvel helper `_scrape_by_discovered_lane()`, qui réutilise
+  `discover_lanes_for_champions()` + `group_champions_by_lane()` — même méthode que
+  `scripts/update_all.py` et les scripts repair. Parité comportementale conservée
+  (rafraîchissement Riot API, pré-calcul des bans) pour les variantes « All Champions »
+- **✅ Test**: `tests/test_menu_lane_handling.py` — preuve de régression sur un pool
+  Jungle/Support/ADC (le bug se reproduisait avant le fix : lane taguée `top`)
+
 ### 🟠 Horizon 2 — Dette technique 2.0 (2026-06-14)
 
 Implémentation de `docs/ROADMAP_2026.md` §3 H2. **Chantier #1 — décommission de la
