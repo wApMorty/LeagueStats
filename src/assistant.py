@@ -409,7 +409,6 @@ class Assistant:
         Returns:
             Number of champions scored and saved
         """
-        from .config import tierlist_config
         import statistics
 
         print("[INFO] Calculating global champion scores...")
@@ -441,7 +440,7 @@ class Assistant:
                 decent_weight = sum(
                     m.pickrate
                     for m in matchups
-                    if m.delta2 > tierlist_config.DECENT_MATCHUP_THRESHOLD
+                    if m.delta2 > analysis_config.DECENT_MATCHUP_THRESHOLD
                 )
                 total_weight = sum(m.pickrate for m in matchups)
                 coverage = decent_weight / total_weight if total_weight > 0 else 0.0
@@ -450,14 +449,14 @@ class Assistant:
                 excellent_impact = sum(
                     m.delta2 * m.pickrate
                     for m in matchups
-                    if m.delta2 > tierlist_config.EXCELLENT_MATCHUP_THRESHOLD
+                    if m.delta2 > analysis_config.EXCELLENT_MATCHUP_THRESHOLD
                 )
                 good_impact = sum(
                     m.delta2 * m.pickrate
                     for m in matchups
-                    if tierlist_config.GOOD_MATCHUP_THRESHOLD
+                    if analysis_config.GOOD_MATCHUP_THRESHOLD
                     < m.delta2
-                    <= tierlist_config.EXCELLENT_MATCHUP_THRESHOLD
+                    <= analysis_config.EXCELLENT_MATCHUP_THRESHOLD
                 )
                 peak_impact = excellent_impact + good_impact * 0.5
 
@@ -468,7 +467,7 @@ class Assistant:
                 viable_weight = sum(
                     m.pickrate
                     for m in matchups
-                    if m.delta2 > tierlist_config.GOOD_MATCHUP_THRESHOLD
+                    if m.delta2 > analysis_config.GOOD_MATCHUP_THRESHOLD
                 )
                 target_ratio = viable_weight / total_weight if total_weight > 0 else 0.0
 

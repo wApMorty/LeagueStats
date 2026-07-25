@@ -85,7 +85,9 @@ class RepairTarget:
     """
 
     name: str  # "matchups" | "synergies"
-    table: str  # SQL table holding the rows
+    # Full literal SQL (never interpolated at call time -- keeps the query
+    # constant and out of reach of any user input)
+    missing_query: str
     peer: str  # "enemy" | "ally" -- the second champion of a row
     default_headless: bool
     scrape: Callable[[Parser, str, str, Optional[str]], list]
@@ -95,7 +97,14 @@ class RepairTarget:
 
 MATCHUPS = RepairTarget(
     name="matchups",
-    table="matchups",
+    missing_query="""
+        SELECT c.name
+        FROM champions c
+        LEFT JOIN matchups m ON m.champion = c.id
+        GROUP BY c.id, c.name
+        HAVING COUNT(m.id) = 0
+        ORDER BY c.name
+    """,
     peer="enemy",
     # GUI mode bypasses Cloudflare detection better on the matchup pages
     default_headless=False,
@@ -108,7 +117,14 @@ MATCHUPS = RepairTarget(
 
 SYNERGIES = RepairTarget(
     name="synergies",
-    table="synergies",
+    missing_query="""
+        SELECT c.name
+        FROM champions c
+        LEFT JOIN synergies s ON s.champion = c.id
+        GROUP BY c.id, c.name
+        HAVING COUNT(s.id) = 0
+        ORDER BY c.name
+    """,
     peer="ally",
     default_headless=True,
     scrape=lambda parser, patch, champion, lane: parser.get_champion_synergies_on_patch(
@@ -169,17 +185,7 @@ def detect_champions_without_data(db: Database, target: RepairTarget) -> List[st
         Sorted list of champion names with no data
     """
     cursor = db.connection.cursor()
-    # Table name comes from the RepairTarget constants above, never from user input
-    cursor.execute(
-        f"""
-        SELECT c.name
-        FROM champions c
-        LEFT JOIN {target.table} t ON t.champion = c.id
-        GROUP BY c.id, c.name
-        HAVING COUNT(t.id) = 0
-        ORDER BY c.name
-        """
-    )
+    cursor.execute(target.missing_query)
     rows = cursor.fetchall()
     return [row[0] for row in rows]
 

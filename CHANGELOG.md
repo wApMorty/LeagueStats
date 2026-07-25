@@ -2,6 +2,66 @@
 
 All notable changes to LeagueStats Coach will be documented in this file.
 
+## [Unreleased] - 2026-07-25
+
+### 🗑️ Suppressions (audit de sur-ingénierie)
+
+Passe de dé-complexification sur tout le dépôt : **-12 800 lignes, -10 dépendances**.
+Aucun changement de comportement fonctionnel.
+
+- **`server/` supprimé** (6 371 l.) — couche FastAPI + PostgreSQL/Neon décommissionnée
+  depuis 7afb137 (« SQLite only »), plus aucun import depuis l'app. `analysis/scoring.py`,
+  `analysis/team_analysis.py` et `models.py` y étaient byte-identiques à leurs jumeaux `src/`.
+  - CI : jobs black/pylint/mypy/bandit/pytest dupliqués retirés
+  - **-9 dépendances** : fastapi, uvicorn, gunicorn, sqlalchemy, asyncpg, pydantic,
+    pydantic-settings, httpx, pytest-asyncio
+- **Abstraction `DataSource` supprimée** (979 l.) — une seule implémentation,
+  `SQLiteDataSource`, qui déléguait chaque méthode à `Database` sans logique.
+  `Assistant(data_source=...)` devient `Assistant(db: Database | None)`.
+- **`scripts/repair_matchups.py` + `repair_synergies.py` fusionnés** (1 182 → 620 l.) —
+  ils étaient identiques à 93,4 %. Remplacés par `scripts/repair_data.py --target
+  {matchups,synergies}`. ⚠️ **Changement d'invocation** — voir ci-dessous.
+- **`src/error_ids.py` supprimé** (206 l. + 191 l. de tests) — Enum + dataclass + `.log()`
+  pour préfixer un code au message, sans Sentry dans les dépendances et 5 codes sur 14
+  jamais utilisés. Les codes `[ERR_*]` restent identiques dans les logs.
+- **`numpy` retiré** (**-1 dépendance**, allège le bundle PyInstaller) — servait à
+  `np.unique()` sur une liste littérale (→ `sorted({...})`) et à un `np.var()` qui avait
+  déjà un repli manuel (→ `statistics.pvariance`).
+- **`config.TierListConfig` supprimé** — dupliquait champ pour champ `AnalysisConfig`
+  (mêmes noms, mêmes valeurs) ; les 8 `@property` de rétro-compatibilité aussi, dont 5
+  sans aucun appelant. Les seuils vivent désormais uniquement dans `config_constants.py`.
+- **Code mort supprimé** : 343 l. dans `src/ui/lol_coach_legacy.py` (doublon inatteignable
+  de tout l'entry point, dont un `main()` de 156 l.), 9 délégateurs sans appelant dans
+  `src/assistant.py`, 12 alias « legacy » dans `src/constants.py`, `Parser.contains()`
+  (→ `row not in result`), `to_dict()` sur les dataclasses (→ `dataclasses.asdict`).
+- **Scripts ad hoc supprimés** : `fill_db.py` (remplacé par `scripts/update_all.py`),
+  `cleanup_db.py`, `test_parser_single.py`, `scripts/benchmark_cache.py`,
+  `scripts/diagnose_synergies_html.py`, `scripts/test_synergies_xpath.py`.
+- **Docs obsolètes supprimées** (1 935 l.) : NEON_READONLY_USER_GUIDE, OFFLINE_FIRST_PLAN,
+  API_PERFORMANCE_ISSUES, DRAFT_SITES_INTEGRATION_RESEARCH, AUDIT_REPORT (remplacé par
+  AUDIT_2026_06), github_actions_scraping, create_readonly_user_neon.sql.
+- `create_package.py` : parcours `zipfile` manuel → `shutil.make_archive()`.
+- `src/utils/display.py` : table de 26 substitutions emoji → ASCII remplacée par
+  `sys.stdout.reconfigure(encoding="utf-8", errors="replace")`.
+
+### ⚠️ Breaking changes
+
+- `python scripts/repair_matchups.py` → **`python scripts/repair_data.py --target matchups`**
+- `python scripts/repair_synergies.py` → **`python scripts/repair_data.py --target synergies`**
+  Les défauts `--headless` par cible sont conservés (matchups en GUI, synergies en headless)
+  et `--firefox-profile` est désormais disponible pour les deux.
+- `python fill_db.py` → **`python scripts/update_all.py`**
+- `Assistant(data_source=...)` → **`Assistant(db=...)`**, qui attend un `Database`
+  (et non plus un `DataSource`).
+
+### 🐛 Connu
+
+- `src/db.py::get_synergy_delta2()` utilise `fetchone()` et retourne une lane arbitraire,
+  là où `get_matchup_delta2()` fait une moyenne pondérée par les games. Divergence
+  préexistante héritée de l'implémentation `server/`, documentée par un test
+  `xfail(strict=True)` dans `tests/test_regression_get_synergy_delta2.py`. **Non corrigée**
+  ici : cette passe ne change aucun comportement d'analyse.
+
 ## [1.2.0] - 2026-02-11
 
 ### ✨ Features

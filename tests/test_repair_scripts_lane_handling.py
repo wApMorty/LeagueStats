@@ -144,7 +144,7 @@ class TestTargetSpecs:
         assert repair_data.detect_champions_without_data(db, SYNERGIES) == ["Jayce"]
 
         executed_sql = db.connection.cursor.return_value.execute.call_args[0][0]
-        assert "LEFT JOIN synergies t" in executed_sql
+        assert "LEFT JOIN synergies s" in executed_sql
 
 
 class TestMainUsesLaneDiscovery:

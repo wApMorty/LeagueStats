@@ -944,7 +944,7 @@ def run_tier_list_generator():
 
 def _display_tier_list(tier_list: List[dict], pool_name: str, type_name: str, analysis_type: str):
     """Display formatted tier list results."""
-    from src.config import tierlist_config
+    from src.config_constants import analysis_config
     from src.assistant import safe_print
 
     print("\n" + "=" * 80)
@@ -964,10 +964,10 @@ def _display_tier_list(tier_list: List[dict], pool_name: str, type_name: str, an
     # Display each tier
     tier_icons = {"S": "🟢", "A": "🟡", "B": "🟠", "C": "🔴"}
     tier_ranges = {
-        "S": f"{tierlist_config.S_TIER_THRESHOLD:.0f}-100",
-        "A": f"{tierlist_config.A_TIER_THRESHOLD:.0f}-{tierlist_config.S_TIER_THRESHOLD:.0f}",
-        "B": f"{tierlist_config.B_TIER_THRESHOLD:.0f}-{tierlist_config.A_TIER_THRESHOLD:.0f}",
-        "C": f"0-{tierlist_config.B_TIER_THRESHOLD:.0f}",
+        "S": f"{analysis_config.TIER_THRESHOLDS["S"]:.0f}-100",
+        "A": f"{analysis_config.TIER_THRESHOLDS["A"]:.0f}-{analysis_config.TIER_THRESHOLDS["S"]:.0f}",
+        "B": f"{analysis_config.TIER_THRESHOLDS["B"]:.0f}-{analysis_config.TIER_THRESHOLDS["A"]:.0f}",
+        "C": f"0-{analysis_config.TIER_THRESHOLDS["B"]:.0f}",
     }
 
     for tier_letter in ["S", "A", "B", "C"]:
@@ -1019,20 +1019,20 @@ def _display_tier_list(tier_list: List[dict], pool_name: str, type_name: str, an
     safe_print("💡 TIER LIST CONFIGURATION:")
     if analysis_type == "blind_pick":
         safe_print(
-            f"   • Weights: Performance {tierlist_config.BLIND_AVG_WEIGHT:.0%}, "
-            f"Stability {tierlist_config.BLIND_STABILITY_WEIGHT:.0%}, "
-            f"Coverage {tierlist_config.BLIND_COVERAGE_WEIGHT:.0%}"
+            f"   • Weights: Performance {analysis_config.BLIND_AVG_WEIGHT:.0%}, "
+            f"Stability {analysis_config.BLIND_STABILITY_WEIGHT:.0%}, "
+            f"Coverage {analysis_config.BLIND_COVERAGE_WEIGHT:.0%}"
         )
     else:
         safe_print(
-            f"   • Weights: Peak Impact {tierlist_config.COUNTER_PEAK_WEIGHT:.0%}, "
-            f"Volatility {tierlist_config.COUNTER_VOLATILITY_WEIGHT:.0%}, "
-            f"Targets {tierlist_config.COUNTER_TARGETS_WEIGHT:.0%}"
+            f"   • Weights: Peak Impact {analysis_config.COUNTER_PEAK_WEIGHT:.0%}, "
+            f"Volatility {analysis_config.COUNTER_VOLATILITY_WEIGHT:.0%}, "
+            f"Targets {analysis_config.COUNTER_TARGETS_WEIGHT:.0%}"
         )
     safe_print(
-        f"   • Thresholds: S≥{tierlist_config.S_TIER_THRESHOLD:.0f}, "
-        f"A≥{tierlist_config.A_TIER_THRESHOLD:.0f}, "
-        f"B≥{tierlist_config.B_TIER_THRESHOLD:.0f}"
+        f"   • Thresholds: S≥{analysis_config.TIER_THRESHOLDS["S"]:.0f}, "
+        f"A≥{analysis_config.TIER_THRESHOLDS["A"]:.0f}, "
+        f"B≥{analysis_config.TIER_THRESHOLDS["B"]:.0f}"
     )
     print("=" * 80)
 
