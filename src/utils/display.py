@@ -1,49 +1,27 @@
 """Display utilities for terminal output with emoji fallback support."""
 
+import sys
+
+# Windows consoles still default to cp1252, which raises UnicodeEncodeError on the
+# emojis used throughout the UI. Reconfiguring the stream once replaces the
+# 26-entry emoji -> ASCII substitution table this module used to carry: unmappable
+# characters degrade to "?" instead of crashing the print.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        # Not a reconfigurable TextIOWrapper (pytest capture, pythonw.exe, pipes)
+        pass
+
 
 def safe_print(text: str) -> None:
-    """
-    Print text with emoji fallback for Windows terminals that don't support UTF-8.
+    """Print text without ever raising on unencodable characters.
 
     Args:
         text: Text to print (may contain emojis)
-
-    Note:
-        Falls back to ASCII replacements if UnicodeEncodeError occurs.
     """
     try:
         print(text)
     except UnicodeEncodeError:
-        # Fallback: replace emojis with text equivalents
-        fallback_text = text
-        emoji_map = {
-            "✅": "OK",
-            "❌": "ERROR",
-            "⚠️": "WARNING",
-            "🎯": "TARGET",
-            "📊": "STATS",
-            "🔸": "-",
-            "🟢": "GREEN",
-            "🟡": "YELLOW",
-            "🟠": "ORANGE",
-            "🔴": "RED",
-            "💡": "TIPS",
-            "📈": "TREND",
-            "🛡️": "SHIELD",
-            "🥇": "1st",
-            "🥈": "2nd",
-            "🥉": "3rd",
-            "🎮": "GAME",
-            "➖": "-",
-            "─": "-",
-            "═": "=",
-            "•": "*",
-            "→": ">",
-            "⚔️": "[SWORD]",
-            "💥": "[BOOM]",
-            "≥": ">=",
-            "⭐": "*",
-        }
-        for emoji, replacement in emoji_map.items():
-            fallback_text = fallback_text.replace(emoji, replacement)
-        print(fallback_text)
+        # Stream could not be reconfigured above -- drop to ASCII rather than crash
+        print(text.encode("ascii", "replace").decode("ascii"))

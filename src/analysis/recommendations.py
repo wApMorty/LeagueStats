@@ -3,7 +3,7 @@
 from typing import List, Optional
 
 from ..db import Database
-from ..constants import CHAMPION_POOL, SOLOQ_POOL
+from ..constants import CHAMPION_POOL, TOP_SOLOQ_POOL
 from ..config import config
 from ..config_constants import analysis_config
 from .scoring import ChampionScorer
@@ -71,14 +71,14 @@ class RecommendationEngine:
             enemy_team: List of enemy champions
             ally_team: List of ally champions
             nb_results: Number of results to display
-            champion_pool: Pool to select from (defaults to SOLOQ_POOL)
+            champion_pool: Pool to select from (defaults to TOP_SOLOQ_POOL)
             banned_champions: List of banned champions to exclude
 
         Returns:
             List of (champion, advantage) tuples, sorted by score
         """
         if champion_pool is None:
-            champion_pool = SOLOQ_POOL
+            champion_pool = TOP_SOLOQ_POOL
         if banned_champions is None:
             banned_champions = []
 

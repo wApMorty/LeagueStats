@@ -68,6 +68,7 @@ def clear_and_banner(banner_func: Optional[Callable[[], None]] = None) -> None:
 
     Example:
         from src.ui.menu_system import print_banner
+
         clear_and_banner(print_banner)
     """
     clear_console()

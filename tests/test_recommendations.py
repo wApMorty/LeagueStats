@@ -276,16 +276,16 @@ class TestEdgeCases:
         assert "🥇" in captured.out
 
     def test_default_champion_pool_when_none(self, db, scorer, capsys):
-        """Test that SOLOQ_POOL is used when champion_pool is None."""
+        """Test that TOP_SOLOQ_POOL is used when champion_pool is None."""
         engine = RecommendationEngine(db, scorer)
         results = engine.calculate_and_display_recommendations(
             enemy_team=["Enemy1"],
             ally_team=[],
             nb_results=5,
-            champion_pool=None,  # Should default to SOLOQ_POOL
+            champion_pool=None,  # Should default to TOP_SOLOQ_POOL
         )
 
-        # Should not crash, uses SOLOQ_POOL internally
+        # Should not crash, uses TOP_SOLOQ_POOL internally
         assert isinstance(results, list)
 
     def test_empty_banned_list_when_none(self, db, scorer, insert_matchup):

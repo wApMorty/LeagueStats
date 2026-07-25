@@ -3,7 +3,13 @@
 from typing import List
 
 from ..db import Database
-from ..constants import TOP_LIST, JUNGLE_LIST, MID_LIST, ADC_LIST, SUPPORT_LIST
+from ..constants import (
+    TOP_CHAMPIONS,
+    JUNGLE_CHAMPIONS,
+    MID_CHAMPIONS,
+    ADC_CHAMPIONS,
+    SUPPORT_CHAMPIONS,
+)
 from ..config_constants import analysis_config
 from .scoring import ChampionScorer
 from ..models import Matchup
@@ -77,15 +83,15 @@ class TierListGenerator:
         """
         champion_list = ""
         if lane == "top":
-            champion_list = TOP_LIST
+            champion_list = TOP_CHAMPIONS
         elif lane == "jungle":
-            champion_list = JUNGLE_LIST
+            champion_list = JUNGLE_CHAMPIONS
         elif lane == "mid":
-            champion_list = MID_LIST
+            champion_list = MID_CHAMPIONS
         elif lane == "adc":
-            champion_list = ADC_LIST
+            champion_list = ADC_CHAMPIONS
         elif lane == "support":
-            champion_list = SUPPORT_LIST
+            champion_list = SUPPORT_CHAMPIONS
         else:
             print("Invalid lane specified.")
             return []

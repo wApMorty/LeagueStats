@@ -373,10 +373,9 @@ class Parser:
                                 .split()
                             ).replace(",", "")
                         )
-                        if not self.contains(
-                            result, champ, winrate, delta1, delta2, pickrate, games
-                        ):
-                            result.append((champ, winrate, delta1, delta2, pickrate, games))
+                        row = (champ, winrate, delta1, delta2, pickrate, games)
+                        if row not in result:
+                            result.append(row)
                     except StaleElementReferenceException:
                         break  # row became stale mid-pass; re-fetch on next iteration
                     except (IndexError, ValueError, NoSuchElementException) as e:
@@ -400,22 +399,6 @@ class Parser:
                 sleep(0.5)
 
         return result
-
-    def contains(self, list, champ, winrate, d1, d2, pick, games) -> bool:
-        ctns = False
-        for i in range(len(list)):
-            l_champ, l_winrate, l_delta1, l_delta2, l_pickrate, l_games = list[i]
-            if (
-                l_champ == champ
-                and l_winrate == winrate
-                and l_delta1 == d1
-                and l_delta2 == d2
-                and l_pickrate == pick
-                and l_games == games
-            ):
-                ctns = True
-                break
-        return ctns
 
     def get_champion_synergies(self, champion: str, lane: str = None) -> List[tuple]:
         """Parse champion synergies (WITH allies) from LoLalytics.
@@ -548,10 +531,9 @@ class Parser:
                                 .split()
                             ).replace(",", "")
                         )
-                        if not self.contains(
-                            result, ally, winrate, delta1, delta2, pickrate, games
-                        ):
-                            result.append((ally, winrate, delta1, delta2, pickrate, games))
+                        row = (ally, winrate, delta1, delta2, pickrate, games)
+                        if row not in result:
+                            result.append(row)
                     except StaleElementReferenceException:
                         break
                     except (IndexError, ValueError, NoSuchElementException) as e:

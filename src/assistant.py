@@ -339,22 +339,6 @@ class Assistant:
     # ==================== Scoring Methods ====================
     # Delegated to analysis.scoring.ChampionScorer
 
-    def _filter_valid_matchups(self, matchups: List[tuple]) -> List[tuple]:
-        """Filter matchups with sufficient pick rate and games data."""
-        return self.scorer.filter_valid_matchups(matchups)
-
-    def avg_delta1(self, matchups: List[tuple]) -> float:
-        """Calculate weighted average delta1 from valid matchups."""
-        return self.scorer.avg_delta1(matchups)
-
-    def avg_delta2(self, matchups: List[tuple]) -> float:
-        """Calculate weighted average delta2 from valid matchups."""
-        return self.scorer.avg_delta2(matchups)
-
-    def avg_winrate(self, matchups: List[tuple]) -> float:
-        """Calculate weighted average winrate from valid matchups."""
-        return self.scorer.avg_winrate(matchups)
-
     def score_against_team(
         self,
         matchups: List[tuple],
@@ -365,10 +349,6 @@ class Assistant:
         """Calculate advantage against a team composition."""
         return self.scorer.score_against_team(matchups, team, champion_name, banned_champions)
 
-    def _delta2_to_win_advantage(self, delta2: float, champion_name: str) -> float:
-        """Convert delta2 value to win advantage using logistic transformation."""
-        return self.scorer.delta2_to_win_advantage(delta2, champion_name)
-
     def _calculate_team_winrate(self, individual_winrates: List[float]) -> dict:
         """Calculate team win probability from individual champion winrates."""
         return self.scorer.calculate_team_winrate(individual_winrates)
@@ -376,17 +356,9 @@ class Assistant:
     # ==================== Tier List Generation ====================
     # Delegated to analysis.tier_list.TierListGenerator
 
-    def tierlist_delta1(self, champion_list: List[str]) -> List[tuple]:
-        """Generate tier list ranked by average delta1."""
-        return self.tier_list_gen.generate_by_delta1(champion_list)
-
     def tierlist_delta2(self, champion_list: List[str]) -> List[tuple]:
         """Generate tier list ranked by average delta2."""
         return self.tier_list_gen.generate_by_delta2(champion_list)
-
-    def tierlist_lane(self, lane: str) -> List[tuple]:
-        """Generate tier list for a specific lane using delta2."""
-        return self.tier_list_gen.generate_for_lane(lane)
 
     def generate_tier_list(
         self, champion_pool: List[str], analysis_type: str = "blind_pick"
@@ -421,14 +393,6 @@ class Assistant:
 
     # ==================== Team Analysis ====================
     # Delegated to analysis.team_analysis.TeamAnalyzer
-
-    def score_teams(self, team1: List[str], team2: List[str]) -> None:
-        """Statistical team analysis using geometric mean for team winrates."""
-        return self.team_analyzer.analyze_teams(team1, team2)
-
-    def score_teams_no_input(self) -> None:
-        """Interactive team analysis with user input."""
-        return self.team_analyzer.analyze_teams_interactive()
 
     # ==================== Global Score Calculation ====================
 

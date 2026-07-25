@@ -1,7 +1,7 @@
 """Champion validation and pool selection utilities."""
 
 from typing import List, Dict, Optional, Tuple
-from src.constants import CHAMPIONS_LIST, ROLE_POOLS, EXTENDED_POOLS
+from src.constants import CHAMPIONS_LIST, CHAMPIONS_BY_ROLE, EXTENDED_POOLS
 from ..db import Database
 from ..config_constants import analysis_config
 from .display import safe_print
@@ -151,8 +151,8 @@ def select_champion_pool() -> List[str]:
         try:
             choice = input("Which pool do you want to use? (top/support/all): ").lower().strip()
 
-            if choice in ROLE_POOLS:
-                selected_pool = ROLE_POOLS[choice]
+            if choice in CHAMPIONS_BY_ROLE:
+                selected_pool = CHAMPIONS_BY_ROLE[choice]
                 safe_print(f"✅ Selected pool: {choice.upper()}")
                 print(f"Champions: {', '.join(selected_pool)}")
                 print()
@@ -162,7 +162,7 @@ def select_champion_pool() -> List[str]:
 
         except (EOFError, KeyboardInterrupt):
             print("\nUsing default pool (top)")
-            return ROLE_POOLS["top"]
+            return CHAMPIONS_BY_ROLE["top"]
 
 
 def select_extended_champion_pool() -> List[str]:

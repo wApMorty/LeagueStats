@@ -130,9 +130,9 @@ class TestGenerateForLane:
         tier_gen = TierListGenerator(db, scorer)
         result = tier_gen.generate_for_lane("top")
 
-        # Should return results (tier list for TOP_LIST champions)
+        # Should return results (tier list for TOP_CHAMPIONS champions)
         assert isinstance(result, list)
-        # Result may be empty if test champions not in TOP_LIST, but should not error
+        # Result may be empty if test champions not in TOP_CHAMPIONS, but should not error
 
     def test_valid_lane_jungle(self, db, scorer):
         """Test tier list generation for jungle."""

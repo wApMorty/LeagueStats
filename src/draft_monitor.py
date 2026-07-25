@@ -11,7 +11,7 @@ from .lcu_client import LCUClient
 from .assistant import Assistant
 from .utils.display import safe_print
 from .utils.console import clear_console
-from .constants import SOLOQ_POOL, ROLE_POOLS, normalize_champion_name_for_onetricks
+from .constants import TOP_SOLOQ_POOL, CHAMPIONS_BY_ROLE, normalize_champion_name_for_onetricks
 from .config import config
 from .config_constants import draft_config
 
@@ -88,7 +88,7 @@ class DraftMonitor:
         self.champion_id_to_name: Dict[int, str] = {}  # Riot ID -> Display name
         self.is_monitoring = False
         self.verbose = verbose
-        self.current_pool = SOLOQ_POOL  # Default pool
+        self.current_pool = TOP_SOLOQ_POOL  # Default pool
         self.pool_name = None  # Pool name for pre-calculated ban lookups
         self.auto_select_pool = auto_select_pool
         self.auto_hover = auto_hover
@@ -131,7 +131,7 @@ class DraftMonitor:
         else:
             # Auto-select top pool by default
             self.pool_name = "All Top Champions"  # System pool name
-            self.current_pool = ROLE_POOLS["top"]
+            self.current_pool = CHAMPIONS_BY_ROLE["top"]
             safe_print(f"✅ Using pool: TOP ({', '.join(self.current_pool)})")
 
         # Performance: Warm cache for selected pool (eliminates SQL queries during draft)
@@ -1256,12 +1256,12 @@ class DraftMonitor:
                 else:
                     print("[WARNING] Invalid choice, using default TOP pool")
                     self.pool_name = "All Top Champions"  # System pool name
-                    return ROLE_POOLS["top"]
+                    return CHAMPIONS_BY_ROLE["top"]
 
             except (ValueError, IndexError):
                 print("[WARNING] Invalid input, using default TOP pool")
                 self.pool_name = "All Top Champions"
-                return ROLE_POOLS["top"]
+                return CHAMPIONS_BY_ROLE["top"]
 
         except Exception as e:
             print(f"[WARNING] Pool selection error: {e}")
