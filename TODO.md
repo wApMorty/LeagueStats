@@ -2182,7 +2182,6 @@ python build_app.py                      # Build executable
 python create_package.py                 # Package portable
 
 # Database
-python cleanup_db.py                     # Backup et nettoyage
 ```
 
 ---

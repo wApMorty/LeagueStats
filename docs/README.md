@@ -7,7 +7,7 @@ Documentation complète du projet League Stats Coach.
 ## 📚 Index de la documentation
 
 ### **État du Projet & Direction** (2026-06-11)
-- [AUDIT_2026_06.md](AUDIT_2026_06.md) - Audit complet vérifié sur pièces (remplace AUDIT_REPORT.md)
+- [AUDIT_2026_06.md](AUDIT_2026_06.md) - Audit complet vérifié sur pièces
 - [ROADMAP_2026.md](ROADMAP_2026.md) - Roadmap et décisions stratégiques (remplace la priorisation de TODO.md)
 
 ### **Architecture & Structure**
@@ -15,9 +15,19 @@ Documentation complète du projet League Stats Coach.
 
 ### **Configuration & Déploiement**
 - [DATABASE_STRUCTURE.md](DATABASE_STRUCTURE.md) - Gestion de la base de données, chemins, et packaging PyInstaller
+- [BUILD_AND_TEST.md](BUILD_AND_TEST.md) - Build PyInstaller et exécution des tests
+- [CI_CD_SETUP.md](CI_CD_SETUP.md) - Pipeline GitHub Actions
+- [AUTO_UPDATE_SETUP.md](AUTO_UPDATE_SETUP.md) - Mise à jour automatique (Task Scheduler)
+- [LOG_ROTATION.md](LOG_ROTATION.md) - Rotation des logs
+- [alembic_guide.md](alembic_guide.md) - Commandes de migration Alembic
+
+### **Scraping**
+- [runbook_scraping.md](runbook_scraping.md) - Runbook d'incident scraping (DOM, Cloudflare, lanes)
+- [HEADLESS_MODE_TESTING.md](HEADLESS_MODE_TESTING.md) - Tests du mode headless Firefox
 
 ### **Features & Améliorations**
 - [TOURNAMENT_COACH_IMPROVEMENTS.md](TOURNAMENT_COACH_IMPROVEMENTS.md) - Refonte complète du Tournament Coach (Oct 2025)
+- [SECURITY_FIXES.md](SECURITY_FIXES.md) - Corrections de sécurité appliquées
 
 ### **Guide Développeur**
 - [../CLAUDE.md](../CLAUDE.md) - Instructions pour Claude Code et historique des décisions de design
@@ -61,7 +71,7 @@ Documentation complète du projet League Stats Coach.
 
 ## 🔄 Mise à jour de cette doc
 
-Dernière mise à jour : 11 juin 2026
+Dernière mise à jour : 25 juillet 2026
 
 Lorsque vous ajoutez une nouvelle documentation :
 1. Créer le fichier dans `docs/`

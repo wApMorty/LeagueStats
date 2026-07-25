@@ -82,15 +82,15 @@ datas=[('data/db.db', '.'), ('README.md', '.')]
 
 ❌ `LeagueStatsCoach_Release/db.db`
 - Build ancien
-- **Action** : Nettoyer avec `cleanup_db.py`
+- **Action** : Supprimer manuellement
 
-### **Script de nettoyage**
+### **Nettoyage manuel**
 
 ```bash
-python cleanup_db.py
+rm -f db.db db_2.db LeagueStatsCoach_Release/db.db
 ```
 
-Supprime automatiquement :
+Fichiers a supprimer :
 - `db.db` (racine)
 - `db_2.db`
 - `LeagueStatsCoach_Release/` (dossier complet)
@@ -113,9 +113,6 @@ Supprime automatiquement :
 - [ ] Double-clic sur exe → Fonctionne
 
 ### **Après nettoyage**
-```bash
-python cleanup_db.py
-```
 
 Structure finale :
 ```
@@ -124,8 +121,7 @@ LeagueStats/
 │   └── db.db                 ✅ SEUL FICHIER .db
 ├── src/
 ├── lol_coach.py
-├── build_app.py
-└── cleanup_db.py
+└── build_app.py
 ```
 
 ---
@@ -170,10 +166,7 @@ python build_app.py
 find . -name "*.db" -type f
 ```
 
-**Solution** :
-```bash
-python cleanup_db.py
-```
+**Solution** : supprimer les `.db` hors de `data/`.
 
 ---
 
@@ -248,7 +241,6 @@ zip -r LeagueStatsCoach_v1.2.zip .
 | Sept 2024 | `db.db` à la racine | Architecture initiale |
 | Sept 2024 | Migration vers `data/db.db` | Organisation du projet |
 | Oct 2024 | Fix `get_resource_path()` | Priorité explicite à `data/` |
-| Oct 2024 | Script `cleanup_db.py` | Nettoyage automatique |
 
 ---
 

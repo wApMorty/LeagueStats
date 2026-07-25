@@ -39,7 +39,7 @@
    ```powershell
    python scripts/update_all.py --skip-synergies
    ```
-5. **Tester une seule page champion** : `python test_parser_single.py` (script utilitaire racine).
+5. **Tester une seule page champion** : `python -m scripts.repair_data --target matchups --champions <Nom> --no-headless`.
 
 ---
 
@@ -79,7 +79,7 @@ champions à 0 matchups.
 | `SYNERGIES_BUTTON_XPATH` (`//span[text()='Common Teammates']/..`) | `config_constants.py` | onglet synergies |
 | `MATCHUP_SCROLL_Y` (1700) | `config_constants.py` | déclenche le lazy-loading |
 
-**Diagnostic** : lancer `python test_parser_single.py` en mode non-headless
+**Diagnostic** : lancer `python -m scripts.repair_data --target matchups --champions <Nom> --no-headless`
 (`HEADLESS: bool = False` temporairement) et observer la page.
 
 ### 3.3 Gate de complétude en échec (`DataCompletenessError`)

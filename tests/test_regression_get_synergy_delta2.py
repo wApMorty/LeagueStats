@@ -2,7 +2,7 @@
 
 Bug Report:
 -----------
-Function: server/src/db.py::Database.get_synergy_delta2()
+Function: src/db.py::Database.get_synergy_delta2()
 Error: "Multiple rows were found when one or none was required"
 Cause: synergies table contains multiple rows for champion-ally pairs (multi-lane data)
        Old code used scalar_one_or_none() which expects 0 or 1 row
