@@ -8,15 +8,16 @@ Key Features:
 - Immutable (frozen=True) for thread-safe caching
 - Type-safe with comprehensive validation
 - Factory methods from database tuples
-- Serialization support for JSON/dict conversion
+
+Need a dict? dataclasses.asdict(instance) — no wrapper method required.
 
 Author: @pj35
 Created: 2025-12-28
 Sprint: 2 - Tâche #14 (SQLAlchemy ORM Migration - Phase 1)
 """
 
-from dataclasses import dataclass, asdict
-from typing import Tuple, Dict, Any
+from dataclasses import dataclass
+from typing import Tuple
 
 
 @dataclass(frozen=True)
@@ -76,36 +77,10 @@ class Matchup:
 
     @classmethod
     def from_tuple(cls, data: Tuple) -> "Matchup":
-        """Create Matchup from database tuple.
-
-        Args:
-            data: 6-element tuple (enemy_name, winrate, delta1, delta2, pickrate, games)
-
-        Returns:
-            Matchup instance
-
-        Raises:
-            ValueError: If tuple length is not 6
-
-        Example:
-            >>> row = cursor.fetchone()  # ('Zed', 52.5, 150.0, 200.0, 12.5, 1000)
-            >>> matchup = Matchup.from_tuple(row)
-        """
+        """Create Matchup from a 6-element database row."""
         if len(data) != 6:
             raise ValueError(f"Expected 6-element tuple for Matchup, got {len(data)}: {data!r}")
         return cls(*data)
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for serialization.
-
-        Returns:
-            Dictionary with all fields
-
-        Example:
-            >>> matchup.to_dict()
-            {'enemy_name': 'Zed', 'winrate': 52.5, ...}
-        """
-        return asdict(self)
 
 
 @dataclass(frozen=True)
@@ -165,36 +140,10 @@ class Synergy:
 
     @classmethod
     def from_tuple(cls, data: Tuple) -> "Synergy":
-        """Create Synergy from database tuple.
-
-        Args:
-            data: 6-element tuple (ally_name, winrate, delta1, delta2, pickrate, games)
-
-        Returns:
-            Synergy instance
-
-        Raises:
-            ValueError: If tuple length is not 6
-
-        Example:
-            >>> row = cursor.fetchone()  # ('Malphite', 55.0, 180.0, 220.0, 15.0, 1200)
-            >>> synergy = Synergy.from_tuple(row)
-        """
+        """Create Synergy from a 6-element database row."""
         if len(data) != 6:
             raise ValueError(f"Expected 6-element tuple for Synergy, got {len(data)}: {data!r}")
         return cls(*data)
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for serialization.
-
-        Returns:
-            Dictionary with all fields
-
-        Example:
-            >>> synergy.to_dict()
-            {'ally_name': 'Malphite', 'winrate': 55.0, ...}
-        """
-        return asdict(self)
 
 
 @dataclass(frozen=True)
@@ -246,38 +195,12 @@ class MatchupDraft:
 
     @classmethod
     def from_tuple(cls, data: Tuple) -> "MatchupDraft":
-        """Create MatchupDraft from database tuple.
-
-        Args:
-            data: 4-element tuple (enemy_name, delta2, pickrate, games)
-
-        Returns:
-            MatchupDraft instance
-
-        Raises:
-            ValueError: If tuple length is not 4
-
-        Example:
-            >>> row = cursor.fetchone()  # ('Yasuo', -50.0, 12.5, 500)
-            >>> draft = MatchupDraft.from_tuple(row)
-        """
+        """Create MatchupDraft from a 4-element database row."""
         if len(data) != 4:
             raise ValueError(
                 f"Expected 4-element tuple for MatchupDraft, got {len(data)}: {data!r}"
             )
         return cls(*data)
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for serialization.
-
-        Returns:
-            Dictionary with all fields
-
-        Example:
-            >>> draft.to_dict()
-            {'enemy_name': 'Yasuo', 'delta2': -50.0, 'pickrate': 12.5, 'games': 500}
-        """
-        return asdict(self)
 
     def to_matchup(self, winrate: float = 50.0, delta1: float = 0.0) -> "Matchup":
         """Convert MatchupDraft to full Matchup with default values.
@@ -342,35 +265,9 @@ class ChampionScore:
 
     @classmethod
     def from_tuple(cls, data: Tuple) -> "ChampionScore":
-        """Create ChampionScore from tuple.
-
-        Args:
-            data: 2-element tuple (name, score)
-
-        Returns:
-            ChampionScore instance
-
-        Raises:
-            ValueError: If tuple length is not 2
-
-        Example:
-            >>> result = ("Jinx", 875.5)
-            >>> champ = ChampionScore.from_tuple(result)
-        """
+        """Create ChampionScore from a 2-element database row."""
         if len(data) != 2:
             raise ValueError(
                 f"Expected 2-element tuple for ChampionScore, got {len(data)}: {data!r}"
             )
         return cls(*data)
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for serialization.
-
-        Returns:
-            Dictionary with all fields
-
-        Example:
-            >>> champ.to_dict()
-            {'name': 'Jinx', 'score': 875.5}
-        """
-        return asdict(self)

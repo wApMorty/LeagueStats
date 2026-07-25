@@ -1,7 +1,5 @@
-import numpy as np
-
-CHAMPIONS_LIST = np.unique(
-    [
+CHAMPIONS_LIST = sorted(
+    {
         "Leona",
         "Hecarim",
         "Kaisa",
@@ -174,7 +172,7 @@ CHAMPIONS_LIST = np.unique(
         "Mel",
         "Yunara",
         "Zaahen",
-    ]
+    }
 )
 
 TOP_CHAMPIONS = [

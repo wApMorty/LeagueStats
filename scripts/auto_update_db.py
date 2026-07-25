@@ -71,7 +71,6 @@ from src.assistant import Assistant
 from src.db import Database
 from src.config import config
 from src.constants import normalize_champion_name_for_url
-from src.error_ids import ERR_LOG_001, ERR_LOG_002
 
 
 class AutoUpdateLogger:
@@ -310,9 +309,8 @@ def main() -> int:
         # If we can't write logs in headless mode, we're blind
         if not logger.test_write_capability():
             # Fatal: Unable to log in headless mode
-            ERR_LOG_002.log(
-                logging.getLogger(__name__),
-                "Unable to write to log file in pythonw.exe mode - aborting",
+            logging.getLogger(__name__).critical(
+                "[ERR_LOG_002] Unable to write to log file in pythonw.exe mode - aborting",
                 exc_info=True,
             )
             sys.exit(1)

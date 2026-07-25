@@ -19,18 +19,16 @@ from selenium.common.exceptions import (
 )
 
 from .config import config
-from .config_constants import scraping_config, xpath_config
-from .error_ids import (
-    ERR_COOKIE_001,
-    ERR_COOKIE_002,
-    ERR_COOKIE_003,
-    ERR_COOKIE_004,
-    ERR_COOKIE_005,
-    ERR_COOKIE_006,
-    ERR_COOKIE_007,
-)
+from .config_constants import analysis_config, scraping_config, xpath_config
 
 logger = logging.getLogger(__name__)
+
+# Error codes are written inline as an "[ERR_<CATEGORY>_<NNN>]" message prefix so
+# they stay greppable in the logs. Cookie banner codes, by severity:
+#   ERROR    ERR_COOKIE_001/002/003 (ID/CSS/XPath strategy blew up),
+#            ERR_COOKIE_006 (coordinate click failed, GUI mode)
+#   WARNING  ERR_COOKIE_004 (button found but not interactable)
+#   CRITICAL ERR_COOKIE_005 (page never loaded), ERR_COOKIE_007 (WebDriver session lost)
 
 
 class Parser:
@@ -96,19 +94,20 @@ class Parser:
             # Expected - element not found, try next strategy
             pass
         except ElementNotInteractableException:
-            ERR_COOKIE_004.log(logger, "Cookie button found but not clickable via ID selector")
+            logger.warning("[ERR_COOKIE_004] Cookie button found but not clickable via ID selector")
             pass
         except (InvalidSessionIdException, WebDriverException) as e:
             # CRITICAL: WebDriver crashed - cannot continue
-            ERR_COOKIE_007.log(
-                logger,
-                f"FATAL: WebDriver session lost in ID strategy: {type(e).__name__}",
+            logger.critical(
+                f"[ERR_COOKIE_007] FATAL: WebDriver session lost in ID strategy: "
+                f"{type(e).__name__}",
                 exc_info=e,
             )
             raise  # Re-raise to abort scraping
         except Exception as e:
-            ERR_COOKIE_001.log(
-                logger, f"Unexpected error in ID strategy: {type(e).__name__}: {e}", exc_info=e
+            logger.error(
+                f"[ERR_COOKIE_001] Unexpected error in ID strategy: {type(e).__name__}: {e}",
+                exc_info=e,
             )
             pass
 
@@ -129,22 +128,22 @@ class Parser:
                 # Expected - try next selector
                 continue
             except ElementNotInteractableException:
-                ERR_COOKIE_004.log(
-                    logger, f"Cookie button found but not clickable via CSS: {selector}"
+                logger.warning(
+                    f"[ERR_COOKIE_004] Cookie button found but not clickable via CSS: {selector}"
                 )
                 continue
             except (InvalidSessionIdException, WebDriverException) as e:
                 # CRITICAL: WebDriver crashed - cannot continue
-                ERR_COOKIE_007.log(
-                    logger,
-                    f"FATAL: WebDriver session lost in CSS strategy: {type(e).__name__}",
+                logger.critical(
+                    f"[ERR_COOKIE_007] FATAL: WebDriver session lost in CSS strategy: "
+                    f"{type(e).__name__}",
                     exc_info=e,
                 )
                 raise  # Re-raise to abort scraping
             except Exception as e:
-                ERR_COOKIE_002.log(
-                    logger,
-                    f"Unexpected error in CSS strategy ({selector}): {type(e).__name__}: {e}",
+                logger.error(
+                    f"[ERR_COOKIE_002] Unexpected error in CSS strategy ({selector}): "
+                    f"{type(e).__name__}: {e}",
                     exc_info=e,
                 )
                 continue
@@ -165,20 +164,20 @@ class Parser:
                 # Expected - try next XPath
                 continue
             except ElementNotInteractableException:
-                ERR_COOKIE_004.log(logger, f"Cookie button found but not clickable via XPath")
+                logger.warning("[ERR_COOKIE_004] Cookie button found but not clickable via XPath")
                 continue
             except (InvalidSessionIdException, WebDriverException) as e:
                 # CRITICAL: WebDriver crashed - cannot continue
-                ERR_COOKIE_007.log(
-                    logger,
-                    f"FATAL: WebDriver session lost in XPath strategy: {type(e).__name__}",
+                logger.critical(
+                    f"[ERR_COOKIE_007] FATAL: WebDriver session lost in XPath strategy: "
+                    f"{type(e).__name__}",
                     exc_info=e,
                 )
                 raise  # Re-raise to abort scraping
             except Exception as e:
-                ERR_COOKIE_003.log(
-                    logger,
-                    f"Unexpected error in XPath strategy: {type(e).__name__}: {e}",
+                logger.error(
+                    f"[ERR_COOKIE_003] Unexpected error in XPath strategy: "
+                    f"{type(e).__name__}: {e}",
                     exc_info=e,
                 )
                 continue
@@ -198,9 +197,8 @@ class Parser:
                 self.webdriver.find_element(By.TAG_NAME, "body")
                 logger.info("Page structure verified - cookie banner handled successfully")
             except NoSuchElementException:
-                ERR_COOKIE_005.log(
-                    logger,
-                    "CRITICAL: Page failed to load despite cookie banner attempts",
+                logger.critical(
+                    "[ERR_COOKIE_005] CRITICAL: Page failed to load despite cookie banner attempts",
                     exc_info=True,
                 )
             return
@@ -223,9 +221,9 @@ class Parser:
             logger.info("Cookie banner dismissed via JavaScript coordinates click")
         except Exception as e:
             # Final fallback to ActionChains
-            ERR_COOKIE_006.log(
-                logger,
-                f"JavaScript coordinate click failed, trying ActionChains: {type(e).__name__}",
+            logger.error(
+                f"[ERR_COOKIE_006] JavaScript coordinate click failed, trying ActionChains: "
+                f"{type(e).__name__}",
                 exc_info=e,
             )
             try:
@@ -239,9 +237,9 @@ class Parser:
                 ).perform()
                 logger.info("Cookie banner dismissed via ActionChains coordinates click")
             except Exception as e2:
-                ERR_COOKIE_006.log(
-                    logger,
-                    f"ActionChains coordinate click also failed: {type(e2).__name__}",
+                logger.error(
+                    f"[ERR_COOKIE_006] ActionChains coordinate click also failed: "
+                    f"{type(e2).__name__}",
                     exc_info=e2,
                 )
                 # Give up gracefully - page may still load
@@ -390,7 +388,7 @@ class Parser:
                         continue
 
                 # Stop if we have low-pickrate data or the carousel added nothing new
-                if pickrate < config.MIN_PICKRATE or len(result) == prev_count:
+                if pickrate < analysis_config.MIN_PICKRATE or len(result) == prev_count:
                     break
 
                 # Scroll carousel right to reveal the next batch of items
@@ -564,7 +562,7 @@ class Parser:
                         )
                         continue
 
-                if pickrate < config.MIN_PICKRATE or len(result) == prev_count:
+                if pickrate < analysis_config.MIN_PICKRATE or len(result) == prev_count:
                     break
 
                 self.webdriver.execute_script(

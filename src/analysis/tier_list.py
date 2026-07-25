@@ -114,7 +114,6 @@ class TierListGenerator:
                 'metrics': dict (detailed metrics)
             }
         """
-        from ..config import tierlist_config
         import statistics
 
         # Check if champion_scores table exists and has data
@@ -225,9 +224,9 @@ class TierListGenerator:
 
                 # Calculate final score
                 normalized_score = (
-                    avg_perf_norm * tierlist_config.BLIND_AVG_WEIGHT
-                    + stability * tierlist_config.BLIND_STABILITY_WEIGHT
-                    + coverage_norm * tierlist_config.BLIND_COVERAGE_WEIGHT
+                    avg_perf_norm * analysis_config.BLIND_AVG_WEIGHT
+                    + stability * analysis_config.BLIND_STABILITY_WEIGHT
+                    + coverage_norm * analysis_config.BLIND_COVERAGE_WEIGHT
                 )
                 final_score = normalized_score * 100
 
@@ -261,9 +260,9 @@ class TierListGenerator:
 
                 # Calculate final score
                 normalized_score = (
-                    peak_impact_norm * tierlist_config.COUNTER_PEAK_WEIGHT
-                    + volatility_norm * tierlist_config.COUNTER_VOLATILITY_WEIGHT
-                    + target_ratio_norm * tierlist_config.COUNTER_TARGETS_WEIGHT
+                    peak_impact_norm * analysis_config.COUNTER_PEAK_WEIGHT
+                    + volatility_norm * analysis_config.COUNTER_VOLATILITY_WEIGHT
+                    + target_ratio_norm * analysis_config.COUNTER_TARGETS_WEIGHT
                 )
                 final_score = normalized_score * 100
 
@@ -282,11 +281,11 @@ class TierListGenerator:
                 raise ValueError(f"Unknown analysis type: {analysis_type}")
 
             # Determine tier
-            if final_score >= tierlist_config.S_TIER_THRESHOLD:
+            if final_score >= analysis_config.TIER_THRESHOLDS["S"]:
                 tier = "S"
-            elif final_score >= tierlist_config.A_TIER_THRESHOLD:
+            elif final_score >= analysis_config.TIER_THRESHOLDS["A"]:
                 tier = "A"
-            elif final_score >= tierlist_config.B_TIER_THRESHOLD:
+            elif final_score >= analysis_config.TIER_THRESHOLDS["B"]:
                 tier = "B"
             else:
                 tier = "C"

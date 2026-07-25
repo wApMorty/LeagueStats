@@ -5,10 +5,6 @@
 selenium>=4.15.0,<5.0.0
 lxml>=5.1.0,<6.0.0
 
-# Data processing and analysis
-# Note: NumPy 2.x required for Python 3.13 (pre-built wheels available)
-numpy>=2.0.0,<3.0.0
-
 # HTTP requests (Riot data fetch, LCU client, Discord notifications)
 requests>=2.31.0,<3.0.0
 urllib3>=2.0.0,<3.0.0

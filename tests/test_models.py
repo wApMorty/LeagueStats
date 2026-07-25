@@ -133,21 +133,6 @@ class TestMatchup:
         with pytest.raises(ValueError, match="Expected 6-element tuple"):
             Matchup.from_tuple(data)
 
-    def test_matchup_to_dict(self):
-        """Test serialization to dictionary."""
-        matchup = Matchup("Zed", 52.5, 150.0, 200.0, 12.5, 1000)
-        result = matchup.to_dict()
-
-        assert isinstance(result, dict)
-        assert result == {
-            "enemy_name": "Zed",
-            "winrate": 52.5,
-            "delta1": 150.0,
-            "delta2": 200.0,
-            "pickrate": 12.5,
-            "games": 1000,
-        }
-
 
 # ============================================================================
 # MatchupDraft Tests
@@ -245,14 +230,6 @@ class TestMatchupDraft:
 
         with pytest.raises(ValueError, match="Expected 4-element tuple"):
             MatchupDraft.from_tuple(data)
-
-    def test_matchup_draft_to_dict(self):
-        """Test serialization to dictionary."""
-        draft = MatchupDraft("Yasuo", -50.0, 12.5, 500)
-        result = draft.to_dict()
-
-        assert isinstance(result, dict)
-        assert result == {"enemy_name": "Yasuo", "delta2": -50.0, "pickrate": 12.5, "games": 500}
 
     def test_matchup_draft_to_matchup(self):
         """Test conversion to full Matchup with default values."""
@@ -354,14 +331,6 @@ class TestChampionScore:
         with pytest.raises(ValueError, match="Expected 2-element tuple"):
             ChampionScore.from_tuple(data)
 
-    def test_champion_score_to_dict(self):
-        """Test serialization to dictionary."""
-        champ = ChampionScore("Jinx", 875.5)
-        result = champ.to_dict()
-
-        assert isinstance(result, dict)
-        assert result == {"name": "Jinx", "score": 875.5}
-
 
 # ============================================================================
 # Integration Tests (Multiple Models)
@@ -391,10 +360,6 @@ class TestModelsIntegration:
         matchup = Matchup("Zed", 52.5, 150.0, 200.0, 12.5, 1000)
         draft = MatchupDraft("Yasuo", -50.0, 12.5, 500)
         champ = ChampionScore("Jinx", 875.5)
-
-        assert isinstance(matchup.to_dict(), dict)
-        assert isinstance(draft.to_dict(), dict)
-        assert isinstance(champ.to_dict(), dict)
 
     def test_all_models_from_tuple_factory(self):
         """Test that all models support from_tuple factory method."""

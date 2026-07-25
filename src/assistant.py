@@ -5,7 +5,9 @@ This is the new modular version that delegates to specialized modules while
 maintaining backward compatibility with the original API.
 """
 
+from statistics import pvariance
 from typing import Dict, List, Optional
+
 from tqdm import tqdm
 
 from .config import config
@@ -1107,7 +1109,10 @@ class Assistant:
             try:
                 matchups = self.db.get_champion_matchups_by_name(our_champion)
                 for m in matchups:
-                    if m.pickrate >= config.MIN_PICKRATE and m.games >= config.MIN_MATCHUP_GAMES:
+                    if (
+                        m.pickrate >= analysis_config.MIN_PICKRATE
+                        and m.games >= analysis_config.MIN_MATCHUP_GAMES
+                    ):
                         all_potential_enemies.add(m.enemy_name)
             except Exception as e:
                 if self.verbose:
@@ -1236,8 +1241,8 @@ class Assistant:
                     matchups = self.db.get_champion_matchups_by_name(our_champion)
                     for m in matchups:
                         if (
-                            m.pickrate >= config.MIN_PICKRATE
-                            and m.games >= config.MIN_MATCHUP_GAMES
+                            m.pickrate >= analysis_config.MIN_PICKRATE
+                            and m.games >= analysis_config.MIN_MATCHUP_GAMES
                         ):
                             all_potential_enemies.add(m.enemy_name)
                 except Exception as e:
@@ -1801,7 +1806,10 @@ class Assistant:
             for i, matchups in enumerate(all_matchups):
                 weaknesses = []
                 for m in matchups:
-                    if m.pickrate >= config.MIN_PICKRATE and m.games >= config.MIN_MATCHUP_GAMES:
+                    if (
+                        m.pickrate >= analysis_config.MIN_PICKRATE
+                        and m.games >= analysis_config.MIN_MATCHUP_GAMES
+                    ):
                         if m.delta2 < -2.0:  # Significantly negative matchup
                             weaknesses.append(m.enemy_name)
                 champion_weaknesses.append(set(weaknesses))
@@ -1839,7 +1847,10 @@ class Assistant:
 
             for matchups in all_matchups:
                 for m in matchups:
-                    if m.pickrate >= config.MIN_PICKRATE and m.games >= config.MIN_MATCHUP_GAMES:
+                    if (
+                        m.pickrate >= analysis_config.MIN_PICKRATE
+                        and m.games >= analysis_config.MIN_MATCHUP_GAMES
+                    ):
                         all_scores.append(m.delta2)
 
             if not all_scores:
@@ -1953,7 +1964,10 @@ class Assistant:
             champion_name = f"Champion{i+1}"  # Fallback name, should be passed properly
 
             for m in matchups:
-                if m.pickrate >= config.MIN_PICKRATE and m.games >= config.MIN_MATCHUP_GAMES:
+                if (
+                    m.pickrate >= analysis_config.MIN_PICKRATE
+                    and m.games >= analysis_config.MIN_MATCHUP_GAMES
+                ):
                     all_enemies.add(m.enemy_name)
                     if (
                         m.enemy_name not in enemy_coverage
@@ -2007,8 +2021,8 @@ class Assistant:
                     for matchup_list in matchups:
                         for m in matchup_list:
                             if (
-                                m.pickrate >= config.MIN_PICKRATE
-                                and m.games >= config.MIN_MATCHUP_GAMES
+                                m.pickrate >= analysis_config.MIN_PICKRATE
+                                and m.games >= analysis_config.MIN_MATCHUP_GAMES
                             ):
                                 all_enemies.add(m.enemy_name)
 
@@ -2030,15 +2044,8 @@ class Assistant:
             variances = {}
             for metric, scores in metric_scores.items():
                 if len(scores) >= 2:
-                    # Use numpy for variance calculation if available, otherwise manual
-                    try:
-                        import numpy as np
-
-                        variances[metric] = float(np.var(scores))
-                    except ImportError:
-                        mean_score = sum(scores) / len(scores)
-                        variance = sum((x - mean_score) ** 2 for x in scores) / len(scores)
-                        variances[metric] = variance
+                    # Population variance, same as the former numpy np.var(scores)
+                    variances[metric] = pvariance(scores)
                 else:
                     variances[metric] = 1.0  # Fallback
 

@@ -43,7 +43,7 @@ class RecommendationEngine:
         for champion in CHAMPION_POOL:
             if champion not in enemy_team:
                 matchups = self.db.get_champion_matchups_by_name(champion)
-                if sum(m.games for m in matchups) < analysis_config.MIN_GAMES_COMPETITIVE:
+                if sum(m.games for m in matchups) < analysis_analysis_config.MIN_GAMES_COMPETITIVE:
                     break
                 score = self.scorer.score_against_team(matchups, enemy_team, champion_name=champion)
                 scores.append((str(champion), score))
@@ -93,7 +93,7 @@ class RecommendationEngine:
             matchups = self.db.get_champion_matchups_by_name(champion)
             total_games = sum(m.games for m in matchups)
 
-            if total_games < config.MIN_GAMES_COMPETITIVE:
+            if total_games < analysis_config.MIN_GAMES_COMPETITIVE:
                 skipped_low_data += 1
                 continue
 
