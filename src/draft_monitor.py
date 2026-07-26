@@ -81,6 +81,7 @@ class DraftMonitor:
         auto_accept_queue: bool = False,
         auto_ban_hover: bool = False,
         open_onetricks: bool = None,
+        synergy_weight: float = None,
     ):
         self.lcu = LCUClient(verbose=verbose)
         self.assistant = Assistant()
@@ -98,6 +99,9 @@ class DraftMonitor:
             open_onetricks
             if open_onetricks is not None
             else draft_config.OPEN_ONETRICKS_ON_DRAFT_END
+        )
+        self.synergy_weight = (
+            synergy_weight if synergy_weight is not None else draft_config.DEFAULT_SYNERGY_WEIGHT
         )
         self.last_recommendation = None  # Track last recommendation to avoid spam
         self.last_ban_recommendation = None  # Track last ban recommendation to avoid spam
@@ -629,6 +633,26 @@ class DraftMonitor:
 
         return synergy_score
 
+    def _final_score(self, matchup_score: float, synergy_score: float) -> float:
+        """Blend matchup and synergy scores using the configurable synergy weight.
+
+        Formula: final_score = matchup_score * min(1, 2 * (1 - synergy_weight))
+                              + synergy_score * min(1, 2 * synergy_weight)
+
+        The min(1, ...) clamp is what makes all three pinned cases exact:
+        - synergy_weight=0.5 (default): both coefficients clamp to 1
+          -> final_score = matchup_score + synergy_score (unchanged historical behavior).
+        - synergy_weight=0.0: matchup coefficient clamps to 1, synergy coefficient is 0
+          -> final_score = matchup_score (synergy fully ignored).
+        - synergy_weight=1.0: synergy coefficient clamps to 1, matchup coefficient is 0
+          -> final_score = synergy_score (matchup fully ignored).
+        (The naive matchup_score * (1 - w) * 2 + synergy_score * w * 2, without the
+        clamp, would double-count at w=0 and w=1, so the clamp is required.)
+        """
+        matchup_weight = min(1.0, 2 * (1 - self.synergy_weight))
+        synergy_weight = min(1.0, 2 * self.synergy_weight)
+        return matchup_score * matchup_weight + synergy_score * synergy_weight
+
     def _parse_draft_state(self, champ_select_data: Dict) -> DraftState:
         """Parse champion select data into DraftState."""
         state = DraftState()
@@ -866,8 +890,8 @@ class DraftMonitor:
                         # Calculate synergy score with allied champions
                         synergy_score = self._calculate_synergy_score(champion_name, ally_picks)
 
-                        # Final score = matchup_score + synergy_score
-                        final_score = matchup_score + synergy_score
+                        # Final score = configurable blend of matchup and synergy (see _final_score)
+                        final_score = self._final_score(matchup_score, synergy_score)
 
                         if self.verbose:
                             print(
@@ -1330,8 +1354,8 @@ class DraftMonitor:
                 other_allies = [aid for aid in ally_picks if aid != champion_id]
                 synergy_score = self._calculate_synergy_score(champion_name, other_allies)
 
-                # Total score = matchup + synergy
-                total_score = matchup_score + synergy_score
+                # Total score = configurable blend of matchup and synergy (see _final_score)
+                total_score = self._final_score(matchup_score, synergy_score)
 
                 ally_scores.append((champion_name, matchup_score, synergy_score, total_score))
 
@@ -1371,8 +1395,8 @@ class DraftMonitor:
                 other_enemies = [eid for eid in enemy_picks if eid != champion_id]
                 synergy_score = self._calculate_synergy_score(champion_name, other_enemies)
 
-                # Total score = matchup + synergy
-                total_score = matchup_score + synergy_score
+                # Total score = configurable blend of matchup and synergy (see _final_score)
+                total_score = self._final_score(matchup_score, synergy_score)
 
                 enemy_scores.append((champion_name, matchup_score, synergy_score, total_score))
 

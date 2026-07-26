@@ -143,6 +143,15 @@ class DraftConfig:
     # Draft phase detection
     READY_CHECK_COOLDOWN: float = 2.0  # Seconds after accepting queue
 
+    # Matchup vs synergy blend for the final recommendation score
+    DEFAULT_SYNERGY_WEIGHT: float = 0.5  # 0.0 = matchup only, 1.0 = synergy only
+    # Prompted interactively at draft coach startup (see draft_coach_ui.run_draft_coach).
+    # Formula (DraftMonitor._final_score):
+    #   final_score = matchup_score * min(1, 2 * (1 - synergy_weight))
+    #               + synergy_score * min(1, 2 * synergy_weight)
+    # At the default 0.5, both coefficients clamp to 1, so this is exactly
+    # matchup_score + synergy_score (unchanged historical behavior).
+
 
 @dataclass
 class UIConfig:

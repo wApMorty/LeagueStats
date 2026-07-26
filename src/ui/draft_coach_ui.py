@@ -3,6 +3,32 @@
 from typing import Optional
 from ..draft_monitor import DraftMonitor
 from ..utils.console import clear_console
+from ..config_constants import draft_config
+
+
+def _prompt_synergy_weight() -> float:
+    """Ask the user for the matchup/synergy blend weight (0.0-1.0).
+
+    Empty input keeps the historical balanced behavior (default 0.5).
+    Re-prompts on invalid input (non-float or out of [0.0, 1.0]).
+    """
+    default = draft_config.DEFAULT_SYNERGY_WEIGHT
+    while True:
+        raw = input(
+            f"Poids synergy vs matchup (0.0=matchup uniquement, 1.0=synergy uniquement) "
+            f"[defaut {default}]: "
+        ).strip()
+        if not raw:
+            return default
+        try:
+            value = float(raw)
+        except ValueError:
+            print("[ERROR] Valeur invalide, entrez un nombre flottant entre 0.0 et 1.0.")
+            continue
+        if not (0.0 <= value <= 1.0):
+            print("[ERROR] La valeur doit etre comprise entre 0.0 et 1.0.")
+            continue
+        return value
 
 
 def run_draft_coach(
@@ -35,6 +61,8 @@ def run_draft_coach(
         print("🌐 [ONETRICKS] Open champion page on draft completion is ENABLED")
     print("Press Ctrl+C to stop monitoring.\n")
 
+    synergy_weight = _prompt_synergy_weight()
+
     try:
         monitor = DraftMonitor(
             verbose=verbose,
@@ -43,6 +71,7 @@ def run_draft_coach(
             auto_accept_queue=auto_accept_queue,
             auto_ban_hover=auto_ban_hover,
             open_onetricks=open_onetricks,
+            synergy_weight=synergy_weight,
         )
         monitor.start_monitoring()
     except KeyboardInterrupt:
