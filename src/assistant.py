@@ -424,14 +424,14 @@ class Assistant:
                         print(f"  [SKIP] {champion}: No matchups found")
                     continue
 
-                valid_matchups = self._filter_valid_matchups(matchups)
+                valid_matchups = self.scorer.filter_valid_matchups(matchups)
                 if not valid_matchups:
                     if self.verbose:
                         print(f"  [SKIP] {champion}: No valid matchups after filtering")
                     continue
 
                 # Calculate raw metrics
-                avg_delta2 = self.avg_delta2(matchups)
+                avg_delta2 = self.scorer.avg_delta2(matchups)
 
                 delta2_values = [m.delta2 for m in valid_matchups]
                 variance = statistics.variance(delta2_values) if len(delta2_values) > 1 else 0.0
