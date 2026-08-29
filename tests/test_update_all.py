@@ -72,9 +72,12 @@ def _scrape_stats():
 
 
 class TestUpdateAllMain:
-    def _run(self, module, monkeypatch, completeness_side_effect=None):
+    def _run(self, module, monkeypatch, completeness_side_effect=None, argv=None):
         """Run main() with every external dependency mocked; return mocks + exit code."""
         mocks = {}
+
+        if argv is not None:
+            monkeypatch.setattr(sys, "argv", argv)
 
         db = MagicMock()
         db.connection.cursor.return_value.fetchone.return_value = [25000]
@@ -150,3 +153,19 @@ class TestUpdateAllMain:
 
         assert update_all_module.main() == 1
         notifier.notify_failure.assert_called_once()
+
+    def test_recompute_only_skips_scrape_and_completeness(self, update_all_module, monkeypatch):
+        exit_code, mocks = self._run(
+            update_all_module, monkeypatch, argv=["update_all.py", "--recompute-only"]
+        )
+
+        assert exit_code == 0
+        mocks["scrape"].assert_not_called()
+        mocks["completeness"].assert_not_called()
+        mocks["assistant"].calculate_global_scores.assert_called_once()
+        mocks["assistant"].precalculate_all_custom_pool_bans.assert_called_once()
+
+        meta_keys = [call.args[0] for call in mocks["db"].set_meta.call_args_list]
+        assert "last_recompute_utc" in meta_keys
+        assert "last_update_utc" not in meta_keys
+        mocks["notifier"].notify_success.assert_called_once()
