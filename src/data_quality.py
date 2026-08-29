@@ -83,15 +83,13 @@ class CompletenessReport:
 def _count_per_champion(db: Database, table: str) -> List[Tuple[str, int]]:
     """Rows per champion for a data table, including champions with 0 rows."""
     cursor = db.connection.cursor()
-    cursor.execute(
-        f"""
+    cursor.execute(f"""
         SELECT c.name, COUNT(t.id)
         FROM champions c
         LEFT JOIN {table} t ON t.champion = c.id
         GROUP BY c.id
         ORDER BY c.name
-        """  # nosec B608 - table is an internal literal, never user input
-    )
+        """)  # nosec B608 - table is an internal literal, never user input
     return cursor.fetchall()
 
 

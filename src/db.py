@@ -143,8 +143,7 @@ class Database:
 
     def init_matchups_table(self) -> None:
         self.execute_query("DROP TABLE IF EXISTS matchups")
-        self.execute_query(
-            """CREATE TABLE matchups (
+        self.execute_query("""CREATE TABLE matchups (
             id INTEGER PRIMARY KEY,
             champion INTEGER NOT NULL,
             enemy INTEGER NOT NULL,
@@ -156,8 +155,7 @@ class Database:
             lane TEXT,
             FOREIGN KEY (champion) REFERENCES champions(id) ON DELETE CASCADE,
             FOREIGN KEY (enemy) REFERENCES champions(id) ON DELETE CASCADE
-        )"""
-        )
+        )""")
         # Create indexes for performance optimization
         self.create_database_indexes()
 
@@ -169,8 +167,7 @@ class Database:
         WITH allies instead of matchups AGAINST enemies.
         """
         self.execute_query("DROP TABLE IF EXISTS synergies")
-        self.execute_query(
-            """CREATE TABLE synergies (
+        self.execute_query("""CREATE TABLE synergies (
             id INTEGER PRIMARY KEY,
             champion INTEGER NOT NULL,
             ally INTEGER NOT NULL,
@@ -182,8 +179,7 @@ class Database:
             lane TEXT,
             FOREIGN KEY (champion) REFERENCES champions(id) ON DELETE CASCADE,
             FOREIGN KEY (ally) REFERENCES champions(id) ON DELETE CASCADE
-        )"""
-        )
+        )""")
         # Create indexes for performance optimization
         cursor = self.connection.cursor()
         cursor.execute("CREATE INDEX idx_synergies_champion ON synergies(champion)")
@@ -203,8 +199,7 @@ class Database:
     def init_champion_scores_table(self) -> None:
         """Create or reset champion_scores table for tier list calculations."""
         self.execute_query("DROP TABLE IF EXISTS champion_scores")
-        self.execute_query(
-            """CREATE TABLE champion_scores (
+        self.execute_query("""CREATE TABLE champion_scores (
             id INTEGER PRIMARY KEY,
             avg_delta2 REAL,
             variance REAL,
@@ -213,8 +208,7 @@ class Database:
             volatility REAL,
             target_ratio REAL,
             FOREIGN KEY (id) REFERENCES champions(id) ON DELETE CASCADE
-        )"""
-        )
+        )""")
 
     def add_matchup(
         self,
@@ -481,8 +475,7 @@ class Database:
                 print("[INFO] Updating champions table structure...")
 
                 # Create new table
-                cursor.execute(
-                    """
+                cursor.execute("""
                     CREATE TABLE champions_new (
                         id INTEGER PRIMARY KEY,
                         key TEXT,
@@ -491,19 +484,16 @@ class Database:
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
-                """
-                )
+                """)
 
                 # Migrate existing data if any
                 cursor.execute("SELECT COUNT(*) FROM champions")
                 if cursor.fetchone()[0] > 0:
                     try:
-                        cursor.execute(
-                            """
+                        cursor.execute("""
                             INSERT INTO champions_new (id, name) 
                             SELECT id, name FROM champions
-                        """
-                        )
+                        """)
                     except:
                         # If migration fails, that's ok - we'll update from Riot API anyway
                         pass
@@ -861,16 +851,14 @@ class Database:
             cursor = self.connection.cursor()
 
             # Load all valid matchups in one query
-            cursor.execute(
-                """
+            cursor.execute("""
                 SELECT c1.name, c2.name, m.delta2
                 FROM matchups m
                 JOIN champions c1 ON m.champion = c1.id
                 JOIN champions c2 ON m.enemy = c2.id
                 WHERE m.pickrate >= 0.5
                 AND m.games >= 200
-            """
-            )
+            """)
 
             # Build cache dictionary
             matchup_cache = {}
@@ -1098,16 +1086,14 @@ class Database:
             cursor = self.connection.cursor()
 
             # Load all valid synergies in one query
-            cursor.execute(
-                """
+            cursor.execute("""
                 SELECT c1.name, c2.name, s.delta2
                 FROM synergies s
                 JOIN champions c1 ON s.champion = c1.id
                 JOIN champions c2 ON s.ally = c2.id
                 WHERE s.pickrate >= 0.5
                 AND s.games >= 200
-            """
-            )
+            """)
 
             # Build cache dictionary
             synergy_cache = {}
@@ -1232,15 +1218,13 @@ class Database:
         """Get all champion scores with champion names."""
         cursor = self.connection.cursor()
         try:
-            cursor.execute(
-                """
+            cursor.execute("""
                 SELECT c.name, cs.avg_delta2, cs.variance, cs.coverage,
                        cs.peak_impact, cs.volatility, cs.target_ratio
                 FROM champion_scores cs
                 JOIN champions c ON cs.id = c.id
                 ORDER BY c.name
-            """
-            )
+            """)
             return cursor.fetchall()
         except Error as e:
             print(f"Error getting all champion scores: {e}")
@@ -1261,8 +1245,7 @@ class Database:
     def init_pool_ban_recommendations_table(self) -> None:
         """Create or reset pool_ban_recommendations table for pre-calculated bans."""
         self.execute_query("DROP TABLE IF EXISTS pool_ban_recommendations")
-        self.execute_query(
-            """CREATE TABLE pool_ban_recommendations (
+        self.execute_query("""CREATE TABLE pool_ban_recommendations (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             pool_name TEXT NOT NULL,
             enemy_champion TEXT NOT NULL,
@@ -1272,8 +1255,7 @@ class Database:
             matchups_count INTEGER NOT NULL,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(pool_name, enemy_champion)
-        )"""
-        )
+        )""")
 
         # Create indexes for fast lookups
         cursor = self.connection.cursor()

@@ -33,8 +33,7 @@ def db_with_synergies(tmp_path):
     cursor.execute(
         "CREATE TABLE champions (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE NOT NULL)"
     )
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE synergies (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             champion INTEGER NOT NULL,
@@ -46,8 +45,7 @@ def db_with_synergies(tmp_path):
             games INTEGER NOT NULL,
             lane TEXT
         )
-        """
-    )
+        """)
     cursor.executemany(
         "INSERT INTO champions (name) VALUES (?)", [("Yasuo",), ("Malphite",), ("Lulu",)]
     )

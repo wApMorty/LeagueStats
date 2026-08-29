@@ -25,18 +25,15 @@ def temp_synergy_db(tmp_path):
     cursor = db.connection.cursor()
 
     # Create champions table
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS champions (
             id INTEGER PRIMARY KEY,
             name TEXT NOT NULL UNIQUE
         )
-    """
-    )
+    """)
 
     # Create synergies table
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS synergies (
             id INTEGER PRIMARY KEY,
             champion INTEGER NOT NULL,
@@ -49,8 +46,7 @@ def temp_synergy_db(tmp_path):
             FOREIGN KEY (champion) REFERENCES champions(id) ON DELETE CASCADE,
             FOREIGN KEY (ally) REFERENCES champions(id) ON DELETE CASCADE
         )
-    """
-    )
+    """)
     db.connection.commit()
 
     # Insert test champions
@@ -60,18 +56,14 @@ def temp_synergy_db(tmp_path):
     db.connection.commit()
 
     # Insert test synergies (Yasuo with Malphite and Diana)
-    cursor.execute(
-        """
+    cursor.execute("""
         INSERT INTO synergies (champion, ally, winrate, delta1, delta2, pickrate, games)
         VALUES (1, 2, 55.0, 180.0, 220.0, 15.0, 1200)
-    """
-    )  # Yasuo + Malphite
-    cursor.execute(
-        """
+    """)  # Yasuo + Malphite
+    cursor.execute("""
         INSERT INTO synergies (champion, ally, winrate, delta1, delta2, pickrate, games)
         VALUES (1, 3, 53.5, 160.0, 190.0, 12.0, 1000)
-    """
-    )  # Yasuo + Diana
+    """)  # Yasuo + Diana
     db.connection.commit()
 
     yield db

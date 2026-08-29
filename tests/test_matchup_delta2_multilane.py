@@ -32,18 +32,15 @@ def db_with_multilane_matchups(tmp_path):
     conn = sqlite3.connect(str(db_path))
     cursor = conn.cursor()
 
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE champions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT UNIQUE NOT NULL,
             role TEXT
         )
-        """
-    )
+        """)
 
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE matchups (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             champion INTEGER NOT NULL,
@@ -56,8 +53,7 @@ def db_with_multilane_matchups(tmp_path):
             FOREIGN KEY (champion) REFERENCES champions (id),
             FOREIGN KEY (enemy) REFERENCES champions (id)
         )
-        """
-    )
+        """)
 
     # Insert test champions
     cursor.execute("INSERT INTO champions (name, role) VALUES ('Ahri', 'Mid')")
@@ -68,44 +64,34 @@ def db_with_multilane_matchups(tmp_path):
     # Lane 1: delta2=5.0, games=300
     # Lane 2: delta2=3.0, games=200
     # Expected weighted average: (5.0*300 + 3.0*200) / (300+200) = 2100/500 = 4.2
-    cursor.execute(
-        """
+    cursor.execute("""
         INSERT INTO matchups (champion, enemy, winrate, delta1, delta2, pickrate, games)
         VALUES (1, 2, 52.5, 2.5, 5.0, 1.2, 300)
-        """
-    )
-    cursor.execute(
-        """
+        """)
+    cursor.execute("""
         INSERT INTO matchups (champion, enemy, winrate, delta1, delta2, pickrate, games)
         VALUES (1, 2, 51.0, 1.0, 3.0, 0.8, 200)
-        """
-    )
+        """)
 
     # Ahri vs Yasuo: Single-lane data (1 row)
     # Expected: delta2=2.5 directly
-    cursor.execute(
-        """
+    cursor.execute("""
         INSERT INTO matchups (champion, enemy, winrate, delta1, delta2, pickrate, games)
         VALUES (1, 3, 48.0, -2.0, 2.5, 1.5, 300)
-        """
-    )
+        """)
 
     # Zed vs Ahri: Multi-lane data with different weights
     # Lane 1: delta2=-3.0, games=400
     # Lane 2: delta2=-5.0, games=200
     # Expected weighted average: (-3.0*400 + -5.0*200) / (400+200) = -2200/600 = -3.666...
-    cursor.execute(
-        """
+    cursor.execute("""
         INSERT INTO matchups (champion, enemy, winrate, delta1, delta2, pickrate, games)
         VALUES (2, 1, 47.5, -2.5, -3.0, 1.2, 400)
-        """
-    )
-    cursor.execute(
-        """
+        """)
+    cursor.execute("""
         INSERT INTO matchups (champion, enemy, winrate, delta1, delta2, pickrate, games)
         VALUES (2, 1, 46.0, -4.0, -5.0, 0.8, 200)
-        """
-    )
+        """)
 
     conn.commit()
     conn.close()
@@ -180,18 +166,15 @@ def test_matchup_respects_quality_thresholds(tmp_path):
     conn = sqlite3.connect(str(db_path))
     cursor = conn.cursor()
 
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE champions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT UNIQUE NOT NULL,
             role TEXT
         )
-        """
-    )
+        """)
 
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE matchups (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             champion INTEGER NOT NULL,
@@ -204,19 +187,16 @@ def test_matchup_respects_quality_thresholds(tmp_path):
             FOREIGN KEY (champion) REFERENCES champions (id),
             FOREIGN KEY (enemy) REFERENCES champions (id)
         )
-        """
-    )
+        """)
 
     cursor.execute("INSERT INTO champions (name, role) VALUES ('ChampA', 'Top')")
     cursor.execute("INSERT INTO champions (name, role) VALUES ('ChampB', 'Top')")
 
     # Insert matchup with insufficient data (pickrate < 0.5 OR games < 200)
-    cursor.execute(
-        """
+    cursor.execute("""
         INSERT INTO matchups (champion, enemy, winrate, delta1, delta2, pickrate, games)
         VALUES (1, 2, 50.0, 0.0, 3.0, 0.3, 100)
-        """
-    )
+        """)
 
     conn.commit()
     conn.close()

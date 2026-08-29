@@ -206,8 +206,7 @@ class Parser:
         # Strategy 4: Fallback to hardcoded coordinates (Bug #1 legacy)
         # GUI mode only - coordinates are screen-dependent
         try:
-            self.webdriver.execute_script(
-                f"""
+            self.webdriver.execute_script(f"""
                 var event = new MouseEvent('click', {{
                     view: window,
                     bubbles: true,
@@ -216,8 +215,7 @@ class Parser:
                     clientY: {scraping_config.COOKIE_CLICK_Y}
                 }});
                 document.elementFromPoint({scraping_config.COOKIE_CLICK_X}, {scraping_config.COOKIE_CLICK_Y}).dispatchEvent(event);
-            """
-            )
+            """)
             logger.info("Cookie banner dismissed via JavaScript coordinates click")
         except Exception as e:
             # Final fallback to ActionChains

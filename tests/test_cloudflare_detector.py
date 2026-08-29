@@ -19,7 +19,6 @@ from selenium.common.exceptions import TimeoutException as SeleniumTimeoutExcept
 
 from src.cloudflare_detector import CloudflareException, detect_cloudflare
 
-
 # ---------------------------------------------------------------------------
 # Helper
 # ---------------------------------------------------------------------------

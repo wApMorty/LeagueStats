@@ -24,18 +24,15 @@ def temp_db(tmp_path):
     cursor = conn.cursor()
 
     # Create schema
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS champions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT UNIQUE NOT NULL,
             role TEXT
         )
-    """
-    )
+    """)
 
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS matchups (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             champion INTEGER NOT NULL,
@@ -48,11 +45,9 @@ def temp_db(tmp_path):
             FOREIGN KEY (champion) REFERENCES champions(id) ON DELETE CASCADE,
             FOREIGN KEY (enemy) REFERENCES champions(id) ON DELETE CASCADE
         )
-    """
-    )
+    """)
 
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS champion_scores (
             id INTEGER PRIMARY KEY,
             avg_delta2 REAL,
@@ -63,8 +58,7 @@ def temp_db(tmp_path):
             target_ratio REAL,
             FOREIGN KEY (id) REFERENCES champions(id) ON DELETE CASCADE
         )
-    """
-    )
+    """)
 
     # Insert test champions
     test_champions = [

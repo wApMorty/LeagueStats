@@ -13,7 +13,6 @@ Coverage Target: 100%
 import pytest
 from src.models import Matchup, MatchupDraft, ChampionScore
 
-
 # ============================================================================
 # Matchup Tests
 # ============================================================================

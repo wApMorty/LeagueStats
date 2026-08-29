@@ -26,19 +26,16 @@ def temp_db(tmp_path):
     cursor = conn.cursor()
 
     # Champions table
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS champions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT UNIQUE NOT NULL,
             role TEXT
         )
-    """
-    )
+    """)
 
     # Matchups table - using production schema column names
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS matchups (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             champion INTEGER NOT NULL,
@@ -53,23 +50,19 @@ def temp_db(tmp_path):
             FOREIGN KEY (champion) REFERENCES champions(id),
             FOREIGN KEY (enemy) REFERENCES champions(id)
         )
-    """
-    )
+    """)
 
     # db_meta table (data freshness monitoring — migration b7e41c9a3f02)
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS db_meta (
             key TEXT PRIMARY KEY,
             value TEXT NOT NULL,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-    """
-    )
+    """)
 
     # Pool ban recommendations table
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS pool_ban_recommendations (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             pool_name TEXT NOT NULL,
@@ -81,8 +74,7 @@ def temp_db(tmp_path):
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(pool_name, enemy_champion)
         )
-    """
-    )
+    """)
 
     conn.commit()
     conn.close()

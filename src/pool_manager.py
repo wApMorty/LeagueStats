@@ -130,15 +130,13 @@ class PoolManager:
             db = Database(config.DATABASE_PATH)
             db.connect()
             cursor = db.connection.cursor()
-            cursor.execute(
-                """
+            cursor.execute("""
                 SELECT DISTINCT m.lane, c.name
                 FROM matchups m
                 JOIN champions c ON m.champion = c.id
                 WHERE m.lane IS NOT NULL
                 ORDER BY c.name
-                """
-            )
+                """)
             for lane, champion in cursor.fetchall():
                 role = self._LANE_TO_ROLE.get(lane)
                 if role:

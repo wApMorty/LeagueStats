@@ -22,27 +22,23 @@ def full_db(tmp_path):
     database.connect()
 
     cursor = database.connection.cursor()
-    cursor.execute(
-        """CREATE TABLE champions (
+    cursor.execute("""CREATE TABLE champions (
             id INTEGER PRIMARY KEY,
             key TEXT,
             name TEXT NOT NULL,
             title TEXT
-        )"""
-    )
+        )""")
     for champ_id, name in [(1, "Aatrox"), (2, "Darius"), (3, "Garen")]:
         cursor.execute("INSERT INTO champions (id, name) VALUES (?, ?)", (champ_id, name))
     database.connection.commit()
 
     database.init_matchups_table()
     database.init_synergies_table()
-    cursor.execute(
-        """CREATE TABLE db_meta (
+    cursor.execute("""CREATE TABLE db_meta (
             key TEXT PRIMARY KEY,
             value TEXT NOT NULL,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )"""
-    )
+        )""")
     database.connection.commit()
 
     yield database
