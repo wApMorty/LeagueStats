@@ -4,8 +4,9 @@ Pipeline:
     1. Refresh champions from the Riot API, reset matchups/synergies tables
     2. Discover the lanes played by each champion (>10% of its games),
        via cheap HTTP requests (src/lane_discovery.py)
-    3. Scrape matchups then synergies once per (lane, champions) group,
-       tagging every row with its lane (migration b7e41c9a3f02)
+    3. Scrape matchups + synergies together, one page visit per (lane,
+       champion) pair (SPEC-02), tagging every row with its lane
+       (migration b7e41c9a3f02)
 
 Champions whose lane discovery failed fall back to the legacy behavior:
 their LoLalytics default lane is scraped and stored untagged (lane=NULL).
@@ -120,31 +121,44 @@ def scrape_all_multilane(
     stats: dict = {
         "lane_map": lane_map,
         "discovery_failures": discovery_failures,
-        "pages_total": pages_per_phase
-        * ((1 if include_matchups else 0) + (1 if include_synergies else 0)),
+        # One page visit per (champion, lane) now covers both datasets
+        # (SPEC-02): no longer multiplied by the number of phases requested.
+        "pages_total": pages_per_phase,
         "matchups": {},
         "synergies": {},
     }
 
-    # ── 3. Matchups, one parallel pass per lane group ────────────────────────
+    # ── 3. One parallel pass per lane group: matchups + synergies from the
+    #      same page visit (SPEC-02) ─────────────────────────────────────────
+    lane_results: Dict[Optional[str], dict] = {}
+    for lane, champs in groups.items():
+        lane_results[lane] = parser.parse_page_by_role(
+            db,
+            champs,
+            lane,
+            normalize_func,
+            include_matchups=include_matchups,
+            include_synergies=include_synergies,
+            init_tables=False,
+        )
+
     if include_matchups:
-        for lane, champs in groups.items():
-            stats["matchups"][lane or "default"] = parser.parse_champions_by_role(
-                db, champs, lane, normalize_func, init_tables=False
-            )
-
-    # ── 4. Synergies, same groups ────────────────────────────────────────────
+        stats["matchups"] = {(lane or "default"): result for lane, result in lane_results.items()}
     if include_synergies:
-        for lane, champs in groups.items():
-            stats["synergies"][lane or "default"] = parser.parse_synergies_by_role(
-                db, champs, lane, normalize_func, init_tables=False
-            )
+        stats["synergies"] = {(lane or "default"): result for lane, result in lane_results.items()}
 
-    # ── 5. Aggregated counters ───────────────────────────────────────────────
-    all_phase_stats = list(stats["matchups"].values()) + list(stats["synergies"].values())
-    stats["success"] = sum(s.get("success", 0) for s in all_phase_stats)
-    stats["failed"] = sum(s.get("failed", 0) for s in all_phase_stats)
-    stats["total"] = sum(s.get("total", 0) for s in all_phase_stats)
+    stats["synergies_missing"] = sorted(
+        {
+            champion
+            for result in lane_results.values()
+            for champion in result.get("synergies_missing", [])
+        }
+    )
+
+    # ── 4. Aggregated counters (one page pass per lane, not per phase) ──────
+    stats["success"] = sum(r.get("success", 0) for r in lane_results.values())
+    stats["failed"] = sum(r.get("failed", 0) for r in lane_results.values())
+    stats["total"] = sum(r.get("total", 0) for r in lane_results.values())
 
     logger.info(
         "Multi-lane scrape completed: %d/%d pages ok, %d failed",

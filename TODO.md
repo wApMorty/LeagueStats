@@ -39,7 +39,7 @@
 
 | Id | Item | PV | D | ROI |
 |---|---|---|---|---|
-| C1 | Matchups + synergies en une seule visite de page | 13 | 8 | 1,6 |
+| C1 | ✅ Matchups + synergies en une seule visite de page | 13 | 8 | 1,6 |
 | C2 | Sortir `get_all_champion_names()` de la boucle des trios | 5 | 1 | 5,0 |
 | C3 | Supprimer le double calcul d'affichage du top 3 | 3 | 1 | 3,0 |
 | C4 | Retirer `COLLATE NOCASE` des jointures | 5 | 3 | 1,7 |

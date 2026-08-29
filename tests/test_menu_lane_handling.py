@@ -42,16 +42,30 @@ def _setup_pipeline_mocks(monkeypatch, discovered_lane):
     seen_matchup_lanes = []
     seen_synergy_lanes = []
 
-    def fake_matchups(db, champs, lane, normalize_func, init_tables=True):
-        seen_matchup_lanes.append(lane)
-        return {"success": len(champs), "failed": 0, "total": len(champs)}
+    def fake_parse_page_by_role(
+        db,
+        champs,
+        lane,
+        normalize_func,
+        include_matchups=True,
+        include_synergies=True,
+        init_tables=True,
+    ):
+        # SPEC-02: one page visit covers both datasets; record the lane on
+        # whichever side(s) the caller actually asked for, mirroring
+        # scrape_all_multilane()'s stats["matchups"]/stats["synergies"] gating.
+        if include_matchups:
+            seen_matchup_lanes.append(lane)
+        if include_synergies:
+            seen_synergy_lanes.append(lane)
+        return {
+            "success": len(champs),
+            "failed": 0,
+            "total": len(champs),
+            "synergies_missing": [],
+        }
 
-    def fake_synergies(db, champs, lane, normalize_func, init_tables=True):
-        seen_synergy_lanes.append(lane)
-        return {"success": len(champs), "failed": 0, "total": len(champs)}
-
-    fake_parser.parse_champions_by_role.side_effect = fake_matchups
-    fake_parser.parse_synergies_by_role.side_effect = fake_synergies
+    fake_parser.parse_page_by_role.side_effect = fake_parse_page_by_role
     monkeypatch.setattr("src.pipeline.ParallelParser", MagicMock(return_value=fake_parser))
 
     return fake_db, seen_matchup_lanes, seen_synergy_lanes

@@ -52,6 +52,31 @@ All notable changes to LeagueStats Coach will be documented in this file.
     `[ALERTE] FRAÎCHEUR INCONNUE` au lieu d'un âge estimé.
   - Le bandeau affiche une seconde ligne d'alerte quand `last_scrape_status != "ok"`.
 
+### ⚡ Performance
+
+- **SPEC-02 (C1) — matchups + synergies en une seule visite de page.** `src/parser.py`
+  chargeait deux fois la même URL LoLalytics par couple (champion, lane) : une fois pour
+  les matchups (`get_champion_data_on_patch`), une fois pour les synergies
+  (`get_champion_synergies_on_patch`), alors que les deux jeux de données sont sur la même
+  page (seul l'onglet « Common Teammates » change). Nouvelle méthode
+  `Parser.get_champion_page_data()` : charge la page une fois, lit le carrousel matchups,
+  clique sur l'onglet synergies, relit le carrousel — via un tronc commun
+  `_extract_carousel_rows()` qui conserve tous les garde-fous existants (boucle infinie,
+  éléments périmés, sentinelle de pickrate) factorisés depuis les deux anciennes méthodes.
+  - `ParallelParser.parse_page_by_role()` remplace l'appel séquentiel
+    `parse_champions_by_role` + `parse_synergies_by_role` dans `src/multilane.py` : une
+    seule passe parallèle par lane, un seul chargement de page par champion.
+  - **Tolérance aux pannes préservée** : un échec de l'onglet synergies (bouton introuvable
+    ou section qui ne rend jamais) n'efface pas les matchups déjà extraits — le champion est
+    marqué dans `synergies_missing` (remonté dans le rapport de notification et repris par la
+    réparation ciblée de SPEC-01 A4), pas perdu.
+  - `get_champion_data_on_patch()` / `get_champion_synergies_on_patch()` restent en place,
+    devenues de fines enveloppes autour de `get_champion_page_data()` — toujours utilisées
+    par `scripts/repair_data.py`.
+  - Gain de volumétrie attendu : ~40 % de requêtes en moins vers LoLalytics (283 pages au
+    lieu de 566 pour un run complet 173 champions) ; durée réelle à mesurer sur un run
+    complet et à reporter ici (référence : 45 min le 16/07, `DEFAULT_MAX_WORKERS = 5`).
+
 ### ♻️ Refactoring
 
 - **SPEC-01 A2 — convergence des deux orchestrateurs de pipeline.** `scripts/update_all.py`

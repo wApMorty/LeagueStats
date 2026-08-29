@@ -40,8 +40,12 @@ class TestScrapeAllMultilane:
     def _make_parser(self):
         parser = MagicMock()
         parser.patch_version = "14"
-        parser.parse_champions_by_role.return_value = {"success": 1, "failed": 0, "total": 1}
-        parser.parse_synergies_by_role.return_value = {"success": 1, "failed": 0, "total": 1}
+        parser.parse_page_by_role.return_value = {
+            "success": 1,
+            "failed": 0,
+            "total": 1,
+            "synergies_missing": [],
+        }
         return parser
 
     def test_tables_initialized_once_then_per_lane_scrapes(self):
@@ -57,13 +61,37 @@ class TestScrapeAllMultilane:
         db.init_matchups_table.assert_called_once()
         db.init_synergies_table.assert_called_once()
 
-        # One scrape pass per non-empty lane, never re-initializing tables
-        matchup_calls = parser.parse_champions_by_role.call_args_list
-        assert call(db, ["Aatrox"], "top", str.lower, init_tables=False) in matchup_calls
-        assert call(db, ["Caitlyn"], "bottom", str.lower, init_tables=False) in matchup_calls
-        assert all(c.kwargs["init_tables"] is False for c in matchup_calls)
+        # One single-page-visit scrape pass per non-empty lane, never
+        # re-initializing tables (SPEC-02: matchups + synergies together)
+        page_calls = parser.parse_page_by_role.call_args_list
+        assert (
+            call(
+                db,
+                ["Aatrox"],
+                "top",
+                str.lower,
+                include_matchups=True,
+                include_synergies=True,
+                init_tables=False,
+            )
+            in page_calls
+        )
+        assert (
+            call(
+                db,
+                ["Caitlyn"],
+                "bottom",
+                str.lower,
+                include_matchups=True,
+                include_synergies=True,
+                init_tables=False,
+            )
+            in page_calls
+        )
+        assert all(c.kwargs["init_tables"] is False for c in page_calls)
 
-        assert stats["success"] == 4  # 2 lanes x (matchups + synergies)
+        # One page visit per lane now covers both matchups and synergies
+        assert stats["success"] == 2  # 2 lanes, one pass each
         assert stats["failed"] == 0
         assert stats["discovery_failures"] == []
 
@@ -74,8 +102,14 @@ class TestScrapeAllMultilane:
         with patch("src.multilane.discover_lanes_for_champions", return_value={"Broken": []}):
             stats = scrape_all_multilane(db, parser, str.lower)
 
-        parser.parse_champions_by_role.assert_called_once_with(
-            db, ["Broken"], None, str.lower, init_tables=False
+        parser.parse_page_by_role.assert_called_once_with(
+            db,
+            ["Broken"],
+            None,
+            str.lower,
+            include_matchups=True,
+            include_synergies=True,
+            init_tables=False,
         )
         assert stats["discovery_failures"] == ["Broken"]
 
@@ -87,7 +121,15 @@ class TestScrapeAllMultilane:
             stats = scrape_all_multilane(db, parser, str.lower, include_synergies=False)
 
         db.init_synergies_table.assert_not_called()
-        parser.parse_synergies_by_role.assert_not_called()
+        parser.parse_page_by_role.assert_called_once_with(
+            db,
+            ["Aatrox"],
+            "top",
+            str.lower,
+            include_matchups=True,
+            include_synergies=False,
+            init_tables=False,
+        )
         assert stats["synergies"] == {}
         assert stats["pages_total"] == 1
 
@@ -101,7 +143,7 @@ class TestScrapeAllMultilane:
         ):
             stats = scrape_all_multilane(db, parser, str.lower, include_synergies=False)
 
-        lanes_scraped = [c.args[2] for c in parser.parse_champions_by_role.call_args_list]
+        lanes_scraped = [c.args[2] for c in parser.parse_page_by_role.call_args_list]
         assert sorted(lanes_scraped) == ["jungle", "top"]
         assert stats["pages_total"] == 2
 
@@ -115,8 +157,14 @@ class TestScrapeAllMultilane:
 
         db.update_champions_from_riot_api.assert_not_called()
         db.init_matchups_table.assert_called_once()
-        parser.parse_champions_by_role.assert_called_once_with(
-            db, ["Aatrox"], "top", str.lower, init_tables=False
+        parser.parse_page_by_role.assert_called_once_with(
+            db,
+            ["Aatrox"],
+            "top",
+            str.lower,
+            include_matchups=True,
+            include_synergies=True,
+            init_tables=False,
         )
 
     def test_restricted_champions_refreshes_roster_when_champions_table_empty(self):
@@ -137,6 +185,30 @@ class TestScrapeAllMultilane:
             stats = scrape_all_multilane(db, parser, str.lower, include_matchups=False)
 
         db.init_matchups_table.assert_not_called()
-        parser.parse_champions_by_role.assert_not_called()
+        parser.parse_page_by_role.assert_called_once_with(
+            db,
+            ["Aatrox"],
+            "top",
+            str.lower,
+            include_matchups=False,
+            include_synergies=True,
+            init_tables=False,
+        )
         assert stats["matchups"] == {}
         assert stats["pages_total"] == 1
+
+    def test_synergies_missing_aggregated_across_lanes(self):
+        db = self._make_db(["Aatrox", "Caitlyn"])
+        parser = self._make_parser()
+        parser.parse_page_by_role.side_effect = [
+            {"success": 1, "failed": 0, "total": 1, "synergies_missing": ["Aatrox"]},
+            {"success": 1, "failed": 0, "total": 1, "synergies_missing": []},
+        ]
+
+        with patch(
+            "src.multilane.discover_lanes_for_champions",
+            return_value={"Aatrox": ["top"], "Caitlyn": ["bottom"]},
+        ):
+            stats = scrape_all_multilane(db, parser, str.lower)
+
+        assert stats["synergies_missing"] == ["Aatrox"]

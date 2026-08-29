@@ -103,6 +103,11 @@ def _format_report(stats: dict, scores: int, bans: dict, duration_min: float) ->
             f"⚠️ Découverte lanes en échec ({len(stats['discovery_failures'])}): "
             + ", ".join(stats["discovery_failures"][:5])
         )
+    if stats.get("synergies_missing"):
+        lines.append(
+            f"⚠️ Synergies manquantes ({len(stats['synergies_missing'])}): "
+            + ", ".join(stats["synergies_missing"][:5])
+        )
     return "\n".join(lines)
 
 
