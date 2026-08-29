@@ -6,9 +6,12 @@ Documentation complète du projet League Stats Coach.
 
 ## 📚 Index de la documentation
 
-### **État du Projet & Direction** (2026-06-11)
-- [AUDIT_2026_06.md](AUDIT_2026_06.md) - Audit complet vérifié sur pièces
-- [ROADMAP_2026.md](ROADMAP_2026.md) - Roadmap et décisions stratégiques (remplace la priorisation de TODO.md)
+### **État du Projet & Direction**
+- [AUDIT_2026_08.md](AUDIT_2026_08.md) - **Audit courant (2026-08-28)** : fiabilité, performance, métier, UX — vérifié sur pièces
+- [BACKLOG_2026_08.md](BACKLOG_2026_08.md) - Backlog issu de l'audit d'août, trié le 29/08 → reporté dans [../TODO.md](../TODO.md)
+- [specs/](specs/) - **Specs d'implémentation** (SPEC-01 à SPEC-07), une par chantier, autoportantes
+- [ROADMAP_2026.md](ROADMAP_2026.md) - Décisions stratégiques tranchées le 2026-06-11 (SQLite only, outil perso, pas de Playwright) — toujours en vigueur
+- [AUDIT_2026_06.md](AUDIT_2026_06.md) - Audit précédent (2026-06-11), base de la roadmap ; conservé pour comparaison
 
 ### **Architecture & Structure**
 - [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) - Structure générale du projet et organisation des fichiers

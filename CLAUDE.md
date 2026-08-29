@@ -21,7 +21,7 @@
 
 ## 🧭 Méthode de Travail
 
-L'assistant travaille directement avec les outils disponibles (Read, Edit, Write, Bash, Grep, Glob). Pas de workflow d'agents intermédiaires obligatoire.
+L'assistant travaille directement avec les outils disponibles (Read, Edit, Write, Bash, Grep, Glob). Pas de workflow d'agents intermédiaires obligatoire, mais possible de spawn des agents Sonnet 5 Effort Medium pour paralléliser l'implémentation.
 
 ### Proposer des Approches
 
@@ -34,26 +34,6 @@ Pour toute décision architecturale non triviale, **toujours proposer 2-3 approc
 ### Vue d'Ensemble
 
 LeagueStats Coach est un outil d'analyse et de coaching pour League of Legends qui aide les joueurs à optimiser leurs choix de champions en draft. Le projet analyse 171 champions et 36,000+ matchups pour générer des tier lists et recommandations.
-
-**Stack Technique**:
-- **Langage**: Python 3.13+
-- **Base de données**: SQLite (data/db.db)
-- **Migrations BD**: Alembic 1.13+
-- **Web Scraping**: Selenium + Firefox
-- **Distribution**: PyInstaller (standalone .exe)
-- **Tests**: pytest + pytest-cov + pytest-mock
-
-### État Actuel (Version 1.1.0-dev)
-
-**✅ Sprint 1 - Dette Technique (COMPLÉTÉ 2025-12-16)**:
-- Tâche #1: Refactoring fichiers monolithiques (<500 lignes/fichier)
-- Tâche #3: Framework Tests Automatisés (89% coverage)
-- Tâche #9: Database Migrations (Alembic 1.17.2)
-
-**🔴 Sprint 2 - Performance & Features (EN COURS)**:
-- Tâche #4: Web Scraping Parallèle ✅ **FAIT** (2025-12-20)
-- Tâche #11: Auto-Update BD (Service Windows) ✅ **FAIT** (2025-12-22)
-- Tâche #16: Support des Synergies ✅ **FAIT** (2026-01-16)
 
 ---
 
@@ -313,48 +293,6 @@ git branch -d feature/task-name
 - `tests/` - Framework pytest avec 89% coverage
 - `tests/regression/` - Tests de régression bugs
 
----
-
-## 🛠️ Commandes Utiles
-
-### Development
-
-```bash
-# Installation dépendances
-pip install -r requirements.txt          # Production
-pip install -r requirements-dev.txt      # Development
-
-# Tests
-pytest tests/ -v                         # Tous tests
-pytest tests/ --cov=src --cov-report=html  # Avec couverture
-
-# Compilation check
-python -m py_compile src/*.py
-
-# Code formatting (Black) - OBLIGATOIRE avant chaque commit
-python -m black src/ tests/
-python -m black --check --diff src/ tests/
-
-# Linting
-pylint src/ --fail-under=8.0
-mypy src/ --ignore-missing-imports
-```
-
-### Git Workflow
-
-```bash
-# Créer feature branch
-git checkout -b feature/task-name origin/master
-
-# Commits fréquents
-git add src/file.py
-git commit -m "Type: Description"
-
-# Vérifier statut
-git status
-git log --oneline -5
-```
-
 ### Database Migrations (Alembic)
 
 **📖 Voir `docs/alembic_guide.md` pour le guide complet des commandes Alembic**
@@ -401,6 +339,6 @@ python -m alembic revision -m "Description"
 
 ---
 
-**Dernière mise à jour**: 2026-05-24
-**Maintenu par**: Claude Code (Sonnet 4.6)
+**Dernière mise à jour**: 2026-08-29
+**Maintenu par**: Claude Code (Sonnet 5)
 **Pour**: @pj35 - LeagueStats Coach v1.1.0-dev
