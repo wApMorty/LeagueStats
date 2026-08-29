@@ -104,3 +104,39 @@ class TestScrapeAllMultilane:
         lanes_scraped = [c.args[2] for c in parser.parse_champions_by_role.call_args_list]
         assert sorted(lanes_scraped) == ["jungle", "top"]
         assert stats["pages_total"] == 2
+
+    def test_restricted_champions_list_skips_full_roster_refresh(self):
+        db = self._make_db(["Aatrox", "Caitlyn", "Zed"])
+        db.connection.cursor.return_value.fetchone.return_value = [3]  # champions table non-empty
+        parser = self._make_parser()
+
+        with patch("src.multilane.discover_lanes_for_champions", return_value={"Aatrox": ["top"]}):
+            scrape_all_multilane(db, parser, str.lower, champions=["Aatrox"])
+
+        db.update_champions_from_riot_api.assert_not_called()
+        db.init_matchups_table.assert_called_once()
+        parser.parse_champions_by_role.assert_called_once_with(
+            db, ["Aatrox"], "top", str.lower, init_tables=False
+        )
+
+    def test_restricted_champions_refreshes_roster_when_champions_table_empty(self):
+        db = self._make_db([])
+        db.connection.cursor.return_value.fetchone.return_value = [0]  # champions table empty
+        parser = self._make_parser()
+
+        with patch("src.multilane.discover_lanes_for_champions", return_value={"Aatrox": ["top"]}):
+            scrape_all_multilane(db, parser, str.lower, champions=["Aatrox"])
+
+        db.update_champions_from_riot_api.assert_called_once()
+
+    def test_matchups_can_be_skipped(self):
+        db = self._make_db(["Aatrox"])
+        parser = self._make_parser()
+
+        with patch("src.multilane.discover_lanes_for_champions", return_value={"Aatrox": ["top"]}):
+            stats = scrape_all_multilane(db, parser, str.lower, include_matchups=False)
+
+        db.init_matchups_table.assert_not_called()
+        parser.parse_champions_by_role.assert_not_called()
+        assert stats["matchups"] == {}
+        assert stats["pages_total"] == 1

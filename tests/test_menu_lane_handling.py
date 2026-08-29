@@ -1,93 +1,44 @@
-"""Tests for the main menu's lane-aware parsing (issue #41 follow-up).
+"""Tests for the main menu's lane-aware parsing (issue #41 follow-up, SPEC-01 A2).
 
 The "Parse Match Statistics" menu (src/ui/lol_coach_legacy.py, reached from
 the main menu option 3) used to hardcode lane="top" for every pool-scoped
-scrape (parse_champion_pool, parse_synergies_pool, parse_all_data_pool) --
-so selecting e.g. "All Jungle Champions" would tag every matchup/synergy row
-as if it had been scraped on the top lane. The "All Champions" variants
-(parse_all_champions, parse_synergies_all, parse_all_data_all) scraped an
-untagged default lane instead. Both are now routed through
-_scrape_by_discovered_lane(), which reuses discover_lanes_for_champions() +
-group_champions_by_lane() -- the same dynamic lane detection as
-scripts/update_all.py and the repair scripts.
+scrape -- so selecting e.g. "All Jungle Champions" would tag every
+matchup/synergy row as if it had been scraped on the top lane.
+
+Since SPEC-01 A2, every menu-triggered parse (pool-scoped or full-roster)
+goes through src.pipeline.run_pipeline() -> src.multilane.scrape_all_multilane(),
+the same dynamic lane detection used by scripts/update_all.py and the repair
+scripts. These tests confirm the menu wiring still passes the pool's real
+champions through to that shared pipeline and that lane tagging is not
+hardcoded anywhere in the menu layer.
 """
 
-from unittest.mock import MagicMock
-
-import pytest
+from unittest.mock import MagicMock, patch
 
 from src.ui import lol_coach_legacy
 
 
-class TestScrapeByDiscoveredLane:
-    def test_aggregates_stats_across_lane_groups(self, monkeypatch):
-        def fake_role_fn(champs, lane):
-            return {"success": len(champs), "failed": 0, "total": len(champs)}
-
-        monkeypatch.setattr(
-            "src.lane_discovery.discover_lanes_for_champions",
-            lambda champs, patch, normalize_func: {"LeeSin": ["jungle"], "Caitlyn": ["bottom"]},
-        )
-
-        stats = lol_coach_legacy._scrape_by_discovered_lane(
-            ["LeeSin", "Caitlyn"], "14", str.lower, fake_role_fn
-        )
-
-        assert stats == {"success": 2, "failed": 0, "total": 2}
-
-    def test_role_fn_receives_discovered_lane_not_hardcoded_top(self, monkeypatch):
-        seen_lanes = []
-
-        def fake_role_fn(champs, lane):
-            seen_lanes.append(lane)
-            return {"success": len(champs), "failed": 0, "total": len(champs)}
-
-        monkeypatch.setattr(
-            "src.lane_discovery.discover_lanes_for_champions",
-            lambda champs, patch, normalize_func: {"LeeSin": ["jungle"]},
-        )
-
-        lol_coach_legacy._scrape_by_discovered_lane(["LeeSin"], "14", str.lower, fake_role_fn)
-
-        assert seen_lanes == ["jungle"]
-        assert "top" not in seen_lanes
-
-    def test_discovery_failure_falls_back_to_default_lane(self, monkeypatch):
-        seen_lanes = []
-
-        def fake_role_fn(champs, lane):
-            seen_lanes.append(lane)
-            return {"success": 0, "failed": len(champs), "total": len(champs)}
-
-        monkeypatch.setattr(
-            "src.lane_discovery.discover_lanes_for_champions",
-            lambda champs, patch, normalize_func: {"Broken": []},
-        )
-
-        lol_coach_legacy._scrape_by_discovered_lane(["Broken"], "14", str.lower, fake_role_fn)
-
-        assert seen_lanes == [None]
-
-
-def _setup_menu_mocks(monkeypatch, discovered_lane):
-    """Common wiring for the parse_* menu functions: DB, ParallelParser,
-    Assistant, and lane discovery mocked; user always confirms."""
+def _setup_pipeline_mocks(monkeypatch, discovered_lane):
+    """Wire src.pipeline's dependencies so run_pipeline() runs end to end
+    against fakes, and record which lane each scrape call used."""
     fake_db = MagicMock()
     fake_db.connection.cursor.return_value.fetchone.return_value = [5]
-    monkeypatch.setattr(lol_coach_legacy, "Database", MagicMock(return_value=fake_db))
+    monkeypatch.setattr("src.pipeline.Database", MagicMock(return_value=fake_db))
+    monkeypatch.setattr("src.pipeline.Notifier", MagicMock(return_value=MagicMock()))
     monkeypatch.setattr("builtins.input", lambda *_args: "y")
 
     fake_assistant = MagicMock()
     fake_assistant.calculate_global_scores.return_value = 2
     fake_assistant.precalculate_all_custom_pool_bans.return_value = {}
-    monkeypatch.setattr(lol_coach_legacy, "Assistant", MagicMock(return_value=fake_assistant))
+    monkeypatch.setattr("src.assistant.Assistant", MagicMock(return_value=fake_assistant))
 
     monkeypatch.setattr(
-        "src.lane_discovery.discover_lanes_for_champions",
+        "src.multilane.discover_lanes_for_champions",
         lambda champs, patch, normalize_func: {c: [discovered_lane] for c in champs},
     )
 
     fake_parser = MagicMock()
+    fake_parser.patch_version = "14"
     seen_matchup_lanes = []
     seen_synergy_lanes = []
 
@@ -101,7 +52,7 @@ def _setup_menu_mocks(monkeypatch, discovered_lane):
 
     fake_parser.parse_champions_by_role.side_effect = fake_matchups
     fake_parser.parse_synergies_by_role.side_effect = fake_synergies
-    monkeypatch.setattr(lol_coach_legacy, "ParallelParser", MagicMock(return_value=fake_parser))
+    monkeypatch.setattr("src.pipeline.ParallelParser", MagicMock(return_value=fake_parser))
 
     return fake_db, seen_matchup_lanes, seen_synergy_lanes
 
@@ -113,7 +64,7 @@ class TestParseChampionPoolUsesRealLane:
             "_select_pool_for_parsing",
             lambda: ("All Jungle Champions", ["LeeSin", "Vi"]),
         )
-        _fake_db, seen_matchup_lanes, _ = _setup_menu_mocks(monkeypatch, "jungle")
+        _fake_db, seen_matchup_lanes, _ = _setup_pipeline_mocks(monkeypatch, "jungle")
 
         lol_coach_legacy.parse_champion_pool(patch_version="14")
 
@@ -128,7 +79,7 @@ class TestParseSynergiesPoolUsesRealLane:
             "_select_pool_for_parsing",
             lambda: ("All Support Champions", ["Thresh", "Lulu"]),
         )
-        _fake_db, _, seen_synergy_lanes = _setup_menu_mocks(monkeypatch, "support")
+        _fake_db, _, seen_synergy_lanes = _setup_pipeline_mocks(monkeypatch, "support")
 
         lol_coach_legacy.parse_synergies_pool(patch_version="14")
 
@@ -143,7 +94,9 @@ class TestParseAllDataPoolUsesRealLane:
             "_select_pool_for_parsing",
             lambda: ("All ADC Champions", ["Jinx", "Caitlyn"]),
         )
-        _fake_db, seen_matchup_lanes, seen_synergy_lanes = _setup_menu_mocks(monkeypatch, "bottom")
+        _fake_db, seen_matchup_lanes, seen_synergy_lanes = _setup_pipeline_mocks(
+            monkeypatch, "bottom"
+        )
 
         lol_coach_legacy.parse_all_data_pool(patch_version="14")
 
@@ -151,3 +104,31 @@ class TestParseAllDataPoolUsesRealLane:
         assert seen_synergy_lanes == ["bottom"]
         assert "top" not in seen_matchup_lanes
         assert "top" not in seen_synergy_lanes
+
+
+class TestPoolScopedRunPassesRestrictedChampionList:
+    def test_pool_champions_forwarded_not_full_roster(self, monkeypatch):
+        """The pool's champions -- not the full roster -- must reach
+        scrape_all_multilane(), otherwise a pool-scoped parse would refresh
+        and re-tag every champion in the database."""
+        monkeypatch.setattr(
+            lol_coach_legacy,
+            "_select_pool_for_parsing",
+            lambda: ("All Jungle Champions", ["LeeSin", "Vi"]),
+        )
+        _setup_pipeline_mocks(monkeypatch, "jungle")
+
+        with patch("src.pipeline.scrape_all_multilane") as mock_scrape:
+            mock_scrape.return_value = {
+                "lane_map": {},
+                "discovery_failures": [],
+                "pages_total": 2,
+                "matchups": {"jungle": {"success": 2, "failed": 0, "total": 2}},
+                "synergies": {},
+                "success": 2,
+                "failed": 0,
+                "total": 2,
+            }
+            lol_coach_legacy.parse_champion_pool(patch_version="14")
+
+        assert mock_scrape.call_args.kwargs["champions"] == ["LeeSin", "Vi"]

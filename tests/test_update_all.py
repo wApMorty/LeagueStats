@@ -5,7 +5,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.data_quality import DataCompletenessError
 from src.notifications import Notifier
 
 
@@ -58,114 +57,68 @@ def update_all_module(monkeypatch):
     return module
 
 
-def _scrape_stats():
-    return {
-        "lane_map": {"Aatrox": ["top"]},
-        "discovery_failures": [],
-        "pages_total": 2,
-        "matchups": {"top": {"success": 1, "failed": 0, "total": 1}},
-        "synergies": {"top": {"success": 1, "failed": 0, "total": 1}},
-        "success": 2,
-        "failed": 0,
-        "total": 2,
-    }
-
-
 class TestUpdateAllMain:
-    def _run(self, module, monkeypatch, completeness_side_effect=None, argv=None):
-        """Run main() with every external dependency mocked; return mocks + exit code."""
-        mocks = {}
+    """scripts/update_all.py is now a thin CLI wrapper around
+    src.pipeline.run_pipeline() (SPEC-01 A2) — these tests only check that
+    CLI args are forwarded correctly and the exit code reflects the result.
+    Pipeline behavior itself is covered by tests/test_pipeline.py.
+    """
+
+    def _run(self, module, monkeypatch, result_status="ok", argv=None):
+        from src.pipeline import PipelineResult
 
         if argv is not None:
             monkeypatch.setattr(sys, "argv", argv)
 
-        db = MagicMock()
-        db.connection.cursor.return_value.fetchone.return_value = [25000]
-        mocks["db"] = db
-        monkeypatch.setattr(module, "Database", MagicMock(return_value=db))
+        mock_run_pipeline = MagicMock(return_value=PipelineResult(status=result_status))
+        monkeypatch.setattr(module, "run_pipeline", mock_run_pipeline)
+        monkeypatch.setattr(module, "_set_process_priority", MagicMock())
+        monkeypatch.setattr(module, "_setup_logging", MagicMock())
 
-        mocks["parser"] = MagicMock()
-        monkeypatch.setattr(module, "ParallelParser", MagicMock(return_value=mocks["parser"]))
+        exit_code = module.main()
+        return exit_code, mock_run_pipeline
 
-        mocks["scrape"] = MagicMock(return_value=_scrape_stats())
-        monkeypatch.setattr(module, "scrape_all_multilane", mocks["scrape"])
-
-        mocks["completeness"] = MagicMock(side_effect=completeness_side_effect)
-        monkeypatch.setattr(module, "assert_completeness", mocks["completeness"])
-
-        mocks["notifier"] = MagicMock()
-        monkeypatch.setattr(module, "Notifier", MagicMock(return_value=mocks["notifier"]))
-
-        assistant = MagicMock()
-        assistant.calculate_global_scores.return_value = 172
-        assistant.precalculate_all_custom_pool_bans.return_value = {"pool1": 10}
-        mocks["assistant"] = assistant
-
-        with patch.dict(
-            sys.modules,
-            {
-                "src.assistant": MagicMock(Assistant=MagicMock(return_value=assistant)),
-            },
-        ):
-            exit_code = module.main()
-
-        return exit_code, mocks
-
-    def test_successful_run_returns_zero_and_writes_meta(self, update_all_module, monkeypatch):
-        exit_code, mocks = self._run(update_all_module, monkeypatch)
+    def test_successful_run_returns_zero(self, update_all_module, monkeypatch):
+        exit_code, mock_run_pipeline = self._run(update_all_module, monkeypatch)
 
         assert exit_code == 0
-        mocks["scrape"].assert_called_once()
-        mocks["completeness"].assert_called_once()
-        mocks["assistant"].calculate_global_scores.assert_called_once()
-        mocks["assistant"].precalculate_all_custom_pool_bans.assert_called_once()
+        mock_run_pipeline.assert_called_once()
 
-        meta_keys = [call.args[0] for call in mocks["db"].set_meta.call_args_list]
-        assert "last_update_utc" in meta_keys
-        assert "matchups_count" in meta_keys
-        mocks["notifier"].notify_success.assert_called_once()
-
-    def test_completeness_failure_returns_one_no_meta(self, update_all_module, monkeypatch):
-        exit_code, mocks = self._run(
-            update_all_module,
-            monkeypatch,
-            completeness_side_effect=DataCompletenessError("matchups total 16179 < 20000"),
-        )
+    def test_failed_run_returns_one(self, update_all_module, monkeypatch):
+        exit_code, _ = self._run(update_all_module, monkeypatch, result_status="failed")
 
         assert exit_code == 1
-        # Freshness must NOT advance on a failed run
-        mocks["db"].set_meta.assert_not_called()
-        mocks["assistant"].calculate_global_scores.assert_not_called()
-        mocks["notifier"].notify_failure.assert_called_once()
-        failure_message = mocks["notifier"].notify_failure.call_args.args[1]
-        assert "runbook" in failure_message
 
-    def test_scrape_crash_returns_one_with_notification(self, update_all_module, monkeypatch):
-        mocks_db = MagicMock()
-        monkeypatch.setattr(update_all_module, "Database", MagicMock(return_value=mocks_db))
-        monkeypatch.setattr(
-            update_all_module,
-            "ParallelParser",
-            MagicMock(side_effect=RuntimeError("geckodriver missing")),
-        )
-        notifier = MagicMock()
-        monkeypatch.setattr(update_all_module, "Notifier", MagicMock(return_value=notifier))
-
-        assert update_all_module.main() == 1
-        notifier.notify_failure.assert_called_once()
-
-    def test_recompute_only_skips_scrape_and_completeness(self, update_all_module, monkeypatch):
-        exit_code, mocks = self._run(
+    def test_recompute_only_flag_forwarded(self, update_all_module, monkeypatch):
+        exit_code, mock_run_pipeline = self._run(
             update_all_module, monkeypatch, argv=["update_all.py", "--recompute-only"]
         )
 
         assert exit_code == 0
-        mocks["scrape"].assert_not_called()
-        mocks["completeness"].assert_not_called()
-        mocks["assistant"].calculate_global_scores.assert_called_once()
-        mocks["assistant"].precalculate_all_custom_pool_bans.assert_called_once()
+        assert mock_run_pipeline.call_args.kwargs["recompute_only"] is True
 
-        meta_keys = [call.args[0] for call in mocks["db"].set_meta.call_args_list]
-        assert "last_recompute_utc" in meta_keys
-        assert "last_update_utc" not in meta_keys
-        mocks["notifier"].notify_success.assert_called_once()
+    def test_skip_synergies_flag_forwarded_as_include_synergies_false(
+        self, update_all_module, monkeypatch
+    ):
+        _exit_code, mock_run_pipeline = self._run(
+            update_all_module, monkeypatch, argv=["update_all.py", "--skip-synergies"]
+        )
+
+        assert mock_run_pipeline.call_args.kwargs["include_synergies"] is False
+
+    def test_skip_completeness_flag_forwarded(self, update_all_module, monkeypatch):
+        _exit_code, mock_run_pipeline = self._run(
+            update_all_module, monkeypatch, argv=["update_all.py", "--skip-completeness"]
+        )
+
+        assert mock_run_pipeline.call_args.kwargs["skip_completeness"] is True
+
+    def test_patch_and_workers_forwarded(self, update_all_module, monkeypatch):
+        _exit_code, mock_run_pipeline = self._run(
+            update_all_module,
+            monkeypatch,
+            argv=["update_all.py", "--patch", "15.1", "--workers", "4"],
+        )
+
+        assert mock_run_pipeline.call_args.kwargs["patch"] == "15.1"
+        assert mock_run_pipeline.call_args.kwargs["workers"] == 4

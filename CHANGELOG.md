@@ -4,6 +4,29 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased] - 2026-08-29
 
+### ♻️ Refactoring
+
+- **SPEC-01 A2 — convergence des deux orchestrateurs de pipeline.** `scripts/update_all.py`
+  et le menu 3 (`src/ui/lol_coach_legacy.py`) réimplémentaient chacun le schéma
+  scrape → complétude → scores → bans → fraîcheur, et avaient dérivé : le menu ne
+  lançait jamais le contrôle de complétude, n'écrivait jamais `db_meta`, et ne
+  loggait/notifiait jamais. Le pipeline est extrait dans un nouveau module
+  `src/pipeline.py::run_pipeline()`, désormais l'unique chemin de mise à jour des
+  données utilisé par les deux entrées.
+  - `scripts/update_all.py` devient un mince point d'entrée CLI (~150 lignes en moins).
+  - `src/ui/lol_coach_legacy.py` : les 6 fonctions de parsing du menu (`parse_champion_pool`,
+    `parse_all_champions`, `parse_synergies_pool`, `parse_synergies_all`,
+    `parse_all_data_pool`, `parse_all_data_all`) délèguent maintenant à `run_pipeline()`
+    (**-534 lignes** au total, dont l'ancien helper `_scrape_by_discovered_lane` devenu mort).
+  - `src/multilane.py::scrape_all_multilane()` accepte désormais `champions=` (scope
+    restreint à un pool, sans rafraîchissement complet depuis l'API Riot) et
+    `include_matchups=` (indépendant de `include_synergies=`).
+  - Effet de bord attendu : toute exécution déclenchée depuis le menu bénéficie
+    désormais du contrôle de complétude, de l'écriture `db_meta`, du log fichier
+    (`logs/update_all.log`) et des notifications (toast + Discord) — comme le run CLI.
+    Le contrôle de complétude (portant sur tout le roster) reste sauté pour les scopes
+    "pool" du menu, puisqu'il échouerait systématiquement sur les champions hors pool.
+
 ### ✨ Ajouts
 
 - **`scripts/update_all.py --recompute-only`** — recalcule `champion_scores` et

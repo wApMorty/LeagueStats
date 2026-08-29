@@ -29,7 +29,7 @@
 | Id | Item | PV | D | ROI |
 |---|---|---|---|---|
 | A1 | Recalculer `champion_scores` (table vide depuis le 25/08) | 13 | 1 | **13,0** |
-| A2 | Faire converger le menu 3 et `scripts/update_all.py` | 13 | 3 | 4,3 |
+| A2 | ✅ Faire converger le menu 3 et `scripts/update_all.py` | 13 | 3 | 4,3 |
 | A3 | Rendre la fraîcheur mesurable (`db_meta` écrit au scrape) | 13 | 2 | 6,5 |
 | A4 | Contrôle de complétude gradué (bloquant / avertissement) | 8 | 3 | 2,7 |
 | A5 | Sauvegarde avant `DROP` (run non destructif) | 13 | 5 | 2,6 |
