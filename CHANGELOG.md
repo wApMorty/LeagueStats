@@ -6,6 +6,22 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Ajouts
 
+- **SPEC-01 A5 — sauvegarde avant `DROP`.** `run_pipeline()` snapshote désormais
+  `data/db.db` (nouveau module `src/db_backup.py`, via `sqlite3.Connection.backup()` —
+  sûr même avec une connexion déjà ouverte) juste avant que `scrape_all_multilane()`
+  ne fasse son `DROP TABLE` sur `matchups`/`synergies`, soit ~45 minutes avant la fin
+  du scrape. C'est le mécanisme exact du sinistre du 01/06/2026 (40 753 → 16 179
+  matchups) : toute interruption dans cette fenêtre détruisait la base sans recours.
+  - Run `"ok"` ou `"partial"` : la sauvegarde est conservée, les plus anciennes au-delà
+    de `data_quality_config.BACKUP_RETENTION` (3) sont purgées.
+  - Run en échec — exception, `DataCompletenessError` (`blocking_failures`), ou
+    `KeyboardInterrupt` (Ctrl+C) — : la base est restaurée depuis la sauvegarde et le
+    log/la notification le disent explicitement. `run_pipeline()` capture désormais
+    aussi `KeyboardInterrupt` pour garantir le même contrat qu'avant A5 : jamais
+    d'exception qui remonte jusqu'à l'appelant (menu ou CLI), toujours un
+    `PipelineResult(status="failed")`.
+  - `data/db.backup-*.db` est déjà couvert par la règle `*.db` du `.gitignore`
+    existante — aucune ligne redondante ajoutée.
 - **SPEC-01 A4 — contrôle de complétude gradué.** `check_completeness()` distingue
   désormais `blocking_failures` (base inexploitable : volumétrie globale effondrée,
   table `champions` vide, ou plus de `MAX_INCOMPLETE_CHAMPIONS_RATIO` = 5 % de champions

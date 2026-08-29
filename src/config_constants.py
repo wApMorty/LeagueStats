@@ -259,6 +259,11 @@ class DataQualityConfig:
     # silently died on 2026-03-19).
     FRESHNESS_WARNING_DAYS: int = 7
 
+    # SPEC-01 A5: number of pre-scrape db.backup-*.db snapshots kept in
+    # data/ after a successful ("ok" or "partial") run. Older ones are
+    # purged so backups don't accumulate indefinitely.
+    BACKUP_RETENTION: int = 3
+
 
 # Global configuration instances
 scraping_config = ScrapingConfig()

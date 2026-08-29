@@ -3,6 +3,7 @@ scripts/update_all.py and the in-app menu (src/ui/lol_coach_legacy.py),
 SPEC-01 A2."""
 
 import sys
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import scripts.repair_data as repair_data_module
@@ -66,6 +67,15 @@ class TestRunPipeline:
         mocks["notifier"] = MagicMock()
         monkeypatch.setattr(module, "Notifier", MagicMock(return_value=mocks["notifier"]))
 
+        mocks["backup_database"] = MagicMock(
+            return_value=Path("data/db.backup-20260101T000000Z.db")
+        )
+        monkeypatch.setattr(module, "backup_database", mocks["backup_database"])
+        mocks["restore_database"] = MagicMock()
+        monkeypatch.setattr(module, "restore_database", mocks["restore_database"])
+        mocks["purge_old_backups"] = MagicMock()
+        monkeypatch.setattr(module, "purge_old_backups", mocks["purge_old_backups"])
+
         assistant = MagicMock()
         if scores_side_effect is not None:
             assistant.calculate_global_scores.side_effect = scores_side_effect
@@ -102,6 +112,12 @@ class TestRunPipeline:
         mocks["notifier"].notify_success.assert_called_once()
         mocks["repair"].assert_not_called()
 
+        # SPEC-01 A5: a backup is taken before the scrape (DROP happens
+        # inside scrape_all_multilane) and kept + pruned on a clean run.
+        mocks["backup_database"].assert_called_once()
+        mocks["purge_old_backups"].assert_called_once()
+        mocks["restore_database"].assert_not_called()
+
     def test_completeness_failure_still_writes_scrape_meta(self, monkeypatch):
         """SPEC-01 A3: a blocked completeness gate must not erase the trace
         that a scrape happened — last_scrape_utc/status are written even on
@@ -120,6 +136,12 @@ class TestRunPipeline:
         assert "last_full_success_utc" not in meta_keys
         mocks["notifier"].notify_failure.assert_called_once()
         assert "runbook" in mocks["notifier"].notify_failure.call_args.args[1]
+
+        # SPEC-01 A5: blocking completeness failures restore the pre-scrape
+        # backup instead of leaving the volumetric-collapse data in place.
+        mocks["restore_database"].assert_called_once()
+        mocks["purge_old_backups"].assert_not_called()
+        assert "restaurée" in mocks["notifier"].notify_failure.call_args.args[1]
 
     def test_warnings_only_report_triggers_partial_status_and_repair(self, monkeypatch):
         """SPEC-01 A4: a handful of incomplete champions (report.warnings, not
@@ -162,10 +184,39 @@ class TestRunPipeline:
         )
         notifier = MagicMock()
         monkeypatch.setattr(module, "Notifier", MagicMock(return_value=notifier))
+        backup_path = Path("data/db.backup-20260101T000000Z.db")
+        monkeypatch.setattr(module, "backup_database", MagicMock(return_value=backup_path))
+        restore_mock = MagicMock()
+        monkeypatch.setattr(module, "restore_database", restore_mock)
 
         result = module.run_pipeline()
 
         assert result.status == "failed"
+        notifier.notify_failure.assert_called_once()
+        # SPEC-01 A5: the tables are DROPped before ParallelParser is even
+        # created, so a crash here must restore the pre-scrape backup.
+        restore_mock.assert_called_once_with(backup_path, module.config.DATABASE_PATH)
+
+    def test_keyboard_interrupt_restores_backup_without_raising(self, monkeypatch):
+        """SPEC-01 A5: a Ctrl+C mid-scrape must not propagate (callers only
+        check result.status) and must restore the pre-scrape backup, same as
+        any other crash in that window."""
+        import src.pipeline as module
+
+        db = MagicMock()
+        monkeypatch.setattr(module, "Database", MagicMock(return_value=db))
+        monkeypatch.setattr(module, "ParallelParser", MagicMock(side_effect=KeyboardInterrupt))
+        notifier = MagicMock()
+        monkeypatch.setattr(module, "Notifier", MagicMock(return_value=notifier))
+        backup_path = Path("data/db.backup-20260101T000000Z.db")
+        monkeypatch.setattr(module, "backup_database", MagicMock(return_value=backup_path))
+        restore_mock = MagicMock()
+        monkeypatch.setattr(module, "restore_database", restore_mock)
+
+        result = module.run_pipeline()
+
+        assert result.status == "failed"
+        restore_mock.assert_called_once_with(backup_path, module.config.DATABASE_PATH)
         notifier.notify_failure.assert_called_once()
 
     def test_recompute_only_skips_scrape_and_completeness(self, monkeypatch):
@@ -218,6 +269,9 @@ class TestRunPipeline:
         assert result.status == "failed"
         mocks["db"].set_meta.assert_not_called()
         mocks["notifier"].notify_failure.assert_called_once()
+        # SPEC-01 A5: recompute-only never DROPs matchups/synergies, so there
+        # is nothing to back up.
+        mocks["backup_database"].assert_not_called()
 
     def test_scoring_failure_after_scrape_marks_scrape_status_failed(self, monkeypatch):
         """When the scrape itself succeeded but a later step (scoring)
@@ -232,6 +286,9 @@ class TestRunPipeline:
         assert "last_full_success_utc" not in meta_keys
         meta_calls = {call.args[0]: call.args[1] for call in mocks["db"].set_meta.call_args_list}
         assert meta_calls["last_scrape_status"] == "failed"
+        # SPEC-01 A5: the scrape already DROPped+repopulated the tables by
+        # this point, so a downstream crash still needs a restore.
+        mocks["restore_database"].assert_called_once()
 
 
 class TestRepairIncompleteChampions:

@@ -24,10 +24,11 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from .config import config
-from .config_constants import scraping_config
+from .config_constants import data_quality_config, scraping_config
 from .constants import normalize_champion_name_for_url
 from .data_quality import CompletenessReport, DataCompletenessError, assert_completeness
 from .db import Database
+from .db_backup import backup_database, purge_old_backups, restore_database
 from .lane_discovery import discover_lanes_for_champions
 from .multilane import group_champions_by_lane, scrape_all_multilane
 from .notifications import Notifier
@@ -231,10 +232,19 @@ def run_pipeline(
     stats = None
     completeness_report: Optional[CompletenessReport] = None
     repair_results: Dict[str, dict] = {}
+    backup_path: Optional[Path] = None
     try:
         if recompute_only:
             logger.info("recompute-only: scrape and completeness check skipped")
         else:
+            # ── 0. Pre-scrape backup (SPEC-01 A5) ────────────────────────────
+            # scrape_all_multilane() DROPs matchups/synergies before ~45 min
+            # of scraping; snapshot the file now so a crash or interruption
+            # in that window restores instead of destroying the data (the
+            # exact mechanism behind the 2026-06-01 incident: 40 753 -> 16 179
+            # matchups).
+            backup_path = backup_database(config.DATABASE_PATH)
+
             # ── 1. Scrape (multi-lane, tagged) ───────────────────────────────
             parser = ParallelParser(
                 max_workers=workers or scraping_config.DEFAULT_MAX_WORKERS,
@@ -340,6 +350,13 @@ def run_pipeline(
             "LeagueStats — BD mise à jour" + (" (partiel)" if status == "partial" else ""),
             report,
         )
+
+        # ── 7. Backup retention (SPEC-01 A5) ─────────────────────────────────
+        # A successful ("ok" or "partial") run keeps its pre-scrape backup —
+        # only purge old ones beyond the retention window.
+        if backup_path is not None:
+            purge_old_backups(config.DATABASE_PATH, data_quality_config.BACKUP_RETENTION)
+
         logger.info("=" * 80)
 
         return PipelineResult(
@@ -358,21 +375,46 @@ def run_pipeline(
         logger.error("COMPLETENESS CHECK FAILED:\n%s", e)
         if not recompute_only:
             db.set_meta("last_scrape_status", "failed")
+        restore_note = ""
+        if backup_path is not None:
+            restore_database(backup_path, config.DATABASE_PATH)
+            restore_note = f"\nBase restaurée depuis {backup_path.name} (SPEC-01 A5)."
         notifier.notify_failure(
             "LeagueStats — Données incomplètes",
             f"Le scrape a terminé mais la volumétrie est insuffisante.\n{e}\n"
-            f"Voir {log_file} et docs/runbook_scraping.md",
+            f"Voir {log_file} et docs/runbook_scraping.md{restore_note}",
         )
         return PipelineResult(status="failed", error=str(e))
+
+    except KeyboardInterrupt:
+        # Ctrl+C mid-scrape is the scenario A5 exists for: the tables have
+        # already been dropped, restore what backup_database() saved before
+        # that instead of leaving the base half-scraped (SPEC-01 A5).
+        logger.error("Pipeline interrupted by user (Ctrl+C)")
+        restore_note = ""
+        if backup_path is not None:
+            restore_database(backup_path, config.DATABASE_PATH)
+            restore_note = f"\nBase restaurée depuis {backup_path.name} (SPEC-01 A5)."
+        elif not recompute_only and stats is not None:
+            db.set_meta("last_scrape_status", "failed")
+        notifier.notify_failure(
+            "LeagueStats — Interrompu",
+            f"Pipeline interrompu par l'utilisateur (Ctrl+C).\nVoir {log_file}{restore_note}",
+        )
+        return PipelineResult(status="failed", error="Interrupted by user (KeyboardInterrupt)")
 
     except Exception as e:
         logger.error("Pipeline FAILED: %s", e)
         logger.error(traceback.format_exc())
         if not recompute_only and stats is not None:
             db.set_meta("last_scrape_status", "failed")
+        restore_note = ""
+        if backup_path is not None:
+            restore_database(backup_path, config.DATABASE_PATH)
+            restore_note = f"\nBase restaurée depuis {backup_path.name} (SPEC-01 A5)."
         notifier.notify_failure(
             "LeagueStats — Échec mise à jour",
-            f"{type(e).__name__}: {e}\nVoir {log_file}",
+            f"{type(e).__name__}: {e}\nVoir {log_file}{restore_note}",
         )
         return PipelineResult(status="failed", error=f"{type(e).__name__}: {e}")
 

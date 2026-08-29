@@ -32,7 +32,7 @@
 | A2 | ✅ Faire converger le menu 3 et `scripts/update_all.py` | 13 | 3 | 4,3 |
 | A3 | ✅ Rendre la fraîcheur mesurable (`db_meta` écrit au scrape) | 13 | 2 | 6,5 |
 | A4 | ✅ Contrôle de complétude gradué (bloquant / avertissement) | 8 | 3 | 2,7 |
-| A5 | Sauvegarde avant `DROP` (run non destructif) | 13 | 5 | 2,6 |
+| A5 | ✅ Sauvegarde avant `DROP` (run non destructif) | 13 | 5 | 2,6 |
 | A6 | Réparer la CI (black 26 + test `pool_manager`) | 8 | 2 | 4,0 |
 
 ### 2. Performance du scrape ⭐ · [SPEC-02](docs/specs/SPEC-02-scrape-page-unique.md) et [SPEC-06](docs/specs/SPEC-06-quickwins.md)
