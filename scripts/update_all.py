@@ -18,6 +18,7 @@ USAGE:
     python scripts/update_all.py                  # full nightly run
     python scripts/update_all.py --skip-synergies # matchups only
     python scripts/update_all.py --workers 8      # override worker count
+    python scripts/update_all.py --recompute-only # scores/bans only, no scrape
     pythonw scripts/update_all.py                 # headless (Task Scheduler)
 """
 
@@ -119,6 +120,11 @@ def _parse_args() -> argparse.Namespace:
         action="store_true",
         help="Skip the volumetric check (diagnostic only — NEVER for the nightly task)",
     )
+    parser.add_argument(
+        "--recompute-only",
+        action="store_true",
+        help="Skip scrape and completeness check; only recalculate scores/bans from existing data",
+    )
     return parser.parse_args()
 
 
@@ -142,6 +148,17 @@ def _format_report(stats: dict, scores: int, bans: dict, duration_min: float) ->
     return "\n".join(lines)
 
 
+def _format_recompute_report(scores: int, bans: dict, duration_min: float) -> str:
+    """Notification body for a --recompute-only run (no scrape stats available)."""
+    lines = [
+        "Mode: recalcul seul (pas de scrape)",
+        f"Scores recalculés: {scores} champions",
+        f"Pools de bans: {sum(1 for c in bans.values() if c > 0)}/{len(bans)}",
+        f"Durée: {duration_min:.1f} min",
+    ]
+    return "\n".join(lines)
+
+
 def main() -> int:
     args = _parse_args()
     log_file = _setup_logging()
@@ -150,10 +167,11 @@ def main() -> int:
 
     logger.info("=" * 80)
     logger.info(
-        "update_all starting — patch=%s, workers=%d, synergies=%s (log: %s)",
+        "update_all starting — patch=%s, workers=%d, synergies=%s, recompute_only=%s (log: %s)",
         args.patch,
         args.workers,
         not args.skip_synergies,
+        args.recompute_only,
         log_file,
     )
     start_time = datetime.now()
@@ -162,26 +180,33 @@ def main() -> int:
     parser = None
     assistant = None
     try:
-        # ── 1. Scrape multi-lane ─────────────────────────────────────────────
         db = Database(config.DATABASE_PATH)
         db.connect()
+        stats = None
 
-        parser = ParallelParser(
-            max_workers=args.workers,
-            patch_version=args.patch,
-            headless=scraping_config.HEADLESS,
-        )
-        stats = scrape_all_multilane(
-            db, parser, normalize_champion_name_for_url, include_synergies=not args.skip_synergies
-        )
-        parser.close()
-        parser = None
-
-        # ── 2. Completeness gate (before recalculating anything) ────────────
-        if args.skip_completeness:
-            logger.warning("Completeness check SKIPPED (--skip-completeness)")
+        if args.recompute_only:
+            logger.info("--recompute-only: scrape and completeness check skipped")
         else:
-            assert_completeness(db, include_synergies=not args.skip_synergies)
+            # ── 1. Scrape multi-lane ─────────────────────────────────────────
+            parser = ParallelParser(
+                max_workers=args.workers,
+                patch_version=args.patch,
+                headless=scraping_config.HEADLESS,
+            )
+            stats = scrape_all_multilane(
+                db,
+                parser,
+                normalize_champion_name_for_url,
+                include_synergies=not args.skip_synergies,
+            )
+            parser.close()
+            parser = None
+
+            # ── 2. Completeness gate (before recalculating anything) ────────
+            if args.skip_completeness:
+                logger.warning("Completeness check SKIPPED (--skip-completeness)")
+            else:
+                assert_completeness(db, include_synergies=not args.skip_synergies)
 
         # ── 3 & 4. Scores + ban recommendations (SQLite only, Decision C) ───
         from src.assistant import Assistant
@@ -206,14 +231,20 @@ def main() -> int:
         cursor.execute("SELECT COUNT(*) FROM synergies")
         synergies_count = cursor.fetchone()[0]
 
-        db.set_meta("last_update_utc", datetime.now(timezone.utc).isoformat())
+        if args.recompute_only:
+            db.set_meta("last_recompute_utc", datetime.now(timezone.utc).isoformat())
+        else:
+            db.set_meta("last_update_utc", datetime.now(timezone.utc).isoformat())
         db.set_meta("last_update_patch", str(args.patch))
         db.set_meta("matchups_count", str(matchups_count))
         db.set_meta("synergies_count", str(synergies_count))
 
         # ── 6. Success notification ──────────────────────────────────────────
         duration_min = (datetime.now() - start_time).total_seconds() / 60
-        report = _format_report(stats, scores_count, ban_results, duration_min)
+        if args.recompute_only:
+            report = _format_recompute_report(scores_count, ban_results, duration_min)
+        else:
+            report = _format_report(stats, scores_count, ban_results, duration_min)
         logger.info("update_all completed successfully in %.1f min", duration_min)
         logger.info("\n%s", report)
         notifier.notify_success("LeagueStats — BD mise à jour", report)

@@ -2,6 +2,16 @@
 
 All notable changes to LeagueStats Coach will be documented in this file.
 
+## [Unreleased] - 2026-08-29
+
+### ✨ Ajouts
+
+- **`scripts/update_all.py --recompute-only`** — recalcule `champion_scores` et
+  `pool_ban_recommendations` sans re-scraper. Restaure la table `champion_scores`
+  (vide depuis le 25/08, cf. `docs/AUDIT_2026_08.md` F1) qui faisait échouer les
+  tier lists. Écrit `last_recompute_utc` dans `db_meta` (distinct de
+  `last_update_utc`, puisque les données sources n'ont pas été rafraîchies).
+
 ## [Unreleased] - 2026-07-25
 
 ### 🗑️ Suppressions (audit de sur-ingénierie)
