@@ -568,6 +568,23 @@ class TestAssistantCacheBidirectional:
         # Mathematical verification
         assert delta2 + 4.0 == 0.0  # Zero-sum property
 
+    def test_get_all_champion_names_called_once_for_multiple_trios(self, assistant, mock_db):
+        """Regression test for SPEC-06 C2: get_all_champion_names() is preloaded
+        once in find_optimal_trios_holistic() instead of being re-fetched per trio.
+
+        Scenario: pool of 5 champions -> C(5,3) = 10 trios evaluated.
+        Expected: get_all_champion_names() called exactly once (was once per trio before C2).
+        """
+        pool = ["Aatrox", "Ahri", "Jinx", "Thresh", "Lee Sin"]  # C(5,3) = 10 trios
+
+        with patch.object(assistant, "_validate_champion_pool", return_value=(pool, {})):
+            mock_db.get_all_matchups_bulk = Mock(return_value={})
+            mock_db.get_all_champion_names = Mock(return_value={1: "Aatrox", 2: "Ahri", 3: "Jinx"})
+
+            assistant.find_optimal_trios_holistic(pool, num_results=3, profile="balanced")
+
+            mock_db.get_all_champion_names.assert_called_once()
+
     def test_cache_priority_direct_before_reverse(self, assistant):
         """Test that direct cache is checked BEFORE reverse cache.
 

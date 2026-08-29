@@ -76,6 +76,12 @@ All notable changes to LeagueStats Coach will be documented in this file.
   - Gain de volumétrie attendu : ~40 % de requêtes en moins vers LoLalytics (283 pages au
     lieu de 566 pour un run complet 173 champions) ; durée réelle à mesurer sur un run
     complet et à reporter ici (référence : 45 min le 16/07, `DEFAULT_MAX_WORKERS = 5`).
+- **SPEC-06 (C2) — `get_all_champion_names()` sorti de la boucle des trios.**
+  `Assistant._evaluate_trio_holistic()` rechargeait la liste des 173 champions
+  (une requête SQL + construction d'un dict) à **chaque trio évalué** — 455 requêtes
+  identiques pour un pool de 15 champions. `find_optimal_trios_holistic()` la précharge
+  désormais une seule fois, comme `matchup_cache` juste au-dessus, et la passe en
+  paramètre à `_evaluate_trio_holistic()`.
 
 ### ♻️ Refactoring
 

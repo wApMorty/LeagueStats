@@ -1509,6 +1509,7 @@ class Assistant:
         # Step 2.5: Preload ALL matchups for performance (single DB query instead of 147K+)
         print("Loading matchup data... ", end="", flush=True)
         matchup_cache = self.db.get_all_matchups_bulk()
+        all_champions = list(self.db.get_all_champion_names().values())
         print(f"✅ Loaded {len(matchup_cache):,} matchups")
 
         trio_rankings = []
@@ -1530,7 +1531,7 @@ class Assistant:
             bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]",
         ):
             try:
-                trio_score = self._evaluate_trio_holistic(trio, matchup_cache)
+                trio_score = self._evaluate_trio_holistic(trio, matchup_cache, all_champions)
                 trio_rankings.append(
                     {
                         "trio": trio,
@@ -1574,7 +1575,9 @@ class Assistant:
 
         return trio_rankings[:num_results]
 
-    def _evaluate_trio_holistic(self, trio: tuple, matchup_cache: dict) -> dict:
+    def _evaluate_trio_holistic(
+        self, trio: tuple, matchup_cache: dict, all_champions: List[str]
+    ) -> dict:
         """
         Evaluate a trio of champions using holistic scoring with reverse lookup.
 
@@ -1583,6 +1586,7 @@ class Assistant:
         Args:
             trio: Tuple of 3 champion names
             matchup_cache: Dict mapping (champion, enemy) -> delta2 (preloaded)
+            all_champions: List of all champion names (preloaded once by the caller)
 
         Returns:
             dict with individual scores and total score
@@ -1593,8 +1597,6 @@ class Assistant:
         # Use reverse lookup to build enemy coverage efficiently
         enemy_coverage = {}  # enemy_name -> (best_delta2, champion_handling_it)
 
-        # Get all champions from database (dynamic, includes new champions)
-        all_champions = list(self.db.get_all_champion_names().values())
         for enemy_champion in all_champions:
             best_delta2 = -float("inf")
             best_counter = None
