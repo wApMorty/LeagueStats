@@ -148,7 +148,9 @@ class TestPoolManagerBanRecalculation:
             mock_assistant_instance.precalculate_all_custom_pool_bans.assert_called_once()
 
             # THEN: Database connection was established
-            mock_db_class.assert_called_once_with("data/db.db")
+            # PoolManager.__init__ ouvre aussi la base via _load_role_pools_from_db()
+            # (pools système dynamiques, PR #41), donc "data/db.db" n'est plus le seul appel.
+            assert call("data/db.db") in mock_db_class.call_args_list
             mock_db_instance.connect.assert_called_once()
 
             # THEN: Success log message is displayed
