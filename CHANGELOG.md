@@ -6,12 +6,27 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Ajouts
 
+- **SPEC-01 A4 — contrôle de complétude gradué.** `check_completeness()` distingue
+  désormais `blocking_failures` (base inexploitable : volumétrie globale effondrée,
+  table `champions` vide, ou plus de `MAX_INCOMPLETE_CHAMPIONS_RATIO` = 5 % de champions
+  vides/sous le seuil) de simples `warnings` (quelques champions incomplets sous ce ratio).
+  `assert_completeness()` ne lève plus que sur `blocking_failures` — c'est exactement le
+  scénario du 16/07 (566/566 pages OK, 13 champions sans synergies) qui annulait jusqu'ici
+  tout le pipeline, scores et bans compris.
+  - Sur `warnings` : le pipeline continue (scores + bans recalculés), tente une réparation
+    ciblée des champions concernés via `scripts/repair_data.py` (`MATCHUPS`/`SYNERGIES`,
+    même découverte de lane que le run nominal), puis écrit `last_scrape_status = "partial"`
+    et notifie avec le récapitulatif des champions et de la réparation.
+  - `Aphelios` (0 matchup, seul champion qui aurait bloqué un run avant A4) : vérifié —
+    `normalize_champion_name_for_url("Aphelios")` renvoie déjà `"aphelios"`, qui correspond
+    à l'URL réelle LoLalytics ; la normalisation n'est **pas** en cause. La cause du 0 matchup
+    reste à diagnostiquer sur un run réel (hors portée d'une vérification statique).
 - **SPEC-01 A3 — fraîcheur mesurable.** `run_pipeline()` écrit désormais `last_scrape_utc`
   dès la fin du scrape, **même si le contrôle de complétude échoue ensuite** — jusqu'ici un
-  run bloqué ne laissait aucune trace en base. `last_scrape_status` (`"ok"` / `"failed"`,
-  `"partial"` réservé à A4) est écrit après chaque run avec scrape, et `last_full_success_utc`
-  seulement quand tout le pipeline a abouti. `last_update_utc` reste écrit pour compatibilité
-  avec les bases existantes.
+  run bloqué ne laissait aucune trace en base. `last_scrape_status` (`"ok"` / `"failed"` /
+  `"partial"`, ce dernier statut posé par A4) est écrit après chaque run avec scrape, et
+  `last_full_success_utc` seulement quand tout le pipeline a abouti. `last_update_utc`
+  reste écrit pour compatibilité avec les bases existantes.
   - `src/data_freshness.py` lit désormais `last_scrape_utc` en priorité (repli sur
     `last_update_utc` pour les bases antérieures à A3).
   - **Repli sur le `mtime` du fichier supprimé** : il mesurait la dernière *ouverture* de

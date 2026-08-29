@@ -248,6 +248,12 @@ class DataQualityConfig:
     MIN_TOTAL_MATCHUPS: int = 20000
     MIN_TOTAL_SYNERGIES: int = 15000
 
+    # SPEC-01 A4: share of champions allowed to be empty/below-threshold
+    # before the run is BLOCKED rather than merely flagged as a warning.
+    # Calibrated against the 2026-07-16 incident: 13/566 champions without
+    # synergies (~2.3%) should have been a warning, not a full pipeline abort.
+    MAX_INCOMPLETE_CHAMPIONS_RATIO: float = 0.05
+
     # Data freshness: warn at app startup when the last successful update
     # is older than this (the guard-rail that was missing when auto-update
     # silently died on 2026-03-19).

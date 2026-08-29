@@ -5,7 +5,8 @@ SPEC-01 A2."""
 import sys
 from unittest.mock import MagicMock, patch
 
-from src.data_quality import DataCompletenessError
+import scripts.repair_data as repair_data_module
+from src.data_quality import CompletenessReport, DataCompletenessError
 
 
 def _scrape_stats():
@@ -22,7 +23,15 @@ def _scrape_stats():
 
 
 class TestRunPipeline:
-    def _run(self, monkeypatch, scores_side_effect=None, completeness_side_effect=None, **kwargs):
+    def _run(
+        self,
+        monkeypatch,
+        scores_side_effect=None,
+        completeness_side_effect=None,
+        completeness_return_value=None,
+        repair_results=None,
+        **kwargs,
+    ):
         """Run run_pipeline() with every external dependency mocked."""
         import src.pipeline as module
 
@@ -39,8 +48,20 @@ class TestRunPipeline:
         mocks["scrape"] = MagicMock(return_value=_scrape_stats())
         monkeypatch.setattr(module, "scrape_all_multilane", mocks["scrape"])
 
-        mocks["completeness"] = MagicMock(side_effect=completeness_side_effect)
+        if completeness_return_value is None:
+            # Default: a clean report (SPEC-01 A4 grading not triggered).
+            completeness_return_value = MagicMock(
+                warnings=[],
+                incomplete_matchup_champions=[],
+                incomplete_synergy_champions=[],
+            )
+        mocks["completeness"] = MagicMock(
+            side_effect=completeness_side_effect, return_value=completeness_return_value
+        )
         monkeypatch.setattr(module, "assert_completeness", mocks["completeness"])
+
+        mocks["repair"] = MagicMock(return_value=repair_results or {})
+        monkeypatch.setattr(module, "_repair_incomplete_champions", mocks["repair"])
 
         mocks["notifier"] = MagicMock()
         monkeypatch.setattr(module, "Notifier", MagicMock(return_value=mocks["notifier"]))
@@ -79,6 +100,7 @@ class TestRunPipeline:
         assert meta_calls["last_scrape_status"] == "ok"
         assert "last_full_success_utc" in meta_keys
         mocks["notifier"].notify_success.assert_called_once()
+        mocks["repair"].assert_not_called()
 
     def test_completeness_failure_still_writes_scrape_meta(self, monkeypatch):
         """SPEC-01 A3: a blocked completeness gate must not erase the trace
@@ -98,6 +120,37 @@ class TestRunPipeline:
         assert "last_full_success_utc" not in meta_keys
         mocks["notifier"].notify_failure.assert_called_once()
         assert "runbook" in mocks["notifier"].notify_failure.call_args.args[1]
+
+    def test_warnings_only_report_triggers_partial_status_and_repair(self, monkeypatch):
+        """SPEC-01 A4: a handful of incomplete champions (report.warnings, not
+        blocking_failures) must not fail the run — it recomputes scores/bans,
+        attempts a targeted repair, and reports status="partial"."""
+        completeness_report = MagicMock(
+            warnings=["1 champion(s) below 50 synergies: Aphelios=0"],
+            incomplete_matchup_champions=[],
+            incomplete_synergy_champions=["Aphelios"],
+        )
+        completeness_report.summary.return_value = (
+            "Completeness check PARTIAL: 172 champions, 25000 matchups, 20000 synergies\n"
+            "  - [warning] 1 champion(s) below 50 synergies: Aphelios=0"
+        )
+        result, mocks = self._run(
+            monkeypatch,
+            completeness_return_value=completeness_report,
+            repair_results={"synergies": {"success": 1, "failed": 0, "total": 1, "duration": 1.2}},
+        )
+
+        assert result.status == "partial"
+        assert result.completeness_warnings == completeness_report.warnings
+        mocks["repair"].assert_called_once()
+        assert mocks["repair"].call_args.args[0] is mocks["db"]
+        assert mocks["repair"].call_args.args[1] is completeness_report
+
+        meta_calls = {call.args[0]: call.args[1] for call in mocks["db"].set_meta.call_args_list}
+        meta_keys = [call.args[0] for call in mocks["db"].set_meta.call_args_list]
+        assert meta_calls["last_scrape_status"] == "partial"
+        assert "last_full_success_utc" not in meta_keys
+        mocks["notifier"].notify_success.assert_called_once()
 
     def test_scrape_crash_returns_failed_with_notification(self, monkeypatch):
         import src.pipeline as module
@@ -179,3 +232,73 @@ class TestRunPipeline:
         assert "last_full_success_utc" not in meta_keys
         meta_calls = {call.args[0]: call.args[1] for call in mocks["db"].set_meta.call_args_list}
         assert meta_calls["last_scrape_status"] == "failed"
+
+
+class TestRepairIncompleteChampions:
+    """SPEC-01 A4: _repair_incomplete_champions() reuses scripts/repair_data.py's
+    MATCHUPS/SYNERGIES targets for a targeted re-scrape, without ever raising."""
+
+    def test_no_incomplete_champions_skips_repair(self, monkeypatch):
+        import src.pipeline as module
+
+        report = CompletenessReport(champions_total=173)
+        repair_mock = MagicMock()
+        monkeypatch.setattr(repair_data_module, "repair_parallel", repair_mock)
+        monkeypatch.setattr(module, "discover_lanes_for_champions", MagicMock())
+
+        result = module._repair_incomplete_champions(MagicMock(), report, "14", None)
+
+        assert result == {}
+        repair_mock.assert_not_called()
+
+    def test_repairs_matchups_and_synergies_separately(self, monkeypatch):
+        import src.pipeline as module
+
+        report = CompletenessReport(
+            champions_total=173,
+            champions_without_matchups=["Aphelios"],
+            synergies_below_threshold=[("Zed", 10)],
+        )
+        discover_mock = MagicMock(
+            side_effect=lambda champions, patch, normalize_func: {
+                champ: ["bottom"] for champ in champions
+            }
+        )
+        monkeypatch.setattr(module, "discover_lanes_for_champions", discover_mock)
+        repair_mock = MagicMock(
+            return_value={"success": 1, "failed": 0, "total": 1, "duration": 1.0}
+        )
+        monkeypatch.setattr(repair_data_module, "repair_parallel", repair_mock)
+
+        result = module._repair_incomplete_champions(MagicMock(), report, "14", 3)
+
+        assert set(result.keys()) == {"matchups", "synergies"}
+        assert repair_mock.call_count == 2
+        called_targets = {call.args[0].name for call in repair_mock.call_args_list}
+        assert called_targets == {"matchups", "synergies"}
+        # patch and max_workers must reach repair_parallel unchanged
+        for call in repair_mock.call_args_list:
+            assert call.args[3] == "14"
+            assert call.args[4] == 3
+
+    def test_repair_failure_is_caught_and_reported(self, monkeypatch):
+        """A crash mid-repair (e.g. geckodriver missing) must not escalate —
+        the pipeline stays 'partial', it never becomes 'failed' over this."""
+        import src.pipeline as module
+
+        report = CompletenessReport(champions_total=173, champions_without_matchups=["Aphelios"])
+        monkeypatch.setattr(
+            module,
+            "discover_lanes_for_champions",
+            MagicMock(return_value={"Aphelios": ["bottom"]}),
+        )
+        monkeypatch.setattr(
+            repair_data_module,
+            "repair_parallel",
+            MagicMock(side_effect=RuntimeError("geckodriver missing")),
+        )
+
+        result = module._repair_incomplete_champions(MagicMock(), report, "14", None)
+
+        assert "error" in result["matchups"]
+        assert "geckodriver missing" in result["matchups"]["error"]

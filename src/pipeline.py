@@ -26,9 +26,10 @@ from typing import Dict, List, Optional
 from .config import config
 from .config_constants import scraping_config
 from .constants import normalize_champion_name_for_url
-from .data_quality import DataCompletenessError, assert_completeness
+from .data_quality import CompletenessReport, DataCompletenessError, assert_completeness
 from .db import Database
-from .multilane import scrape_all_multilane
+from .lane_discovery import discover_lanes_for_champions
+from .multilane import group_champions_by_lane, scrape_all_multilane
 from .notifications import Notifier
 from .parallel_parser import ParallelParser
 
@@ -71,7 +72,7 @@ def _setup_logging() -> Path:
 class PipelineResult:
     """Outcome of a run_pipeline() call."""
 
-    status: str  # "ok" or "failed"
+    status: str  # "ok", "partial" (SPEC-01 A4: a few champions incomplete) or "failed"
     scores_count: int = 0
     ban_results: Dict[str, int] = field(default_factory=dict)
     scrape_stats: Optional[dict] = None
@@ -80,6 +81,7 @@ class PipelineResult:
     duration_min: float = 0.0
     report: str = ""
     error: Optional[str] = None
+    completeness_warnings: List[str] = field(default_factory=list)
 
 
 def _format_report(stats: dict, scores: int, bans: dict, duration_min: float) -> str:
@@ -111,6 +113,64 @@ def _format_recompute_report(scores: int, bans: dict, duration_min: float) -> st
         f"Pools de bans: {sum(1 for c in bans.values() if c > 0)}/{len(bans)}",
         f"Durée: {duration_min:.1f} min",
     ]
+    return "\n".join(lines)
+
+
+def _repair_incomplete_champions(
+    db: Database,
+    report: CompletenessReport,
+    patch: str,
+    workers: Optional[int],
+) -> Dict[str, dict]:
+    """Targeted re-scrape of the champions flagged as warnings (SPEC-01 A4).
+
+    Reuses scripts/repair_data.py's MATCHUPS/SYNERGIES targets and
+    repair_parallel() instead of a full re-scrape: only the specific
+    (champion, lane) pages that came back short are re-fetched. Never
+    raises — a failed repair must leave the pipeline at "partial", not
+    turn it into a "failed" run (see module docstring / A4 in SPEC-01).
+    """
+    from scripts.repair_data import MATCHUPS, SYNERGIES, repair_parallel
+
+    max_workers = workers or scraping_config.DEFAULT_MAX_WORKERS
+    results: Dict[str, dict] = {}
+    for target, incomplete in (
+        (MATCHUPS, report.incomplete_matchup_champions),
+        (SYNERGIES, report.incomplete_synergy_champions),
+    ):
+        if not incomplete:
+            continue
+        logger.warning(
+            "Targeted repair: %d %s champion(s) below threshold: %s",
+            len(incomplete),
+            target.name,
+            ", ".join(incomplete),
+        )
+        try:
+            lane_map = discover_lanes_for_champions(
+                incomplete, patch, normalize_champion_name_for_url
+            )
+            groups = group_champions_by_lane(lane_map)
+            results[target.name] = repair_parallel(
+                target, db, groups, patch, max_workers, target.default_headless, logger
+            )
+            logger.info("Targeted %s repair result: %s", target.name, results[target.name])
+        except Exception as e:  # never let a repair failure escalate to "failed"
+            logger.error("Targeted %s repair failed, staying partial: %s", target.name, e)
+            results[target.name] = {"error": str(e)}
+    return results
+
+
+def _format_partial_summary(report: CompletenessReport, repair_results: Dict[str, dict]) -> str:
+    """Notification snippet summarizing warnings and the targeted repair attempt."""
+    lines = ["", "[PARTIEL] " + report.summary()]
+    for target_name, outcome in repair_results.items():
+        if "error" in outcome:
+            lines.append(f"Réparation {target_name} échouée: {outcome['error']}")
+        else:
+            lines.append(
+                f"Réparation {target_name}: {outcome['success']}/{outcome['total']} champion(s)"
+            )
     return "\n".join(lines)
 
 
@@ -169,6 +229,8 @@ def run_pipeline(
     parser = None
     assistant = None
     stats = None
+    completeness_report: Optional[CompletenessReport] = None
+    repair_results: Dict[str, dict] = {}
     try:
         if recompute_only:
             logger.info("recompute-only: scrape and completeness check skipped")
@@ -214,7 +276,7 @@ def run_pipeline(
                     len(champions),
                 )
             else:
-                assert_completeness(db, include_synergies=include_synergies)
+                completeness_report = assert_completeness(db, include_synergies=include_synergies)
 
         # ── 3 & 4. Scores + ban recommendations (SQLite only) ───────────────
         from .assistant import Assistant
@@ -232,6 +294,12 @@ def run_pipeline(
         assistant.close()
         assistant = None
 
+        # ── 4b. Targeted repair for warning-only gaps (SPEC-01 A4) ──────────
+        if completeness_report is not None and completeness_report.warnings:
+            repair_results = _repair_incomplete_champions(
+                db, completeness_report, resolved_patch, workers
+            )
+
         # ── 5. Freshness metadata ────────────────────────────────────────────
         if recompute_only:
             cursor = db.connection.cursor()
@@ -245,24 +313,37 @@ def run_pipeline(
             db.set_meta("synergies_count", str(synergies_count))
         else:
             # matchups_count/synergies_count/last_scrape_utc were already
-            # written right after the scrape, above — this only marks the
-            # pipeline as fully successful.
-            db.set_meta("last_scrape_status", "ok")
-            db.set_meta("last_full_success_utc", datetime.now(timezone.utc).isoformat())
+            # written right after the scrape, above.
+            is_partial = completeness_report is not None and bool(completeness_report.warnings)
+            db.set_meta("last_scrape_status", "partial" if is_partial else "ok")
+            if not is_partial:
+                # Only a run with no completeness warnings counts as "fully
+                # successful" (SPEC-01 A4) — a partial run did complete, but
+                # last_full_success_utc must stay reserved for a clean run.
+                db.set_meta("last_full_success_utc", datetime.now(timezone.utc).isoformat())
 
-        # ── 6. Success notification ──────────────────────────────────────────
+        # ── 6. Success/partial notification ──────────────────────────────────
         duration_min = (datetime.now() - start_time).total_seconds() / 60
         if recompute_only:
             report = _format_recompute_report(scores_count, ban_results, duration_min)
+            status = "ok"
         else:
             report = _format_report(stats, scores_count, ban_results, duration_min)
-        logger.info("Pipeline completed successfully in %.1f min", duration_min)
+            if completeness_report is not None and completeness_report.warnings:
+                status = "partial"
+                report += "\n" + _format_partial_summary(completeness_report, repair_results)
+            else:
+                status = "ok"
+        logger.info("Pipeline completed with status=%s in %.1f min", status, duration_min)
         logger.info("\n%s", report)
-        notifier.notify_success("LeagueStats — BD mise à jour", report)
+        notifier.notify_success(
+            "LeagueStats — BD mise à jour" + (" (partiel)" if status == "partial" else ""),
+            report,
+        )
         logger.info("=" * 80)
 
         return PipelineResult(
-            status="ok",
+            status=status,
             scores_count=scores_count,
             ban_results=ban_results,
             scrape_stats=stats,
@@ -270,6 +351,7 @@ def run_pipeline(
             synergies_count=synergies_count,
             duration_min=duration_min,
             report=report,
+            completeness_warnings=list(completeness_report.warnings) if completeness_report else [],
         )
 
     except DataCompletenessError as e:

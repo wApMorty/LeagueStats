@@ -105,7 +105,10 @@ def main() -> int:
         recompute_only=args.recompute_only,
         skip_completeness=args.skip_completeness,
     )
-    return 0 if result.status == "ok" else 1
+    # "partial" (SPEC-01 A4: a few champions incomplete, pipeline still ran
+    # scores/bans and attempted a targeted repair) is not a task failure —
+    # only "failed" should make the nightly Task Scheduler entry non-zero.
+    return 0 if result.status in ("ok", "partial") else 1
 
 
 if __name__ == "__main__":
