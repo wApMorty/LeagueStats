@@ -73,17 +73,29 @@ class TestRunPipeline:
 
         meta_keys = [call.args[0] for call in mocks["db"].set_meta.call_args_list]
         assert "last_update_utc" in meta_keys
+        assert "last_scrape_utc" in meta_keys
         assert "matchups_count" in meta_keys
+        meta_calls = {call.args[0]: call.args[1] for call in mocks["db"].set_meta.call_args_list}
+        assert meta_calls["last_scrape_status"] == "ok"
+        assert "last_full_success_utc" in meta_keys
         mocks["notifier"].notify_success.assert_called_once()
 
-    def test_completeness_failure_returns_failed_no_meta(self, monkeypatch):
+    def test_completeness_failure_still_writes_scrape_meta(self, monkeypatch):
+        """SPEC-01 A3: a blocked completeness gate must not erase the trace
+        that a scrape happened — last_scrape_utc/status are written even on
+        failure, only last_full_success_utc is withheld."""
         result, mocks = self._run(
             monkeypatch,
             completeness_side_effect=DataCompletenessError("matchups total 16179 < 20000"),
         )
 
         assert result.status == "failed"
-        mocks["db"].set_meta.assert_not_called()
+        meta_keys = [call.args[0] for call in mocks["db"].set_meta.call_args_list]
+        assert "last_scrape_utc" in meta_keys
+        assert "matchups_count" in meta_keys
+        meta_calls = {call.args[0]: call.args[1] for call in mocks["db"].set_meta.call_args_list}
+        assert meta_calls["last_scrape_status"] == "failed"
+        assert "last_full_success_utc" not in meta_keys
         mocks["notifier"].notify_failure.assert_called_once()
         assert "runbook" in mocks["notifier"].notify_failure.call_args.args[1]
 
@@ -115,6 +127,9 @@ class TestRunPipeline:
         meta_keys = [call.args[0] for call in mocks["db"].set_meta.call_args_list]
         assert "last_recompute_utc" in meta_keys
         assert "last_update_utc" not in meta_keys
+        assert "last_scrape_utc" not in meta_keys
+        assert "last_scrape_status" not in meta_keys
+        assert "last_full_success_utc" not in meta_keys
         mocks["notifier"].notify_success.assert_called_once()
 
     def test_pool_scoped_run_skips_whole_roster_completeness_check(self, monkeypatch):
@@ -150,3 +165,17 @@ class TestRunPipeline:
         assert result.status == "failed"
         mocks["db"].set_meta.assert_not_called()
         mocks["notifier"].notify_failure.assert_called_once()
+
+    def test_scoring_failure_after_scrape_marks_scrape_status_failed(self, monkeypatch):
+        """When the scrape itself succeeded but a later step (scoring)
+        crashes, last_scrape_utc must already be recorded (written right
+        after the scrape) and last_scrape_status must flip to 'failed' —
+        but last_full_success_utc must never appear."""
+        result, mocks = self._run(monkeypatch, scores_side_effect=AttributeError("boom"))
+
+        assert result.status == "failed"
+        meta_keys = [call.args[0] for call in mocks["db"].set_meta.call_args_list]
+        assert "last_scrape_utc" in meta_keys
+        assert "last_full_success_utc" not in meta_keys
+        meta_calls = {call.args[0]: call.args[1] for call in mocks["db"].set_meta.call_args_list}
+        assert meta_calls["last_scrape_status"] == "failed"

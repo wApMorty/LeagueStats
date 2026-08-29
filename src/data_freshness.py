@@ -5,9 +5,12 @@ on 2026-03-19 and the database lost 60% of its rows on 2026-06-01, and nobody
 noticed for days. The app now displays the data age at every launch and warns
 when it exceeds ``data_quality_config.FRESHNESS_WARNING_DAYS``.
 
-Reads ``db_meta.last_update_utc`` (written by scripts/update_all.py after a
-fully successful run). Databases that predate migration b7e41c9a3f02 fall
-back to the db file modification time.
+Reads ``db_meta.last_scrape_utc`` in priority (written by ``run_pipeline()``
+right after a scrape completes, even if the completeness gate fails — see
+SPEC-01 A3), falling back to the legacy ``last_update_utc`` key for bases
+written before A3. A database with neither key reports an unknown age: there
+is no reliable file-based fallback (``db.db`` is rewritten on every session
+for pools/bans, so its mtime reflects the last *open*, not the last update).
 """
 
 import sqlite3
@@ -24,9 +27,10 @@ class FreshnessInfo:
     """Snapshot of the database freshness and volumetry."""
 
     last_update: Optional[datetime] = None
-    source: str = "unknown"  # "db_meta" | "file_mtime" | "unknown"
+    source: str = "unknown"  # "db_meta" | "unknown"
     matchups_count: int = 0
     synergies_count: int = 0
+    scrape_status: Optional[str] = None  # "ok" | "partial" | "failed" | None
 
     @property
     def age_days(self) -> Optional[float]:
@@ -45,8 +49,8 @@ class FreshnessInfo:
 def get_freshness_info(db_path: str) -> FreshnessInfo:
     """Read freshness metadata and volumetry from the database (read-only).
 
-    Never raises: a missing/corrupt database returns an 'unknown' snapshot,
-    which is reported as stale.
+    Never raises: a missing/corrupt database, or one without freshness
+    metadata, returns an 'unknown' snapshot, which is reported as stale.
     """
     info = FreshnessInfo()
     path = Path(db_path)
@@ -58,9 +62,17 @@ def get_freshness_info(db_path: str) -> FreshnessInfo:
         try:
             cursor = connection.cursor()
 
+            row = None
             try:
-                cursor.execute("SELECT value FROM db_meta WHERE key = 'last_update_utc'")
+                cursor.execute("SELECT value FROM db_meta WHERE key = 'last_scrape_utc'")
                 row = cursor.fetchone()
+                if not row:
+                    cursor.execute("SELECT value FROM db_meta WHERE key = 'last_update_utc'")
+                    row = cursor.fetchone()
+                cursor.execute("SELECT value FROM db_meta WHERE key = 'last_scrape_status'")
+                status_row = cursor.fetchone()
+                if status_row:
+                    info.scrape_status = status_row[0]
             except sqlite3.Error:
                 row = None  # pre-migration database: no db_meta table
 
@@ -69,9 +81,6 @@ def get_freshness_info(db_path: str) -> FreshnessInfo:
                 if info.last_update.tzinfo is None:
                     info.last_update = info.last_update.replace(tzinfo=timezone.utc)
                 info.source = "db_meta"
-            else:
-                info.last_update = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
-                info.source = "file_mtime"
 
             for table, attr in (("matchups", "matchups_count"), ("synergies", "synergies_count")):
                 try:
@@ -95,25 +104,30 @@ def format_freshness_banner(info: FreshnessInfo) -> str:
     """
     if info.last_update is None:
         return (
-            "[ALERTE] DONNÉES INTROUVABLES — base absente ou illisible.\n"
+            "[ALERTE] FRAÎCHEUR INCONNUE — la base ne porte pas de date de mise à jour.\n"
             "         Lancez : python scripts/update_all.py"
         )
 
     age = info.age_days
     age_label = f"{age:.1f} j" if age >= 1 else f"{age * 24:.0f} h"
-    via = " (estimé via date du fichier)" if info.source == "file_mtime" else ""
 
     matchups = f"{info.matchups_count:,}".replace(",", " ")
     synergies = f"{info.synergies_count:,}".replace(",", " ")
     line = (
         f"Données : {matchups} matchups, {synergies} synergies — "
-        f"mises à jour il y a {age_label}{via}"
+        f"mises à jour il y a {age_label}"
     )
 
     if info.is_stale:
-        return (
+        banner = (
             f"[ALERTE] DONNÉES OBSOLÈTES ({age_label} > "
             f"{data_quality_config.FRESHNESS_WARNING_DAYS} j) — {line}\n"
             f"         Vérifiez la tâche planifiée ou lancez : python scripts/update_all.py"
         )
-    return f"[OK] {line}"
+    else:
+        banner = f"[OK] {line}"
+
+    if info.scrape_status and info.scrape_status != "ok":
+        banner += f"\n[ALERTE] Dernier run incomplet (statut: {info.scrape_status})."
+
+    return banner

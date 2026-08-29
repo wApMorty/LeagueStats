@@ -4,6 +4,23 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased] - 2026-08-29
 
+### ✨ Ajouts
+
+- **SPEC-01 A3 — fraîcheur mesurable.** `run_pipeline()` écrit désormais `last_scrape_utc`
+  dès la fin du scrape, **même si le contrôle de complétude échoue ensuite** — jusqu'ici un
+  run bloqué ne laissait aucune trace en base. `last_scrape_status` (`"ok"` / `"failed"`,
+  `"partial"` réservé à A4) est écrit après chaque run avec scrape, et `last_full_success_utc`
+  seulement quand tout le pipeline a abouti. `last_update_utc` reste écrit pour compatibilité
+  avec les bases existantes.
+  - `src/data_freshness.py` lit désormais `last_scrape_utc` en priorité (repli sur
+    `last_update_utc` pour les bases antérieures à A3).
+  - **Repli sur le `mtime` du fichier supprimé** : il mesurait la dernière *ouverture* de
+    `data/db.db` (réécrit à chaque session pour les pools/bans), pas la dernière mise à jour
+    des données — c'est ce qui a masqué six semaines de données obsolètes entre le 16/07 et
+    le 25/08 (`docs/AUDIT_2026_08.md` F2). Sans métadonnée, le bandeau affiche désormais
+    `[ALERTE] FRAÎCHEUR INCONNUE` au lieu d'un âge estimé.
+  - Le bandeau affiche une seconde ligne d'alerte quand `last_scrape_status != "ok"`.
+
 ### ♻️ Refactoring
 
 - **SPEC-01 A2 — convergence des deux orchestrateurs de pipeline.** `scripts/update_all.py`

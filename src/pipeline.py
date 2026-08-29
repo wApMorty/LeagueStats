@@ -190,6 +190,21 @@ def run_pipeline(
             parser.close()
             parser = None
 
+            # ── Freshness metadata, written as soon as the scrape itself is
+            # done — even if the completeness gate below fails (SPEC-01 A3).
+            # Otherwise a blocked run leaves no trace that a scrape happened.
+            cursor = db.connection.cursor()
+            cursor.execute("SELECT COUNT(*) FROM matchups")
+            matchups_count = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) FROM synergies")
+            synergies_count = cursor.fetchone()[0]
+            scrape_time_iso = datetime.now(timezone.utc).isoformat()
+            db.set_meta("last_scrape_utc", scrape_time_iso)
+            db.set_meta("last_update_utc", scrape_time_iso)  # compat: pre-A3 readers
+            db.set_meta("last_update_patch", str(resolved_patch))
+            db.set_meta("matchups_count", str(matchups_count))
+            db.set_meta("synergies_count", str(synergies_count))
+
             # ── 2. Completeness gate (before recalculating anything) ────────
             if skip_completeness:
                 logger.warning("Completeness check SKIPPED (--skip-completeness)")
@@ -218,19 +233,22 @@ def run_pipeline(
         assistant = None
 
         # ── 5. Freshness metadata ────────────────────────────────────────────
-        cursor = db.connection.cursor()
-        cursor.execute("SELECT COUNT(*) FROM matchups")
-        matchups_count = cursor.fetchone()[0]
-        cursor.execute("SELECT COUNT(*) FROM synergies")
-        synergies_count = cursor.fetchone()[0]
-
         if recompute_only:
+            cursor = db.connection.cursor()
+            cursor.execute("SELECT COUNT(*) FROM matchups")
+            matchups_count = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) FROM synergies")
+            synergies_count = cursor.fetchone()[0]
             db.set_meta("last_recompute_utc", datetime.now(timezone.utc).isoformat())
+            db.set_meta("last_update_patch", str(resolved_patch))
+            db.set_meta("matchups_count", str(matchups_count))
+            db.set_meta("synergies_count", str(synergies_count))
         else:
-            db.set_meta("last_update_utc", datetime.now(timezone.utc).isoformat())
-        db.set_meta("last_update_patch", str(resolved_patch))
-        db.set_meta("matchups_count", str(matchups_count))
-        db.set_meta("synergies_count", str(synergies_count))
+            # matchups_count/synergies_count/last_scrape_utc were already
+            # written right after the scrape, above — this only marks the
+            # pipeline as fully successful.
+            db.set_meta("last_scrape_status", "ok")
+            db.set_meta("last_full_success_utc", datetime.now(timezone.utc).isoformat())
 
         # ── 6. Success notification ──────────────────────────────────────────
         duration_min = (datetime.now() - start_time).total_seconds() / 60
@@ -256,6 +274,8 @@ def run_pipeline(
 
     except DataCompletenessError as e:
         logger.error("COMPLETENESS CHECK FAILED:\n%s", e)
+        if not recompute_only:
+            db.set_meta("last_scrape_status", "failed")
         notifier.notify_failure(
             "LeagueStats — Données incomplètes",
             f"Le scrape a terminé mais la volumétrie est insuffisante.\n{e}\n"
@@ -266,6 +286,8 @@ def run_pipeline(
     except Exception as e:
         logger.error("Pipeline FAILED: %s", e)
         logger.error(traceback.format_exc())
+        if not recompute_only and stats is not None:
+            db.set_meta("last_scrape_status", "failed")
         notifier.notify_failure(
             "LeagueStats — Échec mise à jour",
             f"{type(e).__name__}: {e}\nVoir {log_file}",
