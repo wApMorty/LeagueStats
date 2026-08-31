@@ -53,6 +53,16 @@ class Database:
                     cursor.execute("CREATE INDEX idx_champions_name ON champions(name)")
                     created_indexes.append("idx_champions_name")
 
+                # Index insensible à la casse : les jointures filtrent sur
+                # `c1.name = ? COLLATE NOCASE`, que idx_champions_name ne peut
+                # pas servir (SPEC-06 C4 — 6,68 ms/appel -> 0,11 ms/appel).
+                if "idx_champions_name_nocase" not in existing_indexes:
+                    cursor.execute(
+                        "CREATE INDEX idx_champions_name_nocase "
+                        "ON champions(name COLLATE NOCASE)"
+                    )
+                    created_indexes.append("idx_champions_name_nocase")
+
             if "matchups" in existing_tables:
                 # Indexes on matchups table for faster queries
                 if "idx_matchups_champion" not in existing_indexes:
