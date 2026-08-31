@@ -59,7 +59,7 @@
 
 | Id | Item | PV | D | ROI |
 |---|---|---|---|---|
-| B6 | Composer `pickrate × confiance(games)` | 13 | 5 | 2,6 |
+| B6 | ✅ Composer `pickrate × confiance(games)` | 13 | 5 | 2,6 |
 | B7 | Passage en log-odds (remplace winrate d'équipe + `delta2 → %`) | 13 | 8 | 1,6 |
 
 ### 5. Confort d'usage · [SPEC-06](docs/specs/SPEC-06-quickwins.md)

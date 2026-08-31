@@ -6,6 +6,42 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Ajouts
 
+- **SPEC-05 (B6) — composer `pickrate × confiance(games)`.** Le filtre de qualité
+  (`MIN_MATCHUP_GAMES = 200`) était binaire : au-delà du seuil, un matchup à 210
+  parties pesait exactement autant qu'un à 26 354. La pondération par `pickrate`
+  (qui sert à prédire le pick adverse) reste inchangée et **conservée** ; ce qui
+  manquait est une notion séparée de confiance statistique, composée avec elle par
+  produit, jamais en remplacement.
+  - Nouvelle constante `CONFIDENCE_K = 500` (`AnalysisConfig`, `src/config_constants.py`) :
+    un matchup à `CONFIDENCE_K` parties reçoit la moitié du poids d'un matchup
+    infiniment observé.
+  - `confidence(games) = games / (games + CONFIDENCE_K)` (`src/analysis/scoring.py`,
+    module-level, importable pour les tests). Exemple : `confidence(200) ≈ 0,29`,
+    `confidence(20 000) ≈ 0,98`.
+  - Le poids `pickrate` seul devient `pickrate × confidence(games)` dans
+    `ChampionScorer.avg_delta1`, `avg_delta2`, `avg_winrate`,
+    `calculate_synergy_bonus` (branche `USE_WEIGHTED_AVERAGE`), et dans
+    `Assistant.calculate_global_scores` (`decent_weight`, `total_weight`,
+    `excellent_impact`, `good_impact`, `viable_weight`). `filter_valid_matchups`
+    et le seuil `MIN_MATCHUP_GAMES` restent inchangés — le lissage complète le
+    filtre, il ne le remplace pas.
+  - Comparatif avant/après sur le pool réel (`data/db.db`, 25 473 matchups) : les
+    classements bougent peu en moyenne, mais les matchups à faible volume cessent
+    de peser autant que les gros échantillons. Les 5 champions les plus impactés
+    (`avg_delta2` avant → après) :
+    Rammus (0,153 → 0,322, +0,169), Nilah (0,262 → 0,394, +0,132),
+    Renata (0,318 → 0,432, +0,114), Skarner (0,003 → 0,084, +0,081),
+    Vex (0,020 → 0,077, +0,057) — tous des champions dont les matchups reposent
+    sur des échantillons plus petits que la médiane de la base.
+  - Tests : `tests/test_scoring_confidence.py` (nouveau) — effet du lissage sur
+    `avg_delta2`/`calculate_synergy_bonus`, ratio `confidence(200) ≈ 0,29` vs
+    `confidence(20 000) ≈ 0,98`, `CONFIDENCE_K` lue depuis `config_constants`
+    (jamais en dur), pondération par `pickrate` toujours active, seuil
+    `MIN_MATCHUP_GAMES` inchangé. Valeurs attendues recalculées (avec commentaire)
+    dans `tests/test_scoring.py`, `tests/test_regression_synergies.py` et
+    `tests/test_bidirectional_scoring.py` là où le nouveau poids change le
+    résultat exact d'une moyenne pondérée.
+
 - **SPEC-04 (B5) — afficher les rôles et permettre leur correction manuelle.** Dernière
   brique du chantier lane/rôles : le joueur voit ce que le Live Coach a déduit et peut
   le corriger sans redémarrer le monitor.
