@@ -3,7 +3,18 @@ import os
 import sys
 
 from sqlalchemy import engine_from_config
-from sqlalchemy import pool, MetaData, Table, Column, Integer, String, Float, TIMESTAMP, ForeignKey, text
+from sqlalchemy import (
+    pool,
+    MetaData,
+    Table,
+    Column,
+    Integer,
+    String,
+    Float,
+    TIMESTAMP,
+    ForeignKey,
+    text,
+)
 
 from alembic import context
 
@@ -25,41 +36,41 @@ target_metadata = MetaData()
 
 # Champions table - Riot API integration schema
 champions_table = Table(
-    'champions',
+    "champions",
     target_metadata,
-    Column('id', Integer, primary_key=True),
-    Column('key', String),
-    Column('name', String, nullable=False),
-    Column('title', String),
-    Column('created_at', TIMESTAMP, server_default=text('CURRENT_TIMESTAMP')),
-    Column('updated_at', TIMESTAMP, server_default=text('CURRENT_TIMESTAMP'))
+    Column("id", Integer, primary_key=True),
+    Column("key", String),
+    Column("name", String, nullable=False),
+    Column("title", String),
+    Column("created_at", TIMESTAMP, server_default=text("CURRENT_TIMESTAMP")),
+    Column("updated_at", TIMESTAMP, server_default=text("CURRENT_TIMESTAMP")),
 )
 
 # Matchups table - Champion vs Champion statistics
 matchups_table = Table(
-    'matchups',
+    "matchups",
     target_metadata,
-    Column('id', Integer, primary_key=True),
-    Column('champion', Integer, ForeignKey('champions.id', ondelete='CASCADE'), nullable=False),
-    Column('enemy', Integer, ForeignKey('champions.id', ondelete='CASCADE'), nullable=False),
-    Column('winrate', Float, nullable=False),
-    Column('delta1', Float, nullable=False),
-    Column('delta2', Float, nullable=False),
-    Column('pickrate', Float, nullable=False),
-    Column('games', Integer, nullable=False)
+    Column("id", Integer, primary_key=True),
+    Column("champion", Integer, ForeignKey("champions.id", ondelete="CASCADE"), nullable=False),
+    Column("enemy", Integer, ForeignKey("champions.id", ondelete="CASCADE"), nullable=False),
+    Column("winrate", Float, nullable=False),
+    Column("delta1", Float, nullable=False),
+    Column("delta2", Float, nullable=False),
+    Column("pickrate", Float, nullable=False),
+    Column("games", Integer, nullable=False),
 )
 
 # Champion scores table - Calculated tier list metrics
 champion_scores_table = Table(
-    'champion_scores',
+    "champion_scores",
     target_metadata,
-    Column('id', Integer, ForeignKey('champions.id', ondelete='CASCADE'), primary_key=True),
-    Column('avg_delta2', Float),
-    Column('variance', Float),
-    Column('coverage', Float),
-    Column('peak_impact', Float),
-    Column('volatility', Float),
-    Column('target_ratio', Float)
+    Column("id", Integer, ForeignKey("champions.id", ondelete="CASCADE"), primary_key=True),
+    Column("avg_delta2", Float),
+    Column("variance", Float),
+    Column("coverage", Float),
+    Column("peak_impact", Float),
+    Column("volatility", Float),
+    Column("target_ratio", Float),
 )
 
 # other values from the config, defined by the needs of env.py,
@@ -106,9 +117,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()
