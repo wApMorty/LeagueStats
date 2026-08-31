@@ -6,6 +6,50 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Ajouts
 
+- **SPEC-04 (B4) — inférer le rôle des 10 joueurs (affectation 5×5).** Le chantier
+  principal de SPEC-04 : deviner quel joueur joue quel rôle, des deux côtés du draft,
+  pour que chaque matchup soit évalué dans son contexte réel (Pantheon vaut +0,30 en
+  top et −0,08 en support).
+  - `src/role_inference.py` (nouveau) : `infer_team_roles(champion_ids, lane_distributions,
+    known_positions=None) -> RoleAssignment`. Affecte un rôle distinct à chaque champion
+    d'une équipe (1 à 5) par énumération exhaustive des permutations de lanes (≤ 5! = 120,
+    exact et instantané), en maximisant `Σ log(max(share, EPSILON))`. Les rôles connus du
+    LCU sont fixés en dur avant l'énumération. La confiance de chaque champion compare
+    l'affectation optimale à la meilleure alternative qui lui donnerait un autre rôle.
+    Module pur : aucun accès base, aucun I/O — testable en isolation.
+  - Nouvelle table `champion_lanes` (migration `9ed81a3f7fc2`) : persiste la distribution
+    de lanes complète d'un champion (top/jungle/middle/bottom/support en %), scrapée par
+    `src/lane_discovery.py` mais jetée jusqu'ici (seules les lanes retenues pour le scrape
+    étaient conservées). C'est la matrice de vraisemblance de l'inférence.
+    `discover_lanes_for_champions()` l'expose désormais via le paramètre optionnel
+    `distributions_out`, et `src/multilane.py`/`src/pipeline.py` la persistent à chaque
+    scrape. `Database.get_all_champion_lane_distributions()` se rabat sur le volume de
+    `matchups` (normalisé à 100 %) quand la table est vide (base pas encore re-scrapée).
+  - `DraftMonitor` charge la matrice une seule fois au démarrage (`_load_lane_distributions`,
+    jamais relue par tick — 120 permutations sont négligeables, une requête SQL par seconde
+    ne l'est pas) et appelle `infer_team_roles()` pour les deux équipes à chaque changement
+    de draft (`_parse_draft_state`), peuplant `DraftState.inferred_roles`/`role_confidence`.
+  - Branchement dans le scoring (`src/analysis/scoring.py:score_against_team`) : nouveaux
+    paramètres `enemy_lanes`/`player_lane` — l'adversaire qui joue notre lane (contre
+    direct) pèse `SAME_LANE_WEIGHT` (2.0, `RoleInferenceConfig`) dans le calcul bidirectionnel,
+    le reste de l'équipe ennemie `OTHER_LANE_WEIGHT` (1.0). Sans ces paramètres, comportement
+    historique inchangé (tous les adversaires pondérés également). `_calculate_synergy_score`
+    reçoit notre propre lane pour filtrer les synergies du candidat évalué.
+  - Hors périmètre de B4 (reporté à B5) : affichage rôle/source/volume dans le Live Coach,
+    correction manuelle d'un rôle par le joueur. Également non traité : filtrage par lane des
+    matchups du *candidat* lui-même (bypasserait le cache bidirectionnel d'`Assistant`,
+    changement plus profond réservé à un chantier séparé) et détection ARAM/mode sans lanes
+    (piège connu, §7 de la spec — l'inférence tourne mais ses conclusions sont hors sujet
+    dans ces modes).
+  - Tests : `tests/test_role_inference.py` (21 cas — équipe classique, unicité, contraintes
+    LCU, équipes partielles 1-5, distribution manquante, `EPSILON` empêche `log(0)`, cas
+    ambigu type Pantheon/Senna vs cas évident type Yuumi), `tests/test_champion_lanes_table.py`
+    (migration, upsert, repli matchups), `tests/test_bidirectional_scoring.py::TestLaneWeighting`,
+    `tests/test_draft_monitor_roles.py` (peuplement de `DraftState`, recalcul par pick, lane
+    effectivement transmise au scoring), `tests/regression/test_regression_role_uniqueness.py`
+    (invariant central : 50 compositions aléatoires, jamais deux rôles identiques). Temps
+    d'inférence mesuré : ~0.7ms pour les deux équipes (budget spec : < 5ms).
+
 - **SPEC-04 (B3) — exposer `assignedPosition` du LCU.** Première brique du chantier
   d'inférence des rôles : la session de champion select donne, pour chaque allié, un
   `assignedPosition` certain quand la file assigne les rôles.

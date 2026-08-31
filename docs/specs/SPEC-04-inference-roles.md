@@ -216,18 +216,18 @@ Le nombre de parties vient de la somme des `games` des matchups retenus (déjà 
 
 ## 5. Critères d'acceptation
 
-- [ ] En file classée, les rôles des 5 alliés viennent du LCU avec `source="lcu"` et `confidence=1.0`.
+- [x] En file classée, les rôles des 5 alliés viennent du LCU avec `source="lcu"` et `confidence=1.0`. Vérifié au niveau algorithme par `tests/test_role_inference.py::TestKnownPositions` et bout-en-bout (DraftState) par `tests/test_draft_monitor_roles.py::test_lcu_known_position_overrides_dominant_lane`. `DraftState` ne persiste pas le champ `source` (schéma fixé en B3) : seul `RoleAssignment.source` (interne à `role_inference.py`) le porte ; B5 le redérive via `ally_positions` pour l'affichage.
 - [x] `"utility"` est bien traduit en `"support"` (aucun `"utility"` ne parvient jusqu'aux requêtes SQL). Vérifié par `tests/test_lcu_assigned_positions.py`.
-- [ ] L'inférence sur une équipe ennemie complète renvoie **5 rôles distincts** — jamais deux junglers.
-- [ ] Un cas de test « équipe classique » (Ornn, Sejuani, Ahri, Jinx, Thresh) est résolu correctement à 100 %.
-- [ ] Un cas ambigu (Pantheon + Senna, jouables sur plusieurs rôles) renvoie une affectation cohérente avec une confiance faible sur les champions concernés.
-- [ ] L'inférence fonctionne sur une équipe partielle (1 à 4 champions) sans exception.
-- [ ] Un champion absent de `champion_lanes` (nouveau champion) ne fait pas planter : repli sur la distribution dérivée de `matchups`, ou confiance nulle.
-- [ ] Les rôles sont recalculés à chaque pick, et la confiance augmente à mesure que le draft se remplit.
-- [ ] Le scoring reçoit bien la lane : pour un même draft, forcer sa lane à `top` puis `support` change les recommandations.
-- [ ] L'affichage montre rôle, source et volume de parties.
-- [ ] Temps d'inférence < 5 ms pour les deux équipes (mesuré) — il tourne dans la boucle de polling.
-- [ ] `pytest tests/ -v` : 0 échec.
+- [x] L'inférence sur une équipe ennemie complète renvoie **5 rôles distincts** — jamais deux junglers. Vérifié par `tests/test_role_inference.py::TestRoleUniqueness` et `tests/regression/test_regression_role_uniqueness.py` (50 compositions aléatoires).
+- [x] Un cas de test « équipe classique » (Ornn, Sejuani, Ahri, Jinx, Thresh) est résolu correctement à 100 %. `tests/test_role_inference.py::TestClassicTeam::test_resolves_exactly`.
+- [x] Un cas ambigu (type Pantheon/Senna, jouables sur plusieurs rôles) renvoie une affectation cohérente avec une confiance faible sur les champions concernés (et une confiance élevée sur un cas évident type Yuumi). `tests/test_role_inference.py::TestAmbiguousCase`.
+- [x] L'inférence fonctionne sur une équipe partielle (1 à 4 champions) sans exception. `tests/test_role_inference.py::TestPartialTeams` (paramétré 1 à 5).
+- [x] Un champion absent de `champion_lanes` (nouveau champion) ne fait pas planter : repli sur la distribution dérivée de `matchups`, ou confiance nulle. `tests/test_champion_lanes_table.py::TestFallbackToMatchups`, `tests/test_role_inference.py::TestMissingDistribution`.
+- [ ] Les rôles sont recalculés à chaque pick (vérifié : `tests/test_draft_monitor_roles.py::test_recomputed_as_more_champions_are_picked`), et la confiance augmente à mesure que le draft se remplit (non vérifié spécifiquement — propriété émergente de l'algorithme, pas testée numériquement).
+- [x] Le scoring reçoit bien la lane : forcer sa lane à `top` puis `support` change les recommandations. Vérifié au niveau `ChampionScorer.score_against_team` (`tests/test_bidirectional_scoring.py::TestLaneWeighting`) et de son branchement dans `DraftMonitor` (`tests/test_draft_monitor_roles.py::TestLaneWiringIntoScoring`). La correction manuelle par le joueur (UI pour « forcer » sa lane) est B5 ; ici la lane vient du LCU ou des tests directs.
+- [ ] L'affichage montre rôle, source et volume de parties. Hors périmètre B4 — reporté à B5.
+- [x] Temps d'inférence < 5 ms pour les deux équipes (mesuré) — il tourne dans la boucle de polling. Mesuré manuellement : ~0.73 ms pour les deux équipes (10 champions, 100 itérations).
+- [x] `pytest tests/ -v` : 0 échec. 680 tests passent.
 
 ---
 
