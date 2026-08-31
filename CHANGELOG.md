@@ -2,9 +2,40 @@
 
 All notable changes to LeagueStats Coach will be documented in this file.
 
-## [Unreleased] - 2026-08-29
+## [Unreleased] - 2026-08-31
 
 ### ✨ Ajouts
+
+- **SPEC-03 (B1) — une seule politique d'agrégation multi-lane.** LoLalytics fournit une
+  ligne par lane : le même couple (champion, adversaire) existe jusqu'en cinq exemplaires.
+  Trois traitements divergents cohabitaient dans `src/db.py`, et le même matchup pouvait donc
+  être noté différemment selon le chemin de code emprunté (constat M2 de l'audit) :
+  - `get_matchup_delta2()` faisait la moyenne pondérée par `games` ;
+  - `get_all_matchups_bulk()` / `get_all_synergies_bulk()` **écrasaient** silencieusement les
+    lignes précédentes (`cache[(champ, enemy)] = delta2`), la survivante dépendant de l'ordre
+    de parcours SQL — 23 368 lignes pour 15 937 entrées de cache, soit **7 431 valeurs jetées** ;
+  - `get_champion_matchups_by_name()` ne regroupait **rien** : `Swain` renvoyait 376 lignes pour
+    103 adversaires distincts, et le scoring voyait quatre fois chaque adversaire ;
+  - `get_synergy_delta2()` faisait un `fetchone()` et renvoyait une lane arbitraire.
+  Nouveau module `src/analysis/aggregation.py` (113 lignes), seul dépositaire de la politique :
+  `delta2`/`winrate`/`delta1` en moyenne pondérée par `games`, `games` sommés, `pickrate` sommé.
+  Les huit accesseurs de lecture de `src/db.py` l'appellent désormais — `db.py` ne fait
+  qu'appeler, la logique n'y est pas dupliquée.
+  - **La forme des retours est inchangée** (tuples à 6 ou 4 colonnes, clés de cache
+    `(champion_lower, enemy_lower)`) : aucun appelant à modifier. Seules les *valeurs* bougent.
+  - Vérifié sur la base de production : `get_matchup_delta2(a, b)` et
+    `get_all_matchups_bulk()[(a, b)]` coïncident désormais sur 100 % des paires testées
+    (500 tirées au hasard, matchups et synergies) — c'est le test de régression central
+    `tests/regression/test_regression_bulk_vs_unitaire.py`.
+  - **Effet sur les scores — c'est une correction, pas une régression** : `avg_delta2` bouge
+    de 0,028 en moyenne (médiane 0,001), jusqu'à 0,357 pour les champions franchement
+    multi-lane (Heimerdinger +0,205 → −0,152, Smolder +0,333 → +0,080, Maokai −0,223 → −0,025).
+    `champion_scores` a été recalculé (173/173) sur la nouvelle base de lecture.
+  - `sum(m.games)` par champion est **inchangé** (les `games` sont sommés, pas moyennés) :
+    le seuil `MIN_GAMES_THRESHOLD` des tier lists n'a pas eu à être recalibré.
+  - Le test `test_multi_lane_synergy_is_games_weighted` était marqué `xfail(strict=True)`
+    depuis le portage de l'implémentation `server/` : il passe désormais, la divergence
+    matchups/synergies qu'il documentait n'existe plus.
 
 - **SPEC-01 A5 — sauvegarde avant `DROP`.** `run_pipeline()` snapshote désormais
   `data/db.db` (nouveau module `src/db_backup.py`, via `sqlite3.Connection.backup()` —

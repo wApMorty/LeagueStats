@@ -48,7 +48,7 @@
 
 | Id | Item | PV | D | ROI |
 |---|---|---|---|---|
-| B1 | Unifier l'agrégation multi-lane (bulk ≠ unitaire) | 13 | 3 | 4,3 |
+| B1 | ✅ Unifier l'agrégation multi-lane (bulk ≠ unitaire) | 13 | 3 | 4,3 |
 | B2 | Lecture filtrée par lane (accesseurs + scoring) | 21 | 8 | 2,6 |
 | B8 | Contrainte d'unicité `(champion, enemy, lane)` + dédoublonnage | 8 | 3 | 2,7 |
 | B3 | Exposer `assignedPosition` du LCU | 13 | 3 | 4,3 |
