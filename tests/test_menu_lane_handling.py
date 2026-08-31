@@ -34,7 +34,7 @@ def _setup_pipeline_mocks(monkeypatch, discovered_lane):
 
     monkeypatch.setattr(
         "src.multilane.discover_lanes_for_champions",
-        lambda champs, patch, normalize_func: {c: [discovered_lane] for c in champs},
+        lambda champs, patch, normalize_func, **kwargs: {c: [discovered_lane] for c in champs},
     )
 
     fake_parser = MagicMock()

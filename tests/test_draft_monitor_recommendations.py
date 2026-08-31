@@ -69,7 +69,7 @@ def test_displayed_breakdown_matches_the_ranking(monitor, state, capsys):
         patch.object(
             monitor,
             "_calculate_score_against_team",
-            side_effect=lambda matchups, enemies, name, bans: matchup_by_champion[name],
+            side_effect=lambda matchups, enemies, name, bans, **kwargs: matchup_by_champion[name],
         ),
         patch.object(monitor, "_calculate_synergy_score", return_value=0.0),
     ):

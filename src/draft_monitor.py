@@ -14,6 +14,7 @@ from .utils.console import clear_console
 from .constants import TOP_SOLOQ_POOL, CHAMPIONS_BY_ROLE, normalize_champion_name_for_onetricks
 from .config import config
 from .config_constants import draft_config
+from .role_inference import infer_team_roles
 
 # Dedicated logger for memory diagnostics. Writes to logs/draft_monitor_memory.log
 # so the RSS trace survives the frequent console clears during a draft session.
@@ -92,6 +93,8 @@ class DraftMonitor:
         self.assistant = Assistant()
         self.last_draft_state = DraftState()
         self.champion_id_to_name: Dict[int, str] = {}  # Riot ID -> Display name
+        # SPEC-04 B4 §7: loaded once at startup, never re-read per draft tick.
+        self.lane_distributions: Dict[int, Dict[str, float]] = {}
         self.is_monitoring = False
         self.verbose = verbose
         self.current_pool = TOP_SOLOQ_POOL  # Default pool
@@ -133,6 +136,7 @@ class DraftMonitor:
 
         # Load champion ID mappings
         self._load_champion_mappings()
+        self._load_lane_distributions()
 
         # Pool selection
         if not self.auto_select_pool:
@@ -574,6 +578,23 @@ class DraftMonitor:
             if self.verbose:
                 print(f"[WARNING] Error loading champion mappings: {e}")
 
+    def _load_lane_distributions(self):
+        """Load the lane likelihood matrix for role inference (SPEC-04 B4).
+
+        Loaded once here, not re-read from the DB on every draft tick — see
+        SPEC-04 §7 (120 permutations per team are negligible; a DB round
+        trip every second is not).
+        """
+        try:
+            self.lane_distributions = self.assistant.db.get_all_champion_lane_distributions()
+            if self.verbose:
+                print(
+                    f"[DATA] Loaded lane distributions for {len(self.lane_distributions)} champions"
+                )
+        except Exception as e:
+            if self.verbose:
+                print(f"[WARNING] Error loading lane distributions: {e}")
+
     def _get_display_name(self, champion_id: int) -> str:
         """Get display name for champion ID."""
         return self.champion_id_to_name.get(champion_id, f"Champion{champion_id}")
@@ -585,6 +606,8 @@ class DraftMonitor:
         champion_name: str,
         banned_champion_ids: List[int] = None,
         lane: Optional[str] = None,
+        enemy_lanes: Optional[Dict[str, str]] = None,
+        player_lane: Optional[str] = None,
     ) -> float:
         """Calculate score against enemy team using Assistant's method.
 
@@ -593,6 +616,10 @@ class DraftMonitor:
                   (cf. ChampionScorer.score_against_team). None = comportement
                   inchangé. La détection automatique de la lane est hors
                   périmètre ici (SPEC-04) : la valeur arrive de l'extérieur.
+            enemy_lanes: Enemy display name -> inferred lane (SPEC-04 §4.3),
+                  from state.inferred_roles. Weights the enemy sharing our
+                  lane above the rest of the enemy team.
+            player_lane: Our own (the local player's) lane.
         """
         if not matchups or not enemy_team:
             return 0.0
@@ -622,6 +649,8 @@ class DraftMonitor:
             champion_name,
             banned_names if banned_names else None,
             lane=lane,
+            enemy_lanes=enemy_lanes,
+            player_lane=player_lane,
         )
 
     def _calculate_synergy_score(
@@ -745,6 +774,27 @@ class DraftMonitor:
                     break
             if state.current_actor:
                 break
+
+        # SPEC-04 B4 §4.3: infer roles for both teams, recalculated on every
+        # parse so the picture sharpens as the draft fills in. Allies with a
+        # known assignedPosition are fixed; enemies are purely inferred
+        # (their assignedPosition is hidden by the LCU).
+        if state.ally_picks:
+            known_positions = {
+                player.get("championId"): state.ally_positions[player.get("cellId")]
+                for player in my_team
+                if player.get("championId", 0) > 0 and player.get("cellId") in state.ally_positions
+            }
+            ally_assignment = infer_team_roles(
+                state.ally_picks, self.lane_distributions, known_positions=known_positions
+            )
+            state.inferred_roles.update(ally_assignment.roles)
+            state.role_confidence.update(ally_assignment.confidence)
+
+        if state.enemy_picks:
+            enemy_assignment = infer_team_roles(state.enemy_picks, self.lane_distributions)
+            state.inferred_roles.update(enemy_assignment.roles)
+            state.role_confidence.update(enemy_assignment.confidence)
 
         return state
 
@@ -882,6 +932,16 @@ class DraftMonitor:
                 # Collect all banned champion IDs for score calculation
                 all_banned_ids = state.ally_bans + state.enemy_bans
 
+                # SPEC-04 B4 §4.3: our own lane (from the LCU, when the queue
+                # assigns one) and the enemy team's inferred lanes, for the
+                # same-lane weighting in _calculate_score_against_team.
+                player_lane = state.ally_positions.get(state.local_player_cell_id)
+                enemy_lanes = {
+                    self._get_display_name(enemy_id): state.inferred_roles[enemy_id]
+                    for enemy_id in enemy_picks
+                    if enemy_id in state.inferred_roles
+                }
+
                 # Debug: show current bans
                 if self.verbose:
                     if state.ally_bans or state.enemy_bans:
@@ -908,11 +968,18 @@ class DraftMonitor:
                     ):  # Threshold for valid data
                         # Calculate matchup score against enemy team
                         matchup_score = self._calculate_score_against_team(
-                            matchups, enemy_picks, champion_name, all_banned_ids
+                            matchups,
+                            enemy_picks,
+                            champion_name,
+                            all_banned_ids,
+                            enemy_lanes=enemy_lanes,
+                            player_lane=player_lane,
                         )
 
                         # Calculate synergy score with allied champions
-                        synergy_score = self._calculate_synergy_score(champion_name, ally_picks)
+                        synergy_score = self._calculate_synergy_score(
+                            champion_name, ally_picks, lane=player_lane
+                        )
 
                         # Final score = configurable blend of matchup and synergy (see _final_score)
                         final_score = self._final_score(matchup_score, synergy_score)
