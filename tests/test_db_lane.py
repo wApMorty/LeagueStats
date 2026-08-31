@@ -132,8 +132,13 @@ class TestAlembicMigration:
         config = Config("alembic.ini")
         script = ScriptDirectory.from_config(config)
 
-        head = script.get_current_head()
-        assert head == "b7e41c9a3f02"
+        # Une seule tête : les migrations restent une chaîne linéaire
+        heads = script.get_heads()
+        assert len(heads) == 1
 
         migration = script.get_revision("b7e41c9a3f02")
         assert migration.down_revision == "cc46f5edf9b2"
+
+        # La migration lane appartient bien à l'historique de la tête courante
+        ancestors = {rev.revision for rev in script.iterate_revisions(heads[0], "base")}
+        assert "b7e41c9a3f02" in ancestors

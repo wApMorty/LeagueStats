@@ -86,3 +86,14 @@ def test_matchup_query_uses_the_nocase_index(db_with_matchup):
 def test_lookup_stays_case_insensitive(db_with_matchup, name):
     """L'insensibilité à la casse est conservée après ajout de l'index."""
     assert db_with_matchup.get_matchup_delta2(name, "caitlyn") == pytest.approx(150.0)
+
+
+def test_migration_is_chained_on_head():
+    """La migration ab14babf365b est la tête et suit b7e41c9a3f02."""
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
+
+    script = ScriptDirectory.from_config(Config("alembic.ini"))
+
+    assert list(script.get_heads()) == ["ab14babf365b"]
+    assert script.get_revision("ab14babf365b").down_revision == "b7e41c9a3f02"
