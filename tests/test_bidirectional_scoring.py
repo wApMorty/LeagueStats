@@ -378,3 +378,56 @@ class TestBidirectionalAdvantage:
 
         # With simple mean giving higher enemy advantage, our net should be lower
         assert result < wrong_result_if_symmetric
+
+
+class TestLaneWeighting:
+    """SPEC-04 §4.3: the enemy sharing our lane counts more (SAME_LANE_WEIGHT)
+    than the rest of the enemy team (OTHER_LANE_WEIGHT), on both perspectives."""
+
+    def test_same_lane_enemy_weighted_more_than_other_lane(self, db, scorer, insert_matchup):
+        # Aatrox crushes Darius (top, our direct counter) but struggles vs Garen (jungle).
+        insert_matchup("Aatrox", "Darius", 60.0, 150, 200, 10.0, 2000)
+        insert_matchup("Aatrox", "Garen", 45.0, -150, -200, 10.0, 2000)
+        insert_matchup("Darius", "Aatrox", 40.0, -150, -200, 10.0, 2000)
+        insert_matchup("Garen", "Aatrox", 55.0, 150, 200, 10.0, 2000)
+
+        aatrox_matchups = db.get_champion_matchups_by_name("Aatrox")
+
+        result_same_lane_darius = scorer.score_against_team(
+            aatrox_matchups,
+            ["Darius", "Garen"],
+            champion_name="Aatrox",
+            enemy_lanes={"Darius": "top", "Garen": "jungle"},
+            player_lane="top",
+        )
+        result_same_lane_garen = scorer.score_against_team(
+            aatrox_matchups,
+            ["Darius", "Garen"],
+            champion_name="Aatrox",
+            enemy_lanes={"Darius": "top", "Garen": "jungle"},
+            player_lane="jungle",
+        )
+
+        # Weighting the favorable matchup (Darius) more should score higher
+        # than weighting the unfavorable one (Garen) more.
+        assert result_same_lane_darius > result_same_lane_garen
+
+    def test_no_lane_info_matches_unweighted_behavior(self, db, scorer, insert_matchup):
+        insert_matchup("Aatrox", "Darius", 60.0, 150, 200, 10.0, 2000)
+        insert_matchup("Aatrox", "Garen", 45.0, -150, -200, 10.0, 2000)
+        insert_matchup("Darius", "Aatrox", 40.0, -150, -200, 10.0, 2000)
+        insert_matchup("Garen", "Aatrox", 55.0, 150, 200, 10.0, 2000)
+
+        aatrox_matchups = db.get_champion_matchups_by_name("Aatrox")
+
+        unweighted = scorer.score_against_team(
+            aatrox_matchups, ["Darius", "Garen"], champion_name="Aatrox"
+        )
+        no_player_lane = scorer.score_against_team(
+            aatrox_matchups,
+            ["Darius", "Garen"],
+            champion_name="Aatrox",
+            enemy_lanes={"Darius": "top", "Garen": "jungle"},
+        )
+
+        assert unweighted == pytest.approx(no_player_lane)

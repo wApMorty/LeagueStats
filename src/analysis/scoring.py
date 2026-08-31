@@ -4,7 +4,7 @@ from typing import List, Optional, Union
 import math
 
 from ..db import Database
-from ..config_constants import analysis_config
+from ..config_constants import analysis_config, role_inference_config
 from ..models import Matchup
 
 
@@ -124,6 +124,24 @@ class ChampionScorer:
 
         return advantage
 
+    def _lane_weight(
+        self, enemy_name: str, enemy_lanes: Optional[dict], player_lane: Optional[str]
+    ) -> float:
+        """Weight of one enemy's matchup, by lane proximity (SPEC-04 §4.3).
+
+        The enemy sharing our lane is our direct counter and counts more
+        than the rest of the enemy team. Defaults to OTHER_LANE_WEIGHT
+        (1.0) whenever lane info is missing, which keeps this a no-op
+        (identical to pre-SPEC-04 behavior) unless both `player_lane` and
+        this enemy's inferred lane are known.
+        """
+        if not enemy_lanes or not player_lane:
+            return role_inference_config.OTHER_LANE_WEIGHT
+        enemy_lane = enemy_lanes.get(enemy_name)
+        if enemy_lane == player_lane:
+            return role_inference_config.SAME_LANE_WEIGHT
+        return role_inference_config.OTHER_LANE_WEIGHT
+
     def score_against_team(
         self,
         matchups: List[Matchup],
@@ -131,6 +149,8 @@ class ChampionScorer:
         champion_name: str = None,
         banned_champions: List[str] = None,
         lane: Optional[str] = None,
+        enemy_lanes: Optional[dict] = None,
+        player_lane: Optional[str] = None,
     ) -> float:
         """
         Calculate bidirectional advantage against a team composition.
@@ -160,6 +180,13 @@ class ChampionScorer:
                   (self.db.get_matchup_delta2). None = agrégation toutes lanes,
                   comportement inchangé. `matchups` est supposée déjà filtrée par
                   l'appelant si un filtrage par lane est voulu sur ce côté.
+            enemy_lanes: Optional enemy name -> inferred lane (SPEC-04 §4.3).
+                  Combined with `player_lane` to weight the enemy sharing our
+                  lane (SAME_LANE_WEIGHT) above the rest of the team
+                  (OTHER_LANE_WEIGHT). None = every enemy weighted equally,
+                  comportement inchangé.
+            player_lane: Our own champion's lane. Required alongside
+                  `enemy_lanes` for the weighting above to take effect.
 
         Returns:
             Net advantage in percentage points (positive = favorable for us)
@@ -198,13 +225,15 @@ class ChampionScorer:
         matchup_count = 0
         remaining_matchups = matchups.copy()
 
-        # Calculate delta2 for known matchups
+        # Calculate delta2 for known matchups, weighted by lane proximity
+        # (SPEC-04 §4.3): our direct counter (same lane) counts more than
+        # the rest of the enemy team.
         for enemy in team:
             for i, matchup in enumerate(remaining_matchups):
                 if matchup.enemy_name.lower() == enemy.lower():
-                    delta2 = matchup.delta2
-                    total_delta2 += delta2
-                    matchup_count += 1
+                    weight = self._lane_weight(enemy, enemy_lanes, player_lane)
+                    total_delta2 += matchup.delta2 * weight
+                    matchup_count += weight
                     remaining_matchups.pop(i)
                     break
 
@@ -238,19 +267,23 @@ class ChampionScorer:
             # Query enemy's perspective: their delta2 vs our champion
             enemy_delta2 = self.db.get_matchup_delta2(enemy, champion_name, lane=lane)
             if enemy_delta2 is not None:
-                enemy_perspective_deltas.append(enemy_delta2)
+                weight = self._lane_weight(enemy, enemy_lanes, player_lane)
+                enemy_perspective_deltas.append((enemy_delta2, weight))
             else:
                 missing_enemies.append(enemy)
 
-        # Calculate average enemy advantage against us (simple mean, not weighted)
+        # Calculate average enemy advantage against us, weighted by lane
+        # proximity (SPEC-04 §4.3; equal weighting — i.e. a plain mean — when
+        # enemy_lanes/player_lane are absent, which is the pre-SPEC-04 case).
         # NOTE: Unlike our advantage calculation which is weighted by pickrate,
-        # enemy advantage uses simple mean because:
+        # enemy advantage otherwise uses simple mean because:
         # 1. We're querying individual matchups (no aggregation needed)
         # 2. Equal weighting of all enemies reflects symmetric team threat
         # 3. Pickrate weighting would undervalue niche counters
         if enemy_perspective_deltas:
-            enemy_avg_delta2_against_us = sum(enemy_perspective_deltas) / len(
-                enemy_perspective_deltas
+            total_weight = sum(weight for _, weight in enemy_perspective_deltas)
+            enemy_avg_delta2_against_us = (
+                sum(delta2 * weight for delta2, weight in enemy_perspective_deltas) / total_weight
             )
             enemy_advantage_against_us = self.delta2_to_win_advantage(
                 enemy_avg_delta2_against_us, champion_name
