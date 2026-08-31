@@ -336,6 +336,7 @@ python -m alembic revision -m "Description"
 5. ❌ Fichiers >500 lignes
 6. ❌ Code non testé en production
 7. ❌ Breaking changes sans migration
+8. ❌ Commit en Co-Author. Tu n'es qu'un outil, je suis pleinement responsable du code.
 
 ---
 
