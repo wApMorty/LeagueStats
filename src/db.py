@@ -944,6 +944,81 @@ class Database:
             print(f"[ERROR] Failed to load bulk matchups: {e}")
             return {}
 
+    # ========== Champion Lanes Methods (SPEC-04 B4) ==========
+
+    def save_champion_lane_distribution(
+        self, champion_id: int, distribution: Dict[str, float]
+    ) -> None:
+        """Upsert a champion's full lane distribution (champion_lanes table).
+
+        Args:
+            champion_id: Internal champion id (champions.id)
+            distribution: lane -> share of the champion's games, in percent
+                          (e.g. {"top": 75.1, "jungle": 22.0, ...}). No-op if empty.
+        """
+        if not distribution:
+            return
+        cursor = self.connection.cursor()
+        try:
+            cursor.executemany(
+                """
+                INSERT INTO champion_lanes (champion, lane, share) VALUES (?, ?, ?)
+                ON CONFLICT(champion, lane) DO UPDATE SET share = excluded.share
+                """,
+                [(champion_id, lane, share) for lane, share in distribution.items()],
+            )
+            self.connection.commit()
+        except Error as e:
+            print(f"The error '{e}' occurred")
+
+    def get_all_champion_lane_distributions(self) -> Dict[int, Dict[str, float]]:
+        """All champion lane distributions, for role_inference.py's likelihood matrix.
+
+        Loaded once (2 bulk queries, not one per champion) — meant to be cached
+        by the caller at startup rather than re-read every draft tick (SPEC-04 §7).
+
+        Champions absent from champion_lanes (not yet re-scraped since this
+        table was introduced) fall back to their matchups games volume,
+        normalized to 100% — an imperfect proxy (a matchup's game count isn't
+        the champion's) but enough to bootstrap before the next full rescrape.
+
+        Returns:
+            championId -> {lane -> share%}. A champion with no data at all
+            (new champion, no matchups either) is simply absent.
+        """
+        distributions: Dict[int, Dict[str, float]] = {}
+        cursor = self.connection.cursor()
+        try:
+            cursor.execute("SELECT champion, lane, share FROM champion_lanes")
+            for champion_id, lane, share in cursor.fetchall():
+                distributions.setdefault(champion_id, {})[lane] = share
+        except Error as e:
+            print(f"The error '{e}' occurred")
+
+        try:
+            cursor.execute(
+                "SELECT champion, lane, SUM(games) FROM matchups WHERE lane != ? "
+                "GROUP BY champion, lane",
+                (scraping_config.DEFAULT_LANE,),
+            )
+            fallback_games: Dict[int, Dict[str, int]] = {}
+            for champion_id, lane, games in cursor.fetchall():
+                fallback_games.setdefault(champion_id, {})[lane] = games
+        except Error as e:
+            print(f"The error '{e}' occurred")
+            fallback_games = {}
+
+        for champion_id, lane_games in fallback_games.items():
+            if champion_id in distributions:
+                continue  # champion_lanes already has real data, don't override
+            total = sum(lane_games.values())
+            if total:
+                distributions[champion_id] = {
+                    lane: (games / total) * 100.0 for lane, games in lane_games.items()
+                }
+
+        return distributions
+
     # ========== Synergies Methods ==========
 
     def add_synergy(

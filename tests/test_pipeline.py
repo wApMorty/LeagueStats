@@ -317,7 +317,7 @@ class TestRepairIncompleteChampions:
             synergies_below_threshold=[("Zed", 10)],
         )
         discover_mock = MagicMock(
-            side_effect=lambda champions, patch, normalize_func: {
+            side_effect=lambda champions, patch, normalize_func, **kwargs: {
                 champ: ["bottom"] for champ in champions
             }
         )

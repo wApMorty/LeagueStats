@@ -153,9 +153,17 @@ def _repair_incomplete_champions(
             ", ".join(incomplete),
         )
         try:
+            lane_distributions: Dict[str, dict] = {}
             lane_map = discover_lanes_for_champions(
-                incomplete, patch, normalize_champion_name_for_url
+                incomplete,
+                patch,
+                normalize_champion_name_for_url,
+                distributions_out=lane_distributions,
             )
+            for champion, distribution in lane_distributions.items():
+                champion_id = db.get_champion_id(champion)
+                if champion_id is not None:
+                    db.save_champion_lane_distribution(champion_id, distribution)
             groups = group_champions_by_lane(lane_map)
             results[target.name] = repair_parallel(
                 target, db, groups, patch, max_workers, target.default_headless, logger

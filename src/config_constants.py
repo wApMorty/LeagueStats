@@ -172,6 +172,24 @@ class DraftConfig:
 
 
 @dataclass
+class RoleInferenceConfig:
+    """Configuration for team role inference (SPEC-04 B4, src/role_inference.py)."""
+
+    # Floor applied to a champion's lane share before taking log() — a lane
+    # never played (share=0) must become an improbable assignment, not an
+    # impossible one (log(0)), since the only valid assignment sometimes
+    # requires it (exotic comp). In percent, same unit as champion_lanes.share.
+    EPSILON: float = 0.5
+
+    # Weighting of enemy matchups by lane proximity when scoring a candidate
+    # (SPEC-04 §4.3): the enemy sharing our lane is the direct counter and
+    # counts more than the rest of the enemy team. Provisional values, to be
+    # calibrated with SPEC-05.
+    SAME_LANE_WEIGHT: float = 2.0
+    OTHER_LANE_WEIGHT: float = 1.0
+
+
+@dataclass
 class UIConfig:
     """Configuration for user interface and display."""
 
@@ -287,6 +305,7 @@ class DataQualityConfig:
 scraping_config = ScrapingConfig()
 analysis_config = AnalysisConfig()
 draft_config = DraftConfig()
+role_inference_config = RoleInferenceConfig()
 ui_config = UIConfig()
 xpath_config = XPathConfig()
 pool_stats_config = PoolStatisticsConfig()

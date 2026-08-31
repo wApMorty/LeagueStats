@@ -101,7 +101,10 @@ def scrape_all_multilane(
     logger.info("Multi-lane scrape starting for %d champions", len(champions))
 
     # ── 2. Lane discovery (cheap HTTP, parallel) ─────────────────────────────
-    lane_map = discover_lanes_for_champions(champions, parser.patch_version, normalize_func)
+    lane_distributions: Dict[str, Dict[str, float]] = {}
+    lane_map = discover_lanes_for_champions(
+        champions, parser.patch_version, normalize_func, distributions_out=lane_distributions
+    )
     discovery_failures = sorted(champ for champ, lanes in lane_map.items() if not lanes)
     if discovery_failures:
         logger.warning(
@@ -109,6 +112,13 @@ def scrape_all_multilane(
             len(discovery_failures),
             ", ".join(discovery_failures),
         )
+
+    # Persist the full distribution for role inference (SPEC-04 §4.1) — the
+    # likelihood matrix the Live Coach needs, discarded until now.
+    for champion, distribution in lane_distributions.items():
+        champion_id = db.get_champion_id(champion)
+        if champion_id is not None:
+            db.save_champion_lane_distribution(champion_id, distribution)
 
     groups = group_champions_by_lane(lane_map)
     pages_per_phase = sum(len(champs) for champs in groups.values())

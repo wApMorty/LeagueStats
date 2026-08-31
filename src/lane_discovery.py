@@ -130,6 +130,7 @@ def discover_lanes_for_champions(
     patch: str,
     normalize_func,
     max_workers: Optional[int] = None,
+    distributions_out: Optional[Dict[str, Dict[str, float]]] = None,
 ) -> Dict[str, List[str]]:
     """Discover the lanes to scrape for every champion, in parallel.
 
@@ -138,6 +139,12 @@ def discover_lanes_for_champions(
         patch: LoLalytics patch parameter
         normalize_func: Champion name -> URL-normalized name
         max_workers: Thread count (default: scraping_config.LANE_DISCOVERY_MAX_WORKERS)
+        distributions_out: If given, populated in place with the full
+            distribution (all lanes, not just those above the scrape
+            threshold) for every successfully discovered champion — SPEC-04
+            §4.1 persists this as role_inference.py's likelihood matrix.
+            Failed champions are absent from it (unlike the return value,
+            which maps them to []).
 
     Returns:
         Mapping champion name -> lanes to scrape (descending share).
@@ -163,6 +170,8 @@ def discover_lanes_for_champions(
                 try:
                     distribution = future.result()
                     results[champion] = select_lanes(distribution)
+                    if distributions_out is not None:
+                        distributions_out[champion] = distribution
                     logger.info(
                         "Lanes for %s: %s (distribution: %s)",
                         champion,
