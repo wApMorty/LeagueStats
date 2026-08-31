@@ -78,8 +78,9 @@ class TestGetSynergyDelta2MultiLaneRegression:
         result = db_with_synergies.get_synergy_delta2("Yasuo", "Malphite")
 
         assert result is not None
-        # Current SQLite implementation returns one of the per-lane rows
-        assert result in (220.0, 180.0, 200.0)
+        # Depuis SPEC-03 / B1 : agrégation pondérée par games, plus une lane
+        # arbitraire. La valeur agrégée n'est donc plus l'une des lignes.
+        assert result not in (220.0, 180.0, 200.0)
 
     def test_single_row_synergy(self, db_with_synergies):
         """Single-lane pair returns that row's delta2."""
@@ -97,14 +98,14 @@ class TestGetSynergyDelta2MultiLaneRegression:
         """Unknown ally returns None."""
         assert db_with_synergies.get_synergy_delta2("Yasuo", "InvalidAlly") is None
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="src/db.py::get_synergy_delta2 uses fetchone() and picks an arbitrary "
-        "lane row, while get_matchup_delta2 aggregates a games-weighted average. "
-        "Divergence inherited from the decommissioned server/ implementation.",
-    )
     def test_multi_lane_synergy_is_games_weighted(self, db_with_synergies):
-        """Multi-lane synergies should aggregate like matchups do (weighted by games)."""
+        """Multi-lane synergies aggregate like matchups do (weighted by games).
+
+        Était `xfail(strict=True)` avant SPEC-03 / B1 : `get_synergy_delta2`
+        utilisait `fetchone()` et renvoyait une lane arbitraire, alors que
+        `get_matchup_delta2` faisait déjà la moyenne pondérée. Les deux passent
+        désormais par `src/analysis/aggregation.py`.
+        """
         expected = (220.0 * 800 + 180.0 * 400 + 200.0 * 600) / (800 + 400 + 600)
         assert db_with_synergies.get_synergy_delta2("Yasuo", "Malphite") == pytest.approx(
             expected, abs=0.01

@@ -4,6 +4,12 @@ from typing import List, Optional, Dict, Union, Tuple
 import requests
 from .constants import CHAMPIONS_LIST
 from .models import Matchup, MatchupDraft, Synergy
+from .analysis.aggregation import (
+    aggregate_full_rows,
+    aggregate_pairs,
+    aggregate_rows,
+    weighted_delta2,
+)
 
 
 class Database:
@@ -333,14 +339,20 @@ class Database:
             """,
                 (champ_id,),
             )
-            result = cursor.fetchall()
+            # Agrégation multi-lane : une entrée par adversaire distinct
+            # (cf. src/analysis/aggregation.py). La forme des tuples reste
+            # inchangée, seules les valeurs bougent.
+            rows = [
+                (a.peer_name, a.winrate, a.delta1, a.delta2, a.pickrate, a.games)
+                for a in aggregate_full_rows(cursor.fetchall()).values()
+            ]
 
             # Convert to dataclasses if requested (default)
             if as_dataclass:
-                return [Matchup.from_tuple(row) for row in result]
+                return [Matchup.from_tuple(row) for row in rows]
             else:
                 # Backward compatibility: return tuples
-                return result
+                return rows
         except Error as e:
             print(f"The error '{e}' occurred")
             return []
@@ -605,14 +617,18 @@ class Database:
             """,
                 (champ_id,),
             )
-            result = cursor.fetchall()
+            # Agrégation multi-lane (cf. src/analysis/aggregation.py)
+            rows = [
+                (a.peer_name, a.delta2, a.pickrate, a.games)
+                for a in aggregate_rows(cursor.fetchall()).values()
+            ]
 
             # Convert to dataclasses if requested (default)
             if as_dataclass:
-                return [MatchupDraft.from_tuple(row) for row in result]
+                return [MatchupDraft.from_tuple(row) for row in rows]
             else:
                 # Backward compatibility: return tuples
-                return result
+                return rows
         except Error as e:
             print(f"The error '{e}' occurred")
             return []
@@ -674,15 +690,19 @@ class Database:
             """,
                 (champ_id,),
             )
-            result = cursor.fetchall()
+            # Agrégation multi-lane : une entrée par picker distinct
+            rows = [
+                (a.peer_name, a.delta2, a.pickrate, a.games)
+                for a in aggregate_rows(cursor.fetchall()).values()
+            ]
 
             # Convert to dataclasses if requested (default)
             if as_dataclass:
                 # Note: We reuse MatchupDraft but enemy_name contains the "picker"
-                return [MatchupDraft.from_tuple(row) for row in result]
+                return [MatchupDraft.from_tuple(row) for row in rows]
             else:
                 # Backward compatibility: return tuples
-                return result
+                return rows
         except Error as e:
             print(f"The error '{e}' occurred")
             return []
@@ -828,16 +848,10 @@ class Database:
                 (champion_name, enemy_name),
             )
 
-            rows = cursor.fetchall()
-            if not rows:
-                return None
-
-            # Python aggregation: weighted average by games
-            # Formula: SUM(delta2 * games) / SUM(games)
-            total_weighted = sum(row[0] * row[1] for row in rows)
-            total_games = sum(row[1] for row in rows)
-
-            return total_weighted / total_games if total_games > 0 else None
+            # Politique d'agrégation unique : SUM(delta2 * games) / SUM(games)
+            # (cf. src/analysis/aggregation.py). Doit rester cohérente avec
+            # get_all_matchups_bulk() — c'est l'incohérence M2 de l'audit.
+            return weighted_delta2(cursor.fetchall())
 
         except Exception as e:
             # Always log database errors - these are unexpected and need visibility
@@ -862,7 +876,7 @@ class Database:
 
             # Load all valid matchups in one query
             cursor.execute("""
-                SELECT c1.name, c2.name, m.delta2
+                SELECT c1.name, c2.name, m.delta2, m.games
                 FROM matchups m
                 JOIN champions c1 ON m.champion = c1.id
                 JOIN champions c2 ON m.enemy = c2.id
@@ -870,14 +884,10 @@ class Database:
                 AND m.games >= 200
             """)
 
-            # Build cache dictionary
-            matchup_cache = {}
-            for champion_name, enemy_name, delta2 in cursor.fetchall():
-                # Normalize to lowercase for case-insensitive lookup
-                key = (champion_name.lower(), enemy_name.lower())
-                matchup_cache[key] = float(delta2)
-
-            return matchup_cache
+            # Agrégation multi-lane, clés en minuscules : même politique et donc
+            # mêmes valeurs que get_matchup_delta2(). Avant B1, la dernière ligne
+            # SQL écrasait les précédentes (10 699 valeurs jetées en silence).
+            return aggregate_pairs(cursor.fetchall())
 
         except Exception as e:
             print(f"[ERROR] Failed to load bulk matchups: {e}")
@@ -972,14 +982,18 @@ class Database:
             """,
                 (champ_id,),
             )
-            result = cursor.fetchall()
+            # Agrégation multi-lane : une entrée par allié distinct
+            rows = [
+                (a.peer_name, a.winrate, a.delta1, a.delta2, a.pickrate, a.games)
+                for a in aggregate_full_rows(cursor.fetchall()).values()
+            ]
 
             # Convert to dataclasses if requested (default)
             if as_dataclass:
-                return [Synergy.from_tuple(row) for row in result]
+                return [Synergy.from_tuple(row) for row in rows]
             else:
                 # Backward compatibility: return tuples
-                return result
+                return rows
 
         except Error as e:
             print(f"The error '{e}' occurred")
@@ -1061,7 +1075,7 @@ class Database:
             cursor = self.connection.cursor()
             cursor.execute(
                 """
-                SELECT delta2
+                SELECT delta2, games
                 FROM synergies
                 WHERE champion = ? AND ally = ?
                 AND pickrate >= 0.5
@@ -1070,11 +1084,10 @@ class Database:
                 (champ_id, ally_id),
             )
 
-            result = cursor.fetchone()
-            if result:
-                return float(result[0])
-            else:
-                return None
+            # Agrégation multi-lane pondérée par games, comme pour les matchups
+            # (cf. src/analysis/aggregation.py). Avant B1, fetchone() renvoyait
+            # une lane arbitraire.
+            return weighted_delta2(cursor.fetchall())
 
         except Exception as e:
             print(f"[ERROR] Database error getting synergy {champion_name} with {ally_name}: {e}")
@@ -1097,7 +1110,7 @@ class Database:
 
             # Load all valid synergies in one query
             cursor.execute("""
-                SELECT c1.name, c2.name, s.delta2
+                SELECT c1.name, c2.name, s.delta2, s.games
                 FROM synergies s
                 JOIN champions c1 ON s.champion = c1.id
                 JOIN champions c2 ON s.ally = c2.id
@@ -1105,14 +1118,9 @@ class Database:
                 AND s.games >= 200
             """)
 
-            # Build cache dictionary
-            synergy_cache = {}
-            for champion_name, ally_name, delta2 in cursor.fetchall():
-                # Normalize to lowercase for case-insensitive lookup
-                key = (champion_name.lower(), ally_name.lower())
-                synergy_cache[key] = float(delta2)
-
-            return synergy_cache
+            # Agrégation multi-lane, clés en minuscules : mêmes valeurs que
+            # get_synergy_delta2().
+            return aggregate_pairs(cursor.fetchall())
 
         except Exception as e:
             print(f"[ERROR] Failed to load bulk synergies: {e}")
