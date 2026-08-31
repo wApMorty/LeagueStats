@@ -1,6 +1,6 @@
 """Scoring algorithms for champion matchups and team compositions."""
 
-from typing import List, Union
+from typing import List, Optional, Union
 import math
 
 from ..db import Database
@@ -130,6 +130,7 @@ class ChampionScorer:
         team: List[str],
         champion_name: str = None,
         banned_champions: List[str] = None,
+        lane: Optional[str] = None,
     ) -> float:
         """
         Calculate bidirectional advantage against a team composition.
@@ -155,6 +156,10 @@ class ChampionScorer:
             team: Enemy team composition (may be partial, e.g., [1-5] enemies)
             champion_name: Name of our champion (required for reverse matchup lookup)
             banned_champions: List of banned champion names to exclude from blind pick calculations
+            lane: Optional lane, transmise aux requêtes inverses internes
+                  (self.db.get_matchup_delta2). None = agrégation toutes lanes,
+                  comportement inchangé. `matchups` est supposée déjà filtrée par
+                  l'appelant si un filtrage par lane est voulu sur ce côté.
 
         Returns:
             Net advantage in percentage points (positive = favorable for us)
@@ -231,7 +236,7 @@ class ChampionScorer:
 
         for enemy in team:
             # Query enemy's perspective: their delta2 vs our champion
-            enemy_delta2 = self.db.get_matchup_delta2(enemy, champion_name)
+            enemy_delta2 = self.db.get_matchup_delta2(enemy, champion_name, lane=lane)
             if enemy_delta2 is not None:
                 enemy_perspective_deltas.append(enemy_delta2)
             else:
@@ -318,7 +323,9 @@ class ChampionScorer:
 
         return {"team_winrate": team_winrate, "individual_winrates": clamped_winrates}
 
-    def calculate_synergy_bonus(self, champion_name: str, ally_names: List[str]) -> float:
+    def calculate_synergy_bonus(
+        self, champion_name: str, ally_names: List[str], lane: Optional[str] = None
+    ) -> float:
         """Calculate synergy bonus for a champion with given allies.
 
         Formula: weighted average of delta2 values from synergies table.
@@ -327,6 +334,8 @@ class ChampionScorer:
         Args:
             champion_name: Name of the champion
             ally_names: List of allied champion names
+            lane: Optional lane filter transmise à get_champion_synergies_by_name.
+                  None = agrégation toutes lanes, comportement inchangé.
 
         Returns:
             Synergy bonus score (weighted average delta2 from allies)
@@ -344,7 +353,9 @@ class ChampionScorer:
         if not ally_names:
             return 0.0
 
-        synergies = self.db.get_champion_synergies_by_name(champion_name, as_dataclass=True)
+        synergies = self.db.get_champion_synergies_by_name(
+            champion_name, as_dataclass=True, lane=lane
+        )
         if not synergies:
             return 0.0
 

@@ -579,8 +579,16 @@ class DraftMonitor:
         enemy_team: List[int],
         champion_name: str,
         banned_champion_ids: List[int] = None,
+        lane: Optional[str] = None,
     ) -> float:
-        """Calculate score against enemy team using Assistant's method."""
+        """Calculate score against enemy team using Assistant's method.
+
+        Args:
+            lane: Lane optionnelle transmise aux requêtes inverses internes
+                  (cf. ChampionScorer.score_against_team). None = comportement
+                  inchangé. La détection automatique de la lane est hors
+                  périmètre ici (SPEC-04) : la valeur arrive de l'extérieur.
+        """
         if not matchups or not enemy_team:
             return 0.0
 
@@ -604,15 +612,23 @@ class DraftMonitor:
 
         # Use the assistant's scoring method which includes blind pick logic
         return self.assistant.score_against_team(
-            matchups, enemy_names, champion_name, banned_names if banned_names else None
+            matchups,
+            enemy_names,
+            champion_name,
+            banned_names if banned_names else None,
+            lane=lane,
         )
 
-    def _calculate_synergy_score(self, champion_name: str, ally_team: List[int]) -> float:
+    def _calculate_synergy_score(
+        self, champion_name: str, ally_team: List[int], lane: Optional[str] = None
+    ) -> float:
         """Calculate synergy score as sum of delta2 with allied champions.
 
         Args:
             champion_name: Name of the champion to evaluate
             ally_team: List of allied champion IDs already picked
+            lane: Lane optionnelle transmise à get_synergy_delta2. None =
+                  comportement inchangé (agrégation toutes lanes).
 
         Returns:
             Sum of delta2 values for synergies with allies (0.0 if no allies)
@@ -625,7 +641,7 @@ class DraftMonitor:
         for ally_id in ally_team:
             ally_name = self._get_display_name(ally_id)
             if ally_name:
-                delta2 = self.assistant.db.get_synergy_delta2(champion_name, ally_name)
+                delta2 = self.assistant.db.get_synergy_delta2(champion_name, ally_name, lane=lane)
                 if delta2 is not None:
                     synergy_score += delta2
                     if self.verbose:

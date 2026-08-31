@@ -162,7 +162,7 @@ def insert_matchup(db):
         Function that accepts (champion, enemy, winrate, delta1, delta2, pickrate, games)
     """
 
-    def _insert(champion, enemy, winrate, delta1, delta2, pickrate, games):
+    def _insert(champion, enemy, winrate, delta1, delta2, pickrate, games, lane=None):
         """Insert matchup using champion names, creating champions if needed."""
         cursor = db.connection.cursor()
 
@@ -180,10 +180,10 @@ def insert_matchup(db):
         # Insert matchup - using production schema column names (champion, enemy)
         cursor.execute(
             """
-            INSERT INTO matchups (champion, enemy, winrate, delta1, delta2, pickrate, games)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO matchups (champion, enemy, winrate, delta1, delta2, pickrate, games, lane)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
-            (champion_id, enemy_id, winrate, delta1, delta2, pickrate, games),
+            (champion_id, enemy_id, winrate, delta1, delta2, pickrate, games, lane),
         )
 
         db.connection.commit()

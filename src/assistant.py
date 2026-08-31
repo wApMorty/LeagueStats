@@ -345,9 +345,12 @@ class Assistant:
         team: List[str],
         champion_name: str = None,
         banned_champions: List[str] = None,
+        lane: Optional[str] = None,
     ) -> float:
         """Calculate advantage against a team composition."""
-        return self.scorer.score_against_team(matchups, team, champion_name, banned_champions)
+        return self.scorer.score_against_team(
+            matchups, team, champion_name, banned_champions, lane=lane
+        )
 
     def _calculate_team_winrate(self, individual_winrates: List[float]) -> dict:
         """Calculate team win probability from individual champion winrates."""

@@ -243,6 +243,62 @@ class TestScoreAgainstTeam:
         assert result == 0.0
 
 
+class TestScoreAgainstTeamLane:
+    """SPEC-03 / B2 : `lane` doit filtrer la requête inverse interne
+    (self.db.get_matchup_delta2) et donc changer le résultat, sans qu'aucun
+    appelant existant (lane=None) ne soit affecté.
+    """
+
+    def test_lane_changes_enemy_perspective_result(self, db, scorer, insert_matchup):
+        # Notre perspective : Aatrox vs Darius, non taguée (peu importe pour ce test).
+        insert_matchup("Aatrox", "Darius", 58.0, 50, 100, 10.0, 2000)
+        # Perspective de l'ennemi, deux lanes aux valeurs opposées.
+        insert_matchup("Darius", "Aatrox", 51.0, 5, 10, 10.0, 2000, lane="top")
+        insert_matchup("Darius", "Aatrox", 55.0, 20, 40, 10.0, 2000, lane="support")
+
+        aatrox_matchups = db.get_champion_matchups_by_name("Aatrox")
+
+        result_top = scorer.score_against_team(
+            aatrox_matchups, ["Darius"], champion_name="Aatrox", lane="top"
+        )
+        result_support = scorer.score_against_team(
+            aatrox_matchups, ["Darius"], champion_name="Aatrox", lane="support"
+        )
+
+        assert result_top != pytest.approx(result_support)
+        # our_advantage = delta2_to_win_advantage(100/5) = 20 (dilution blind picks)
+        assert result_top == pytest.approx(20.0 - 10.0)
+        assert result_support == pytest.approx(20.0 - 40.0)
+
+    def test_lane_none_keeps_full_aggregation_behaviour(self, db, scorer, insert_matchup):
+        """lane=None (comportement historique) reste la moyenne pondérée toutes lanes."""
+        insert_matchup("Aatrox", "Darius", 58.0, 50, 100, 10.0, 2000)
+        insert_matchup("Darius", "Aatrox", 51.0, 5, 10, 10.0, 2000, lane="top")
+        insert_matchup("Darius", "Aatrox", 55.0, 20, 40, 10.0, 2000, lane="support")
+
+        aatrox_matchups = db.get_champion_matchups_by_name("Aatrox")
+        result_none = scorer.score_against_team(aatrox_matchups, ["Darius"], champion_name="Aatrox")
+
+        weighted_enemy = (10.0 * 2000 + 40.0 * 2000) / 4000  # = 25.0
+        assert result_none == pytest.approx(20.0 - weighted_enemy)
+
+    def test_lane_with_no_matching_data_degrades_to_unidirectional(
+        self, db, scorer, insert_matchup
+    ):
+        """Une lane sans donnée pour l'ennemi retombe sur le mode unidirectionnel (enemy=0)."""
+        insert_matchup("Aatrox", "Darius", 58.0, 50, 100, 10.0, 2000)
+        insert_matchup("Darius", "Aatrox", 51.0, 5, 10, 10.0, 2000, lane="top")
+
+        result = scorer.score_against_team(
+            db.get_champion_matchups_by_name("Aatrox"),
+            ["Darius"],
+            champion_name="Aatrox",
+            lane="jungle",
+        )
+
+        assert result == pytest.approx(20.0)  # our_advantage - 0 (pas de donnée ennemie)
+
+
 class TestCalculateTeamWinrate:
     """Tests for calculate_team_winrate geometric mean calculation."""
 

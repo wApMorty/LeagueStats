@@ -300,7 +300,7 @@ class Database:
             return []
 
     def get_champion_matchups_by_name(
-        self, champion_name: str, as_dataclass: bool = True
+        self, champion_name: str, as_dataclass: bool = True, lane: Optional[str] = None
     ) -> Union[List[Matchup], List[tuple]]:
         """Get matchups for a champion by name with enemy names included.
 
@@ -308,6 +308,8 @@ class Database:
             champion_name: Name of the champion to get matchups for
             as_dataclass: If True, return Matchup objects. If False, return tuples.
                          Default True for new code. Use False for backward compatibility.
+            lane: Optional lane filter (e.g. "top"). None = toutes lanes agrégées
+                  (comportement historique, inchangé).
 
         Returns:
             List of Matchup objects or tuples (enemy_name, winrate, delta1, delta2, pickrate, games)
@@ -330,15 +332,17 @@ class Database:
         cursor = self.connection.cursor()
         try:
             # Join avec la table champions pour obtenir les noms des ennemis
-            cursor.execute(
-                """
+            query = """
                 SELECT c.name, m.winrate, m.delta1, m.delta2, m.pickrate, m.games
                 FROM matchups m
                 JOIN champions c ON m.enemy = c.id
                 WHERE m.champion = ? AND m.pickrate > 0.5
-            """,
-                (champ_id,),
-            )
+            """
+            params = [champ_id]
+            if lane is not None:
+                query += " AND m.lane = ?"
+                params.append(lane)
+            cursor.execute(query, tuple(params))
             # Agrégation multi-lane : une entrée par adversaire distinct
             # (cf. src/analysis/aggregation.py). La forme des tuples reste
             # inchangée, seules les valeurs bougent.
@@ -566,7 +570,7 @@ class Database:
             return {}
 
     def get_champion_matchups_for_draft(
-        self, champion_name: str, as_dataclass: bool = True
+        self, champion_name: str, as_dataclass: bool = True, lane: Optional[str] = None
     ) -> Union[List[MatchupDraft], List[tuple]]:
         """
         Optimized query for draft analysis - returns only the columns needed for draft calculations.
@@ -608,15 +612,17 @@ class Database:
         cursor = self.connection.cursor()
         try:
             # Optimized query: only 4 columns needed for draft analysis
-            cursor.execute(
-                """
+            query = """
                 SELECT c.name, m.delta2, m.pickrate, m.games
                 FROM matchups m
                 JOIN champions c ON m.enemy = c.id
                 WHERE m.champion = ? AND m.pickrate > 0.5
-            """,
-                (champ_id,),
-            )
+            """
+            params = [champ_id]
+            if lane is not None:
+                query += " AND m.lane = ?"
+                params.append(lane)
+            cursor.execute(query, tuple(params))
             # Agrégation multi-lane (cf. src/analysis/aggregation.py)
             rows = [
                 (a.peer_name, a.delta2, a.pickrate, a.games)
@@ -634,7 +640,7 @@ class Database:
             return []
 
     def get_reverse_matchups_for_draft(
-        self, champion_name: str, as_dataclass: bool = True
+        self, champion_name: str, as_dataclass: bool = True, lane: Optional[str] = None
     ) -> Union[List[MatchupDraft], List[tuple]]:
         """
         Get matchups where champion is in ENEMY position (reverse lookup).
@@ -681,15 +687,17 @@ class Database:
             # Reverse lookup: find champions that pick against this champion
             # WHERE enemy = champ_id (champion is in enemy position)
             # JOIN on champion (the picker)
-            cursor.execute(
-                """
+            query = """
                 SELECT c.name, m.delta2, m.pickrate, m.games
                 FROM matchups m
                 JOIN champions c ON m.champion = c.id
                 WHERE m.enemy = ? AND m.pickrate >= 0.5 AND m.games >= 200
-            """,
-                (champ_id,),
-            )
+            """
+            params = [champ_id]
+            if lane is not None:
+                query += " AND m.lane = ?"
+                params.append(lane)
+            cursor.execute(query, tuple(params))
             # Agrégation multi-lane : une entrée par picker distinct
             rows = [
                 (a.peer_name, a.delta2, a.pickrate, a.games)
@@ -816,7 +824,9 @@ class Database:
             print(f"[ERROR] Error clearing matchups for {champion_name}: {e}")
             return False
 
-    def get_matchup_delta2(self, champion_name: str, enemy_name: str) -> Optional[float]:
+    def get_matchup_delta2(
+        self, champion_name: str, enemy_name: str, lane: Optional[str] = None
+    ) -> Optional[float]:
         """
         Get delta2 value for a specific matchup using direct SQL query.
 
@@ -826,6 +836,8 @@ class Database:
         Args:
             champion_name: Name of our champion
             enemy_name: Name of enemy champion
+            lane: Optional lane filter (e.g. "top"). None = toutes lanes agrégées
+                  (comportement historique, inchangé).
 
         Returns:
             Weighted average delta2 value if matchup exists with sufficient data, None otherwise
@@ -834,8 +846,7 @@ class Database:
             cursor = self.connection.cursor()
 
             # Direct SQL join - aggregation done in Python for consistency
-            cursor.execute(
-                """
+            query = """
                 SELECT m.delta2, m.games
                 FROM matchups m
                 JOIN champions c1 ON m.champion = c1.id
@@ -844,9 +855,12 @@ class Database:
                 AND c2.name = ? COLLATE NOCASE
                 AND m.pickrate >= 0.5
                 AND m.games >= 200
-            """,
-                (champion_name, enemy_name),
-            )
+            """
+            params = [champion_name, enemy_name]
+            if lane is not None:
+                query += " AND m.lane = ?"
+                params.append(lane)
+            cursor.execute(query, tuple(params))
 
             # Politique d'agrégation unique : SUM(delta2 * games) / SUM(games)
             # (cf. src/analysis/aggregation.py). Doit rester cohérente avec
@@ -858,7 +872,7 @@ class Database:
             print(f"[ERROR] Database error getting matchup {champion_name} vs {enemy_name}: {e}")
             return None
 
-    def get_all_matchups_bulk(self) -> dict:
+    def get_all_matchups_bulk(self, lane: Optional[str] = None) -> dict:
         """
         Load ALL valid matchups in a single SQL query for caching.
 
@@ -868,6 +882,11 @@ class Database:
         This is much faster than calling get_matchup_delta2() repeatedly.
         Use this for bulk operations like holistic optimizer.
 
+        Args:
+            lane: Optional lane filter, appliqué avant agrégation. None = toutes
+                  lanes agrégées (comportement historique, inchangé). La forme du
+                  dict retourné ne change pas — cf. SPEC-03 §3/B2, option (b).
+
         Returns:
             Dict with keys as tuples (champion_name, enemy_name) and values as delta2 floats
         """
@@ -875,14 +894,19 @@ class Database:
             cursor = self.connection.cursor()
 
             # Load all valid matchups in one query
-            cursor.execute("""
+            query = """
                 SELECT c1.name, c2.name, m.delta2, m.games
                 FROM matchups m
                 JOIN champions c1 ON m.champion = c1.id
                 JOIN champions c2 ON m.enemy = c2.id
                 WHERE m.pickrate >= 0.5
                 AND m.games >= 200
-            """)
+            """
+            params = []
+            if lane is not None:
+                query += " AND m.lane = ?"
+                params.append(lane)
+            cursor.execute(query, tuple(params))
 
             # Agrégation multi-lane, clés en minuscules : même politique et donc
             # mêmes valeurs que get_matchup_delta2(). Avant B1, la dernière ligne
@@ -943,7 +967,7 @@ class Database:
             print(f"The error '{e}' occurred")
 
     def get_champion_synergies_by_name(
-        self, champion_name: str, as_dataclass: bool = True
+        self, champion_name: str, as_dataclass: bool = True, lane: Optional[str] = None
     ) -> Union[List["Synergy"], List[tuple]]:
         """Get synergies for a champion by name with ally names included.
 
@@ -951,6 +975,8 @@ class Database:
             champion_name: Name of the champion to get synergies for
             as_dataclass: If True, return Synergy objects. If False, return tuples.
                          Default True for new code. Use False for backward compatibility.
+            lane: Optional lane filter (e.g. "top"). None = toutes lanes agrégées
+                  (comportement historique, inchangé).
 
         Returns:
             List of Synergy objects or tuples (ally_name, winrate, delta1, delta2, pickrate, games)
@@ -973,15 +999,17 @@ class Database:
         cursor = self.connection.cursor()
         try:
             # Join avec la table champions pour obtenir les noms des alliés
-            cursor.execute(
-                """
+            query = """
                 SELECT c.name, s.winrate, s.delta1, s.delta2, s.pickrate, s.games
                 FROM synergies s
                 JOIN champions c ON s.ally = c.id
                 WHERE s.champion = ? AND s.pickrate > 0.5
-            """,
-                (champ_id,),
-            )
+            """
+            params = [champ_id]
+            if lane is not None:
+                query += " AND s.lane = ?"
+                params.append(lane)
+            cursor.execute(query, tuple(params))
             # Agrégation multi-lane : une entrée par allié distinct
             rows = [
                 (a.peer_name, a.winrate, a.delta1, a.delta2, a.pickrate, a.games)
@@ -1055,12 +1083,16 @@ class Database:
         except Error as e:
             print(f"The error '{e}' occurred")
 
-    def get_synergy_delta2(self, champion_name: str, ally_name: str) -> Optional[float]:
+    def get_synergy_delta2(
+        self, champion_name: str, ally_name: str, lane: Optional[str] = None
+    ) -> Optional[float]:
         """Get delta2 value for a specific champion-ally synergy.
 
         Args:
             champion_name: Name of the champion
             ally_name: Name of the allied champion
+            lane: Optional lane filter (e.g. "top"). None = toutes lanes agrégées
+                  (comportement historique, inchangé).
 
         Returns:
             delta2 value if synergy exists, None otherwise
@@ -1073,16 +1105,18 @@ class Database:
 
         try:
             cursor = self.connection.cursor()
-            cursor.execute(
-                """
+            query = """
                 SELECT delta2, games
                 FROM synergies
                 WHERE champion = ? AND ally = ?
                 AND pickrate >= 0.5
                 AND games >= 200
-            """,
-                (champ_id, ally_id),
-            )
+            """
+            params = [champ_id, ally_id]
+            if lane is not None:
+                query += " AND lane = ?"
+                params.append(lane)
+            cursor.execute(query, tuple(params))
 
             # Agrégation multi-lane pondérée par games, comme pour les matchups
             # (cf. src/analysis/aggregation.py). Avant B1, fetchone() renvoyait
@@ -1093,7 +1127,7 @@ class Database:
             print(f"[ERROR] Database error getting synergy {champion_name} with {ally_name}: {e}")
             return None
 
-    def get_all_synergies_bulk(self) -> dict:
+    def get_all_synergies_bulk(self, lane: Optional[str] = None) -> dict:
         """Load ALL valid synergies in a single SQL query for caching.
 
         Returns dict mapping (champion_name, ally_name) -> delta2 value.
@@ -1102,6 +1136,10 @@ class Database:
         This is much faster than calling get_synergy_delta2() repeatedly.
         Use this for bulk operations like draft optimization.
 
+        Args:
+            lane: Optional lane filter, appliqué avant agrégation. None = toutes
+                  lanes agrégées (comportement historique, inchangé).
+
         Returns:
             Dict with keys as tuples (champion_name, ally_name) and values as delta2 floats
         """
@@ -1109,14 +1147,19 @@ class Database:
             cursor = self.connection.cursor()
 
             # Load all valid synergies in one query
-            cursor.execute("""
+            query = """
                 SELECT c1.name, c2.name, s.delta2, s.games
                 FROM synergies s
                 JOIN champions c1 ON s.champion = c1.id
                 JOIN champions c2 ON s.ally = c2.id
                 WHERE s.pickrate >= 0.5
                 AND s.games >= 200
-            """)
+            """
+            params = []
+            if lane is not None:
+                query += " AND s.lane = ?"
+                params.append(lane)
+            cursor.execute(query, tuple(params))
 
             # Agrégation multi-lane, clés en minuscules : mêmes valeurs que
             # get_synergy_delta2().
