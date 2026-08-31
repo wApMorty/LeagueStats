@@ -8,6 +8,23 @@ from ..config_constants import analysis_config, role_inference_config
 from ..models import Matchup
 
 
+def confidence(games: int) -> float:
+    """Statistical confidence weight for a sample of `games` games (SPEC-05 B6).
+
+    Composes with `pickrate` (which predicts the opponent's pick, and stays
+    untouched) rather than replacing it: the product `pickrate * confidence(games)`
+    is the weight to use wherever matchups/synergies are averaged.
+
+    Args:
+        games: Number of games backing the sample.
+
+    Returns:
+        A value in [0, 1) that tends to 1 as games grows large and to 0 as
+        games tends to 0 (half-weight at games == CONFIDENCE_K).
+    """
+    return games / (games + analysis_config.CONFIDENCE_K)
+
+
 class ChampionScorer:
     """Handles scoring calculations for champion matchups and team compositions."""
 
@@ -52,10 +69,12 @@ class ChampionScorer:
         valid_matchups = self.filter_valid_matchups(matchups)
         if not valid_matchups:
             return 0.0
-        total_weight = sum(m.pickrate for m in valid_matchups)
+        total_weight = sum(m.pickrate * confidence(m.games) for m in valid_matchups)
         if total_weight == 0:
             return 0.0
-        return sum(m.delta1 * m.pickrate for m in valid_matchups) / total_weight
+        return (
+            sum(m.delta1 * m.pickrate * confidence(m.games) for m in valid_matchups) / total_weight
+        )
 
     def avg_delta2(self, matchups: List[Matchup]) -> float:
         """
@@ -70,10 +89,12 @@ class ChampionScorer:
         valid_matchups = self.filter_valid_matchups(matchups)
         if not valid_matchups:
             return 0.0
-        total_weight = sum(m.pickrate for m in valid_matchups)
+        total_weight = sum(m.pickrate * confidence(m.games) for m in valid_matchups)
         if total_weight == 0:
             return 0.0
-        return sum(m.delta2 * m.pickrate for m in valid_matchups) / total_weight
+        return (
+            sum(m.delta2 * m.pickrate * confidence(m.games) for m in valid_matchups) / total_weight
+        )
 
     def avg_winrate(self, matchups: List[Matchup]) -> float:
         """
@@ -88,10 +109,12 @@ class ChampionScorer:
         valid_matchups = self.filter_valid_matchups(matchups)
         if not valid_matchups:
             return 0.0
-        total_weight = sum(m.pickrate for m in valid_matchups)
+        total_weight = sum(m.pickrate * confidence(m.games) for m in valid_matchups)
         if total_weight == 0:
             return 0.0
-        return sum(m.winrate * m.pickrate for m in valid_matchups) / total_weight
+        return (
+            sum(m.winrate * m.pickrate * confidence(m.games) for m in valid_matchups) / total_weight
+        )
 
     def delta2_to_win_advantage(self, delta2: float, champion_name: str) -> float:
         """
@@ -412,10 +435,13 @@ class ChampionScorer:
 
         # Calculate bonus (weighted or simple average)
         if synergy_config.USE_WEIGHTED_AVERAGE:
-            total_weight = sum(s.pickrate for s in valid_synergies)
+            total_weight = sum(s.pickrate * confidence(s.games) for s in valid_synergies)
             if total_weight == 0:
                 return 0.0
-            synergy_bonus = sum(s.delta2 * s.pickrate for s in valid_synergies) / total_weight
+            synergy_bonus = (
+                sum(s.delta2 * s.pickrate * confidence(s.games) for s in valid_synergies)
+                / total_weight
+            )
         else:
             synergy_bonus = sum(s.delta2 for s in valid_synergies) / len(valid_synergies)
 

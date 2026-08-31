@@ -113,6 +113,12 @@ class AnalysisConfig:
     MIN_PICKRATE: float = 0.5  # Minimum pickrate % for matchup inclusion
     MIN_MATCHUP_GAMES: int = 200  # Minimum games for matchup reliability
 
+    # Lissage de confiance : un matchup à CONFIDENCE_K parties reçoit la moitié
+    # du poids d'un matchup infiniment observé. Les petits échantillons sont
+    # ramenés vers le neutre plutôt que comptés au même titre que les gros.
+    # Valeur initiale 500 : la médiane de la base est ~1 300 parties.
+    CONFIDENCE_K: int = 500
+
     # Tier thresholds (0-100 scale)
     TIER_THRESHOLDS: Dict[str, float] = field(
         default_factory=lambda: {

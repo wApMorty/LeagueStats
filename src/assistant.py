@@ -16,7 +16,7 @@ from .db import Database
 from .models import Matchup, MatchupDraft
 
 # Import specialized modules
-from .analysis.scoring import ChampionScorer
+from .analysis.scoring import ChampionScorer, confidence
 from .analysis.tier_list import TierListGenerator
 from .analysis.recommendations import RecommendationEngine
 from .analysis.team_analysis import TeamAnalyzer
@@ -448,22 +448,25 @@ class Assistant:
                 variance = statistics.variance(delta2_values) if len(delta2_values) > 1 else 0.0
 
                 # Coverage (blind pick metric)
+                # Poids = pickrate * confidence(games) (SPEC-05 B6) : un matchup
+                # à peine au-dessus du seuil MIN_MATCHUP_GAMES ne doit pas peser
+                # autant qu'un matchup mesuré sur des dizaines de milliers de parties.
                 decent_weight = sum(
-                    m.pickrate
+                    m.pickrate * confidence(m.games)
                     for m in matchups
                     if m.delta2 > analysis_config.DECENT_MATCHUP_THRESHOLD
                 )
-                total_weight = sum(m.pickrate for m in matchups)
+                total_weight = sum(m.pickrate * confidence(m.games) for m in matchups)
                 coverage = decent_weight / total_weight if total_weight > 0 else 0.0
 
                 # Peak impact (counter pick metric)
                 excellent_impact = sum(
-                    m.delta2 * m.pickrate
+                    m.delta2 * m.pickrate * confidence(m.games)
                     for m in matchups
                     if m.delta2 > analysis_config.EXCELLENT_MATCHUP_THRESHOLD
                 )
                 good_impact = sum(
-                    m.delta2 * m.pickrate
+                    m.delta2 * m.pickrate * confidence(m.games)
                     for m in matchups
                     if analysis_config.GOOD_MATCHUP_THRESHOLD
                     < m.delta2
@@ -476,7 +479,7 @@ class Assistant:
 
                 # Target ratio (counter pick metric)
                 viable_weight = sum(
-                    m.pickrate
+                    m.pickrate * confidence(m.games)
                     for m in matchups
                     if m.delta2 > analysis_config.GOOD_MATCHUP_THRESHOLD
                 )
