@@ -6,6 +6,31 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Ajouts
 
+- **SPEC-03 (B2) — filtrage par lane des accesseurs de lecture.** Les huit accesseurs de
+  `src/db.py` unifiés par B1 acceptent désormais un paramètre `lane: Optional[str] = None` :
+  `get_champion_matchups_by_name`, `get_champion_matchups_for_draft`,
+  `get_reverse_matchups_for_draft`, `get_champion_synergies_by_name`, `get_matchup_delta2`,
+  `get_synergy_delta2`, `get_all_matchups_bulk`, `get_all_synergies_bulk`.
+  - `lane=None` conserve **exactement** le comportement post-B1 (agrégation toutes lanes) :
+    aucun appelant existant ne change de comportement.
+  - Une lane sans donnée pour la paire demandée renvoie une liste/dict vide ou `None`, jamais
+    une exception.
+  - Pour les caches bulk : `lane` filtre **avant** agrégation, la forme du dict
+    `{(champion_lower, peer_lower): delta2}` ne change pas (option (b) de la spec — l'option
+    clé-étendue aurait cassé tous les appelants).
+  - Propagé dans `ChampionScorer.score_against_team` (requêtes inverses internes vers
+    `get_matchup_delta2`) et `ChampionScorer.calculate_synergy_bonus`, puis jusqu'à
+    `Assistant.score_against_team` et `DraftMonitor._calculate_score_against_team` /
+    `_calculate_synergy_score`. La détection automatique de la lane reste hors périmètre
+    (SPEC-04) : ici la lane arrive de l'extérieur ou vaut `None`.
+  - Vérifié explicitement que le cache bidirectionnel d'`Assistant` (`warm_cache`,
+    `get_cached_matchups`, `get_cached_matchup_delta2`) n'est pas touché par ce changement :
+    les nouveaux paramètres `lane` court-circuitent le cache et vont directement au scorer/DB,
+    donc aucun risque de pollution inter-lane tant que SPEC-04 n'active pas la détection.
+  - Tests : `tests/test_db_lane_filter.py` (nouveau, un accesseur = un cas filtré + lane
+    inexistante + `lane=None`), `tests/test_scoring.py` étendu (`score_against_team` et
+    `calculate_synergy_bonus` avec lane).
+
 - **SPEC-03 (B1) — une seule politique d'agrégation multi-lane.** LoLalytics fournit une
   ligne par lane : le même couple (champion, adversaire) existe jusqu'en cinq exemplaires.
   Trois traitements divergents cohabitaient dans `src/db.py`, et le même matchup pouvait donc
