@@ -6,6 +6,34 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Ajouts
 
+- **SPEC-04 (B5) — afficher les rôles et permettre leur correction manuelle.** Dernière
+  brique du chantier lane/rôles : le joueur voit ce que le Live Coach a déduit et peut
+  le corriger sans redémarrer le monitor.
+  - `_display_draft_state` annote chaque champion de sa lane et de sa source :
+    `Ornn (top·LCU)` pour un rôle certain (LCU), `Thresh (support·85%)` pour un rôle
+    inféré, `?` ajouté sous `ROLE_CONFIDENCE_WARN` (0.6, nouvelle constante de
+    `RoleInferenceConfig`) pour signaler qu'une vérification est utile.
+  - `_provide_recommendations` affiche notre lane, l'adversaire direct (même lane que
+    nous, s'il est identifié) et le volume de parties déjà agrégé pour le calcul :
+    `[1st] Ornn (top vs Darius) +2.34% (Matchup: ..., Synergy: ...) · 4 800 games`. Le
+    volume réutilise la somme déjà calculée pour le seuil de fiabilité (500 parties),
+    pas de requête supplémentaire.
+  - Correction manuelle : `r <champion> <lane>` tapé dans le terminal pendant le draft
+    force un rôle (`confidence=1.0`, `source="user"`). Lu par un thread daemon bloquant
+    sur `input()` (jamais la boucle de polling) ; `_apply_pending_commands()` draine la
+    queue sur le thread principal à chaque tick, gardant tout accès LCU/DB
+    single-threaded. Le rôle forcé est réappliqué à chaque recalcul
+    (`_parse_draft_state`) tant que le champion reste dans le draft en cours, et purgé
+    au reset de fin de partie (`_reset_for_next_game`).
+  - `DraftState` gagne `role_source: Dict[int, str]` (`"lcu" | "inferred" | "user"`),
+    peuplé depuis `RoleAssignment.source` (B4) et par la correction manuelle.
+  - Tests : `tests/test_draft_monitor_display.py` (nouveau, 25 cas — format de
+    l'étiquette de rôle selon la source et le seuil de confiance, affichage effectif,
+    lane/adversaire direct/volume dans les recommandations, validation des commandes
+    de correction, drainage de la queue, persistance du rôle forcé à travers un
+    recalcul et sa purge à la sortie du draft, idempotence du thread d'écoute,
+    redisplay déclenché par une commande sans changement de draft).
+
 - **SPEC-04 (B4) — inférer le rôle des 10 joueurs (affectation 5×5).** Le chantier
   principal de SPEC-04 : deviner quel joueur joue quel rôle, des deux côtés du draft,
   pour que chaque matchup soit évalué dans son contexte réel (Pantheon vaut +0,30 en

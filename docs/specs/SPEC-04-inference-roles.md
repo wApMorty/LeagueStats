@@ -224,10 +224,10 @@ Le nombre de parties vient de la somme des `games` des matchups retenus (déjà 
 - [x] L'inférence fonctionne sur une équipe partielle (1 à 4 champions) sans exception. `tests/test_role_inference.py::TestPartialTeams` (paramétré 1 à 5).
 - [x] Un champion absent de `champion_lanes` (nouveau champion) ne fait pas planter : repli sur la distribution dérivée de `matchups`, ou confiance nulle. `tests/test_champion_lanes_table.py::TestFallbackToMatchups`, `tests/test_role_inference.py::TestMissingDistribution`.
 - [ ] Les rôles sont recalculés à chaque pick (vérifié : `tests/test_draft_monitor_roles.py::test_recomputed_as_more_champions_are_picked`), et la confiance augmente à mesure que le draft se remplit (non vérifié spécifiquement — propriété émergente de l'algorithme, pas testée numériquement).
-- [x] Le scoring reçoit bien la lane : forcer sa lane à `top` puis `support` change les recommandations. Vérifié au niveau `ChampionScorer.score_against_team` (`tests/test_bidirectional_scoring.py::TestLaneWeighting`) et de son branchement dans `DraftMonitor` (`tests/test_draft_monitor_roles.py::TestLaneWiringIntoScoring`). La correction manuelle par le joueur (UI pour « forcer » sa lane) est B5 ; ici la lane vient du LCU ou des tests directs.
-- [ ] L'affichage montre rôle, source et volume de parties. Hors périmètre B4 — reporté à B5.
+- [x] Le scoring reçoit bien la lane : forcer sa lane à `top` puis `support` change les recommandations. Vérifié au niveau `ChampionScorer.score_against_team` (`tests/test_bidirectional_scoring.py::TestLaneWeighting`), de son branchement dans `DraftMonitor` (`tests/test_draft_monitor_roles.py::TestLaneWiringIntoScoring`), et désormais via la commande de correction manuelle elle-même (B5, `tests/test_draft_monitor_display.py::TestManualCorrectionCommand`).
+- [x] L'affichage montre rôle, source et volume de parties (B5). `_display_draft_state` : `tests/test_draft_monitor_display.py::TestFormatRoleTag`/`TestDisplayDraftStateShowsRoles`. `_provide_recommendations` : `TestRecommendationLaneAndVolumeTags`.
 - [x] Temps d'inférence < 5 ms pour les deux équipes (mesuré) — il tourne dans la boucle de polling. Mesuré manuellement : ~0.73 ms pour les deux équipes (10 champions, 100 itérations).
-- [x] `pytest tests/ -v` : 0 échec. 680 tests passent.
+- [x] `pytest tests/ -v` : 0 échec. 705 tests passent.
 
 ---
 
