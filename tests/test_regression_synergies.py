@@ -11,7 +11,7 @@ import pytest
 from src.db import Database
 from src.models import Synergy
 from src.analysis.scoring import ChampionScorer
-from src.config_constants import synergy_config
+from src.config_constants import synergy_config, analysis_config
 
 
 @pytest.fixture
@@ -162,9 +162,18 @@ def test_synergy_bonus_with_multiple_allies(temp_synergy_db):
     # Calculate synergy bonus for Yasuo with Malphite + Diana
     bonus = scorer.calculate_synergy_bonus("Yasuo", ["Malphite", "Diana"])
 
-    # Expected: weighted average by pickrate
-    # (220.0 * 15.0 + 190.0 * 12.0) / (15.0 + 12.0) = 206.67
-    expected_bonus = (220.0 * 15.0 + 190.0 * 12.0) / (15.0 + 12.0)
+    # recalculé avec confidence(games), cf B6 : le poids est désormais
+    # pickrate * confidence(games) et non plus pickrate seul.
+    # Malphite: games=1200 -> confidence = 1200/1700 = 0.7059, weight = 15*0.7059 = 10.588
+    # Diana:    games=1000 -> confidence = 1000/1500 = 0.6667, weight = 12*0.6667 = 8.0
+    # (220.0 * 10.588 + 190.0 * 8.0) / (10.588 + 8.0) = 207.09
+    malphite_confidence = 1200 / (1200 + analysis_config.CONFIDENCE_K)
+    diana_confidence = 1000 / (1000 + analysis_config.CONFIDENCE_K)
+    malphite_weight = 15.0 * malphite_confidence
+    diana_weight = 12.0 * diana_confidence
+    expected_bonus = (220.0 * malphite_weight + 190.0 * diana_weight) / (
+        malphite_weight + diana_weight
+    )
     assert bonus == pytest.approx(expected_bonus, abs=0.1)
 
 

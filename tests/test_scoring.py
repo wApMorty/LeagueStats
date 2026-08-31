@@ -99,16 +99,20 @@ class TestAvgDelta2:
     """Tests for avg_delta2 weighted average calculation."""
 
     def test_weighted_average_calculation(self, scorer):
-        """Test correct weighted average by pickrate."""
+        """Test correct weighted average by pickrate * confidence(games)."""
         matchups = [
-            Matchup("Champ1", 50.0, 0, 150.0, 15.0, 1500),  # delta2=150, weight=15
-            Matchup("Champ2", 50.0, 0, 250.0, 10.0, 1000),  # delta2=250, weight=10
+            Matchup("Champ1", 50.0, 0, 150.0, 15.0, 1500),  # delta2=150, pickrate=15
+            Matchup("Champ2", 50.0, 0, 250.0, 10.0, 1000),  # delta2=250, pickrate=10
         ]
-        # Expected: (150*15 + 250*10) / (15+10) = 4750 / 25 = 190
+        # recalculé avec confidence(games), cf B6 : le poids est désormais
+        # pickrate * confidence(games) et non plus pickrate seul.
+        # confidence(1500) = 1500/2000 = 0.75 -> weight1 = 15*0.75 = 11.25
+        # confidence(1000) = 1000/1500 = 0.6667 -> weight2 = 10*0.6667 = 6.667
+        # (150*11.25 + 250*6.667) / (11.25+6.667) = 187.21
 
         result = scorer.avg_delta2(matchups)
 
-        assert abs(result - 190.0) < 0.01
+        assert abs(result - 187.21) < 0.01
 
     def test_empty_matchups_returns_zero(self, scorer):
         """Test that empty matchup list returns 0."""
@@ -121,16 +125,20 @@ class TestAvgWinrate:
     """Tests for avg_winrate weighted average calculation."""
 
     def test_weighted_average_calculation(self, scorer):
-        """Test correct weighted average by pickrate."""
+        """Test correct weighted average by pickrate * confidence(games)."""
         matchups = [
-            Matchup("Champ1", 52.0, 0, 0, 12.0, 1200),  # winrate=52, weight=12
-            Matchup("Champ2", 48.0, 0, 0, 8.0, 800),  # winrate=48, weight=8
+            Matchup("Champ1", 52.0, 0, 0, 12.0, 1200),  # winrate=52, pickrate=12
+            Matchup("Champ2", 48.0, 0, 0, 8.0, 800),  # winrate=48, pickrate=8
         ]
-        # Expected: (52*12 + 48*8) / (12+8) = 1008 / 20 = 50.4
+        # recalculé avec confidence(games), cf B6 : le poids est désormais
+        # pickrate * confidence(games) et non plus pickrate seul.
+        # confidence(1200) = 1200/1700 = 0.7059 -> weight1 = 12*0.7059 = 8.471
+        # confidence(800) = 800/1300 = 0.6154 -> weight2 = 8*0.6154 = 4.923
+        # (52*8.471 + 48*4.923) / (8.471+4.923) = 50.53
 
         result = scorer.avg_winrate(matchups)
 
-        assert abs(result - 50.4) < 0.01
+        assert abs(result - 50.53) < 0.01
 
     def test_empty_matchups_returns_zero(self, scorer):
         """Test that empty matchup list returns 0."""

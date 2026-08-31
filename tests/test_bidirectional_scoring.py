@@ -2,6 +2,7 @@
 
 import pytest
 from src.analysis.scoring import ChampionScorer
+from src.config_constants import analysis_config
 
 
 class TestBidirectionalAdvantage:
@@ -158,9 +159,17 @@ class TestBidirectionalAdvantage:
         # Empty team = blind pick
         result = scorer.score_against_team(aatrox_matchups, [], champion_name="Aatrox")
 
-        # Should use weighted average (by pickrate)
-        # Weighted avg = (100*10 + 200*15) / (10+15) = 160
-        weighted_avg = (100 * 10 + 200 * 15) / (10 + 15)
+        # Should use weighted average (by pickrate * confidence(games), cf B6)
+        # recalculé avec confidence(games), cf B6 : le poids est désormais
+        # pickrate * confidence(games) et non plus pickrate seul.
+        # confidence(2000) = 2000/2500 = 0.8 -> weight1 = 10*0.8 = 8.0
+        # confidence(2500) = 2500/3000 = 0.8333 -> weight2 = 15*0.8333 = 12.5
+        # (100*8.0 + 200*12.5) / (8.0+12.5) = 160.98
+        confidence_darius = 2000 / (2000 + analysis_config.CONFIDENCE_K)
+        confidence_garen = 2500 / (2500 + analysis_config.CONFIDENCE_K)
+        weight_darius = 10 * confidence_darius
+        weight_garen = 15 * confidence_garen
+        weighted_avg = (100 * weight_darius + 200 * weight_garen) / (weight_darius + weight_garen)
         expected = scorer.delta2_to_win_advantage(weighted_avg, "Aatrox")
 
         assert abs(result - expected) < 0.01
