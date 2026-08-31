@@ -89,11 +89,17 @@ def test_lookup_stays_case_insensitive(db_with_matchup, name):
 
 
 def test_migration_is_chained_on_head():
-    """La migration ab14babf365b est la tête et suit b7e41c9a3f02."""
+    """La migration ab14babf365b reste chaînée depuis b7e41c9a3f02.
+
+    Elle n'est plus la tête : SPEC-03 B8 a empilé ea9a2b4722f1 par-dessus
+    (contrainte d'unicité par lane), le 2026-09-01.
+    """
     from alembic.config import Config
     from alembic.script import ScriptDirectory
 
     script = ScriptDirectory.from_config(Config("alembic.ini"))
 
-    assert list(script.get_heads()) == ["ab14babf365b"]
     assert script.get_revision("ab14babf365b").down_revision == "b7e41c9a3f02"
+    heads = list(script.get_heads())
+    assert len(heads) == 1
+    assert script.get_revision(heads[0]).down_revision == "ab14babf365b"

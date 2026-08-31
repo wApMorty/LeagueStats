@@ -37,25 +37,35 @@ def quality_db(tmp_path):
 
 
 def populate(db, champions=3, matchups_per_champ=100, synergies_per_champ=80):
-    """Insert N champions, each with the given row counts (enemy = next champion)."""
+    """Insert N champions, each with the given row counts.
+
+    SPEC-03 B8 added a UNIQUE(champion, enemy, lane) constraint, so each row
+    needs a distinct `enemy`/`ally` rather than one repeated peer. These ids
+    are synthetic (no matching champions row) and safe here: data_quality
+    only ever groups matchups/synergies by `champion`, never joins on
+    `enemy`/`ally`, so FK enforcement is turned off for this bulk insert.
+    """
     cursor = db.connection.cursor()
     for i in range(1, champions + 1):
         cursor.execute("INSERT INTO champions (id, name) VALUES (?, ?)", (i, f"Champ{i}"))
+    db.connection.commit()
+
+    cursor.execute("PRAGMA foreign_keys = OFF")
     for i in range(1, champions + 1):
-        enemy = i % champions + 1
-        for _ in range(matchups_per_champ):
+        for row in range(matchups_per_champ):
             cursor.execute(
                 "INSERT INTO matchups (champion, enemy, winrate, delta1, delta2, pickrate, games, lane)"
                 " VALUES (?, ?, 50.0, 0.0, 0.0, 5.0, 1000, 'top')",
-                (i, enemy),
+                (i, 900_000 + row),
             )
-        for _ in range(synergies_per_champ):
+        for row in range(synergies_per_champ):
             cursor.execute(
                 "INSERT INTO synergies (champion, ally, winrate, delta1, delta2, pickrate, games, lane)"
                 " VALUES (?, ?, 50.0, 0.0, 0.0, 5.0, 1000, 'top')",
-                (i, enemy),
+                (i, 900_000 + row),
             )
     db.connection.commit()
+    cursor.execute("PRAGMA foreign_keys = ON")
 
 
 def clear_matchups(db, champion_id):

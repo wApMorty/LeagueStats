@@ -58,12 +58,15 @@ class TestLaneColumn:
         cursor.execute("SELECT lane FROM matchups")
         assert cursor.fetchone()[0] == "top"
 
-    def test_matchups_batch_without_lane_is_null(self, full_db):
+    def test_matchups_batch_without_lane_stores_default(self, full_db):
+        # SPEC-03 B8: NULL is no longer stored (SQLite treats NULL != NULL,
+        # so the unique index on (champion, enemy, lane) would not constrain
+        # untagged rows). lane=None now normalizes to DEFAULT_LANE.
         full_db.add_matchups_batch([("Aatrox", "Darius", 51.0, 1.0, 2.0, 5.0, 1000)])
 
         cursor = full_db.connection.cursor()
         cursor.execute("SELECT lane FROM matchups")
-        assert cursor.fetchone()[0] is None
+        assert cursor.fetchone()[0] == "default"
 
     def test_same_matchup_on_two_lanes_is_distinguishable(self, full_db):
         """The exact regression from AUDIT_2026_06: multi-lane rows must be distinguishable."""
@@ -92,6 +95,11 @@ class TestLaneColumn:
         assert "idx_matchups_enemy_lane_pickrate" in indexes
         assert "idx_synergies_champion_lane_pickrate" in indexes
         assert "idx_synergies_ally_lane_pickrate" in indexes
+
+        # SPEC-03 B8: created by init_*_table() too, not only by the
+        # migration, since these DROP/CREATE the tables and bypass Alembic.
+        assert "idx_matchups_unique" in indexes
+        assert "idx_synergies_unique" in indexes
 
 
 class TestDbMeta:

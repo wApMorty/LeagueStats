@@ -2,6 +2,7 @@ import sqlite3
 from sqlite3 import Error
 from typing import List, Optional, Dict, Union, Tuple
 import requests
+from .config_constants import scraping_config
 from .constants import CHAMPIONS_LIST
 from .models import Matchup, MatchupDraft, Synergy
 from .analysis.aggregation import (
@@ -115,6 +116,17 @@ class Database:
                         )
                         created_indexes.append("idx_matchups_enemy_lane_pickrate")
 
+                    # SPEC-03 B8: uniqueness per (champion, enemy, lane).
+                    # init_matchups_table() rebuilds the table with DROP/CREATE,
+                    # bypassing Alembic entirely, so this index must also be
+                    # (re)created here or a full rescrape would lose it.
+                    if "idx_matchups_unique" not in existing_indexes:
+                        cursor.execute(
+                            "CREATE UNIQUE INDEX idx_matchups_unique "
+                            "ON matchups(champion, enemy, lane)"
+                        )
+                        created_indexes.append("idx_matchups_unique")
+
             self.connection.commit()
 
             # Only log if indexes were actually created
@@ -210,6 +222,12 @@ class Database:
         )
         cursor.execute(
             "CREATE INDEX idx_synergies_ally_lane_pickrate ON synergies(ally, lane, pickrate)"
+        )
+        # SPEC-03 B8: uniqueness per (champion, ally, lane). init_synergies_table()
+        # DROP/CREATEs the table, bypassing Alembic, so this index is created
+        # here too, not only in the migration.
+        cursor.execute(
+            "CREATE UNIQUE INDEX idx_synergies_unique ON synergies(champion, ally, lane)"
         )
 
     def init_champion_scores_table(self) -> None:
@@ -740,6 +758,10 @@ class Database:
         if champion_cache is None:
             champion_cache = self.build_champion_cache()
 
+        # SPEC-03 B8: never store NULL lane (SQLite treats NULL != NULL, so
+        # the unique index on (champion, enemy, lane) would not constrain it).
+        lane = lane or scraping_config.DEFAULT_LANE
+
         try:
             cursor = self.connection.cursor()
 
@@ -772,10 +794,15 @@ class Database:
                 return 0
 
             # Single transaction with batch insert (much faster!)
+            # ON CONFLICT: SPEC-03 B8 — idempotent per (champion, enemy, lane),
+            # so a repeated scrape/repair run updates instead of duplicating.
             cursor.executemany(
                 """
                 INSERT INTO matchups (champion, enemy, winrate, delta1, delta2, pickrate, games, lane)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(champion, enemy, lane) DO UPDATE SET
+                    winrate=excluded.winrate, delta1=excluded.delta1, delta2=excluded.delta2,
+                    pickrate=excluded.pickrate, games=excluded.games
             """,
                 batch_data,
             )
@@ -1039,6 +1066,10 @@ class Database:
             lane: Optional lane tag applied to every row of the batch
                   (one batch = one champion scraped on one lane). None = legacy/default lane.
         """
+        # SPEC-03 B8: never store NULL lane (SQLite treats NULL != NULL, so
+        # the unique index on (champion, ally, lane) would not constrain it).
+        lane = lane or scraping_config.DEFAULT_LANE
+
         cursor = self.connection.cursor()
         try:
             # Convert champion/ally names to IDs
@@ -1051,9 +1082,17 @@ class Database:
                         (champ_id, ally_id, winrate, delta1, delta2, pickrate, games, lane)
                     )
 
-            # Batch insert
+            # Batch insert. ON CONFLICT: SPEC-03 B8 — idempotent per
+            # (champion, ally, lane), so a repeated scrape/repair run updates
+            # instead of duplicating.
             cursor.executemany(
-                "INSERT INTO synergies (champion, ally, winrate, delta1, delta2, pickrate, games, lane) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                """
+                INSERT INTO synergies (champion, ally, winrate, delta1, delta2, pickrate, games, lane)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(champion, ally, lane) DO UPDATE SET
+                    winrate=excluded.winrate, delta1=excluded.delta1, delta2=excluded.delta2,
+                    pickrate=excluded.pickrate, games=excluded.games
+                """,
                 synergy_data,
             )
             self.connection.commit()

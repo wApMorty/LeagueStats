@@ -55,6 +55,12 @@ class ScrapingConfig:
     # matchups/synergies `lane` column.
     LANES: tuple = ("top", "jungle", "middle", "bottom", "support")
 
+    # Stored value for rows whose lane is unknown (discovery failure, legacy
+    # scrape). SPEC-03 B8: NULL is never used in `lane` — SQLite treats
+    # NULL != NULL, so a unique index on (champion, enemy, lane) would not
+    # constrain untagged rows at all.
+    DEFAULT_LANE: str = "default"
+
     # A lane is scraped for a champion when its share of the champion's games
     # exceeds this threshold (ROADMAP_2026.md H1: « lanes à pickrate >10% »).
     LANE_PICKRATE_THRESHOLD: float = 10.0
