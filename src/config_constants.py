@@ -188,6 +188,10 @@ class RoleInferenceConfig:
     SAME_LANE_WEIGHT: float = 2.0
     OTHER_LANE_WEIGHT: float = 1.0
 
+    # Below this confidence, the Live Coach display flags an inferred role
+    # with "?" so the player knows to double check it (SPEC-04 B5).
+    ROLE_CONFIDENCE_WARN: float = 0.6
+
 
 @dataclass
 class UIConfig:

@@ -3,7 +3,9 @@ import json
 import subprocess
 import os
 import logging
+import queue
 import tempfile
+import threading
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 from dataclasses import dataclass, field
@@ -13,7 +15,7 @@ from .utils.display import safe_print
 from .utils.console import clear_console
 from .constants import TOP_SOLOQ_POOL, CHAMPIONS_BY_ROLE, normalize_champion_name_for_onetricks
 from .config import config
-from .config_constants import draft_config
+from .config_constants import draft_config, role_inference_config, scraping_config
 from .role_inference import infer_team_roles
 
 # Dedicated logger for memory diagnostics. Writes to logs/draft_monitor_memory.log
@@ -66,6 +68,8 @@ class DraftState:
     ally_positions: Dict[int, str] = field(default_factory=dict)  # cellId -> lane
     inferred_roles: Dict[int, str] = field(default_factory=dict)  # championId -> lane
     role_confidence: Dict[int, float] = field(default_factory=dict)  # championId -> [0,1]
+    # SPEC-04 B5: championId -> "lcu" | "inferred" | "user" (manual correction).
+    role_source: Dict[int, str] = field(default_factory=dict)
 
     def get_all_picks(self) -> List[str]:
         """Get all picked champions."""
@@ -95,6 +99,14 @@ class DraftMonitor:
         self.champion_id_to_name: Dict[int, str] = {}  # Riot ID -> Display name
         # SPEC-04 B4 §7: loaded once at startup, never re-read per draft tick.
         self.lane_distributions: Dict[int, Dict[str, float]] = {}
+        # SPEC-04 B5: manual role corrections (championId -> lane), applied on
+        # top of infer_team_roles() every tick until the champion leaves the
+        # draft. Commands ("r <champion> <lane>") arrive via a background
+        # stdin thread and are drained on the main poll thread (_monitor_loop)
+        # so LCU/db access stays single-threaded.
+        self.forced_roles: Dict[int, str] = {}
+        self._command_queue: "queue.Queue[str]" = queue.Queue()
+        self._command_listener_thread: Optional[threading.Thread] = None
         self.is_monitoring = False
         self.verbose = verbose
         self.current_pool = TOP_SOLOQ_POOL  # Default pool
@@ -163,7 +175,10 @@ class DraftMonitor:
             print("   🚫 [AUTO-BAN-HOVER] Ban hover is ENABLED")
         if self.open_onetricks:
             print("   🌐 [ONETRICKS] Open champion page on draft completion is ENABLED")
+        print("   ✏️  Type 'r <champion> <lane>' + Enter to force a role (e.g. r Pantheon support)")
         print("   (Press Ctrl+C to stop)")
+
+        self._start_command_listener()
 
         # Log a baseline RSS measurement at startup for diagnostics.
         self._log_memory_usage(force=True)
@@ -345,8 +360,12 @@ class DraftMonitor:
             # Parse draft state
             current_state = self._parse_draft_state(champ_select_data)
 
+            # SPEC-04 B5: apply any queued "r <champion> <lane>" corrections —
+            # forces a redisplay even when the draft itself hasn't changed.
+            commands_applied = self._apply_pending_commands(current_state)
+
             # Check for changes and provide recommendations (only if draft not complete)
-            if self._has_draft_changed(current_state):
+            if self._has_draft_changed(current_state) or commands_applied:
                 # Only show draft updates if we haven't completed the analysis yet
                 if not self.has_analyzed_final_draft:
                     self._handle_draft_change(current_state)
@@ -555,6 +574,7 @@ class DraftMonitor:
         self.last_gameflow_phase = ""
         self.ready_check_accepted_time = 0
         self.player_champion = None
+        self.forced_roles = {}  # SPEC-04 B5: corrections don't carry to the next game
 
         # Reset ready message flag
         if hasattr(self, "_shown_ready_message"):
@@ -594,6 +614,77 @@ class DraftMonitor:
         except Exception as e:
             if self.verbose:
                 print(f"[WARNING] Error loading lane distributions: {e}")
+
+    def _start_command_listener(self) -> None:
+        """Background stdin reader for role corrections (SPEC-04 B5).
+
+        A daemon thread blocking on input() so the poll loop never blocks on
+        the terminal; _apply_pending_commands() drains the queue from the
+        main thread every tick, keeping LCU/db access single-threaded.
+        """
+        if self._command_listener_thread is not None:
+            return
+
+        def _listen() -> None:
+            while self.is_monitoring:
+                try:
+                    line = input()
+                except (EOFError, RuntimeError):
+                    return
+                if line.strip():
+                    self._command_queue.put(line)
+
+        self._command_listener_thread = threading.Thread(target=_listen, daemon=True)
+        self._command_listener_thread.start()
+
+    def _apply_pending_commands(self, state: DraftState) -> bool:
+        """Drain queued role-correction commands onto `state` (SPEC-04 B5).
+
+        Returns True if at least one command was applied, so the caller can
+        force a redisplay even when the draft itself hasn't changed.
+        """
+        applied = False
+        while True:
+            try:
+                line = self._command_queue.get_nowait()
+            except queue.Empty:
+                break
+            if self._handle_correction_command(line, state):
+                applied = True
+        return applied
+
+    def _handle_correction_command(self, line: str, state: DraftState) -> bool:
+        """Parse and apply one 'r <champion> <lane>' correction command."""
+        parts = line.strip().split()
+        if len(parts) != 3 or parts[0].lower() != "r":
+            print(f"[ROLE] Unrecognized command: '{line}'. Expected format: r <champion> <lane>")
+            return False
+
+        _, champion_input, lane_input = parts
+        lane = lane_input.lower()
+        if lane not in scraping_config.LANES:
+            print(
+                f"[ROLE] Unknown lane: '{lane_input}'. "
+                f"Valid values: {', '.join(scraping_config.LANES)}"
+            )
+            return False
+
+        name_to_id = {name.lower(): champ_id for champ_id, name in self.champion_id_to_name.items()}
+        champion_id = name_to_id.get(champion_input.lower())
+        if champion_id is None:
+            print(f"[ROLE] Unknown champion: '{champion_input}'")
+            return False
+
+        if champion_id not in state.ally_picks and champion_id not in state.enemy_picks:
+            print(f"[ROLE] {champion_input} is not in the current draft")
+            return False
+
+        self.forced_roles[champion_id] = lane
+        state.inferred_roles[champion_id] = lane
+        state.role_confidence[champion_id] = 1.0
+        state.role_source[champion_id] = "user"
+        print(f"[ROLE] {self._get_display_name(champion_id)} forced to {lane}")
+        return True
 
     def _get_display_name(self, champion_id: int) -> str:
         """Get display name for champion ID."""
@@ -790,11 +881,23 @@ class DraftMonitor:
             )
             state.inferred_roles.update(ally_assignment.roles)
             state.role_confidence.update(ally_assignment.confidence)
+            state.role_source.update(ally_assignment.source)
 
         if state.enemy_picks:
             enemy_assignment = infer_team_roles(state.enemy_picks, self.lane_distributions)
             state.inferred_roles.update(enemy_assignment.roles)
             state.role_confidence.update(enemy_assignment.confidence)
+            state.role_source.update(enemy_assignment.source)
+
+        # SPEC-04 B5: user-forced roles override the fresh inference above and
+        # survive recalculation as long as the champion stays in the draft.
+        for champion_id, lane in list(self.forced_roles.items()):
+            if champion_id in state.ally_picks or champion_id in state.enemy_picks:
+                state.inferred_roles[champion_id] = lane
+                state.role_confidence[champion_id] = 1.0
+                state.role_source[champion_id] = "user"
+            else:
+                del self.forced_roles[champion_id]
 
         return state
 
@@ -861,13 +964,40 @@ class DraftMonitor:
         # Provide coaching recommendations
         self._provide_recommendations(state)
 
+    def _format_role_tag(self, champion_id: int, state: DraftState) -> str:
+        """Role annotation for one champion in the draft display (SPEC-04 B5).
+
+        "(lane·LCU)" for a role certain from the queue, "(lane·forced)" for a
+        manual correction, "(lane·NN%)" for an inferred one — with a trailing
+        "?" below ROLE_CONFIDENCE_WARN to flag it for a `r <champion> <lane>`
+        check. Empty string when no lane is known yet (e.g. before B4's
+        distributions load, or a champion missing from the lane_distributions
+        likelihood matrix).
+        """
+        lane = state.inferred_roles.get(champion_id)
+        if lane is None:
+            return ""
+
+        source = state.role_source.get(champion_id, "inferred")
+        if source == "lcu":
+            label = "LCU"
+        elif source == "user":
+            label = "forced"
+        else:
+            confidence = state.role_confidence.get(champion_id, 0.0)
+            label = f"{confidence * 100:.0f}%"
+            if confidence < role_inference_config.ROLE_CONFIDENCE_WARN:
+                label += "?"
+
+        return f" ({lane}·{label})"
+
     def _display_draft_state(self, state: DraftState):
         """Display current draft state in terminal."""
         print(f"\n[ALLY] ALLY TEAM:")
         if state.ally_picks:
             for i, champ_id in enumerate(state.ally_picks, 1):
                 display_name = self._get_display_name(champ_id)
-                print(f"  {i}. {display_name}")
+                print(f"  {i}. {display_name}{self._format_role_tag(champ_id, state)}")
         else:
             print("  (No picks yet)")
 
@@ -880,7 +1010,7 @@ class DraftMonitor:
         if state.enemy_picks:
             for i, champ_id in enumerate(state.enemy_picks, 1):
                 display_name = self._get_display_name(champ_id)
-                print(f"  {i}. {display_name}")
+                print(f"  {i}. {display_name}{self._format_role_tag(champ_id, state)}")
         else:
             print("  (No picks yet)")
 
@@ -941,6 +1071,11 @@ class DraftMonitor:
                     for enemy_id in enemy_picks
                     if enemy_id in state.inferred_roles
                 }
+                # SPEC-04 B5: the enemy sharing our lane, shown as "vs X" next
+                # to each recommendation.
+                direct_counter_name = next(
+                    (name for name, lane in enemy_lanes.items() if lane == player_lane), None
+                )
 
                 # Debug: show current bans
                 if self.verbose:
@@ -963,9 +1098,8 @@ class DraftMonitor:
                     # Get champion name and matchups (cached for performance)
                     champion_name = self._get_display_name(champion_id)
                     matchups = self.assistant.get_matchups_for_draft(champion_name)
-                    if (
-                        matchups and sum(m.games for m in matchups) >= 500
-                    ):  # Threshold for valid data
+                    total_games = sum(m.games for m in matchups) if matchups else 0
+                    if matchups and total_games >= 500:  # Threshold for valid data
                         # Calculate matchup score against enemy team
                         matchup_score = self._calculate_score_against_team(
                             matchups,
@@ -992,7 +1126,9 @@ class DraftMonitor:
 
                         # Le détail est conservé pour l'affichage : le recalculer
                         # coûtait un second passage et pouvait diverger du classement
-                        scores.append((champion_id, final_score, matchup_score, synergy_score))
+                        scores.append(
+                            (champion_id, final_score, matchup_score, synergy_score, total_games)
+                        )
 
                 scores.sort(key=lambda x: -x[1])
 
@@ -1001,7 +1137,7 @@ class DraftMonitor:
                 top_recommendation = None
 
                 for i in range(display_count):
-                    champion_id, final_score, matchup_score, synergy_score = scores[i]
+                    champion_id, final_score, matchup_score, synergy_score, games = scores[i]
                     display_name = self._get_display_name(champion_id)
                     rank = "[1st]" if i == 0 else "[2nd]" if i == 1 else "[3rd]"
 
@@ -1011,7 +1147,17 @@ class DraftMonitor:
                     )
                     breakdown = f"(Matchup: {matchup_score:+.2f}%, Synergy: {synergy_score:+.2f}%)"
 
-                    print(f"  {rank} {display_name} {score_text} {breakdown}")
+                    # SPEC-04 B5: show our lane, the direct-lane counter (if
+                    # any) and the games volume behind the score.
+                    lane_tag = ""
+                    if player_lane:
+                        lane_tag = f" ({player_lane}"
+                        if direct_counter_name:
+                            lane_tag += f" vs {direct_counter_name}"
+                        lane_tag += ")"
+                    volume_tag = f" · {games:,} games".replace(",", " ")
+
+                    print(f"  {rank} {display_name}{lane_tag} {score_text} {breakdown}{volume_tag}")
 
                     # Store top recommendation for auto-hover
                     if i == 0:
