@@ -60,6 +60,11 @@ class DraftState:
     enemy_bans: List[str] = field(default_factory=list)
     current_actor: Optional[int] = None
     local_player_cell_id: Optional[int] = None
+    # SPEC-04 B3: lane info, filled from the LCU (ally_positions) and later
+    # inferred by role_inference.py (B4) for all 10 players.
+    ally_positions: Dict[int, str] = field(default_factory=dict)  # cellId -> lane
+    inferred_roles: Dict[int, str] = field(default_factory=dict)  # championId -> lane
+    role_confidence: Dict[int, float] = field(default_factory=dict)  # championId -> [0,1]
 
     def get_all_picks(self) -> List[str]:
         """Get all picked champions."""
@@ -680,6 +685,9 @@ class DraftMonitor:
         # Parse team composition
         my_team = champ_select_data.get("myTeam", [])
         their_team = champ_select_data.get("theirTeam", [])
+
+        # SPEC-04 B3: cellId -> lane, for allies whose role is assigned by the queue
+        state.ally_positions = self.lcu.get_assigned_positions(champ_select_data)
 
         # Process ally team
         for player in my_team:

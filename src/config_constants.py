@@ -6,6 +6,18 @@ Centralized configuration for all hardcoded values across the application.
 from dataclasses import dataclass, field
 from typing import Dict
 
+# SPEC-04 B3: LCU `assignedPosition` values -> `lane` column values.
+# The LCU calls the support role "utility"; LoLalytics (and the `lane`
+# column) call it "support". An empty string means the queue doesn't
+# assign roles (e.g. normal blind pick) and is intentionally absent here.
+LCU_POSITION_TO_LANE: Dict[str, str] = {
+    "top": "top",
+    "jungle": "jungle",
+    "middle": "middle",
+    "bottom": "bottom",
+    "utility": "support",
+}
+
 
 @dataclass
 class ScrapingConfig:

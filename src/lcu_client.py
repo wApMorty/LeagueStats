@@ -8,6 +8,8 @@ import unicodedata
 from typing import Optional, Dict, Any
 from dataclasses import dataclass
 
+from .config_constants import LCU_POSITION_TO_LANE
+
 # Disable SSL warnings since LCU uses self-signed certificates
 import urllib3
 
@@ -219,6 +221,30 @@ class LCUClient:
             if self.verbose:
                 print(f"[WARNING] Request error: {e}")
             return None
+
+    def get_assigned_positions(self, champ_select_data: Dict) -> Dict[int, str]:
+        """
+        Map each ally's cellId to their normalized lane, for players whose
+        role is assigned by the queue.
+
+        Args:
+            champ_select_data: champion select session (from
+                get_champion_select_session), containing a "myTeam" list of
+                players with "cellId" and "assignedPosition".
+
+        Returns:
+            cellId -> lane (e.g. "top", "support"). Players with no
+            assignedPosition (empty string, e.g. normal blind pick) or an
+            unrecognized value are simply absent from the dict.
+        """
+        positions: Dict[int, str] = {}
+        for player in champ_select_data.get("myTeam", []):
+            cell_id = player.get("cellId")
+            assigned_position = player.get("assignedPosition", "")
+            lane = LCU_POSITION_TO_LANE.get(assigned_position)
+            if cell_id is not None and lane is not None:
+                positions[cell_id] = lane
+        return positions
 
     def get_champion_select_session(self) -> Optional[Dict[str, Any]]:
         """
