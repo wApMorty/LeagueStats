@@ -348,8 +348,10 @@ class ChampionScorer:
         if not synergies:
             return 0.0
 
-        # Filter synergies matching our allies
-        relevant_synergies = [s for s in synergies if s.ally_name in ally_names]
+        # Filter synergies matching our allies (comparaison insensible à la casse,
+        # comme partout ailleurs dans le scoring — cf. score_against_team)
+        allies_lower = {name.lower() for name in ally_names}
+        relevant_synergies = [s for s in synergies if s.ally_name.lower() in allies_lower]
         if not relevant_synergies:
             return 0.0
 
