@@ -1,9 +1,47 @@
 import json
 import os
+import shutil
 import sys
 from typing import Dict, List, Optional, Set
 from dataclasses import dataclass, asdict, field
 from .config import get_resource_path
+
+POOLS_FILENAME = "champion_pools.json"
+
+
+def get_project_root() -> str:
+    """Racine du dépôt en mode développement (remonte de src/ vers la racine)."""
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def get_legacy_pools_path() -> str:
+    """Ancien emplacement (bogué) du fichier de pools : un cran au-dessus du dépôt."""
+    return os.path.join(os.path.dirname(get_project_root()), POOLS_FILENAME)
+
+
+def migrate_legacy_pools_file(pools_path: str, legacy_path: str) -> bool:
+    """Déplace le fichier de pools depuis l'ancien emplacement s'il s'y trouve encore.
+
+    Args:
+        pools_path: Emplacement attendu (dans le dépôt)
+        legacy_path: Ancien emplacement, hors du dépôt
+
+    Returns:
+        True si une migration a eu lieu
+    """
+    if pools_path == legacy_path:
+        return False
+    if os.path.exists(pools_path) or not os.path.exists(legacy_path):
+        return False
+
+    try:
+        os.makedirs(os.path.dirname(pools_path), exist_ok=True)
+        shutil.move(legacy_path, pools_path)
+        print(f"[INFO] Pools migrés depuis {legacy_path}")
+        return True
+    except OSError as e:
+        print(f"[WARNING] Migration des pools impossible depuis {legacy_path}: {e}")
+        return False
 
 
 def get_user_pools_path() -> str:
@@ -12,13 +50,11 @@ def get_user_pools_path() -> str:
         # Mode exécutable PyInstaller
         # Sauve à côté de l'exécutable pour la persistance
         executable_dir = os.path.dirname(sys.executable)
-        pools_path = os.path.join(executable_dir, "champion_pools.json")
-    else:
-        # Mode développement
-        # Utilise le répertoire du projet
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-        pools_path = os.path.join(project_root, "champion_pools.json")
+        return os.path.join(executable_dir, POOLS_FILENAME)
 
+    # Mode développement : racine du dépôt (cf. src/config.py)
+    pools_path = os.path.join(get_project_root(), POOLS_FILENAME)
+    migrate_legacy_pools_file(pools_path, get_legacy_pools_path())
     return pools_path
 
 
