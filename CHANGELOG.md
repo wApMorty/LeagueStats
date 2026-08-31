@@ -2,9 +2,31 @@
 
 All notable changes to LeagueStats Coach will be documented in this file.
 
-## [Unreleased] - 2026-08-31
+## [Unreleased] - 2026-09-01
 
 ### ✨ Ajouts
+
+- **SPEC-04 (B3) — exposer `assignedPosition` du LCU.** Première brique du chantier
+  d'inférence des rôles : la session de champion select donne, pour chaque allié, un
+  `assignedPosition` certain quand la file assigne les rôles.
+  - `LCUClient.get_assigned_positions(champ_select_data) -> Dict[int, str]` : `cellId -> lane`
+    normalisée, à partir de `myTeam` uniquement (`theirTeam` n'expose presque jamais ce champ,
+    masqué par le client). Les entrées sans rôle assigné (`""`, file sans sélection de rôle) ou
+    avec une valeur inconnue sont simplement absentes du dict — pas d'exception.
+  - `"utility"` (valeur LCU) est traduit en `"support"` (valeur LoLalytics/colonne `lane`) via
+    la nouvelle table `LCU_POSITION_TO_LANE` de `src/config_constants.py` — aucun `"utility"`
+    ne doit atteindre une requête SQL.
+  - `DraftState` (`src/draft_monitor.py`) gagne trois champs pour le chantier lane :
+    `ally_positions: Dict[int, str]` (rempli par `_parse_draft_state` depuis le LCU),
+    `inferred_roles: Dict[int, str]` et `role_confidence: Dict[int, float]` (réservés à B4,
+    vides pour l'instant). Les nouveaux champs sont correctement typés (contrairement à
+    `ally_picks`/`enemy_picks`, annotés `List[str]` mais contenant des `int` — non corrigé ici,
+    hors périmètre de B3).
+  - L'inférence des rôles elle-même (`src/role_inference.py`, affectation 5×5) et son
+    branchement dans le scoring restent à faire (B4, B5).
+  - Tests : `tests/test_lcu_assigned_positions.py` (nouveau — mapping `utility → support`,
+    `assignedPosition` vide/absent/inconnu ignoré, `theirTeam` ignoré), `tests/test_draft_monitor_roles.py`
+    (nouveau — `ally_positions` peuplé par `_parse_draft_state`, defaults vides de `DraftState`).
 
 - **SPEC-03 (B8) — contrainte d'unicité `(champion, enemy, lane)` + dédoublonnage.** Sans
   contrainte, `scripts/repair_data.py` et le pipeline principal pouvaient écrire des doublons

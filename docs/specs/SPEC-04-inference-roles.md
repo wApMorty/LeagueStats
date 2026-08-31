@@ -217,7 +217,7 @@ Le nombre de parties vient de la somme des `games` des matchups retenus (déjà 
 ## 5. Critères d'acceptation
 
 - [ ] En file classée, les rôles des 5 alliés viennent du LCU avec `source="lcu"` et `confidence=1.0`.
-- [ ] `"utility"` est bien traduit en `"support"` (aucun `"utility"` ne parvient jusqu'aux requêtes SQL).
+- [x] `"utility"` est bien traduit en `"support"` (aucun `"utility"` ne parvient jusqu'aux requêtes SQL). Vérifié par `tests/test_lcu_assigned_positions.py`.
 - [ ] L'inférence sur une équipe ennemie complète renvoie **5 rôles distincts** — jamais deux junglers.
 - [ ] Un cas de test « équipe classique » (Ornn, Sejuani, Ahri, Jinx, Thresh) est résolu correctement à 100 %.
 - [ ] Un cas ambigu (Pantheon + Senna, jouables sur plusieurs rôles) renvoie une affectation cohérente avec une confiance faible sur les champions concernés.

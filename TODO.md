@@ -51,7 +51,7 @@
 | B1 | ✅ Unifier l'agrégation multi-lane (bulk ≠ unitaire) | 13 | 3 | 4,3 |
 | B2 | ✅ Lecture filtrée par lane (accesseurs + scoring) | 21 | 8 | 2,6 |
 | B8 | ✅ Contrainte d'unicité `(champion, enemy, lane)` + dédoublonnage | 8 | 3 | 2,7 |
-| B3 | Exposer `assignedPosition` du LCU | 13 | 3 | 4,3 |
+| B3 | ✅ Exposer `assignedPosition` du LCU | 13 | 3 | 4,3 |
 | B4 | Inférer le rôle des 10 joueurs (affectation 5×5) | 21 | 13 | 1,6 |
 | B5 | Afficher lane + nombre de parties dans les recommandations | 13 | 3 | 4,3 |
 
