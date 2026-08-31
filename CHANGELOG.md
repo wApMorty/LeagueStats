@@ -6,6 +6,33 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Ajouts
 
+- **SPEC-03 (B8) — contrainte d'unicité `(champion, enemy, lane)` + dédoublonnage.** Sans
+  contrainte, `scripts/repair_data.py` et le pipeline principal pouvaient écrire des doublons
+  avec des valeurs contradictoires — mesuré : 1 263 doublons matchups, 783 synergies
+  (ex. Annie vs Lux en support : `delta2 = -9,25/67 parties` **et** `+4,61/72 parties`).
+  - Migration `ea9a2b4722f1` : backfill `lane IS NULL → 'default'`, dédoublonnage (garde la
+    ligne au plus grand `games` par triplet), puis `CREATE UNIQUE INDEX` sur
+    `matchups(champion, enemy, lane)` et `synergies(champion, ally, lane)`. `downgrade()`
+    retire les index mais ne restaure pas les lignes supprimées (documenté, non réversible).
+  - **NULL banni, jamais toléré** : SQLite ne considère jamais `NULL = NULL`, donc un index
+    unique laisserait passer un nombre illimité de lignes non taguées — c'est exactement le
+    repli de `src/multilane.py` en cas d'échec de la découverte de lane. Nouvelle constante
+    `scraping_config.DEFAULT_LANE = "default"` : `add_matchups_batch` / `add_synergies_batch`
+    normalisent `lane=None → DEFAULT_LANE` avant d'écrire.
+  - Insertions idempotentes : `INSERT ... ON CONFLICT(champion, enemy, lane) DO UPDATE SET ...`
+    (et son équivalent synergies). Un second run de scrape ou de `repair_data.py` sur le même
+    triplet met à jour la ligne existante au lieu de la dupliquer.
+  - `init_matchups_table()` / `init_synergies_table()` recréent les tables en DROP/CREATE à
+    chaque scrape complet, en contournant Alembic : l'index unique y est donc créé aussi
+    (`create_database_indexes()`), pas seulement dans la migration — sinon un rescrape complet
+    perdrait la contrainte.
+  - Tests : `tests/test_migration_unique_lane.py` (nouveau — dédoublonnage, backfill NULL,
+    contrainte rejetée en écriture brute, downgrade, idempotence applicative via
+    `add_matchups_batch`/`add_synergies_batch`), `tests/test_db_lane.py` et
+    `tests/test_data_quality.py` mis à jour (le fixture de ce dernier générait des doublons
+    `(champion, enemy, lane)` volontaires pour les tests volumétriques ; il utilise désormais
+    un `enemy`/`ally` synthétique distinct par ligne, FK désactivée le temps de l'insertion).
+
 - **SPEC-03 (B2) — filtrage par lane des accesseurs de lecture.** Les huit accesseurs de
   `src/db.py` unifiés par B1 acceptent désormais un paramètre `lane: Optional[str] = None` :
   `get_champion_matchups_by_name`, `get_champion_matchups_for_draft`,

@@ -177,8 +177,8 @@ dans `add_matchups_batch` (l. 690) et `add_synergies_batch` (l. 990).
 - [x] `get_champion_matchups_by_name("Swain", lane="middle")` renvoie les seules données middle.
 - [x] Une lane inexistante (`lane="jungle"` pour un champion qui n'y est pas joué) renvoie une liste vide, sans exception.
 - [x] `score_against_team(..., lane="top")` et `score_against_team(..., lane="support")` diffèrent pour Pantheon, dans le sens des données.
-- [ ] Après migration : 0 triplet `(champion, enemy, lane)` en double ; un second run de scrape ne crée pas de doublon (il met à jour).
-- [ ] `pytest tests/ -v` : 0 échec — y compris les tests de régression multi-lane existants (`tests/test_matchup_delta2_multilane.py`, `tests/regression/test_regression_get_synergy_delta2.py`, `tests/test_regression_synergies.py`).
+- [x] Après migration : 0 triplet `(champion, enemy, lane)` en double ; un second run de scrape ne crée pas de doublon (il met à jour). Vérifié par `tests/test_migration_unique_lane.py` (dédoublonnage + `ON CONFLICT DO UPDATE`) ; migration `ea9a2b4722f1` pas encore appliquée à `data/db.db` (à faire avant le prochain scrape).
+- [x] `pytest tests/ -v` : 0 échec — y compris les tests de régression multi-lane existants (`tests/test_matchup_delta2_multilane.py`, `tests/regression/test_regression_get_synergy_delta2.py`, `tests/test_regression_synergies.py`).
 
 ---
 
