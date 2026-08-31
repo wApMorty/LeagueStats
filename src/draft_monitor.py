@@ -899,7 +899,9 @@ class DraftMonitor:
                                 f"Synergy={synergy_score:+.2f}, Final={final_score:.2f}"
                             )
 
-                        scores.append((champion_id, final_score))
+                        # Le détail est conservé pour l'affichage : le recalculer
+                        # coûtait un second passage et pouvait diverger du classement
+                        scores.append((champion_id, final_score, matchup_score, synergy_score))
 
                 scores.sort(key=lambda x: -x[1])
 
@@ -908,16 +910,9 @@ class DraftMonitor:
                 top_recommendation = None
 
                 for i in range(display_count):
-                    champion_id, final_score = scores[i]
+                    champion_id, final_score, matchup_score, synergy_score = scores[i]
                     display_name = self._get_display_name(champion_id)
                     rank = "[1st]" if i == 0 else "[2nd]" if i == 1 else "[3rd]"
-
-                    # Recalculate matchup and synergy scores for display
-                    matchups = self.assistant.get_matchups_for_draft(display_name)
-                    matchup_score = self._calculate_score_against_team(
-                        matchups, enemy_picks, display_name, all_banned_ids
-                    )
-                    synergy_score = self._calculate_synergy_score(display_name, ally_picks)
 
                     # Format score as win rate advantage with breakdown
                     score_text = (

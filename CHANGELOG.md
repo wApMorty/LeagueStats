@@ -82,6 +82,27 @@ All notable changes to LeagueStats Coach will be documented in this file.
   identiques pour un pool de 15 champions. `find_optimal_trios_holistic()` la précharge
   désormais une seule fois, comme `matchup_cache` juste au-dessus, et la passe en
   paramètre à `_evaluate_trio_holistic()`.
+- **SPEC-06 (C4) — index `COLLATE NOCASE` sur `champions.name`.** Les lectures de
+  matchups filtrent sur `c1.name = ? COLLATE NOCASE` : appliqué à la colonne comparée,
+  `COLLATE NOCASE` interdit l'usage de `idx_champions_name`, et SQLite attaquait la
+  requête par la table `matchups`. Nouvel index `idx_champions_name_nocase` (migration
+  Alembic `ab14babf365b`, créé aussi par `create_database_indexes()` pour les bases
+  existantes).
+  - Mesure sur la base de production (26 604 matchups, 173 champions), 200 appels de
+    `get_matchup_delta2()` : **1 336 ms (6,68 ms/appel) → 23 ms (0,11 ms/appel)**, soit
+    ~55x. Le plan de requête passe de `SEARCH m USING INDEX idx_matchups_pickrate` à
+    `SEARCH c1 USING COVERING INDEX idx_champions_name_nocase`.
+  - Le draft coach fait 5 appels par champion de pool et par changement d'état du draft :
+    ~0,5 s économisées par rafraîchissement pour un pool de 15 champions.
+  - Comportement inchangé : les recherches restent insensibles à la casse.
+- **SPEC-06 (C3) — plus de double calcul du top 3.** `DraftMonitor._provide_recommendations()`
+  scorait tout le pool, triait, puis **recalculait** matchup et synergie pour chacun des
+  3 champions affichés — soit 3 lectures de matchups et 6 calculs de score en trop à chaque
+  changement d'état du draft. Le détail est désormais conservé dans `scores` (quadruplet
+  `champion_id, final_score, matchup_score, synergy_score`) et réutilisé à l'affichage.
+  - **Enjeu réel au-delà du coût** : deux calculs séparés pouvaient diverger, le classement
+    affichant alors un détail qui ne le justifiait pas. Un test vérifie désormais que le
+    détail affiché est bien celui qui a servi au tri.
 
 ### ♻️ Refactoring
 

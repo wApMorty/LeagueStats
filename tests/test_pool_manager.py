@@ -318,3 +318,61 @@ class TestPoolManagerBanRecalculation:
                 for call_str in print_calls
             )
             assert error_found, "Expected error log for filesystem failure not found"
+
+
+class TestPoolsPathAndMigration:
+    """Tests du chemin de champion_pools.json et de sa migration (SPEC-06 D1)."""
+
+    def test_dev_path_is_inside_repository(self):
+        """En mode dev, le fichier de pools vit à la racine du dépôt, pas au-dessus."""
+        from src import pool_manager
+
+        with patch.object(sys, "frozen", False, create=True):
+            pools_path = pool_manager.get_user_pools_path()
+
+        expected = os.path.join(pool_manager.get_project_root(), "champion_pools.json")
+        assert pools_path == expected
+        # La racine du dépôt contient bien le code source
+        assert os.path.isdir(os.path.join(pool_manager.get_project_root(), "src"))
+        # Régression : l'ancien chemin remontait un cran trop haut
+        assert pools_path != pool_manager.get_legacy_pools_path()
+
+    def test_migration_moves_legacy_file(self, tmp_path, capsys):
+        """Le fichier de l'ancien emplacement est déplacé vers le nouveau."""
+        from src.pool_manager import migrate_legacy_pools_file
+
+        legacy = tmp_path / "old" / "champion_pools.json"
+        legacy.parent.mkdir()
+        legacy.write_text(json.dumps({"GRIND": {"champions": ["Jinx"]}}), encoding="utf-8")
+        target = tmp_path / "repo" / "champion_pools.json"
+
+        assert migrate_legacy_pools_file(str(target), str(legacy)) is True
+        assert target.exists()
+        assert not legacy.exists()
+        assert json.loads(target.read_text(encoding="utf-8")) == {"GRIND": {"champions": ["Jinx"]}}
+        assert "migr" in capsys.readouterr().out
+
+    def test_no_migration_when_target_exists(self, tmp_path):
+        """Un fichier déjà présent au nouvel emplacement n'est jamais écrasé."""
+        from src.pool_manager import migrate_legacy_pools_file
+
+        legacy = tmp_path / "old" / "champion_pools.json"
+        legacy.parent.mkdir()
+        legacy.write_text('{"ancien": {}}', encoding="utf-8")
+        target = tmp_path / "repo" / "champion_pools.json"
+        target.parent.mkdir()
+        target.write_text('{"nouveau": {}}', encoding="utf-8")
+
+        assert migrate_legacy_pools_file(str(target), str(legacy)) is False
+        assert target.read_text(encoding="utf-8") == '{"nouveau": {}}'
+        assert legacy.exists()
+
+    def test_no_migration_when_legacy_absent(self, tmp_path):
+        """Sans fichier à l'ancien emplacement, rien ne se passe."""
+        from src.pool_manager import migrate_legacy_pools_file
+
+        target = tmp_path / "repo" / "champion_pools.json"
+        legacy = tmp_path / "old" / "champion_pools.json"
+
+        assert migrate_legacy_pools_file(str(target), str(legacy)) is False
+        assert not target.exists()
