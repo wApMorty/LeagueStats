@@ -4,6 +4,26 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### ♻️ Refactor
+
+- **SPEC-07 (E9)** — `src/ui/lol_coach_legacy.py` (2045 lignes, 14 % couvert)
+  démantelé en 9 modules par domaine de menu (`checks.py`,
+  `pool_selection_ui.py`, `data_update_ui.py`, `tier_list_ui.py`,
+  `tournament_coach_ui.py`/`tournament_display_ui.py`, `team_builder_ui.py`,
+  `pools_menu_ui.py`/`pools_crud_ui.py`), chacun < 400 lignes. Déplacement de
+  code verbatim, aucun changement de comportement. 11 tests de
+  caractérisation ajoutés pour les 6 points d'entrée que `lol_coach.py`
+  importe, jusque-là non couverts.
+
+### 🔧 Chore
+
+- **SPEC-07 (E2)** — README réécrit : chaque affirmation vérifiée sur l'état
+  actuel du dépôt (plus de `main.py`, plus de modes PostgreSQL, chiffres
+  réels).
+- **SPEC-06 (E7)** — derniers seuils métier hardcodés (`pickrate`/`games`
+  dans les requêtes SQL de `db.py`, seuil de games et nombre de
+  recommandations dans `draft_monitor.py`) sortis vers `config_constants`.
+
 ## [1.3.0] - 2026-09-01
 
 ### 🔧 Chore
