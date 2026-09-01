@@ -20,6 +20,7 @@ from src.ui.champion_data_ui import update_champion_data
 from src.utils.console import clear_console, set_clear_enabled, clear_and_banner
 from src.config import config
 from src.data_freshness import get_freshness_info, format_freshness_banner
+from src.user_prefs import load_user_prefs
 
 # Import legacy functions not yet refactored
 from src.ui.lol_coach_legacy import (
@@ -131,24 +132,63 @@ def main():
                     input("\nPress Enter to return to menu...")
                     continue
 
-                # Ask about auto-features
-                hover_choice = (
-                    input("\nEnable automatic champion hovering? (y/N): ").strip().lower()
-                )
-                auto_hover = hover_choice == "y"
+                # SPEC-06 D2: reprendre les préférences de la dernière session
+                # au lieu de reposer les six questions à chaque lancement.
+                saved_prefs = load_user_prefs()
+                reuse = False
+                if saved_prefs is not None:
+                    print(
+                        "\nPréférences précédentes : "
+                        f"hover={'oui' if saved_prefs.auto_hover else 'non'}, "
+                        f"accept={'oui' if saved_prefs.auto_accept_queue else 'non'}, "
+                        f"ban-hover={'oui' if saved_prefs.auto_ban_hover else 'non'}, "
+                        f"onetricks={'oui' if saved_prefs.open_onetricks else 'non'}, "
+                        f"synergie={saved_prefs.synergy_weight}, "
+                        f"pool={saved_prefs.pool_name or 'aucune'}"
+                    )
+                    resume_choice = (
+                        input("[Entrée] pour reprendre - [m] pour modifier : ").strip().lower()
+                    )
+                    reuse = resume_choice != "m"
 
-                accept_choice = input("Enable automatic queue acceptance? (y/N): ").strip().lower()
-                auto_accept_queue = accept_choice == "y"
+                if reuse:
+                    auto_hover = saved_prefs.auto_hover
+                    auto_accept_queue = saved_prefs.auto_accept_queue
+                    auto_ban_hover = saved_prefs.auto_ban_hover
+                    open_onetricks = saved_prefs.open_onetricks
+                    synergy_weight = saved_prefs.synergy_weight
+                    pool_name = saved_prefs.pool_name
+                else:
+                    # Ask about auto-features
+                    hover_choice = (
+                        input("\nActiver le survol automatique des champions ? (o/N) : ")
+                        .strip()
+                        .lower()
+                    )
+                    auto_hover = hover_choice == "o"
 
-                ban_hover_choice = input("Enable automatic ban hovering? (y/N): ").strip().lower()
-                auto_ban_hover = ban_hover_choice == "y"
+                    accept_choice = (
+                        input("Activer l'acceptation automatique de la queue ? (o/N) : ")
+                        .strip()
+                        .lower()
+                    )
+                    auto_accept_queue = accept_choice == "o"
 
-                onetricks_choice = (
-                    input("Open champion page on Onetricks.gg when draft completes? (Y/n): ")
-                    .strip()
-                    .lower()
-                )
-                open_onetricks = onetricks_choice != "n"  # Default to True unless explicitly 'n'
+                    ban_hover_choice = (
+                        input("Activer le survol automatique des bans ? (o/N) : ").strip().lower()
+                    )
+                    auto_ban_hover = ban_hover_choice == "o"
+
+                    onetricks_choice = (
+                        input(
+                            "Ouvrir la page du champion sur Onetricks.gg en fin de draft ? (O/n) : "
+                        )
+                        .strip()
+                        .lower()
+                    )
+                    open_onetricks = onetricks_choice != "n"  # Oui par défaut sauf 'n' explicite
+                    synergy_weight = None  # redemandé par run_draft_coach
+                    pool_name = None  # sélection interactive par run_draft_coach
 
                 run_draft_coach(
                     args.verbose,
@@ -156,6 +196,8 @@ def main():
                     auto_accept_queue=auto_accept_queue,
                     auto_ban_hover=auto_ban_hover,
                     open_onetricks=open_onetricks,
+                    synergy_weight=synergy_weight,
+                    pool_name=pool_name,
                 )
 
             elif choice == "2":

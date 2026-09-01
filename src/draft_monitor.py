@@ -92,6 +92,7 @@ class DraftMonitor:
         auto_ban_hover: bool = False,
         open_onetricks: bool = None,
         synergy_weight: float = None,
+        preselected_pool_name: Optional[str] = None,
     ):
         self.lcu = LCUClient(verbose=verbose)
         self.assistant = Assistant()
@@ -112,6 +113,9 @@ class DraftMonitor:
         self.current_pool = TOP_SOLOQ_POOL  # Default pool
         self.pool_name = None  # Pool name for pre-calculated ban lookups
         self.auto_select_pool = auto_select_pool
+        # SPEC-06 D2: pool mémorisée d'une session précédente, réutilisée sans
+        # re-poser la question si elle existe toujours.
+        self.preselected_pool_name = preselected_pool_name
         self.auto_hover = auto_hover
         self.auto_accept_queue = auto_accept_queue
         self.auto_ban_hover = auto_ban_hover
@@ -157,7 +161,10 @@ class DraftMonitor:
 
         # Pool selection
         if not self.auto_select_pool:
-            self.current_pool = self._select_champion_pool_interactive()
+            if self.preselected_pool_name:
+                self.current_pool = self._select_champion_pool_by_name(self.preselected_pool_name)
+            else:
+                self.current_pool = self._select_champion_pool_interactive()
         else:
             # Auto-select top pool by default
             self.pool_name = "All Top Champions"  # System pool name
@@ -1513,6 +1520,28 @@ class DraftMonitor:
         except Exception as e:
             if self.verbose:
                 print(f"[WARNING] Error showing adaptive ban recommendations: {e}")
+
+    def _select_champion_pool_by_name(self, pool_name: str) -> List[str]:
+        """Charge une pool mémorisée par son nom, sans re-poser la question.
+
+        Retombe sur la sélection interactive si la pool a été supprimée ou
+        renommée depuis la dernière session (SPEC-06 D2).
+        """
+        try:
+            from .pool_manager import PoolManager
+
+            pool_manager = PoolManager()
+            pool = pool_manager.get_pool(pool_name)
+            if pool is None:
+                print(f"[INFO] Pool '{pool_name}' introuvable, sélection manuelle.")
+                return self._select_champion_pool_interactive()
+
+            safe_print(f"[OK] Pool mémorisée utilisée : {pool_name} ({', '.join(pool.champions)})")
+            self.pool_name = pool_name
+            return pool.champions
+        except Exception as e:
+            print(f"[WARNING] Erreur lors du chargement de la pool mémorisée: {e}")
+            return self._select_champion_pool_interactive()
 
     def _select_champion_pool_interactive(self) -> List[str]:
         """Interactive pool selection with custom pools support."""

@@ -4,6 +4,7 @@ from typing import Optional
 from ..draft_monitor import DraftMonitor
 from ..utils.console import clear_console
 from ..config_constants import draft_config
+from ..user_prefs import UserPrefs, save_user_prefs
 
 
 def _prompt_synergy_weight() -> float:
@@ -37,6 +38,8 @@ def run_draft_coach(
     auto_accept_queue: bool = False,
     auto_ban_hover: bool = False,
     open_onetricks: Optional[bool] = None,
+    synergy_weight: Optional[float] = None,
+    pool_name: Optional[str] = None,
 ) -> None:
     """
     Run the real-time draft coach.
@@ -47,6 +50,8 @@ def run_draft_coach(
         auto_accept_queue: Auto-accept queue
         auto_ban_hover: Auto-hover ban recommendations
         open_onetricks: Open champion pages on draft completion
+        synergy_weight: Poids synergy/matchup mémorisé (SPEC-06 D2) ; None = redemander
+        pool_name: Pool mémorisée (SPEC-06 D2) ; None = sélection interactive
     """
     clear_console()  # Clear console at start
     print("[INFO] Starting Real-time Draft Coach...")
@@ -61,8 +66,10 @@ def run_draft_coach(
         print("🌐 [ONETRICKS] Open champion page on draft completion is ENABLED")
     print("Press Ctrl+C to stop monitoring.\n")
 
-    synergy_weight = _prompt_synergy_weight()
+    if synergy_weight is None:
+        synergy_weight = _prompt_synergy_weight()
 
+    monitor = None
     try:
         monitor = DraftMonitor(
             verbose=verbose,
@@ -72,6 +79,7 @@ def run_draft_coach(
             auto_ban_hover=auto_ban_hover,
             open_onetricks=open_onetricks,
             synergy_weight=synergy_weight,
+            preselected_pool_name=pool_name,
         )
         monitor.start_monitoring()
     except KeyboardInterrupt:
@@ -82,3 +90,17 @@ def run_draft_coach(
             import traceback
 
             traceback.print_exc()
+    finally:
+        # SPEC-06 D2: mémorise les choix réellement utilisés (y compris la
+        # pool retombée en secours si le nom mémorisé n'existait plus).
+        if monitor is not None:
+            save_user_prefs(
+                UserPrefs(
+                    auto_hover=auto_hover,
+                    auto_accept_queue=auto_accept_queue,
+                    auto_ban_hover=auto_ban_hover,
+                    open_onetricks=bool(monitor.open_onetricks),
+                    synergy_weight=monitor.synergy_weight,
+                    pool_name=monitor.pool_name,
+                )
+            )

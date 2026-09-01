@@ -14,6 +14,19 @@ def get_project_root() -> str:
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
+def get_user_data_path(filename: str) -> str:
+    """Emplacement persistant et inscriptible pour un fichier de données utilisateur.
+
+    Mode .exe (PyInstaller) : à côté de l'exécutable. Mode développement :
+    racine du dépôt. Réutilisé par les pools (`champion_pools.json`) et les
+    préférences du draft coach (`user_prefs.json`).
+    """
+    if getattr(sys, "frozen", False):
+        executable_dir = os.path.dirname(sys.executable)
+        return os.path.join(executable_dir, filename)
+    return os.path.join(get_project_root(), filename)
+
+
 def get_legacy_pools_path() -> str:
     """Ancien emplacement (bogué) du fichier de pools : un cran au-dessus du dépôt."""
     return os.path.join(os.path.dirname(get_project_root()), POOLS_FILENAME)
@@ -46,15 +59,9 @@ def migrate_legacy_pools_file(pools_path: str, legacy_path: str) -> bool:
 
 def get_user_pools_path() -> str:
     """Get the path for user pools file, ensuring it's writable and persistent."""
-    if getattr(sys, "frozen", False):
-        # Mode exécutable PyInstaller
-        # Sauve à côté de l'exécutable pour la persistance
-        executable_dir = os.path.dirname(sys.executable)
-        return os.path.join(executable_dir, POOLS_FILENAME)
-
-    # Mode développement : racine du dépôt (cf. src/config.py)
-    pools_path = os.path.join(get_project_root(), POOLS_FILENAME)
-    migrate_legacy_pools_file(pools_path, get_legacy_pools_path())
+    pools_path = get_user_data_path(POOLS_FILENAME)
+    if not getattr(sys, "frozen", False):
+        migrate_legacy_pools_file(pools_path, get_legacy_pools_path())
     return pools_path
 
 
