@@ -61,10 +61,10 @@ addopts = [
     "-v",
     "--strict-markers",
     "--tb=short",
-    "--cov=src/analysis",
+    "--cov=src",
     "--cov-report=term-missing",
     "--cov-report=xml",
-    "--cov-fail-under=70",
+    "--cov-fail-under=45",
 ]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
@@ -73,10 +73,11 @@ markers = [
 ]
 
 # Coverage configuration
-# Focus on tested modules only (Sprint 1: analysis package)
+# Mesure honnête sur tout src/ (SPEC-07 E1). Seuil 45 % = légèrement au-dessus
+# du réel hors legacy : il doit monter à chaque chantier, jamais baisser.
 [tool.coverage.run]
-source = ["src/analysis"]
-omit = []
+source = ["src"]
+omit = ["src/ui/lol_coach_legacy.py"]  # dette isolée, traitée par SPEC-07 E9
 
 [tool.coverage.report]
 precision = 2
