@@ -10,11 +10,7 @@ from .assistant import Assistant
 from .utils.display import safe_print
 from .utils.console import clear_console
 from .constants import TOP_SOLOQ_POOL, CHAMPIONS_BY_ROLE
-from .config_constants import (
-    analysis_config,
-    draft_config,
-    ui_config,
-)
+from .config_constants import draft_config
 from .draft.state import ChampionAction, DraftState
 from .draft import phases
 from .draft import display
@@ -26,6 +22,9 @@ from .draft.automation import HoverAutomation
 from .draft.pool_selection import PoolSelector
 from .draft.ban_advice import BanAdvisor
 from .draft.commands import CommandListener
+from .draft.recommendations import DraftRecommender
+from .draft.final_analysis import FinalDraftAnalyzer
+from .draft.lifecycle import MonitorLifecycle
 
 
 class DraftMonitor:
@@ -84,6 +83,9 @@ class DraftMonitor:
         self.pool_selector = PoolSelector(self)
         self.ban_advisor = BanAdvisor(self)
         self.commands = CommandListener(self)
+        self.recommender = DraftRecommender(self)
+        self.final_analyzer = FinalDraftAnalyzer(self)
+        self.lifecycle = MonitorLifecycle(self)
         self.last_recommendation = None  # Track last recommendation to avoid spam
         self.last_ban_recommendation = None  # Track last ban recommendation to avoid spam
         self.has_done_initial_hover = False  # Track if we've done the initial hover
@@ -190,130 +192,11 @@ class DraftMonitor:
 
     def _monitor_loop(self):
         """Main monitoring loop."""
-        try:
-            # Check for ready check (queue found) and auto-accept if enabled
-            if self.auto_accept_queue and self.lcu.is_in_ready_check():
-                self._handle_ready_check()
-
-            if not self.lcu.is_in_champion_select():
-                # Show ready message when leaving champion select if we had a draft
-                if self.last_draft_state.phase and (
-                    self.last_draft_state.ally_picks or self.last_draft_state.enemy_picks
-                ):
-                    # Only show the message once when leaving champion select
-                    if not hasattr(self, "_shown_ready_message"):
-                        print("\n[INFO] Champion select quitté - La partie démarre !")
-
-                        # Show ready message for next game
-                        print("\n" + "=" * 60)
-                        print("[READY] En attente de la prochaine partie...")
-                        if self.auto_accept_queue:
-                            print("   Auto-accept activé pour la prochaine queue")
-                        print("   (Relancez une recherche de partie !)")
-                        print("=" * 60)
-
-                        self._shown_ready_message = True
-
-                # Check if we've completely left the game flow and should reset
-                gameflow = self.lcu.get_gameflow_session()
-                if gameflow:
-                    current_phase = gameflow.get("phase", "")
-                    # Reset when we're back in lobby or matchmaking
-                    if current_phase in ["Lobby", "Matchmaking", "None", ""]:
-                        if self.has_analyzed_final_draft:  # Only reset if we had analyzed a draft
-                            if self.verbose:
-                                print(
-                                    f"[DEBUG] Gameflow phase: {current_phase} - Resetting for next game"
-                                )
-                            self._reset_for_next_game()
-
-                return
-
-            # Get current champion select data
-            champ_select_data = self.lcu.get_champion_select_session()
-            if not champ_select_data:
-                return
-
-            # Parse draft state
-            current_state = self._parse_draft_state(champ_select_data)
-
-            # SPEC-04 B5: apply any queued "r <champion> <lane>" corrections —
-            # forces a redisplay even when the draft itself hasn't changed.
-            commands_applied = self._apply_pending_commands(current_state)
-
-            # Check for changes and provide recommendations (only if draft not complete)
-            if self._has_draft_changed(current_state) or commands_applied:
-                # Only show draft updates if we haven't completed the analysis yet
-                if not self.has_analyzed_final_draft:
-                    self._handle_draft_change(current_state)
-                self.last_draft_state = current_state
-
-            # Check if draft is complete and analyze if needed
-            if self._is_draft_complete(current_state) and not self.has_analyzed_final_draft:
-                self._analyze_complete_draft(current_state)
-
-        except Exception as e:
-            if self.verbose:
-                print(f"[WARNING] Monitor error: {e}")
+        self.lifecycle.monitor_loop()
 
     def _handle_ready_check(self):
         """Handle ready check (queue found) and auto-accept if enabled."""
-        try:
-            # Get current gameflow phase to avoid spam
-            gameflow = self.lcu.get_gameflow_session()
-            if not gameflow:
-                return
-
-            current_phase = gameflow.get("phase", "")
-            current_time = time.time()
-
-            # Check if we've entered ready check for the first time or after a failed attempt
-            if current_phase == "ReadyCheck":
-                # Reset ready check acceptance if we haven't accepted recently
-                # This handles cases where ready check failed and we're in a new one
-                cooldown = draft_config.READY_CHECK_COOLDOWN * 2.5  # 5 seconds default
-                if self.last_gameflow_phase != "ReadyCheck" or (
-                    self.ready_check_accepted_time > 0
-                    and current_time - self.ready_check_accepted_time > cooldown
-                ):
-                    print("\n" + "=" * 60)
-                    print("[QUEUE] PARTIE TROUVÉE !")
-                    print("=" * 60)
-
-                    # Get ready check details if available
-                    ready_check = self.lcu.get_ready_check_state()
-                    if ready_check and self.verbose:
-                        timer = ready_check.get("timer", 0)
-                        print(f"[DEBUG] Ready check timer: {timer}s")
-
-                    # Auto-accept the queue
-                    if self.lcu.accept_ready_check():
-                        print("[OK] [AUTO-ACCEPT] Queue acceptée automatiquement !")
-                        self.ready_check_accepted_time = current_time
-                    else:
-                        print("[ALERTE] [AUTO-ACCEPT] Échec de l'acceptation de la queue")
-
-                    print("En attente des autres joueurs...")
-                    print("=" * 60)
-
-            # Handle transitions out of ready check
-            elif self.last_gameflow_phase == "ReadyCheck" and current_phase != "ReadyCheck":
-                if current_phase == "ChampSelect":
-                    print(
-                        "[OK] [SUCCESS] Tous les joueurs ont accepté - Entrée en champion select !"
-                    )
-                elif current_phase in ["Lobby", "Matchmaking"]:
-                    print("[ALERTE] [FAILED] Échec du ready check - Un joueur n'a pas accepté")
-                    print("[RETRY] Retour en file d'attente...")
-                    # Reset ready check timer to allow new detection
-                    self.ready_check_accepted_time = 0
-
-            # Update last phase
-            self.last_gameflow_phase = current_phase
-
-        except Exception as e:
-            if self.verbose:
-                print(f"[WARNING] Error handling ready check: {e}")
+        self.lifecycle.handle_ready_check()
 
     def _handle_auto_ban_hover(self, state: DraftState):
         """Handle auto-ban-hover when it's our turn to ban."""
@@ -325,55 +208,11 @@ class DraftMonitor:
 
     def _analyze_complete_draft(self, state: DraftState):
         """Analyze the complete draft immediately when all champions are locked."""
-        try:
-            ally_picks = state.ally_picks
-            enemy_picks = state.enemy_picks
-
-            if len(ally_picks) >= 5 and len(enemy_picks) >= 5:
-                print("\n" + "=" * 80)
-                print("[DRAFT TERMINÉ] Tous les champions verrouillés - Analyse finale !")
-                print("=" * 80)
-
-                self._calculate_final_scores(
-                    ally_picks, enemy_picks, ally_lanes=state.inferred_roles
-                )
-
-                # Mark analysis as done
-                self.has_analyzed_final_draft = True
-
-                # Open champion page on OneTriks.gg if enabled
-                if self.open_onetricks:
-                    self._open_champion_page_on_onetricks()
-
-        except Exception as e:
-            print(f"[ERREUR] Échec de l'analyse du draft complet: {e}")
-            if self.verbose:
-                import traceback
-
-                traceback.print_exc()
+        self.lifecycle.analyze_complete_draft(state)
 
     def _reset_for_next_game(self):
         """Reset state for the next game."""
-        # Clear console when returning to queue for clean slate
-        clear_console()
-
-        self.last_draft_state = DraftState()
-        self.has_done_initial_hover = False
-        self.has_analyzed_final_draft = False
-        self.last_recommendation = None
-        self.last_ban_recommendation = None
-        self.last_gameflow_phase = ""
-        self.ready_check_accepted_time = 0
-        self.player_champion = None
-        self.forced_roles = {}  # SPEC-04 B5: corrections don't carry to the next game
-        self._last_prediction_id = None  # SPEC-05 B7: predictions don't carry to the next game
-
-        # Reset ready message flag
-        if hasattr(self, "_shown_ready_message"):
-            delattr(self, "_shown_ready_message")
-
-        if self.verbose:
-            print("[DEBUG] State reset for next game")
+        self.lifecycle.reset_for_next_game()
 
     def _load_champion_mappings(self):
         """Load champion mappings from database (now using Riot IDs)."""
@@ -474,56 +313,7 @@ class DraftMonitor:
 
     def _handle_draft_change(self, state: DraftState):
         """Handle draft state change and provide recommendations."""
-        # Clear console on draft updates to prevent infinite scroll
-        # BUT don't clear during ban phase to keep ban recommendations visible
-        should_clear = True
-
-        # Don't clear during active ban phase - keep ban recommendations visible
-        if self._is_ban_phase(state):
-            should_clear = False
-            if self.verbose:
-                print(
-                    f"[DEBUG] Ban phase active - skipping console clear to preserve ban recommendations"
-                )
-
-        # Only clear on phase transitions, not during same phase
-        if should_clear and self.last_draft_state.phase == state.phase:
-            # Same phase - only clear if there's a significant change (new pick)
-            picks_changed = len(state.ally_picks) != len(self.last_draft_state.ally_picks) or len(
-                state.enemy_picks
-            ) != len(self.last_draft_state.enemy_picks)
-            if not picks_changed:
-                should_clear = False
-
-        if should_clear:
-            clear_console()
-
-        print("\n" + "=" * 80)
-        print(f"[INFO] MISE À JOUR DU DRAFT - Phase : {state.phase}")
-        if self.verbose:
-            print(
-                f"[DEBUG] Current actor: {state.current_actor}, Local player: {state.local_player_cell_id}"
-            )
-            print(
-                f"[DEBUG] Enemy picks: {len(state.enemy_picks)}, Ally picks: {len(state.ally_picks)}"
-            )
-            print(f"[DEBUG] Enemy bans: {len(state.enemy_bans)}, Ally bans: {len(state.ally_bans)}")
-        print("=" * 80)
-
-        # Do initial hover when first entering champion select
-        if self.auto_hover and not self.has_done_initial_hover and state.phase:
-            self._do_initial_hover()
-            self.has_done_initial_hover = True
-
-        # Reset last recommendation if enemy composition changed for fresh hover decisions
-        if self._enemy_picks_changed(state):
-            self.last_recommendation = None
-
-        # Display current draft state
-        self._display_draft_state(state)
-
-        # Provide coaching recommendations
-        self._provide_recommendations(state)
+        self.lifecycle.handle_draft_change(state)
 
     def _format_role_tag(self, champion_id: int, state: DraftState) -> str:
         """Role annotation for one champion in the draft display (SPEC-04 B5)."""
@@ -535,192 +325,7 @@ class DraftMonitor:
 
     def _provide_recommendations(self, state: DraftState):
         """Provide coaching recommendations based on current draft."""
-        try:
-            enemy_picks = state.enemy_picks
-            ally_picks = state.ally_picks
-
-            if self.verbose:
-                print(
-                    f"[DEBUG] _provide_recommendations called: Phase='{state.phase}', Enemies={len(enemy_picks)}, Allies={len(ally_picks)}"
-                )
-
-            # Skip recommendations if draft hasn't started yet (bans already shown in initial hover)
-            if not enemy_picks and not ally_picks:
-                if self.verbose:
-                    print(f"[DEBUG] Waiting for picks to start (bans already shown at start)")
-                return
-
-            # Use existing coach logic
-            if enemy_picks:
-                print(f"\n[PICKS] RECOMMANDATIONS DE COUNTERPICK :")
-                print("-" * 50)
-
-                # Show adaptive ban recommendations only during actual ban phases
-                if self._is_ban_phase(state) and len(enemy_picks) >= 1:
-                    self._show_adaptive_ban_recommendations(state)
-
-                # Get champion IDs from current pool only
-                name_to_id = {name: champ_id for champ_id, name in self.champion_id_to_name.items()}
-                pool_champion_ids = []
-                for champ_name in self.current_pool:
-                    if champ_name in name_to_id:
-                        pool_champion_ids.append(name_to_id[champ_name])
-                    else:
-                        if self.verbose:
-                            print(
-                                f"[DEBUG] Champion '{champ_name}' from current pool not found in database"
-                            )
-
-                scores = []
-
-                # Collect all banned champion IDs for score calculation
-                all_banned_ids = state.ally_bans + state.enemy_bans
-
-                # SPEC-04 B4 §4.3: our own lane (from the LCU, when the queue
-                # assigns one) and the enemy team's inferred lanes, for the
-                # same-lane weighting in _calculate_score_against_team.
-                player_lane = state.ally_positions.get(state.local_player_cell_id)
-                enemy_lanes = {
-                    self._get_display_name(enemy_id): state.inferred_roles[enemy_id]
-                    for enemy_id in enemy_picks
-                    if enemy_id in state.inferred_roles
-                }
-                # SPEC-04 B5: the enemy sharing our lane, shown as "vs X" next
-                # to each recommendation.
-                direct_counter_name = next(
-                    (name for name, lane in enemy_lanes.items() if lane == player_lane), None
-                )
-
-                # Debug: show current bans
-                if self.verbose:
-                    if state.ally_bans or state.enemy_bans:
-                        ally_ban_names = [self._get_display_name(bid) for bid in state.ally_bans]
-                        enemy_ban_names = [self._get_display_name(bid) for bid in state.enemy_bans]
-                        print(f"[DEBUG] Ally bans: {ally_ban_names}")
-                        print(f"[DEBUG] Enemy bans: {enemy_ban_names}")
-
-                for champion_id in pool_champion_ids:
-                    # Skip if already picked/banned
-                    if champion_id in enemy_picks or champion_id in ally_picks:
-                        continue
-                    if champion_id in state.ally_bans or champion_id in state.enemy_bans:
-                        if self.verbose:
-                            banned_name = self._get_display_name(champion_id)
-                            print(f"[DEBUG] Skipping banned champion: {banned_name}")
-                        continue
-
-                    # Get champion name and matchups (cached for performance)
-                    champion_name = self._get_display_name(champion_id)
-                    matchups = self.assistant.get_matchups_for_draft(champion_name)
-                    total_games = sum(m.games for m in matchups) if matchups else 0
-                    if matchups and total_games >= draft_config.MIN_CHAMPION_GAMES:
-                        # Calculate matchup score against enemy team
-                        matchup_score = self._calculate_score_against_team(
-                            matchups,
-                            enemy_picks,
-                            champion_name,
-                            all_banned_ids,
-                            enemy_lanes=enemy_lanes,
-                            player_lane=player_lane,
-                        )
-
-                        # Calculate synergy score with allied champions
-                        synergy_score = self._calculate_synergy_score(
-                            champion_name, ally_picks, lane=player_lane
-                        )
-
-                        # Final score = configurable blend of matchup and synergy (see _final_score)
-                        final_score = self._final_score(matchup_score, synergy_score)
-
-                        if self.verbose:
-                            print(
-                                f"[DEBUG] {champion_name}: Matchup={matchup_score:.2f}, "
-                                f"Synergy={synergy_score:+.2f}, Final={final_score:.2f}"
-                            )
-
-                        # Le détail est conservé pour l'affichage : le recalculer
-                        # coûtait un second passage et pouvait diverger du classement
-                        scores.append(
-                            (champion_id, final_score, matchup_score, synergy_score, total_games)
-                        )
-
-                scores.sort(key=lambda x: -x[1])
-
-                # Show top recommendations
-                display_count = min(ui_config.MAX_RECOMMENDATIONS, len(scores))
-                top_recommendation = None
-
-                for i in range(display_count):
-                    champion_id, final_score, matchup_score, synergy_score, games = scores[i]
-                    display_name = self._get_display_name(champion_id)
-                    rank = "[1st]" if i == 0 else "[2nd]" if i == 1 else "[3rd]"
-
-                    # Format score as win rate advantage with breakdown
-                    score_text = (
-                        f"+{final_score:.2f}%" if final_score > 0 else f"{final_score:.2f}%"
-                    )
-                    breakdown = f"(Matchup: {matchup_score:+.2f}%, Synergy: {synergy_score:+.2f}%)"
-
-                    # SPEC-04 B5: show our lane, the direct-lane counter (if
-                    # any) and the games volume behind the score.
-                    lane_tag = ""
-                    if player_lane:
-                        lane_tag = f" ({player_lane}"
-                        if direct_counter_name:
-                            lane_tag += f" vs {direct_counter_name}"
-                        lane_tag += ")"
-                    volume_tag = f" · {games:,} games".replace(",", " ")
-
-                    print(f"  {rank} {display_name}{lane_tag} {score_text} {breakdown}{volume_tag}")
-
-                    # Store top recommendation for auto-hover
-                    if i == 0:
-                        top_recommendation = display_name
-
-                # Auto-hover top recommendation if enabled
-                if (
-                    self.auto_hover
-                    and top_recommendation
-                    and top_recommendation != self.last_recommendation
-                ):
-                    # Check if we should update hover (either it's our turn or enemy picked)
-                    is_our_turn = self._is_player_turn(state)
-                    enemy_changed = self._enemy_picks_changed(state)
-
-                    if is_our_turn or enemy_changed:
-                        reason = (
-                            "À vous de jouer" if is_our_turn else "Mise à jour d'un pick ennemi"
-                        )
-                        self._auto_hover_champion(top_recommendation, reason)
-                        self.last_recommendation = top_recommendation
-
-                if not scores:
-                    print("  [DATA] Aucune donnée disponible pour les matchups actuels")
-
-            # Handle auto-ban-hover for ban phases (independent of pick phase)
-            if self._is_ban_phase(state) and self.auto_ban_hover:
-                self._handle_auto_ban_hover(state)
-
-            # Phase-specific advice (dynamic based on actual game state)
-            advice = None
-            if state.phase == "PLANNING":
-                advice = "[PLAN] Réfléchissez à la composition d'équipe et aux priorités de ban"
-            elif state.phase == "BAN_PICK":
-                # BAN_PICK phase includes both bans and picks - detect which we're in
-                if self._is_ban_phase(state):
-                    advice = "[BAN] Concentrez-vous sur les bans des forces adverses"
-                else:
-                    advice = "[PICK] C'est le moment de sécuriser votre champion !"
-            elif state.phase == "PICK":
-                advice = "[PICK] C'est le moment de sécuriser votre champion !"
-            elif state.phase == "FINALIZATION":
-                advice = "[FINAL] Finalisez runes et sorts d'invocateur"
-
-            if advice:
-                print(f"\n[ADVICE] {advice}")
-
-        except Exception as e:
-            print(f"[WARNING] Erreur lors de la génération des recommandations: {e}")
+        self.recommender.provide(state)
 
     def _is_player_turn(self, state: DraftState) -> bool:
         """Check if it's the local player's turn to pick."""
@@ -797,253 +402,8 @@ class DraftMonitor:
         enemy_picks: List[int],
         ally_lanes: Optional[Dict[int, str]] = None,
     ):
-        """Calculate individual scores for each champion at end of draft.
-
-        Args:
-            ally_lanes: championId -> inferred lane (state.inferred_roles),
-                used only to log the prediction row (SPEC-05 B7 §8). None =
-                no lane info stored with the prediction.
-        """
-        # Clear console before final analysis for clean display
-        clear_console()
-
-        print("\n" + "=" * 80)
-        print("ANALYSE FINALE DU DRAFT - Scores individuels des champions")
-        print("=" * 80)
-
-        if not ally_picks or not enemy_picks:
-            print("[INFO] Draft incomplet - aucune analyse finale disponible")
-            return
-
-        ally_names = [self._get_display_name(champ_id) for champ_id in ally_picks]
-        enemy_names = [self._get_display_name(champ_id) for champ_id in enemy_picks]
-
-        print(f"\n[TEAMS] COMPOSITION FINALE :")
-        print(f"  Équipe alliée :  {' | '.join(ally_names)}")
-        print(f"  Équipe ennemie : {' | '.join(enemy_names)}")
-
-        print(f"\nANALYSE DE PERFORMANCE D'ÉQUIPE :")
-        print("-" * 60)
-
-        ally_scores = []
-        enemy_scores = []
-
-        # Calculate scores for ALLY team (without displaying yet)
-        for i, champion_id in enumerate(ally_picks):
-            champion_name = self._get_display_name(champion_id)
-
-            try:
-                # Get champion matchups (cached for performance) - uses 6-column format
-                champion_matchups = self.assistant.get_matchups_for_draft(champion_name)
-
-                if (
-                    not champion_matchups or sum(m.games for m in champion_matchups) < 500
-                ):  # m.games = games in 6-column format
-                    if self.verbose:
-                        total_games = (
-                            sum(m.games for m in champion_matchups) if champion_matchups else 0
-                        )
-                        print(
-                            f"[DEBUG] {champion_name}: Insufficient data (games={total_games}, need >=500)"
-                        )
-                    ally_scores.append(
-                        (champion_name, None, 0, 0.0)
-                    )  # (name, matchup_score, synergy_score, total)
-                    continue
-
-                # Use the new normalized scoring system
-                enemy_names = [self._get_display_name(enemy_id) for enemy_id in enemy_picks]
-
-                # Calculate matchup score against enemies
-                matchup_score = self.assistant.score_against_team(
-                    champion_matchups, enemy_names, champion_name
-                )
-
-                # Calculate synergy score with other allies (excluding self)
-                other_allies = [aid for aid in ally_picks if aid != champion_id]
-                synergy_score = self._calculate_synergy_score(champion_name, other_allies)
-
-                # Total score = configurable blend of matchup and synergy (see _final_score)
-                total_score = self._final_score(matchup_score, synergy_score)
-
-                ally_scores.append((champion_name, matchup_score, synergy_score, total_score))
-
-            except Exception as e:
-                ally_scores.append((champion_name, None, 0.0, 0.0))  # Mark error
-
-        # Calculate scores for ENEMY team (without displaying yet)
-        for i, champion_id in enumerate(enemy_picks):
-            champion_name = self._get_display_name(champion_id)
-
-            try:
-                # Get champion matchups (cached for performance) - uses 6-column format
-                champion_matchups = self.assistant.get_matchups_for_draft(champion_name)
-
-                if (
-                    not champion_matchups or sum(m.games for m in champion_matchups) < 500
-                ):  # m.games = games in 6-column format
-                    if self.verbose:
-                        total_games = (
-                            sum(m.games for m in champion_matchups) if champion_matchups else 0
-                        )
-                        print(
-                            f"[DEBUG] {champion_name}: Insufficient data (games={total_games}, need >=500)"
-                        )
-                    enemy_scores.append((champion_name, None, 0.0, 0.0))  # Mark insufficient data
-                    continue
-
-                # Use the new normalized scoring system
-                ally_names = [self._get_display_name(ally_id) for ally_id in ally_picks]
-
-                # Calculate matchup score against our team
-                matchup_score = self.assistant.score_against_team(
-                    champion_matchups, ally_names, champion_name
-                )
-
-                # Calculate synergy score with other enemies (excluding self)
-                other_enemies = [eid for eid in enemy_picks if eid != champion_id]
-                synergy_score = self._calculate_synergy_score(champion_name, other_enemies)
-
-                # Total score = configurable blend of matchup and synergy (see _final_score)
-                total_score = self._final_score(matchup_score, synergy_score)
-
-                enemy_scores.append((champion_name, matchup_score, synergy_score, total_score))
-
-            except Exception as e:
-                enemy_scores.append((champion_name, None, 0.0, 0.0))  # Mark error
-
-        # Sort both teams by total score (descending - best scores first)
-        ally_scores.sort(
-            key=lambda x: x[3] if x[1] is not None else -999, reverse=True
-        )  # Sort by total_score
-        enemy_scores.sort(key=lambda x: x[3] if x[1] is not None else -999, reverse=True)
-
-        # Helper function to get an ASCII strength marker for a score
-        def get_emoji(score):
-            if score >= 2.0:
-                return "[++]"
-            elif score >= 1.0:
-                return "[+]"
-            elif score >= -1.0:
-                return "[~]"
-            elif score >= -2.0:
-                return "[-]"
-            else:
-                return "[--]"
-
-        # Display ALLY team performance (sorted)
-        print(f"\nVOTRE ÉQUIPE :")
-        print(f"  {'Champion':<15} | Matchup | Synergy | Total")
-        print(f"  {'-'*15}-+---------+---------+-------")
-        for champion_name, matchup_score, synergy_score, total_score in ally_scores:
-            if matchup_score is None:
-                print(f"  {champion_name:<15} | Données insuffisantes")
-            else:
-                matchup_emoji = get_emoji(matchup_score)
-                synergy_emoji = get_emoji(synergy_score)
-                total_emoji = get_emoji(total_score)
-                print(
-                    f"  {champion_name:<15} | {matchup_emoji} {matchup_score:+5.1f} | "
-                    f"{synergy_emoji} {synergy_score:+5.1f} | {total_emoji} {total_score:+5.1f}"
-                )
-
-        # Display ENEMY team performance (sorted)
-        print(f"\nÉQUIPE ENNEMIE :")
-        print(f"  {'Champion':<15} | Matchup | Synergy | Total")
-        print(f"  {'-'*15}-+---------+---------+-------")
-        for champion_name, matchup_score, synergy_score, total_score in enemy_scores:
-            if matchup_score is None:
-                print(f"  {champion_name:<15} | Données insuffisantes")
-            else:
-                matchup_emoji = get_emoji(matchup_score)
-                synergy_emoji = get_emoji(synergy_score)
-                total_emoji = get_emoji(total_score)
-                print(
-                    f"  {champion_name:<15} | {matchup_emoji} {matchup_score:+5.1f} | "
-                    f"{synergy_emoji} {synergy_score:+5.1f} | {total_emoji} {total_score:+5.1f}"
-                )
-
-        # Team summary comparison
-        print(f"\nCOMPARAISON DU DRAFT :")
-        print("-" * 40)
-
-        # Calculate team winrates using total scores (matchup + synergy)
-        ally_valid_scores = [
-            score[3] for score in ally_scores if score[1] is not None
-        ]  # index 3 = total_score
-        enemy_valid_scores = [score[3] for score in enemy_scores if score[1] is not None]
-
-        if ally_valid_scores:
-            # Convert total advantages to individual winrates
-            ally_winrates = [50.0 + advantage for advantage in ally_valid_scores]
-            # Use geometric mean for team strength calculation
-            ally_team_stats = self.assistant._calculate_team_winrate(ally_winrates)
-            ally_team_winrate = ally_team_stats["team_winrate"]
-            ally_total = sum(ally_valid_scores)  # For display purposes
-            print(
-                f"  Votre équipe : {ally_total:+.2f}% d'avantage total → {ally_team_winrate:.2f}% de winrate d'équipe"
-            )
-        else:
-            ally_team_winrate = 50.0
-            ally_total = 0
-            print(f"  Votre équipe : Aucune donnée valide")
-
-        if enemy_valid_scores:
-            # Convert advantages to individual winrates
-            enemy_winrates = [50.0 + advantage for advantage in enemy_valid_scores]
-            # Use geometric mean for team strength calculation
-            enemy_team_stats = self.assistant._calculate_team_winrate(enemy_winrates)
-            enemy_team_winrate = enemy_team_stats["team_winrate"]
-            enemy_total = sum(enemy_valid_scores)  # For display purposes
-            print(
-                f"  Équipe ennemie : {enemy_total:+.2f}% d'avantage total → {enemy_team_winrate:.2f}% de winrate d'équipe"
-            )
-        else:
-            enemy_team_winrate = 50.0
-            enemy_total = 0
-            print(f"  Équipe ennemie : Aucune donnée valide")
-
-        # Normalize team winrates to ensure they sum to 100%
-        if ally_team_winrate != 50.0 or enemy_team_winrate != 50.0:
-            total_winrate = ally_team_winrate + enemy_team_winrate
-            our_expected = (ally_team_winrate / total_winrate) * 100.0
-            their_expected = (enemy_team_winrate / total_winrate) * 100.0
-
-            print(f"\n  Matchup attendu (normalisé) : {our_expected:.2f}% vs {their_expected:.2f}%")
-
-            # Overall assessment based on normalized winrates
-            draft_diff = our_expected - their_expected
-        else:
-            # No valid data - neutral matchup
-            our_expected = 50.0
-            their_expected = 50.0
-            draft_diff = 0.0
-
-        # SPEC-05 B7 §8: best-effort prediction logging for later calibration
-        # (scripts/calibrate_model.py). Never blocks nor slows down the draft.
-        try:
-            self._last_prediction_id = self.assistant.db.insert_prediction(
-                ally_champions=ally_picks,
-                enemy_champions=enemy_picks,
-                ally_lanes=ally_lanes,
-                predicted_probability=our_expected / 100.0,
-                model_version=analysis_config.MODEL_VERSION,
-            )
-        except Exception as e:
-            print(f"[WARNING] Échec de l'enregistrement de la prédiction: {e}")
-
-        if draft_diff >= 5.0:
-            print(f"  Évaluation : Avantage de draft majeur ({draft_diff:+.2f}% d'écart total)")
-        elif draft_diff >= 2.5:
-            print(f"  Évaluation : Bon avantage de draft ({draft_diff:+.2f}% d'écart total)")
-        elif draft_diff >= -2.5:
-            print(f"  Évaluation : Draft équilibré ({draft_diff:+.2f}% de différence)")
-        elif draft_diff >= -5.0:
-            print(f"  Évaluation : Désavantage de draft ({draft_diff:.2f}% de retard)")
-        else:
-            print(f"  Évaluation : Désavantage de draft majeur ({draft_diff:.2f}% de retard)")
-
-        print("\n" + "=" * 80)
+        """Calculate individual scores for each champion at end of draft."""
+        self.final_analyzer.analyze(ally_picks, enemy_picks, ally_lanes)
 
     def cleanup(self):
         """Clean up resources."""

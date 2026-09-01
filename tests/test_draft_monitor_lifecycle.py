@@ -311,7 +311,7 @@ class TestResetForNextGame:
         self._dirty(monitor)
 
         # Act
-        with patch("src.draft_monitor.clear_console"):
+        with patch("src.draft.lifecycle.clear_console"):
             monitor._reset_for_next_game()
 
         # Assert
@@ -327,7 +327,7 @@ class TestResetForNextGame:
         assert monitor._last_prediction_id is None
 
     def test_console_is_cleared(self, monitor):
-        with patch("src.draft_monitor.clear_console") as clear:
+        with patch("src.draft.lifecycle.clear_console") as clear:
             monitor._reset_for_next_game()
 
         clear.assert_called_once_with()
@@ -337,7 +337,7 @@ class TestResetForNextGame:
         monitor._shown_ready_message = True
 
         # Act
-        with patch("src.draft_monitor.clear_console"):
+        with patch("src.draft.lifecycle.clear_console"):
             monitor._reset_for_next_game()
 
         # Assert
@@ -349,7 +349,7 @@ class TestResetForNextGame:
         assert not hasattr(monitor, "_shown_ready_message")
 
         # Act
-        with patch("src.draft_monitor.clear_console"):
+        with patch("src.draft.lifecycle.clear_console"):
             monitor._reset_for_next_game()  # must not raise
 
         # Assert
@@ -362,7 +362,7 @@ class TestResetForNextGame:
         monitor.pool_name = "Alpha Pool"
         monitor.champion_id_to_name = {1: "Aatrox"}
 
-        with patch("src.draft_monitor.clear_console"):
+        with patch("src.draft.lifecycle.clear_console"):
             monitor._reset_for_next_game()
 
         assert monitor.current_pool == ["Aatrox", "Darius"]
@@ -372,7 +372,7 @@ class TestResetForNextGame:
     def test_debug_message_is_verbose_only(self, monitor, capsys):
         monitor.verbose = True
 
-        with patch("src.draft_monitor.clear_console"):
+        with patch("src.draft.lifecycle.clear_console"):
             monitor._reset_for_next_game()
 
         assert "[DEBUG] State reset for next game" in capsys.readouterr().out
@@ -380,7 +380,7 @@ class TestResetForNextGame:
     def test_reset_is_idempotent(self, monitor):
         self._dirty(monitor)
 
-        with patch("src.draft_monitor.clear_console"):
+        with patch("src.draft.lifecycle.clear_console"):
             monitor._reset_for_next_game()
             monitor._reset_for_next_game()
 

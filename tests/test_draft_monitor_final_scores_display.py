@@ -80,7 +80,7 @@ def monitor():
 @pytest.fixture
 def output(monitor, capsys):
     """Run the analysis once and return the captured stdout."""
-    with patch("src.draft_monitor.clear_console"):
+    with patch("src.draft.final_analysis.clear_console"):
         monitor._calculate_final_scores(ALLY_IDS, ENEMY_IDS, ally_lanes={1: "top"})
     return capsys.readouterr().out
 
@@ -160,7 +160,7 @@ class TestFinalScoresComparison:
 
     def test_winrates_are_computed_from_total_scores(self, monitor):
         """Individual winrates fed to the team model are 50 + total_score."""
-        with patch("src.draft_monitor.clear_console"):
+        with patch("src.draft.final_analysis.clear_console"):
             monitor._calculate_final_scores(ALLY_IDS, ENEMY_IDS)
 
         ally_call, enemy_call = monitor.assistant._calculate_team_winrate.call_args_list
@@ -168,7 +168,7 @@ class TestFinalScoresComparison:
         assert sorted(enemy_call.args[0]) == [47.0, 49.0, 50.5, 52.0, 53.5]
 
     def test_prediction_is_logged_with_the_normalized_probability(self, monitor):
-        with patch("src.draft_monitor.clear_console"):
+        with patch("src.draft.final_analysis.clear_console"):
             monitor._calculate_final_scores(ALLY_IDS, ENEMY_IDS, ally_lanes={1: "top"})
 
         kwargs = monitor.assistant.db.insert_prediction.call_args.kwargs
@@ -183,7 +183,7 @@ class TestFinalScoresDegradedCases:
     """Empty picks, missing data, and the resulting fallbacks."""
 
     def test_empty_picks_stop_after_the_header(self, monitor, capsys):
-        with patch("src.draft_monitor.clear_console"):
+        with patch("src.draft.final_analysis.clear_console"):
             monitor._calculate_final_scores([], ENEMY_IDS)
 
         out = capsys.readouterr().out
@@ -199,7 +199,7 @@ class TestFinalScoresDegradedCases:
 
         monitor.assistant.get_matchups_for_draft.side_effect = thin_data
 
-        with patch("src.draft_monitor.clear_console"):
+        with patch("src.draft.final_analysis.clear_console"):
             monitor._calculate_final_scores(ALLY_IDS, ENEMY_IDS)
 
         out = capsys.readouterr().out
@@ -217,7 +217,7 @@ class TestFinalScoresDegradedCases:
 
         monitor.assistant.score_against_team.side_effect = flaky
 
-        with patch("src.draft_monitor.clear_console"):
+        with patch("src.draft.final_analysis.clear_console"):
             monitor._calculate_final_scores(ALLY_IDS, ENEMY_IDS)
 
         out = capsys.readouterr().out
@@ -229,7 +229,7 @@ class TestFinalScoresDegradedCases:
         )
         monitor.assistant._calculate_team_winrate.side_effect = [{"team_winrate": 52.0}]
 
-        with patch("src.draft_monitor.clear_console"):
+        with patch("src.draft.final_analysis.clear_console"):
             monitor._calculate_final_scores(ALLY_IDS, ENEMY_IDS)
 
         out = capsys.readouterr().out
@@ -240,7 +240,7 @@ class TestFinalScoresDegradedCases:
         """Both teams at the default 50.0 skip the normalization block."""
         monitor.assistant.get_matchups_for_draft.side_effect = lambda name: []
 
-        with patch("src.draft_monitor.clear_console"):
+        with patch("src.draft.final_analysis.clear_console"):
             monitor._calculate_final_scores(ALLY_IDS, ENEMY_IDS)
 
         out = capsys.readouterr().out
@@ -252,7 +252,7 @@ class TestFinalScoresDegradedCases:
     def test_unknown_champion_id_uses_the_placeholder_name(self, monitor, capsys):
         monitor.champion_id_to_name = {}
 
-        with patch("src.draft_monitor.clear_console"):
+        with patch("src.draft.final_analysis.clear_console"):
             monitor._calculate_final_scores([1], [6])
 
         out = capsys.readouterr().out
