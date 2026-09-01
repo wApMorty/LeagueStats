@@ -16,14 +16,15 @@ from .config import config
 from .config_constants import (
     analysis_config,
     draft_config,
-    role_inference_config,
     scraping_config,
     ui_config,
 )
 from .role_inference import infer_team_roles
 from .draft.state import ChampionAction, DraftState
 from .draft import phases
+from .draft import display
 from .draft.memory_diagnostics import log_memory_usage
+from .draft.scoring import DraftScorer
 
 
 class DraftMonitor:
@@ -72,6 +73,9 @@ class DraftMonitor:
         )
         self.synergy_weight = (
             synergy_weight if synergy_weight is not None else draft_config.DEFAULT_SYNERGY_WEIGHT
+        )
+        self.scorer = DraftScorer(
+            self.assistant, self._get_display_name, self.synergy_weight, verbose=verbose
         )
         self.last_recommendation = None  # Track last recommendation to avoid spam
         self.last_ban_recommendation = None  # Track last ban recommendation to avoid spam
@@ -681,45 +685,12 @@ class DraftMonitor:
         enemy_lanes: Optional[Dict[str, str]] = None,
         player_lane: Optional[str] = None,
     ) -> float:
-        """Calculate score against enemy team using Assistant's method.
-
-        Args:
-            lane: Lane optionnelle transmise aux requêtes inverses internes
-                  (cf. ChampionScorer.score_against_team). None = comportement
-                  inchangé. La détection automatique de la lane est hors
-                  périmètre ici (SPEC-04) : la valeur arrive de l'extérieur.
-            enemy_lanes: Enemy display name -> inferred lane (SPEC-04 §4.3),
-                  from state.inferred_roles. Weights the enemy sharing our
-                  lane above the rest of the enemy team.
-            player_lane: Our own (the local player's) lane.
-        """
-        if not matchups or not enemy_team:
-            return 0.0
-
-        # Convert enemy IDs to champion names for the assistant method
-        enemy_names = []
-        for enemy_id in enemy_team:
-            enemy_name = self._get_display_name(enemy_id)
-            if enemy_name:
-                enemy_names.append(enemy_name)
-
-        if not enemy_names:
-            return 0.0
-
-        # Convert banned champion IDs to names
-        banned_names = []
-        if banned_champion_ids:
-            for banned_id in banned_champion_ids:
-                banned_name = self._get_display_name(banned_id)
-                if banned_name:
-                    banned_names.append(banned_name)
-
-        # Use the assistant's scoring method which includes blind pick logic
-        return self.assistant.score_against_team(
+        """Calculate score against enemy team using Assistant's method."""
+        return self.scorer.calculate_score_against_team(
             matchups,
-            enemy_names,
+            enemy_team,
             champion_name,
-            banned_names if banned_names else None,
+            banned_champion_ids,
             lane=lane,
             enemy_lanes=enemy_lanes,
             player_lane=player_lane,
@@ -728,52 +699,12 @@ class DraftMonitor:
     def _calculate_synergy_score(
         self, champion_name: str, ally_team: List[int], lane: Optional[str] = None
     ) -> float:
-        """Calculate synergy score as sum of delta2 with allied champions.
-
-        Args:
-            champion_name: Name of the champion to evaluate
-            ally_team: List of allied champion IDs already picked
-            lane: Lane optionnelle transmise à get_synergy_delta2. None =
-                  comportement inchangé (agrégation toutes lanes).
-
-        Returns:
-            Sum of delta2 values for synergies with allies (0.0 if no allies)
-        """
-        if not ally_team:
-            return 0.0
-
-        synergy_score = 0.0
-
-        for ally_id in ally_team:
-            ally_name = self._get_display_name(ally_id)
-            if ally_name:
-                delta2 = self.assistant.db.get_synergy_delta2(champion_name, ally_name, lane=lane)
-                if delta2 is not None:
-                    synergy_score += delta2
-                    if self.verbose:
-                        print(f"[DEBUG] Synergy: {champion_name} + {ally_name} = {delta2:+.2f}")
-
-        return synergy_score
+        """Calculate synergy score as sum of delta2 with allied champions."""
+        return self.scorer.calculate_synergy_score(champion_name, ally_team, lane=lane)
 
     def _final_score(self, matchup_score: float, synergy_score: float) -> float:
-        """Blend matchup and synergy scores using the configurable synergy weight.
-
-        Formula: final_score = matchup_score * min(1, 2 * (1 - synergy_weight))
-                              + synergy_score * min(1, 2 * synergy_weight)
-
-        The min(1, ...) clamp is what makes all three pinned cases exact:
-        - synergy_weight=0.5 (default): both coefficients clamp to 1
-          -> final_score = matchup_score + synergy_score (unchanged historical behavior).
-        - synergy_weight=0.0: matchup coefficient clamps to 1, synergy coefficient is 0
-          -> final_score = matchup_score (synergy fully ignored).
-        - synergy_weight=1.0: synergy coefficient clamps to 1, matchup coefficient is 0
-          -> final_score = synergy_score (matchup fully ignored).
-        (The naive matchup_score * (1 - w) * 2 + synergy_score * w * 2, without the
-        clamp, would double-count at w=0 and w=1, so the clamp is required.)
-        """
-        matchup_weight = min(1.0, 2 * (1 - self.synergy_weight))
-        synergy_weight = min(1.0, 2 * self.synergy_weight)
-        return matchup_score * matchup_weight + synergy_score * synergy_weight
+        """Blend matchup and synergy scores using the configurable synergy weight."""
+        return self.scorer.final_score(matchup_score, synergy_score)
 
     def _parse_draft_state(self, champ_select_data: Dict) -> DraftState:
         """Parse champion select data into DraftState."""
@@ -940,59 +871,12 @@ class DraftMonitor:
         self._provide_recommendations(state)
 
     def _format_role_tag(self, champion_id: int, state: DraftState) -> str:
-        """Role annotation for one champion in the draft display (SPEC-04 B5).
-
-        "(lane·LCU)" for a role certain from the queue, "(lane·forced)" for a
-        manual correction, "(lane·NN%)" for an inferred one — with a trailing
-        "?" below ROLE_CONFIDENCE_WARN to flag it for a `r <champion> <lane>`
-        check. Empty string when no lane is known yet (e.g. before B4's
-        distributions load, or a champion missing from the lane_distributions
-        likelihood matrix).
-        """
-        lane = state.inferred_roles.get(champion_id)
-        if lane is None:
-            return ""
-
-        source = state.role_source.get(champion_id, "inferred")
-        if source == "lcu":
-            label = "LCU"
-        elif source == "user":
-            label = "forcé"
-        else:
-            confidence = state.role_confidence.get(champion_id, 0.0)
-            label = f"{confidence * 100:.0f}%"
-            if confidence < role_inference_config.ROLE_CONFIDENCE_WARN:
-                label += "?"
-
-        return f" ({lane}·{label})"
+        """Role annotation for one champion in the draft display (SPEC-04 B5)."""
+        return display.format_role_tag(champion_id, state)
 
     def _display_draft_state(self, state: DraftState):
         """Display current draft state in terminal."""
-        print(f"\n[ALLY] ÉQUIPE ALLIÉE :")
-        if state.ally_picks:
-            for i, champ_id in enumerate(state.ally_picks, 1):
-                display_name = self._get_display_name(champ_id)
-                print(f"  {i}. {display_name}{self._format_role_tag(champ_id, state)}")
-        else:
-            print("  (Aucun pick pour l'instant)")
-
-        # Only show bans during ban phases or when bans are relevant
-        if state.ally_bans and self._should_show_bans(state):
-            display_bans = [self._get_display_name(champ_id) for champ_id in state.ally_bans]
-            print(f"  Bans : {', '.join(display_bans)}")
-
-        print(f"\n[ENEMY] ÉQUIPE ENNEMIE :")
-        if state.enemy_picks:
-            for i, champ_id in enumerate(state.enemy_picks, 1):
-                display_name = self._get_display_name(champ_id)
-                print(f"  {i}. {display_name}{self._format_role_tag(champ_id, state)}")
-        else:
-            print("  (Aucun pick pour l'instant)")
-
-        # Only show bans during ban phases or when bans are relevant
-        if state.enemy_bans and self._should_show_bans(state):
-            display_bans = [self._get_display_name(champ_id) for champ_id in state.enemy_bans]
-            print(f"  Bans : {', '.join(display_bans)}")
+        display.display_draft_state(state, self._get_display_name, self._should_show_bans)
 
     def _provide_recommendations(self, state: DraftState):
         """Provide coaching recommendations based on current draft."""
