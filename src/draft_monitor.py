@@ -169,7 +169,7 @@ class DraftMonitor:
             # Auto-select top pool by default
             self.pool_name = "All Top Champions"  # System pool name
             self.current_pool = CHAMPIONS_BY_ROLE["top"]
-            safe_print(f"✅ Pool utilisée : TOP ({', '.join(self.current_pool)})")
+            safe_print(f"[OK] Pool utilisée : TOP ({', '.join(self.current_pool)})")
 
         # Performance: Warm cache for selected pool (eliminates SQL queries during draft)
         if self.current_pool:
@@ -182,16 +182,16 @@ class DraftMonitor:
         print("[WATCH] Surveillance du champion select...")
         print("   (Démarrez une partie pour voir les recommandations de draft)")
         if self.auto_accept_queue:
-            print("   🔥 [AUTO-ACCEPT] Acceptation automatique de la queue ACTIVÉE")
+            print("   [AUTO-ACCEPT] Acceptation automatique de la queue ACTIVÉE")
         if self.auto_ban_hover:
-            print("   🚫 [AUTO-BAN-HOVER] Survol automatique des bans ACTIVÉ")
+            print("   [AUTO-BAN-HOVER] Survol automatique des bans ACTIVÉ")
         if self.open_onetricks:
-            print("   🌐 [ONETRICKS] Ouverture de la page du champion en fin de draft ACTIVÉE")
+            print("   [ONETRICKS] Ouverture de la page du champion en fin de draft ACTIVÉE")
         print(
-            "   ✏️  Tapez 'r <champion> <lane>' + Entrée pour forcer un rôle (ex. r Pantheon support)"
+            "   Tapez 'r <champion> <lane>' + Entrée pour forcer un rôle (ex. r Pantheon support)"
         )
         print(
-            "   🏁 Tapez 'outcome win' ou 'outcome loss' + Entrée après la partie pour logger le résultat"
+            "   Tapez 'outcome win' ou 'outcome loss' + Entrée après la partie pour logger le résultat"
         )
         print("   (Ctrl+C pour arrêter)")
 
@@ -346,9 +346,9 @@ class DraftMonitor:
 
                         # Show ready message for next game
                         print("\n" + "=" * 60)
-                        print("🎮 [READY] En attente de la prochaine partie...")
+                        print("[READY] En attente de la prochaine partie...")
                         if self.auto_accept_queue:
-                            print("   🔥 Auto-accept activé pour la prochaine queue")
+                            print("   Auto-accept activé pour la prochaine queue")
                         print("   (Relancez une recherche de partie !)")
                         print("=" * 60)
 
@@ -417,7 +417,7 @@ class DraftMonitor:
                     and current_time - self.ready_check_accepted_time > cooldown
                 ):
                     print("\n" + "=" * 60)
-                    print("🎮 [QUEUE] PARTIE TROUVÉE !")
+                    print("[QUEUE] PARTIE TROUVÉE !")
                     print("=" * 60)
 
                     # Get ready check details if available
@@ -428,10 +428,10 @@ class DraftMonitor:
 
                     # Auto-accept the queue
                     if self.lcu.accept_ready_check():
-                        print("✅ [AUTO-ACCEPT] Queue acceptée automatiquement !")
+                        print("[OK] [AUTO-ACCEPT] Queue acceptée automatiquement !")
                         self.ready_check_accepted_time = current_time
                     else:
-                        print("❌ [AUTO-ACCEPT] Échec de l'acceptation de la queue")
+                        print("[ALERTE] [AUTO-ACCEPT] Échec de l'acceptation de la queue")
 
                     print("En attente des autres joueurs...")
                     print("=" * 60)
@@ -439,10 +439,12 @@ class DraftMonitor:
             # Handle transitions out of ready check
             elif self.last_gameflow_phase == "ReadyCheck" and current_phase != "ReadyCheck":
                 if current_phase == "ChampSelect":
-                    print("✅ [SUCCESS] Tous les joueurs ont accepté - Entrée en champion select !")
+                    print(
+                        "[OK] [SUCCESS] Tous les joueurs ont accepté - Entrée en champion select !"
+                    )
                 elif current_phase in ["Lobby", "Matchmaking"]:
-                    print("❌ [FAILED] Échec du ready check - Un joueur n'a pas accepté")
-                    print("🔄 [RETRY] Retour en file d'attente...")
+                    print("[ALERTE] [FAILED] Échec du ready check - Un joueur n'a pas accepté")
+                    print("[RETRY] Retour en file d'attente...")
                     # Reset ready check timer to allow new detection
                     self.ready_check_accepted_time = 0
 
@@ -527,15 +529,15 @@ class DraftMonitor:
                 banned_champions_lower = [name.lower() for name in banned_champions]
                 if top_ban.lower() not in banned_champions_lower:
                     print(f"[DEBUG] Attempting to hover {top_ban}...")
-                    if self._auto_hover_champion(top_ban, "Ban recommendation"):
+                    if self._auto_hover_champion(top_ban, "Recommandation de ban"):
                         print(
-                            f"  🚫 [AUTO-BAN-HOVER] Hovering {top_ban} (Threat: {threat_score:.2f})"
+                            f"  [AUTO-BAN-HOVER] Survol de {top_ban} (Menace : {threat_score:.2f})"
                         )
                         self.last_ban_recommendation = top_ban
                     else:
-                        print(f"  ⚠️ [AUTO-BAN-HOVER] Failed to hover {top_ban}")
+                        print(f"  [ALERTE] [AUTO-BAN-HOVER] Échec du survol de {top_ban}")
                 else:
-                    print(f"  ⚠️ [AUTO-BAN-HOVER] {top_ban} already banned, skipping")
+                    print(f"  [ALERTE] [AUTO-BAN-HOVER] {top_ban} déjà banni, ignoré")
             else:
                 if self.verbose:
                     print(f"[DEBUG] Same recommendation as before ({top_ban}), skipping")
@@ -559,7 +561,7 @@ class DraftMonitor:
 
             if len(ally_picks) >= 5 and len(enemy_picks) >= 5:
                 print("\n" + "=" * 80)
-                print("🎯 [DRAFT TERMINÉ] Tous les champions verrouillés - Analyse finale !")
+                print("[DRAFT TERMINÉ] Tous les champions verrouillés - Analyse finale !")
                 print("=" * 80)
 
                 self._calculate_final_scores(
@@ -1349,13 +1351,13 @@ class DraftMonitor:
         try:
             if self.lcu.hover_champion(champion_name):
                 reason_text = f" ({reason})" if reason else ""
-                print(f"  🎯 [AUTO-HOVER] {champion_name} survolé{reason_text}")
+                print(f"  [AUTO-HOVER] {champion_name} survolé{reason_text}")
             else:
                 if self.verbose:
-                    print(f"  ⚠️ [AUTO-HOVER] Échec du survol de {champion_name}")
+                    print(f"  [ALERTE] [AUTO-HOVER] Échec du survol de {champion_name}")
         except Exception as e:
             if self.verbose:
-                print(f"  ❌ [AUTO-HOVER] Erreur lors du survol de {champion_name}: {e}")
+                print(f"  [ERREUR] [AUTO-HOVER] Erreur lors du survol de {champion_name}: {e}")
 
     def _do_initial_hover(self):
         """Do initial hover with the best champion from the pool when entering champion select."""
@@ -1363,22 +1365,22 @@ class DraftMonitor:
             # Clear console at start of champion select
             clear_console()
 
-            print(f"\n[INITIAL] 🎮 Champion select démarré - Préparation de votre stratégie !")
+            print(f"\n[INITIAL] Champion select démarré - Préparation de votre stratégie !")
             print("=" * 80)
 
             # Get best champion from current pool (first champion as fallback)
             if not self.current_pool:
                 if self.verbose:
-                    print("  ⚠️ [INITIAL-HOVER] Aucun champion dans la pool")
+                    print("  [ALERTE] [INITIAL-HOVER] Aucun champion dans la pool")
                 return
 
             # Calculate best champion from pool using smart analysis
             initial_champion = self._get_best_champion_from_pool()
 
             # Show the recommended blind pick
-            print(f"\n[PICK] 🎯 MEILLEUR BLIND PICK DE VOTRE POOL :")
-            print(f"  ✅ {initial_champion}")
-            print(f"  💡 Si vous êtes premier pick, c'est votre choix le plus sûr !")
+            print(f"\n[PICK] MEILLEUR BLIND PICK DE VOTRE POOL :")
+            print(f"  [OK] {initial_champion}")
+            print(f"  [INFO] Si vous êtes premier pick, c'est votre choix le plus sûr !")
 
             # Auto-hover the champion
             self._auto_hover_champion(initial_champion, "Meilleur blind pick")
@@ -1393,7 +1395,7 @@ class DraftMonitor:
 
         except Exception as e:
             if self.verbose:
-                print(f"  ⚠️ [INITIAL-HOVER] Erreur lors du hover initial: {e}")
+                print(f"  [ALERTE] [INITIAL-HOVER] Erreur lors du hover initial: {e}")
 
     def _get_best_champion_from_pool(self) -> str:
         """Get the best champion from current pool using tier list analysis."""
@@ -1427,7 +1429,7 @@ class DraftMonitor:
                 best_champion = scores[0][0]
                 if self.verbose:
                     print(
-                        f"  ✅ [INITIAL-HOVER] Best from pool: {best_champion} ({scores[0][1]:+.2f}% advantage)"
+                        f"  [OK] [INITIAL-HOVER] Meilleur de la pool : {best_champion} ({scores[0][1]:+.2f}% d'avantage)"
                     )
                 return best_champion
             else:
@@ -1436,7 +1438,7 @@ class DraftMonitor:
 
         except Exception as e:
             if self.verbose:
-                print(f"  ⚠️ [INITIAL-HOVER] Error getting best champion: {e}")
+                print(f"  [ALERTE] [INITIAL-HOVER] Erreur d'obtention du meilleur champion: {e}")
             return self.current_pool[0]  # Fallback
 
     def _show_ban_recommendations_draft(self):
@@ -1447,7 +1449,7 @@ class DraftMonitor:
             return  # Skip ban recommendations in .exe mode
 
         try:
-            print(f"\n[BANS] 🛡️ RECOMMANDATIONS DE BAN STRATÉGIQUES")
+            print(f"\n[BANS] RECOMMANDATIONS DE BAN STRATÉGIQUES")
             print("-" * 50)
 
             # Try to get pre-calculated bans from database first (fast)
@@ -1478,10 +1480,10 @@ class DraftMonitor:
                     print(
                         f"  {i}. {enemy:<12} | Menace : {threat_score:>5.2f} | Counter {matchup_count}/{len(self.current_pool)} de vos champions"
                     )
-                print(f"💡 Ces champions ont de bons matchups contre votre pool")
+                print(f"[INFO] Ces champions ont de bons matchups contre votre pool")
             else:
                 if self.verbose:
-                    print(f"⚠️ Aucune donnée de ban disponible pour votre pool")
+                    print(f"[ALERTE] Aucune donnée de ban disponible pour votre pool")
 
         except Exception as e:
             if self.verbose:
@@ -1497,7 +1499,7 @@ class DraftMonitor:
             if not state.enemy_picks:
                 return
 
-            print(f"\n[ADAPTIVE BANS] 🎯 RECOMMANDATIONS DE BAN CIBLÉES")
+            print(f"\n[ADAPTIVE BANS] RECOMMANDATIONS DE BAN CIBLÉES")
             print("-" * 50)
 
             # Get enemy champion names
@@ -1521,7 +1523,7 @@ class DraftMonitor:
                 print(f"Bans prioritaires pour neutraliser les synergies ennemies :")
                 for i, (enemy, threat_score, *_) in enumerate(ban_recommendations[:3], 1):
                     print(f"  {i}. {enemy:<12} | Menace : {threat_score:>5.2f}")
-                print(f"💡 Ciblez les champions qui synergisent avec leurs picks")
+                print(f"[INFO] Ciblez les champions qui synergisent avec leurs picks")
 
         except Exception as e:
             if self.verbose:
@@ -1568,7 +1570,7 @@ class DraftMonitor:
             idx = 1
             for name, pool in sorted(pools.items()):
                 pool_list.append((name, pool))
-                status = "🔧" if pool.created_by == "system" else "👤"
+                status = "[SYS]" if pool.created_by == "system" else "[USR]"
                 print(
                     f"  {idx}. {status} {name:<20} | {pool.role:<8} | {pool.size():>2} champs | {pool.description}"
                 )
@@ -1583,7 +1585,7 @@ class DraftMonitor:
                 if 1 <= choice <= len(pool_list):
                     selected_name, selected_pool = pool_list[choice - 1]
                     safe_print(
-                        f"✅ Pool utilisée : {selected_name} ({', '.join(selected_pool.champions)})"
+                        f"[OK] Pool utilisée : {selected_name} ({', '.join(selected_pool.champions)})"
                     )
                     # Store pool name for pre-calculated ban lookups
                     self.pool_name = selected_name
@@ -1625,7 +1627,7 @@ class DraftMonitor:
         clear_console()
 
         print("\n" + "=" * 80)
-        safe_print("🎮 ANALYSE FINALE DU DRAFT - Scores individuels des champions")
+        print("ANALYSE FINALE DU DRAFT - Scores individuels des champions")
         print("=" * 80)
 
         if not ally_picks or not enemy_picks:
@@ -1639,7 +1641,7 @@ class DraftMonitor:
         print(f"  Équipe alliée :  {' | '.join(ally_names)}")
         print(f"  Équipe ennemie : {' | '.join(enemy_names)}")
 
-        safe_print(f"\n📊 ANALYSE DE PERFORMANCE D'ÉQUIPE :")
+        print(f"\nANALYSE DE PERFORMANCE D'ÉQUIPE :")
         print("-" * 60)
 
         ally_scores = []
@@ -1735,53 +1737,53 @@ class DraftMonitor:
         )  # Sort by total_score
         enemy_scores.sort(key=lambda x: x[3] if x[1] is not None else -999, reverse=True)
 
-        # Helper function to get emoji for score
+        # Helper function to get an ASCII strength marker for a score
         def get_emoji(score):
             if score >= 2.0:
-                return "✅"
+                return "[++]"
             elif score >= 1.0:
-                return "🟡"
+                return "[+]"
             elif score >= -1.0:
-                return "➖"
+                return "[~]"
             elif score >= -2.0:
-                return "🟠"
+                return "[-]"
             else:
-                return "🔴"
+                return "[--]"
 
         # Display ALLY team performance (sorted)
-        safe_print(f"\n🟢 VOTRE ÉQUIPE :")
-        safe_print(f"  {'Champion':<15} | Matchup | Synergy | Total")
-        safe_print(f"  {'-'*15}-+---------+---------+-------")
+        print(f"\nVOTRE ÉQUIPE :")
+        print(f"  {'Champion':<15} | Matchup | Synergy | Total")
+        print(f"  {'-'*15}-+---------+---------+-------")
         for champion_name, matchup_score, synergy_score, total_score in ally_scores:
             if matchup_score is None:
-                safe_print(f"  {champion_name:<15} | ❌ Données insuffisantes")
+                print(f"  {champion_name:<15} | Données insuffisantes")
             else:
                 matchup_emoji = get_emoji(matchup_score)
                 synergy_emoji = get_emoji(synergy_score)
                 total_emoji = get_emoji(total_score)
-                safe_print(
+                print(
                     f"  {champion_name:<15} | {matchup_emoji} {matchup_score:+5.1f} | "
                     f"{synergy_emoji} {synergy_score:+5.1f} | {total_emoji} {total_score:+5.1f}"
                 )
 
         # Display ENEMY team performance (sorted)
-        safe_print(f"\n🔴 ÉQUIPE ENNEMIE :")
-        safe_print(f"  {'Champion':<15} | Matchup | Synergy | Total")
-        safe_print(f"  {'-'*15}-+---------+---------+-------")
+        print(f"\nÉQUIPE ENNEMIE :")
+        print(f"  {'Champion':<15} | Matchup | Synergy | Total")
+        print(f"  {'-'*15}-+---------+---------+-------")
         for champion_name, matchup_score, synergy_score, total_score in enemy_scores:
             if matchup_score is None:
-                safe_print(f"  {champion_name:<15} | ❌ Données insuffisantes")
+                print(f"  {champion_name:<15} | Données insuffisantes")
             else:
                 matchup_emoji = get_emoji(matchup_score)
                 synergy_emoji = get_emoji(synergy_score)
                 total_emoji = get_emoji(total_score)
-                safe_print(
+                print(
                     f"  {champion_name:<15} | {matchup_emoji} {matchup_score:+5.1f} | "
                     f"{synergy_emoji} {synergy_score:+5.1f} | {total_emoji} {total_score:+5.1f}"
                 )
 
         # Team summary comparison
-        safe_print(f"\n📈 COMPARAISON DU DRAFT :")
+        print(f"\nCOMPARAISON DU DRAFT :")
         print("-" * 40)
 
         # Calculate team winrates using total scores (matchup + synergy)
@@ -1797,13 +1799,13 @@ class DraftMonitor:
             ally_team_stats = self.assistant._calculate_team_winrate(ally_winrates)
             ally_team_winrate = ally_team_stats["team_winrate"]
             ally_total = sum(ally_valid_scores)  # For display purposes
-            safe_print(
-                f"  🟢 Votre équipe : {ally_total:+.2f}% d'avantage total → {ally_team_winrate:.2f}% de winrate d'équipe"
+            print(
+                f"  Votre équipe : {ally_total:+.2f}% d'avantage total → {ally_team_winrate:.2f}% de winrate d'équipe"
             )
         else:
             ally_team_winrate = 50.0
             ally_total = 0
-            safe_print(f"  🟢 Votre équipe : Aucune donnée valide")
+            print(f"  Votre équipe : Aucune donnée valide")
 
         if enemy_valid_scores:
             # Convert advantages to individual winrates
@@ -1812,13 +1814,13 @@ class DraftMonitor:
             enemy_team_stats = self.assistant._calculate_team_winrate(enemy_winrates)
             enemy_team_winrate = enemy_team_stats["team_winrate"]
             enemy_total = sum(enemy_valid_scores)  # For display purposes
-            safe_print(
-                f"  🔴 Équipe ennemie : {enemy_total:+.2f}% d'avantage total → {enemy_team_winrate:.2f}% de winrate d'équipe"
+            print(
+                f"  Équipe ennemie : {enemy_total:+.2f}% d'avantage total → {enemy_team_winrate:.2f}% de winrate d'équipe"
             )
         else:
             enemy_team_winrate = 50.0
             enemy_total = 0
-            safe_print(f"  🔴 Équipe ennemie : Aucune donnée valide")
+            print(f"  Équipe ennemie : Aucune donnée valide")
 
         # Normalize team winrates to ensure they sum to 100%
         if ally_team_winrate != 50.0 or enemy_team_winrate != 50.0:
@@ -1826,9 +1828,7 @@ class DraftMonitor:
             our_expected = (ally_team_winrate / total_winrate) * 100.0
             their_expected = (enemy_team_winrate / total_winrate) * 100.0
 
-            safe_print(
-                f"\n  🎯 Matchup attendu (normalisé) : {our_expected:.2f}% vs {their_expected:.2f}%"
-            )
+            print(f"\n  Matchup attendu (normalisé) : {our_expected:.2f}% vs {their_expected:.2f}%")
 
             # Overall assessment based on normalized winrates
             draft_diff = our_expected - their_expected
@@ -1852,21 +1852,15 @@ class DraftMonitor:
             print(f"[WARNING] Échec de l'enregistrement de la prédiction: {e}")
 
         if draft_diff >= 5.0:
-            safe_print(
-                f"  Évaluation : ✅ Avantage de draft majeur ({draft_diff:+.2f}% d'écart total)"
-            )
+            print(f"  Évaluation : Avantage de draft majeur ({draft_diff:+.2f}% d'écart total)")
         elif draft_diff >= 2.5:
-            safe_print(
-                f"  Évaluation : 🟡 Bon avantage de draft ({draft_diff:+.2f}% d'écart total)"
-            )
+            print(f"  Évaluation : Bon avantage de draft ({draft_diff:+.2f}% d'écart total)")
         elif draft_diff >= -2.5:
-            safe_print(f"  Évaluation : ➖ Draft équilibré ({draft_diff:+.2f}% de différence)")
+            print(f"  Évaluation : Draft équilibré ({draft_diff:+.2f}% de différence)")
         elif draft_diff >= -5.0:
-            safe_print(f"  Évaluation : 🟠 Désavantage de draft ({draft_diff:.2f}% de retard)")
+            print(f"  Évaluation : Désavantage de draft ({draft_diff:.2f}% de retard)")
         else:
-            safe_print(
-                f"  Évaluation : 🔴 Désavantage de draft majeur ({draft_diff:.2f}% de retard)"
-            )
+            print(f"  Évaluation : Désavantage de draft majeur ({draft_diff:.2f}% de retard)")
 
         print("\n" + "=" * 80)
 

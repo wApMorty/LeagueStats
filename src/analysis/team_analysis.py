@@ -72,7 +72,7 @@ class TeamAnalyzer:
 
         # Display results
         print("=" * 60)
-        safe_print(f"🔵 TEAM 1 ANALYSIS:")
+        safe_print(f"TEAM 1 ANALYSIS:")
         print("-" * 40)
         for champion, advantage in scores1:
             winrate = 50.0 + advantage
@@ -80,11 +80,11 @@ class TeamAnalyzer:
 
         print("-" * 40)
         safe_print(
-            f"🎯 Team Winrate: {team1_stats['team_winrate']:.1f}% (raw: {team1_stats['raw_winrate']:.1f}%)"
+            f"Team Winrate: {team1_stats['team_winrate']:.1f}% (raw: {team1_stats['raw_winrate']:.1f}%)"
         )
 
         print("=" * 60)
-        safe_print(f"🔴 TEAM 2 ANALYSIS:")
+        safe_print(f"TEAM 2 ANALYSIS:")
         print("-" * 40)
         for champion, advantage in scores2:
             winrate = 50.0 + advantage
@@ -92,12 +92,12 @@ class TeamAnalyzer:
 
         print("-" * 40)
         safe_print(
-            f"🎯 Team Winrate: {team2_stats['team_winrate']:.1f}% (raw: {team2_stats['raw_winrate']:.1f}%)"
+            f"Team Winrate: {team2_stats['team_winrate']:.1f}% (raw: {team2_stats['raw_winrate']:.1f}%)"
         )
 
         # Matchup prediction
         print("=" * 60)
-        safe_print(f"📊 MATCHUP PREDICTION:")
+        safe_print(f"MATCHUP PREDICTION:")
         team_diff = team1_stats["team_winrate"] - team2_stats["team_winrate"]
 
         print(
@@ -107,13 +107,13 @@ class TeamAnalyzer:
 
         # Confidence level based on magnitude
         if abs(team_diff) >= 10:
-            safe_print(f"🟢 Strong advantage predicted")
+            safe_print(f"Strong advantage predicted")
         elif abs(team_diff) >= 5:
-            safe_print(f"🟡 Moderate advantage predicted")
+            safe_print(f"Moderate advantage predicted")
         elif abs(team_diff) >= 2:
-            safe_print(f"🟠 Small advantage predicted")
+            safe_print(f"Small advantage predicted")
         else:
-            safe_print(f"⚪ Very close matchup predicted")
+            safe_print(f"Very close matchup predicted")
 
         print("=" * 60)
 

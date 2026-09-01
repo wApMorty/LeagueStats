@@ -69,7 +69,7 @@
 | D1 | ✅ Corriger le chemin de `champion_pools.json` (écrit hors du dépôt) | 8 | 1 | **8,0** |
 | D2 | ✅ Mémoriser les préférences du draft coach | 8 | 2 | 4,0 |
 | D3 | 🟡 Unifier la langue de l'interface (français) — fait sauf `lol_coach_legacy.py`, différé à E9 | 5 | 3 | 1,7 |
-| D4 | Purger les emojis des sorties console | 3 | 2 | 1,5 |
+| D4 | 🟡 Purger les emojis des sorties console — fait sauf `lol_coach_legacy.py` (E9) et `pipeline.py` (notifications Discord, UTF-8, exempté) | 3 | 2 | 1,5 |
 
 ### 6. Dette, tests, docs · [SPEC-07](docs/specs/SPEC-07-dette-tests-docs.md)
 

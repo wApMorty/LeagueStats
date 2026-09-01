@@ -538,11 +538,11 @@ class Assistant:
         print("─" * 80)
 
         if not top_duos:
-            print("🔍 Searching for optimal duos...")
+            print("Searching for optimal duos...")
             print()
             return
 
-        medals = ["🥇", "🥈", "🥉"]
+        medals = ["1.", "2.", "3."]
         for i, duo_info in enumerate(top_duos):
             duo = duo_info["duo"]
             score = duo_info["total_score"]
@@ -577,7 +577,7 @@ class Assistant:
         total_enemies = len(all_champions)
 
         total_combinations = len(list(combinations(remaining_pool, 2)))
-        print(f"\n🔍 Evaluating {total_combinations} possible duos...\n")
+        print(f"\nEvaluating {total_combinations} possible duos...\n")
 
         # Try all possible pairs from remaining pool
         for duo in combinations(remaining_pool, 2):
@@ -651,7 +651,7 @@ class Assistant:
         # Final podium
         print("\n" + "=" * 80)
         print(
-            f"✅ Evaluation complete: {duos_tested}/{total_combinations} tested, {evaluated_combinations} viable"
+            f"[OK] Evaluation complete: {duos_tested}/{total_combinations} tested, {evaluated_combinations} viable"
         )
 
         if evaluated_combinations == 0:
@@ -667,7 +667,7 @@ class Assistant:
 
         # Display rankings if requested
         if show_ranking and len(duo_rankings) > 1:
-            safe_print(f"\n📊 TOP DUO RANKINGS:")
+            safe_print(f"\nTOP DUO RANKINGS:")
             safe_print("─" * 80)
             display_count = min(5, len(duo_rankings))  # Show top 5
 
@@ -677,7 +677,7 @@ class Assistant:
                 coverage = info["coverage"]
                 avg_score = info["avg_score"]
 
-                rank_symbol = "🥇" if i == 0 else "🥈" if i == 1 else "🥉" if i == 2 else f"{i+1}."
+                rank_symbol = "1." if i == 0 else "2." if i == 1 else "3." if i == 2 else f"{i+1}."
 
                 safe_print(f"{rank_symbol} {duo[0]} + {duo[1]}")
                 print(
@@ -716,7 +716,7 @@ class Assistant:
         viable_champions, validation_report = self._validate_champion_pool(champion_pool)
 
         if len(viable_champions) < 3:
-            safe_print(f"\n❌ ERROR: Only {len(viable_champions)} champions have sufficient data.")
+            safe_print(f"\n[ERREUR] Only {len(viable_champions)} champions have sufficient data.")
             print("Need at least 3 champions with data to form a trio.")
             print("\nChampions with insufficient data:")
             for champ, data in validation_report.items():
@@ -726,7 +726,7 @@ class Assistant:
 
         if len(viable_champions) < len(champion_pool):
             safe_print(
-                f"\n⚠️  WARNING: Using {len(viable_champions)} viable champions out of {len(champion_pool)} requested"
+                f"\n[ALERTE] Using {len(viable_champions)} viable champions out of {len(champion_pool)} requested"
             )
 
         # Step 1: Find best blind pick (highest average delta2) from viable champions
@@ -754,7 +754,7 @@ class Assistant:
             raise ValueError("No viable blind pick champion found")
 
         # Display blind pick rankings
-        safe_print(f"\n🎯 BLIND PICK RANKINGS:")
+        safe_print(f"\nBLIND PICK RANKINGS:")
         safe_print("─" * 60)
         display_count = min(len(viable_champions), 5)  # Show all viable or max 5
 
@@ -764,7 +764,7 @@ class Assistant:
             games = candidate["total_games"]
             matchups = candidate["matchups"]
 
-            rank_symbol = "🥇" if i == 0 else "🥈" if i == 1 else "🥉" if i == 2 else f"{i+1}."
+            rank_symbol = "1." if i == 0 else "2." if i == 1 else "3." if i == 2 else f"{i+1}."
 
             safe_print(f"{rank_symbol} {champ}")
             print(f"    Avg Delta2: {score:.2f} | Games: {games:,} | Matchups: {matchups}")
@@ -772,7 +772,7 @@ class Assistant:
         best_blind = blind_candidates[0]["champion"]
         best_blind_score = blind_candidates[0]["avg_delta2"]
 
-        safe_print(f"\n✅ Selected blind pick: {best_blind} (avg delta2: {best_blind_score:.2f})")
+        safe_print(f"\n[OK] Selected blind pick: {best_blind} (avg delta2: {best_blind_score:.2f})")
 
         # Step 2: Find best counterpick duo from remaining viable champions
         remaining_pool = [champ for champ in viable_champions if champ != best_blind]
@@ -798,7 +798,7 @@ class Assistant:
         print(f"Best counterpick duo: {best_duo}")
         print(f"Total coverage score: {total_score:.2f}")
         safe_print(
-            f"\n✅ Optimal trio: {best_blind} (blind) + {best_duo[0]} + {best_duo[1]} (counterpicks)"
+            f"\n[OK] Optimal trio: {best_blind} (blind) + {best_duo[0]} + {best_duo[1]} (counterpicks)"
         )
 
         # Add tactical analysis
@@ -837,12 +837,12 @@ class Assistant:
         has_data, matchups, games, delta2 = self._validate_champion_data(fixed_champion)
 
         if not has_data:
-            safe_print(f"\n❌ ERROR: Fixed champion '{fixed_champion}' has insufficient data")
+            safe_print(f"\n[ERREUR] Fixed champion '{fixed_champion}' has insufficient data")
             print(f"  Matchups: {matchups}, Games: {games}")
             raise ValueError(f"Fixed champion '{fixed_champion}' has insufficient data in database")
 
         safe_print(
-            f"✅ Fixed champion validated: {matchups} matchups, {games} total games, {delta2:.2f} avg delta2"
+            f"[OK] Fixed champion validated: {matchups} matchups, {games} total games, {delta2:.2f} avg delta2"
         )
 
         # Remove the fixed champion from the pool if it's there
@@ -859,7 +859,7 @@ class Assistant:
         viable_companions, validation_report = self._validate_champion_pool(available_pool)
 
         if len(viable_companions) < 2:
-            safe_print(f"\n❌ ERROR: Only {len(viable_companions)} companions have sufficient data.")  # fmt: skip
+            safe_print(f"\n[ERREUR] Only {len(viable_companions)} companions have sufficient data.")  # fmt: skip
             print("Need at least 2 viable companions to form a duo.")
             print("\nCompanions with insufficient data:")
             for champ, data in validation_report.items():
@@ -871,7 +871,7 @@ class Assistant:
 
         if len(viable_companions) < len(available_pool):
             safe_print(
-                f"\n⚠️  WARNING: Using {len(viable_companions)} viable companions out of {len(available_pool)} available"
+                f"\n[ALERTE] Using {len(viable_companions)} viable companions out of {len(available_pool)} available"
             )
 
         # Step 2: Find best duo from viable companions
@@ -890,7 +890,7 @@ class Assistant:
 
         print(f"\nBest companions: {best_duo}")
         print(f"Total coverage score: {total_score:.2f}")
-        safe_print(f"\n✅ Optimal trio: {fixed_champion} + {best_duo[0]} + {best_duo[1]}")
+        safe_print(f"\n[OK] Optimal trio: {fixed_champion} + {best_duo[0]} + {best_duo[1]}")
 
         # Add tactical analysis
         result_trio = (fixed_champion, best_duo[0], best_duo[1], total_score)
@@ -907,7 +907,7 @@ class Assistant:
         """
         blind_pick, counter1, counter2 = trio[:3]
 
-        safe_print(f"\n🎮 TACTICAL ANALYSIS:")
+        safe_print(f"\nTACTICAL ANALYSIS:")
         safe_print("=" * 80)
         print(f"Your optimal trio: {blind_pick} (Blind) + {counter1} + {counter2} (Counterpicks)")
 
@@ -931,13 +931,13 @@ class Assistant:
                 if not valid_matchups:
                     continue
 
-                safe_print(f"\n🔸 {champion} ({role}):")
+                safe_print(f"\n{champion} ({role}):")
 
                 # Best matchups (top 5)
                 best_matchups = valid_matchups[:5]
-                safe_print(f"  ✅ STRONG AGAINST:")
+                safe_print(f"  STRONG AGAINST:")
                 for enemy, delta2 in best_matchups:
-                    print(f"    • {enemy} ({delta2:+.2f} delta2)")
+                    print(f"    - {enemy} ({delta2:+.2f} delta2)")
 
                 # Worst matchups (bottom 5, but only show negatives)
                 worst_matchups = [
@@ -946,13 +946,13 @@ class Assistant:
                 worst_matchups = sorted(worst_matchups, key=lambda x: x[1])[:5]  # Worst 5
 
                 if worst_matchups:
-                    safe_print(f"  ⚠️  WEAK AGAINST:")
+                    safe_print(f"  WEAK AGAINST:")
                     for enemy, delta2 in worst_matchups:
-                        print(f"    • {enemy} ({delta2:+.2f} delta2)")
+                        print(f"    - {enemy} ({delta2:+.2f} delta2)")
 
                 # Neutral matchups count
                 neutral_count = sum(1 for _, delta2 in valid_matchups if -1 <= delta2 <= 1)
-                safe_print(f"  ➖ NEUTRAL MATCHUPS: {neutral_count} champions")
+                safe_print(f"  NEUTRAL MATCHUPS: {neutral_count} champions")
 
             except Exception as e:
                 print(f"  Error analyzing {champion}: {e}")
@@ -964,7 +964,7 @@ class Assistant:
     def _analyze_trio_coverage(self, trio: List[str]) -> None:
         """Analyze what the trio covers and potential gaps."""
 
-        safe_print(f"\n📊 COVERAGE ANALYSIS:")
+        safe_print(f"\nCOVERAGE ANALYSIS:")
         safe_print("─" * 50)
 
         # Get all champions from database (dynamic, includes new champions)
@@ -1005,8 +1005,8 @@ class Assistant:
         covered_count = len(coverage_map)
         coverage_percent = (covered_count / total_enemies) * 100
 
-        safe_print(f"📈 COVERAGE STATS:")
-        print(f"  • Covered: {covered_count}/{total_enemies} champions ({coverage_percent:.1f}%)")
+        safe_print(f"COVERAGE STATS:")
+        print(f"  - Covered: {covered_count}/{total_enemies} champions ({coverage_percent:.1f}%)")
 
         # Categorize coverage quality
         excellent = [(e, c, d) for e, (c, d) in coverage_map.items() if d >= 2.0]
@@ -1016,49 +1016,49 @@ class Assistant:
 
         if excellent:
             safe_print(
-                f"  🟢 EXCELLENT counters: {len(excellent)} ({len(excellent)/covered_count*100:.1f}%)"
+                f"  EXCELLENT counters: {len(excellent)} ({len(excellent)/covered_count*100:.1f}%)"
             )
         if good:
-            safe_print(f"  🟡 GOOD counters: {len(good)} ({len(good)/covered_count*100:.1f}%)")
+            safe_print(f"  GOOD counters: {len(good)} ({len(good)/covered_count*100:.1f}%)")
         if decent:
-            safe_print(f"  🟠 DECENT counters: {len(decent)} ({len(decent)/covered_count*100:.1f}%)")  # fmt: skip
+            safe_print(f"  DECENT counters: {len(decent)} ({len(decent)/covered_count*100:.1f}%)")  # fmt: skip
         if struggling:
             safe_print(
-                f"  🔴 STRUGGLING against: {len(struggling)} ({len(struggling)/covered_count*100:.1f}%)"
+                f"  STRUGGLING against: {len(struggling)} ({len(struggling)/covered_count*100:.1f}%)"
             )
 
         # Show problematic matchups
         if struggling:
-            safe_print(f"\n⚠️  DIFFICULT MATCHUPS:")
+            safe_print(f"\nDIFFICULT MATCHUPS:")
             worst_struggling = sorted(struggling, key=lambda x: x[2])[:3]  # Worst 3
             for enemy, counter, delta2 in worst_struggling:
-                print(f"    • {enemy}: Best answer is {counter} ({delta2:+.2f} delta2)")
+                print(f"    - {enemy}: Best answer is {counter} ({delta2:+.2f} delta2)")
 
         if uncovered_enemies:
-            safe_print(f"\n❌ UNCOVERED CHAMPIONS ({len(uncovered_enemies)}):")
+            safe_print(f"\n[ALERTE] UNCOVERED CHAMPIONS ({len(uncovered_enemies)}):")
             if len(uncovered_enemies) <= 5:
                 for enemy in uncovered_enemies:
-                    print(f"    • {enemy}")
+                    print(f"    - {enemy}")
             else:
                 for enemy in uncovered_enemies[:3]:
-                    print(f"    • {enemy}")
+                    print(f"    - {enemy}")
                 print(f"    ... and {len(uncovered_enemies)-3} more")
 
         # Draft recommendations
-        safe_print(f"\n💡 DRAFT RECOMMENDATIONS:")
+        safe_print(f"\nDRAFT RECOMMENDATIONS:")
         if coverage_percent >= 85:
-            safe_print("  🟢 Excellent pool! Very few gaps.")
+            safe_print("  Excellent pool! Very few gaps.")
         elif coverage_percent >= 70:
-            safe_print("  🟡 Good pool with minor gaps.")
+            safe_print("  Good pool with minor gaps.")
         elif coverage_percent >= 50:
-            safe_print("  🟠 Decent pool but consider expanding.")
+            safe_print("  Decent pool but consider expanding.")
         else:
-            safe_print("  🔴 Pool has significant gaps - consider more champions.")
+            safe_print("  Pool has significant gaps - consider more champions.")
 
         if len(excellent) > len(struggling):
-            safe_print("  📈 Pool favors aggressive counterpicking.")
+            safe_print("  Pool favors aggressive counterpicking.")
         else:
-            safe_print("  🛡️ Pool requires careful champion selection.")
+            safe_print("  Pool requires careful champion selection.")
 
     # ==================== Ban Recommendations ====================
 
@@ -1524,7 +1524,7 @@ class Assistant:
         print("Loading matchup data... ", end="", flush=True)
         matchup_cache = self.db.get_all_matchups_bulk()
         all_champions = list(self.db.get_all_champion_names().values())
-        print(f"✅ Loaded {len(matchup_cache):,} matchups")
+        print(f"[OK] Loaded {len(matchup_cache):,} matchups")
 
         trio_rankings = []
 
@@ -1569,12 +1569,12 @@ class Assistant:
                 continue
 
         # Summary after completion
-        print(f"\n✅ Analysis complete: {successful_trios} successful, {failed_trios} failed")
+        print(f"\n[OK] Analysis complete: {successful_trios} successful, {failed_trios} failed")
 
         if failed_trios > 0:
             failure_rate = (failed_trios / len(trio_combinations)) * 100
             print(
-                f"⚠️  WARNING: {failure_rate:.1f}% failure rate ({failed_trios}/{len(trio_combinations)} trios)"
+                f"[ALERTE] {failure_rate:.1f}% failure rate ({failed_trios}/{len(trio_combinations)} trios)"
             )
 
         if not trio_rankings:

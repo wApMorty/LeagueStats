@@ -122,10 +122,10 @@ class TestCalculateAndDisplayRecommendations:
 
         # Should display exactly 3 results
         assert len(results) >= 3
-        # Output should contain medals for top 3
-        assert "🥇" in captured.out  # Gold medal for 1st
-        assert "🥈" in captured.out  # Silver medal for 2nd
-        assert "🥉" in captured.out  # Bronze medal for 3rd
+        # Output should contain rank markers for top 3
+        assert "1." in captured.out  # Rank 1
+        assert "2." in captured.out  # Rank 2
+        assert "3." in captured.out  # Rank 3
         # Should show advantage percentages
         assert "advantage" in captured.out
         assert "%" in captured.out
@@ -273,7 +273,7 @@ class TestEdgeCases:
         # Should only return 1 result, not crash
         assert len(results) == 1
         # Should display only 1 recommendation
-        assert "🥇" in captured.out
+        assert "1." in captured.out
 
     def test_default_champion_pool_when_none(self, db, scorer, capsys):
         """Test that TOP_SOLOQ_POOL is used when champion_pool is None."""

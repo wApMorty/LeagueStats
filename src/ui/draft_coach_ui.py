@@ -57,13 +57,13 @@ def run_draft_coach(
     print("[INFO] Démarrage du Draft Coach en temps réel...")
     print("Assurez-vous que le client League of Legends est lancé et démarrez une partie !")
     if auto_hover:
-        print("🎯 [AUTO-HOVER] Survol automatique des champions ACTIVÉ")
+        print("[AUTO-HOVER] Survol automatique des champions ACTIVÉ")
     if auto_accept_queue:
-        print("🔥 [AUTO-ACCEPT] Acceptation automatique de la queue ACTIVÉE")
+        print("[AUTO-ACCEPT] Acceptation automatique de la queue ACTIVÉE")
     if auto_ban_hover:
-        print("🚫 [AUTO-BAN-HOVER] Survol automatique des bans ACTIVÉ")
+        print("[AUTO-BAN-HOVER] Survol automatique des bans ACTIVÉ")
     if open_onetricks:
-        print("🌐 [ONETRICKS] Ouverture de la page du champion en fin de draft ACTIVÉE")
+        print("[ONETRICKS] Ouverture de la page du champion en fin de draft ACTIVÉE")
     print("Appuyez sur Ctrl+C pour arrêter le suivi.\n")
 
     if synergy_weight is None:

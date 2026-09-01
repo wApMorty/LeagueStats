@@ -36,15 +36,15 @@ def validate_champion_name(name: str) -> Optional[str]:
         return suggestions[0]
     elif len(suggestions) > 1:
         # Multiple matches - show suggestions
-        print(f"  ⚠️ Ambiguous name. Did you mean: {', '.join(suggestions[:5])}?")
+        print(f"  [ALERTE] Ambiguous name. Did you mean: {', '.join(suggestions[:5])}?")
         return None
     else:
         # No matches - try contains
         contains_matches = [c for c in CHAMPIONS_LIST if normalized.lower() in c.lower()]
         if contains_matches:
-            print(f"  ⚠️ Champion not found. Similar: {', '.join(contains_matches[:5])}")
+            print(f"  [ALERTE] Champion not found. Similar: {', '.join(contains_matches[:5])}")
         else:
-            print(f"  ❌ Champion '{name}' not found")
+            print(f"  [ERREUR] Champion '{name}' not found")
         return None
 
 
@@ -125,10 +125,12 @@ def validate_champion_pool(
         if has_data:
             viable_champions.append(champion)
             safe_print(
-                f"  ✅ {champion}: {matchups} matchups, {games} total games, {delta2:.2f} avg delta2"
+                f"  [OK] {champion}: {matchups} matchups, {games} total games, {delta2:.2f} avg delta2"
             )
         else:
-            safe_print(f"  ❌ {champion}: Insufficient data ({matchups} matchups, {games} games)")
+            safe_print(
+                f"  [ALERTE] {champion}: Insufficient data ({matchups} matchups, {games} games)"
+            )
 
     return viable_champions, validation_report
 
@@ -140,7 +142,7 @@ def select_champion_pool() -> List[str]:
     Returns:
         Selected champion pool (list of champion names)
     """
-    safe_print("🎯 SELECT YOUR CHAMPION POOL:")
+    safe_print("SELECT YOUR CHAMPION POOL:")
     print("Available pools:")
     print("  1. top     - Top lane champions")
     print("  2. support - Support champions")
@@ -153,12 +155,12 @@ def select_champion_pool() -> List[str]:
 
             if choice in CHAMPIONS_BY_ROLE:
                 selected_pool = CHAMPIONS_BY_ROLE[choice]
-                safe_print(f"✅ Selected pool: {choice.upper()}")
+                safe_print(f"[OK] Selected pool: {choice.upper()}")
                 print(f"Champions: {', '.join(selected_pool)}")
                 print()
                 return selected_pool
             else:
-                print("❌ Invalid choice. Please enter: top, support, or all")
+                print("[ALERTE] Invalid choice. Please enter: top, support, or all")
 
         except (EOFError, KeyboardInterrupt):
             print("\nUsing default pool (top)")
@@ -172,7 +174,7 @@ def select_extended_champion_pool() -> List[str]:
     Returns:
         Selected extended champion pool (list of champion names)
     """
-    safe_print("🎯 SELECT CHAMPION POOL FOR ANALYSIS:")
+    safe_print("SELECT CHAMPION POOL FOR ANALYSIS:")
     print("Extended pools for comprehensive analysis:")
     print("  1. top        - Extended top lane pool (~24 champions)")
     print("  2. support    - Extended support pool (~26 champions)")
@@ -213,14 +215,14 @@ def select_extended_champion_pool() -> List[str]:
             if choice in pool_options:
                 pool_key = pool_options[choice]
                 selected_pool = EXTENDED_POOLS[pool_key]
-                safe_print(f"✅ Selected extended pool: {pool_key.upper()}")
+                safe_print(f"[OK] Selected extended pool: {pool_key.upper()}")
                 print(f"Pool size: {len(selected_pool)} champions")
                 print(f"First few: {', '.join(selected_pool[:5])}, ...")
                 print()
                 return selected_pool
             else:
                 print(
-                    "❌ Invalid choice. Use 1-7 or role names (top, support, jungle, mid, adc, multi-role, all-roles)"
+                    "[ALERTE] Invalid choice. Use 1-7 or role names (top, support, jungle, mid, adc, multi-role, all-roles)"
                 )
 
         except (EOFError, KeyboardInterrupt):

@@ -104,13 +104,13 @@ class RecommendationEngine:
 
         # Display formatted results
         if scores:
-            rank_emojis = ["🥇", "🥈", "🥉"]
+            rank_labels = ["1.", "2.", "3."]
             for index in range(min(nb_results, len(scores))):
                 champion, advantage = scores[index]
-                rank = rank_emojis[index] if index < 3 else f"  {index+1}."
+                rank = rank_labels[index] if index < 3 else f"  {index+1}."
                 print(f"{rank} {champion:<15} | {advantage:+6.2f}% advantage")
         else:
-            print("  ⚠️ No recommendations available")
+            print("  [ALERTE] No recommendations available")
             if skipped_low_data > 0:
                 print(f"     ({skipped_low_data} champions skipped - insufficient data)")
 
