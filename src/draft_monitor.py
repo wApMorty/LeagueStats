@@ -13,7 +13,6 @@ from .constants import TOP_SOLOQ_POOL, CHAMPIONS_BY_ROLE
 from .config_constants import (
     analysis_config,
     draft_config,
-    scraping_config,
     ui_config,
 )
 from .draft.state import ChampionAction, DraftState
@@ -25,6 +24,8 @@ from .draft.state_parser import DraftStateParser
 from .draft.onetricks import OneTricksWindow
 from .draft.automation import HoverAutomation
 from .draft.pool_selection import PoolSelector
+from .draft.ban_advice import BanAdvisor
+from .draft.commands import CommandListener
 
 
 class DraftMonitor:
@@ -81,6 +82,8 @@ class DraftMonitor:
         self.onetricks = OneTricksWindow(self)
         self.hover = HoverAutomation(self)
         self.pool_selector = PoolSelector(self)
+        self.ban_advisor = BanAdvisor(self)
+        self.commands = CommandListener(self)
         self.last_recommendation = None  # Track last recommendation to avoid spam
         self.last_ban_recommendation = None  # Track last ban recommendation to avoid spam
         self.has_done_initial_hover = False  # Track if we've done the initial hover
@@ -314,96 +317,7 @@ class DraftMonitor:
 
     def _handle_auto_ban_hover(self, state: DraftState):
         """Handle auto-ban-hover when it's our turn to ban."""
-        import sys
-
-        if getattr(sys, "frozen", False):
-            return  # Skip ban hover in .exe mode
-        try:
-            if self.verbose:
-                print(
-                    f"[DEBUG] Auto-ban-hover called: Phase='{state.phase}', Actor={state.current_actor}, Local={state.local_player_cell_id}"
-                )
-
-            # Only act if it's our turn to ban
-            if not self._is_player_ban_turn(state):
-                if self.verbose:
-                    print(f"[DEBUG] Not player ban turn - skipping auto-ban-hover")
-                return
-
-            if self.verbose:
-                print(
-                    f"[DEBUG] It's our ban turn! Getting recommendations for pool size {len(self.current_pool)}"
-                )
-
-            # Try to get pre-calculated bans from database first (fast)
-            ban_recommendations = None
-            if hasattr(self, "pool_name") and self.pool_name:
-                ban_recommendations = self.assistant.db.get_pool_ban_recommendations(
-                    self.pool_name, limit=3
-                )
-                if ban_recommendations and self.verbose:
-                    print(
-                        f"[DEBUG] Using pre-calculated bans from database for pool '{self.pool_name}'"
-                    )
-
-            # Fallback to real-time calculation if no pre-calculated data
-            if not ban_recommendations:
-                if self.verbose:
-                    print(f"[DEBUG] No pre-calculated bans found, calculating in real-time...")
-                ban_recommendations = self.assistant.get_ban_recommendations(
-                    self.current_pool, num_bans=3
-                )
-
-            if not ban_recommendations:
-                print("[DEBUG] No ban recommendations available")
-                return
-
-            if self.verbose:
-                print(f"[DEBUG] Got {len(ban_recommendations)} ban recommendations")
-
-            # Get the top ban recommendation
-            # Tuple format: (enemy, threat_score, best_delta2, best_champ, matchup_count)
-            top_ban_data = ban_recommendations[0]
-            top_ban = top_ban_data[0]
-            threat_score = top_ban_data[1]
-            matchup_count = top_ban_data[4] if len(top_ban_data) >= 5 else 0
-
-            if self.verbose:
-                print(f"[DEBUG] Top ban recommendation: {top_ban} (threat: {threat_score:.2f})")
-
-            # Only hover if it's a different recommendation or first time
-            if top_ban != self.last_ban_recommendation:
-                # Check if this champion is already banned
-                banned_champions = []
-                for ban_id in state.ally_bans + state.enemy_bans:
-                    banned_champions.append(self._get_display_name(ban_id))
-
-                if self.verbose:
-                    print(f"[DEBUG] Currently banned: {banned_champions}")
-                    print(f"[DEBUG] Checking if '{top_ban}' is in banned list")
-
-                # Case-insensitive comparison to handle potential name mismatches
-                banned_champions_lower = [name.lower() for name in banned_champions]
-                if top_ban.lower() not in banned_champions_lower:
-                    print(f"[DEBUG] Attempting to hover {top_ban}...")
-                    if self._auto_hover_champion(top_ban, "Recommandation de ban"):
-                        print(
-                            f"  [AUTO-BAN-HOVER] Survol de {top_ban} (Menace : {threat_score:.2f})"
-                        )
-                        self.last_ban_recommendation = top_ban
-                    else:
-                        print(f"  [ALERTE] [AUTO-BAN-HOVER] Échec du survol de {top_ban}")
-                else:
-                    print(f"  [ALERTE] [AUTO-BAN-HOVER] {top_ban} déjà banni, ignoré")
-            else:
-                if self.verbose:
-                    print(f"[DEBUG] Same recommendation as before ({top_ban}), skipping")
-
-        except Exception as e:
-            print(f"[WARNING] Error handling auto-ban-hover: {e}")
-            import traceback
-
-            traceback.print_exc()
+        self.ban_advisor.handle_auto_ban_hover(state)
 
     def _is_draft_complete(self, state: DraftState) -> bool:
         """Check if the draft is complete (all 10 champions locked)."""
@@ -494,114 +408,21 @@ class DraftMonitor:
                 print(f"[WARNING] Error loading lane distributions: {e}")
 
     def _start_command_listener(self) -> None:
-        """Background stdin reader for role corrections (SPEC-04 B5).
-
-        A daemon thread blocking on input() so the poll loop never blocks on
-        the terminal; _apply_pending_commands() drains the queue from the
-        main thread every tick, keeping LCU/db access single-threaded.
-        """
-        if self._command_listener_thread is not None:
-            return
-
-        def _listen() -> None:
-            while self.is_monitoring:
-                try:
-                    line = input()
-                except (EOFError, RuntimeError):
-                    return
-                if line.strip():
-                    self._command_queue.put(line)
-
-        self._command_listener_thread = threading.Thread(target=_listen, daemon=True)
-        self._command_listener_thread.start()
+        """Background stdin reader for role corrections (SPEC-04 B5)."""
+        self.commands.start()
 
     def _apply_pending_commands(self, state: DraftState) -> bool:
         """Drain queued commands: role corrections (SPEC-04 B5) and manual
-        outcome logging (SPEC-05 B7 §9).
-
-        Returns True if at least one command was applied, so the caller can
-        force a redisplay even when the draft itself hasn't changed.
-        """
-        applied = False
-        while True:
-            try:
-                line = self._command_queue.get_nowait()
-            except queue.Empty:
-                break
-            stripped = line.strip()
-            if stripped.lower().startswith("outcome"):
-                # Never affects the draft display, so it doesn't set `applied`.
-                self._handle_outcome_command(stripped)
-                continue
-            if self._handle_correction_command(line, state):
-                applied = True
-        return applied
+        outcome logging (SPEC-05 B7 §9)."""
+        return self.commands.apply_pending(state)
 
     def _handle_correction_command(self, line: str, state: DraftState) -> bool:
         """Parse and apply one 'r <champion> <lane>' correction command."""
-        parts = line.strip().split()
-        if len(parts) != 3 or parts[0].lower() != "r":
-            print(f"[ROLE] Commande non reconnue : '{line}'. Format attendu : r <champion> <lane>")
-            return False
-
-        _, champion_input, lane_input = parts
-        lane = lane_input.lower()
-        if lane not in scraping_config.LANES:
-            print(
-                f"[ROLE] Lane inconnue : '{lane_input}'. "
-                f"Valeurs valides : {', '.join(scraping_config.LANES)}"
-            )
-            return False
-
-        name_to_id = {name.lower(): champ_id for champ_id, name in self.champion_id_to_name.items()}
-        champion_id = name_to_id.get(champion_input.lower())
-        if champion_id is None:
-            print(f"[ROLE] Champion inconnu : '{champion_input}'")
-            return False
-
-        if champion_id not in state.ally_picks and champion_id not in state.enemy_picks:
-            print(f"[ROLE] {champion_input} n'est pas dans le draft en cours")
-            return False
-
-        self.forced_roles[champion_id] = lane
-        state.inferred_roles[champion_id] = lane
-        state.role_confidence[champion_id] = 1.0
-        state.role_source[champion_id] = "user"
-        print(f"[ROLE] {self._get_display_name(champion_id)} forcé sur {lane}")
-        return True
+        return self.commands.handle_correction_command(line, state)
 
     def _handle_outcome_command(self, line: str) -> None:
-        """Parse and apply one 'outcome win'/'outcome loss' command (SPEC-05
-        B7 §9): journalise le résultat réel de la partie sur la dernière
-        prédiction en attente, pour la calibration (scripts/calibrate_model.py).
-
-        Manual command by design (not a gameflow/EndOfGame hook, per SPEC-05:
-        untestable against a real LCU client without speculating on its
-        behavior). Best-effort: never raises, never blocks the draft loop.
-        """
-        parts = line.split()
-        if len(parts) != 2 or parts[1].lower() not in ("win", "loss"):
-            print(f"[OUTCOME] Commande non reconnue : '{line}'. Format attendu : outcome win|loss")
-            return
-
-        if self._last_prediction_id is None:
-            print("[OUTCOME] Aucune prédiction à mettre à jour pour cette partie")
-            return
-
-        outcome = 1 if parts[1].lower() == "win" else 0
-        try:
-            updated = self.assistant.db.update_prediction_outcome(self._last_prediction_id, outcome)
-            if updated:
-                print(
-                    f"[OUTCOME] Prédiction #{self._last_prediction_id} enregistrée comme {parts[1].lower()}"
-                )
-            else:
-                print(f"[OUTCOME] Aucune prédiction trouvée pour l'id #{self._last_prediction_id}")
-        except Exception as e:
-            print(f"[WARNING] Échec de la mise à jour du résultat de la prédiction: {e}")
-
-        # One outcome update per game, whether it succeeded or not.
-        self._last_prediction_id = None
+        """Parse and apply one 'outcome win'/'outcome loss' command (SPEC-05 B7 §9)."""
+        self.commands.handle_outcome_command(line)
 
     def _get_display_name(self, champion_id: int) -> str:
         """Get display name for champion ID."""
@@ -952,91 +773,11 @@ class DraftMonitor:
 
     def _show_ban_recommendations_draft(self):
         """Show ban recommendations for current pool during draft."""
-        import sys
-
-        if getattr(sys, "frozen", False):
-            return  # Skip ban recommendations in .exe mode
-
-        try:
-            print(f"\n[BANS] RECOMMANDATIONS DE BAN STRATÉGIQUES")
-            print("-" * 50)
-
-            # Try to get pre-calculated bans from database first (fast)
-            ban_recommendations = None
-            if hasattr(self, "pool_name") and self.pool_name:
-                ban_recommendations = self.assistant.db.get_pool_ban_recommendations(
-                    self.pool_name, limit=3
-                )
-                if ban_recommendations and self.verbose:
-                    print(
-                        f"[DEBUG] Using pre-calculated bans from database for pool '{self.pool_name}'"
-                    )
-
-            # Fallback to real-time calculation if no pre-calculated data
-            if not ban_recommendations:
-                if self.verbose:
-                    print(f"[DEBUG] No pre-calculated bans found, calculating in real-time...")
-                ban_recommendations = self.assistant.get_ban_recommendations(
-                    self.current_pool, num_bans=3
-                )
-
-            if ban_recommendations:
-                print(f"Envisagez de bannir ces menaces pour votre pool :")
-                # Tuple format: (enemy, threat_score, best_delta2, best_champ, matchup_count)
-                for i, (enemy, threat_score, _best_delta2, _best_champ, matchup_count) in enumerate(
-                    ban_recommendations, 1
-                ):
-                    print(
-                        f"  {i}. {enemy:<12} | Menace : {threat_score:>5.2f} | Counter {matchup_count}/{len(self.current_pool)} de vos champions"
-                    )
-                print(f"[INFO] Ces champions ont de bons matchups contre votre pool")
-            else:
-                if self.verbose:
-                    print(f"[ALERTE] Aucune donnée de ban disponible pour votre pool")
-
-        except Exception as e:
-            if self.verbose:
-                print(f"[WARNING] Erreur lors de l'affichage des recommandations de ban: {e}")
+        self.ban_advisor.show_ban_recommendations_draft()
 
     def _show_adaptive_ban_recommendations(self, state: DraftState):
         """Show ban recommendations adapted to enemy picks."""
-        import sys
-
-        if getattr(sys, "frozen", False):
-            return  # Skip adaptive bans in .exe mode
-        try:
-            if not state.enemy_picks:
-                return
-
-            print(f"\n[ADAPTIVE BANS] RECOMMANDATIONS DE BAN CIBLÉES")
-            print("-" * 50)
-
-            # Get enemy champion names
-            enemy_names = [self._get_display_name(champ_id) for champ_id in state.enemy_picks]
-            print(f"L'équipe ennemie a : {', '.join(enemy_names)}")
-
-            # Try to get pre-calculated bans from database first (fast)
-            ban_recommendations = None
-            if hasattr(self, "pool_name") and self.pool_name:
-                ban_recommendations = self.assistant.db.get_pool_ban_recommendations(
-                    self.pool_name, limit=3
-                )
-
-            # Fallback to real-time calculation if no pre-calculated data
-            if not ban_recommendations:
-                ban_recommendations = self.assistant.get_ban_recommendations(
-                    self.current_pool, num_bans=3
-                )
-
-            if ban_recommendations:
-                print(f"Bans prioritaires pour neutraliser les synergies ennemies :")
-                for i, (enemy, threat_score, *_) in enumerate(ban_recommendations[:3], 1):
-                    print(f"  {i}. {enemy:<12} | Menace : {threat_score:>5.2f}")
-                print(f"[INFO] Ciblez les champions qui synergisent avec leurs picks")
-
-        except Exception as e:
-            if self.verbose:
-                print(f"[WARNING] Erreur lors de l'affichage des bans ciblés: {e}")
+        self.ban_advisor.show_adaptive_ban_recommendations(state)
 
     def _select_champion_pool_by_name(self, pool_name: str) -> List[str]:
         """Charge une pool mémorisée par son nom, sans re-poser la question.
