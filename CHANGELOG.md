@@ -4,6 +4,16 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### 📝 Docs
+
+- **SPEC-06 (D3, D4)** — les 9 modules issus du démantèlement de
+  `lol_coach_legacy.py` (E9), plus `champion_data_ui.py` resté en anglais
+  depuis un refactor antérieur, sont traduits en français et purgés de
+  leurs emojis. Les indicateurs visuels en tableau (pools système/perso,
+  médailles, statuts de matchup) passent à des tags ASCII à largeur fixe
+  pour préserver l'alignement des colonnes. Aucun changement de
+  comportement.
+
 ### ♻️ Refactor
 
 - **SPEC-07 (E9)** — `src/ui/lol_coach_legacy.py` (2045 lignes, 14 % couvert)
