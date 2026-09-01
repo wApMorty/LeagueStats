@@ -75,11 +75,11 @@
 
 | Id | Item | PV | D | ROI |
 |---|---|---|---|---|
-| E1 | Mesurer la couverture sur tout `src/` | 8 | 2 | 4,0 |
+| E1 | ✅ Mesurer la couverture sur tout `src/` | 8 | 2 | 4,0 |
 | E2 | Réécrire le README | 8 | 2 | 4,0 |
-| E4 | Unifier le numéro de version (→ 1.3.0) | 5 | 1 | 5,0 |
-| E5 | Hygiène du dépôt (fichiers parasites trackés, résidus) | 5 | 1 | 5,0 |
-| E6 | Isoler les tests (log et BD de production touchés) | 8 | 3 | 2,7 |
+| E4 | ✅ Unifier le numéro de version (→ 1.3.0) | 5 | 1 | 5,0 |
+| E5 | ✅ Hygiène du dépôt (fichiers parasites trackés, résidus) | 5 | 1 | 5,0 |
+| E6 | ✅ Isoler les tests (log et BD de production touchés) | 8 | 3 | 2,7 |
 | E7 | Sortir les seuils métier restants vers `config_constants` | 5 | 2 | 2,5 |
 | E8 | ✅ Corriger la casse dans `calculate_synergy_bonus` | 5 | 1 | 5,0 |
 | E9 | Démanteler `lol_coach_legacy.py` (2 045 l., 14 % couvert) — inclut la traduction D3 restante | 8 | 13 | 0,6 |

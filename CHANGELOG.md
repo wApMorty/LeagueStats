@@ -2,6 +2,8 @@
 
 All notable changes to LeagueStats Coach will be documented in this file.
 
+## [Unreleased]
+
 ## [1.3.0] - 2026-09-01
 
 ### 🔧 Chore
