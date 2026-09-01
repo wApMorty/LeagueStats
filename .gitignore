@@ -1,7 +1,12 @@
 __pycache__
 .vscode
 node_modules
-*.json
+
+# Données personnelles générées localement (SPEC-07 E5 : *.json global
+# masquait aussi les vrais fichiers de config qu'on voudrait committer)
+champion_pools.json
+user_prefs.json
+
 *.db
 *.log
 .claude
@@ -21,8 +26,6 @@ htmlcov/
 
 # Environment variables (sensitive credentials)
 .env
-server/.env
-config/.env.neon
 
 # Claude Code temporary files
 tmpclaude-*-cwd
