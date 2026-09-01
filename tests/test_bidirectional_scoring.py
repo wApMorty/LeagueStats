@@ -1,8 +1,21 @@
 """Tests for bidirectional advantage calculation in scoring.py."""
 
 import pytest
+from src.analysis.probability import sigmoid
 from src.analysis.scoring import ChampionScorer
 from src.config_constants import analysis_config
+
+
+def _pct(logit_value: float) -> float:
+    """recalculé (SPEC-05 B7) : delta2_to_win_advantage() renvoie désormais un
+    log-odds, pas un pourcentage. Ce helper reproduit la conversion finale de
+    score_against_team (sigmoid, jamais un log-odds brut) pour comparer un
+    delta2 de référence au résultat -- déjà en pourcentage -- renvoyé par
+    score_against_team. sigmoid étant strictement monotone, tout ordre
+    (<, >, ==) entre deux quantités en log-odds reste valide après cette
+    conversion : seules les comparaisons de tolérance absolue (abs(...) < x)
+    ont dû être recalculées avec la nouvelle échelle."""
+    return (sigmoid(logit_value) - 0.5) * 100.0
 
 
 class TestBidirectionalAdvantage:
@@ -32,10 +45,10 @@ class TestBidirectionalAdvantage:
         result = scorer.score_against_team(aatrox_matchups, ["Darius"], champion_name="Aatrox")
 
         # With blind pick dilution: our_avg_delta2 = 100/5 = 20
-        our_diluted_adv = scorer.delta2_to_win_advantage(20, "Aatrox")
+        our_diluted_adv = _pct(scorer.delta2_to_win_advantage(20))
 
         # Opponent advantage from delta2=10 (no dilution)
-        opp_adv = scorer.delta2_to_win_advantage(10, "Darius")
+        opp_adv = _pct(scorer.delta2_to_win_advantage(10))
 
         # Net should be positive but reduced by opponent advantage
         assert result > 0
@@ -61,8 +74,8 @@ class TestBidirectionalAdvantage:
 
         result = scorer.score_against_team(aatrox_matchups, ["Teemo"], champion_name="Aatrox")
 
-        # Our advantage (no bounds)
-        our_adv = scorer.delta2_to_win_advantage(300, "Aatrox")
+        # Our advantage (no bounds at the log-odds stage)
+        our_adv = _pct(scorer.delta2_to_win_advantage(300))
 
         # Since both perspectives agree we dominate, result should be very high
         assert result > our_adv  # Amplified by opponent's negative advantage
@@ -170,7 +183,8 @@ class TestBidirectionalAdvantage:
         weight_darius = 10 * confidence_darius
         weight_garen = 15 * confidence_garen
         weighted_avg = (100 * weight_darius + 200 * weight_garen) / (weight_darius + weight_garen)
-        expected = scorer.delta2_to_win_advantage(weighted_avg, "Aatrox")
+        # recalculé (B7) : score_against_team sature désormais via sigmoid.
+        expected = _pct(scorer.delta2_to_win_advantage(weighted_avg))
 
         assert abs(result - expected) < 0.01
 
@@ -210,7 +224,8 @@ class TestBidirectionalAdvantage:
 
         # Should use only our advantage (opponent data filtered out due to low pickrate)
         # With 1 known + 4 blind: (150+0*4)/5 = 30
-        our_diluted_advantage = scorer.delta2_to_win_advantage(30, "Aatrox")
+        # recalculé (B7) : score_against_team sature désormais via sigmoid.
+        our_diluted_advantage = _pct(scorer.delta2_to_win_advantage(30))
         # Opponent advantage should be 0 (filtered out)
         assert abs(result - our_diluted_advantage) < 0.5
 
@@ -228,7 +243,8 @@ class TestBidirectionalAdvantage:
 
         # Should use only our advantage (opponent data filtered out due to insufficient games)
         # With 1 known + 4 blind: (180+0*4)/5 = 36
-        our_diluted_advantage = scorer.delta2_to_win_advantage(36, "Aatrox")
+        # recalculé (B7) : score_against_team sature désormais via sigmoid.
+        our_diluted_advantage = _pct(scorer.delta2_to_win_advantage(36))
         # Opponent advantage should be 0 (filtered out)
         assert abs(result - our_diluted_advantage) < 0.5
 
@@ -248,18 +264,19 @@ class TestBidirectionalAdvantage:
 
         result = scorer.score_against_team(aatrox_matchups, ["Teemo"], champion_name="Aatrox")
 
-        # Calculate expected values
+        # Calculate expected values (log-odds -- combine BEFORE converting to
+        # a percentage, exactly like score_against_team does internally, B7).
         # Our advantage: (500+0*4)/5 = 100
-        our_adv = scorer.delta2_to_win_advantage(100, "Aatrox")
+        our_adv_logit = scorer.delta2_to_win_advantage(100)
         # Opponent advantage: 250 (no dilution)
-        opp_adv = scorer.delta2_to_win_advantage(250, "Teemo")
+        opp_adv_logit = scorer.delta2_to_win_advantage(250)
 
         # CRITICAL: Must be subtraction (our - opp), NOT addition
-        expected_net = our_adv - opp_adv
+        expected_net = _pct(our_adv_logit - opp_adv_logit)
         assert abs(result - expected_net) < 0.5
 
         # Verify it's NOT addition (would be very high and positive)
-        wrong_addition = our_adv + opp_adv
+        wrong_addition = _pct(our_adv_logit + opp_adv_logit)
         assert abs(result - wrong_addition) > 10.0  # Should NOT be addition
 
     def test_blind_pick_dilution_reduces_advantage(self, db, scorer, insert_matchup):
@@ -280,10 +297,10 @@ class TestBidirectionalAdvantage:
         )
 
         # Diluted advantage: (500+0*4)/5 = 100
-        diluted_adv = scorer.delta2_to_win_advantage(100, "Aatrox")
+        diluted_adv = _pct(scorer.delta2_to_win_advantage(100))
 
         # Undiluted (raw) advantage: 500
-        raw_adv = scorer.delta2_to_win_advantage(500, "Aatrox")
+        raw_adv = _pct(scorer.delta2_to_win_advantage(500))
 
         # Verify dilution reduces advantage
         assert result < raw_adv
@@ -313,7 +330,8 @@ class TestBidirectionalAdvantage:
         # Blind pick average = (100*10 + (-100)*10) / (10+10) = 0
         # Diluted delta2 = (200 + 0*4) / 5 = 40
         expected_avg_delta2 = (200 + 0 * 4) / 5  # Should equal 40
-        expected_advantage = scorer.delta2_to_win_advantage(expected_avg_delta2, "Aatrox")
+        # recalculé (B7) : score_against_team sature désormais via sigmoid.
+        expected_advantage = _pct(scorer.delta2_to_win_advantage(expected_avg_delta2))
 
         # No opponent perspective in this test (unidirectional)
         assert abs(result - expected_advantage) < 0.5
@@ -355,14 +373,14 @@ class TestBidirectionalAdvantage:
         our_weighted_avg = (20 * 30 + 250 * 2 + 80 * 15 + (-30) * 12 + 50 * 10) / (
             30 + 2 + 15 + 12 + 10
         )
-        our_adv = scorer.delta2_to_win_advantage(our_weighted_avg, "Aatrox")
+        our_adv_logit = scorer.delta2_to_win_advantage(our_weighted_avg)
 
         # Enemy advantage: SIMPLE average (not weighted)
         # (10 + 320 + 60 + (-40) + 30) / 5 = 380/5 = 76
         enemy_simple_avg = (10 + 320 + 60 + (-40) + 30) / 5
-        enemy_adv = scorer.delta2_to_win_advantage(enemy_simple_avg, "Aatrox")
+        enemy_adv_logit = scorer.delta2_to_win_advantage(enemy_simple_avg)
 
-        expected = our_adv - enemy_adv
+        expected = _pct(our_adv_logit - enemy_adv_logit)
 
         # This test verifies the design choice is implemented
         # Exact values are complex due to filtering, so we verify behavior exists
@@ -382,8 +400,8 @@ class TestBidirectionalAdvantage:
         enemy_weighted_avg = (10 * 40 + 320 * 1 + 60 * 10 + (-40) * 8 + 30 * 12) / (
             40 + 1 + 10 + 8 + 12
         )
-        enemy_adv_if_weighted = scorer.delta2_to_win_advantage(enemy_weighted_avg, "Aatrox")
-        wrong_result_if_symmetric = our_adv - enemy_adv_if_weighted
+        enemy_adv_if_weighted_logit = scorer.delta2_to_win_advantage(enemy_weighted_avg)
+        wrong_result_if_symmetric = _pct(our_adv_logit - enemy_adv_if_weighted_logit)
 
         # With simple mean giving higher enemy advantage, our net should be lower
         assert result < wrong_result_if_symmetric

@@ -14,6 +14,7 @@ Test approach:
 """
 
 import pytest
+from src.analysis.probability import sigmoid
 from src.models import Matchup
 
 
@@ -131,7 +132,11 @@ def test_banned_champions_case_insensitive(scorer):
 
     # Calculate expected score (should only include EnemyB)
     # Since EnemyC is banned, avg_delta2 should only use EnemyB's delta2 (50.0)
-    expected_advantage = scorer.delta2_to_win_advantage(50.0, "ChampionA")
+    # recalculé (SPEC-05 B7) : le blind pick sature désormais via sigmoid ;
+    # delta2_to_win_advantage renvoie un log-odds, reconverti ici comme le
+    # fait score_against_team.
+    expected_logit = scorer.delta2_to_win_advantage(50.0)
+    expected_advantage = (sigmoid(expected_logit) - 0.5) * 100.0
 
     # Assert: Score should match expected (case-insensitive filtering worked)
     assert abs(score - expected_advantage) < 0.1, (

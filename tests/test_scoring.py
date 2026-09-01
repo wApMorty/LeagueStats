@@ -1,7 +1,8 @@
 """Tests for scoring algorithms (src/analysis/scoring.py)."""
 
 import pytest
-from src.analysis.scoring import ChampionScorer
+from src.analysis.probability import sigmoid, winrate_points_to_logit
+from src.analysis.scoring import ChampionScorer, estimate_win_probability
 from src.config_constants import analysis_config
 from src.models import Matchup
 
@@ -147,56 +148,6 @@ class TestAvgWinrate:
         assert result == 0.0
 
 
-class TestDelta2ToWinAdvantage:
-    """Tests for delta2_to_win_advantage logistic transformation."""
-
-    def test_positive_delta2_gives_positive_advantage(self, scorer):
-        """Test that positive delta2 gives positive advantage."""
-        result = scorer.delta2_to_win_advantage(2.0, "TestChamp")
-
-        assert result > 0
-
-    def test_negative_delta2_gives_negative_advantage(self, scorer):
-        """Test that negative delta2 gives negative advantage."""
-        result = scorer.delta2_to_win_advantage(-2.0, "TestChamp")
-
-        assert result < 0
-
-    def test_zero_delta2_gives_near_zero_advantage(self, scorer):
-        """Test that zero delta2 gives ~0% advantage."""
-        result = scorer.delta2_to_win_advantage(0.0, "TestChamp")
-
-        assert abs(result) < 0.01
-
-    def test_logistic_asymptotic_behavior(self, scorer):
-        """Test that logistic function approaches asymptotic limits."""
-        # Very large positive delta2 should approach 50% advantage
-        result_positive = scorer.delta2_to_win_advantage(100.0, "TestChamp")
-        assert result_positive > 45.0  # Should be very close to 50%
-
-        # Very large negative delta2 should approach -50% advantage
-        result_negative = scorer.delta2_to_win_advantage(-100.0, "TestChamp")
-        assert result_negative < -45.0  # Should be very close to -50%
-
-    def test_logistic_formula(self, scorer):
-        """Test logistic transformation formula is correct."""
-        delta2 = 5.0
-        # Manual calculation: log_odds = 0.12 * 5.0 = 0.6
-        # win_prob = 1 / (1 + exp(-0.6)) = 0.6457
-        # advantage = (0.6457 - 0.5) * 100 = 14.57
-
-        result = scorer.delta2_to_win_advantage(delta2, "TestChamp")
-
-        # Should match mathematical formula (no bounds)
-        import math
-
-        expected_log_odds = 0.12 * delta2
-        expected_win_prob = 1 / (1 + math.exp(-expected_log_odds))
-        expected_advantage = (expected_win_prob - 0.5) * 100
-
-        assert abs(result - expected_advantage) < 0.01
-
-
 class TestScoreAgainstTeam:
     """Tests for score_against_team matchup calculations."""
 
@@ -210,9 +161,13 @@ class TestScoreAgainstTeam:
         """Test that blind pick scenario uses average delta2."""
         result = scorer.score_against_team(sample_matchups, [], champion_name="Aatrox")
 
-        # Should use avg_delta2 of sample_matchups
+        # recalculé : score_against_team sature désormais via sigmoid, cf B7.
+        # delta2_to_win_advantage renvoie un log-odds ; on le reconvertit en
+        # écart de probabilité saturant avant de comparer, comme le fait
+        # score_against_team lui-même.
         avg_delta2 = scorer.avg_delta2(sample_matchups)
-        expected = scorer.delta2_to_win_advantage(avg_delta2, "Aatrox")
+        expected_logit = scorer.delta2_to_win_advantage(avg_delta2)
+        expected = (sigmoid(expected_logit) - 0.5) * 100.0
 
         assert abs(result - expected) < 0.01
 
@@ -274,9 +229,15 @@ class TestScoreAgainstTeamLane:
         )
 
         assert result_top != pytest.approx(result_support)
-        # our_advantage = delta2_to_win_advantage(100/5) = 20 (dilution blind picks)
-        assert result_top == pytest.approx(20.0 - 10.0)
-        assert result_support == pytest.approx(20.0 - 40.0)
+        # recalculé : score_against_team sature désormais via sigmoid, cf B7.
+        # our_avg_delta2 = 100/5 = 20 (dilution blind picks), converti en
+        # log-odds ; net_advantage = our_logit - enemy_logit, reconverti en
+        # écart de probabilité saturant seulement à la toute fin.
+        our_logit = winrate_points_to_logit(20.0 * analysis_config.K_MATCHUP)
+        top_logit = our_logit - winrate_points_to_logit(10.0 * analysis_config.K_MATCHUP)
+        support_logit = our_logit - winrate_points_to_logit(40.0 * analysis_config.K_MATCHUP)
+        assert result_top == pytest.approx((sigmoid(top_logit) - 0.5) * 100.0)
+        assert result_support == pytest.approx((sigmoid(support_logit) - 0.5) * 100.0)
 
     def test_lane_none_keeps_full_aggregation_behaviour(self, db, scorer, insert_matchup):
         """lane=None (comportement historique) reste la moyenne pondérée toutes lanes."""
@@ -288,7 +249,10 @@ class TestScoreAgainstTeamLane:
         result_none = scorer.score_against_team(aatrox_matchups, ["Darius"], champion_name="Aatrox")
 
         weighted_enemy = (10.0 * 2000 + 40.0 * 2000) / 4000  # = 25.0
-        assert result_none == pytest.approx(20.0 - weighted_enemy)
+        # recalculé : score_against_team sature désormais via sigmoid, cf B7.
+        our_logit = winrate_points_to_logit(20.0 * analysis_config.K_MATCHUP)
+        enemy_logit = winrate_points_to_logit(weighted_enemy * analysis_config.K_MATCHUP)
+        assert result_none == pytest.approx((sigmoid(our_logit - enemy_logit) - 0.5) * 100.0)
 
     def test_lane_with_no_matching_data_degrades_to_unidirectional(
         self, db, scorer, insert_matchup
@@ -304,24 +268,35 @@ class TestScoreAgainstTeamLane:
             lane="jungle",
         )
 
-        assert result == pytest.approx(20.0)  # our_advantage - 0 (pas de donnée ennemie)
+        # recalculé : score_against_team sature désormais via sigmoid, cf B7.
+        our_logit = winrate_points_to_logit(20.0 * analysis_config.K_MATCHUP)
+        assert result == pytest.approx(
+            (sigmoid(our_logit) - 0.5) * 100.0
+        )  # enemy_logit = 0 (pas de donnée)
 
 
 class TestCalculateTeamWinrate:
-    """Tests for calculate_team_winrate geometric mean calculation."""
+    """Tests for calculate_team_winrate (SPEC-05 B7): thin wrapper around the
+    module-level estimate_win_probability now -- no more geometric mean, no
+    more [20, 80]/[25, 75] clamps. Behavioral coverage of the log-odds math
+    itself (saturation, symmetry, extremes) lives in tests/test_win_probability.py;
+    these tests check the wrapper's own contract (dict shape, delegation,
+    passthrough of individual_winrates)."""
 
-    def test_geometric_mean_calculation(self, scorer):
-        """Test geometric mean formula is correct."""
-        # Winrates: [52%, 51%, 53%]
-        # Probabilities: [0.52, 0.51, 0.53]
-        # Geometric mean: (0.52 * 0.51 * 0.53)^(1/3) = 0.5199
-        # Team winrate: 51.99%
-
+    def test_returns_expected_dict_shape(self, scorer):
         result = scorer.calculate_team_winrate([52.0, 51.0, 53.0])
 
         assert "team_winrate" in result
         assert "individual_winrates" in result
-        assert abs(result["team_winrate"] - 52.0) < 1.0  # Approximately 52%
+
+    def test_delegates_to_estimate_win_probability(self, scorer):
+        """calculate_team_winrate must delegate to the module-level
+        estimate_win_probability rather than reimplementing the math."""
+        winrates = [52.0, 48.0, 61.0]
+        result = scorer.calculate_team_winrate(winrates)
+
+        expected = estimate_win_probability(winrates) * 100.0
+        assert result["team_winrate"] == pytest.approx(expected)
 
     def test_empty_list_returns_50_percent(self, scorer):
         """Test that empty list returns neutral 50% winrate."""
@@ -330,82 +305,90 @@ class TestCalculateTeamWinrate:
         assert result["team_winrate"] == 50.0
         assert result["individual_winrates"] == []
 
-    def test_clamping_individual_winrates(self, scorer):
-        """Test that individual winrates are clamped to [20%, 80%]."""
+    def test_individual_winrates_are_no_longer_clamped(self, scorer):
+        """recalculé : SPEC-05 B7 supprime le clamp [20%, 80%] sur les winrates
+        individuelles -- il ne servait qu'à masquer les sorties absurdes de la
+        moyenne géométrique (SPEC-05 §1.3). Elles sont désormais renvoyées
+        telles quelles."""
         result = scorer.calculate_team_winrate([90.0, 10.0, 50.0])
 
-        assert result["individual_winrates"] == [80.0, 20.0, 50.0]
+        assert result["individual_winrates"] == [90.0, 10.0, 50.0]
 
-    def test_team_winrate_bounds(self, scorer):
-        """Test that team winrate is clamped to [25%, 75%]."""
-        # All very high winrates
+    def test_team_winrate_no_longer_bounded_to_25_75(self, scorer):
+        """recalculé : SPEC-05 B7 supprime le clamp [25%, 75%] sur le résultat,
+        remplacé par la saturation naturelle du sigmoïde (reste dans ]0, 100[
+        sans borne artificielle) -- un draft à 5x80% dépasse désormais 75%,
+        et un draft à 5x20% descend désormais sous 25%."""
         result_high = scorer.calculate_team_winrate([80.0, 80.0, 80.0, 80.0, 80.0])
-        assert result_high["team_winrate"] <= 75.0
+        assert result_high["team_winrate"] > 75.0
+        assert result_high["team_winrate"] < 100.0
 
-        # All very low winrates
         result_low = scorer.calculate_team_winrate([20.0, 20.0, 20.0, 20.0, 20.0])
-        assert result_low["team_winrate"] >= 25.0
+        assert result_low["team_winrate"] < 25.0
+        assert result_low["team_winrate"] > 0.0
 
     def test_single_champion(self, scorer):
-        """Test calculation with single champion."""
+        """recalculé : avant B7, un seul champion dans [20, 80] repassait tel
+        quel (moyenne géométrique à un seul terme, non clampée). B7 fait
+        toujours passer la valeur par logit/sigmoid, donc 55.0 ne redonne
+        plus exactement 55.0."""
         result = scorer.calculate_team_winrate([55.0])
 
-        assert abs(result["team_winrate"] - 55.0) < 0.01
+        expected = sigmoid(winrate_points_to_logit(55.0 - 50.0)) * 100.0
+        assert result["team_winrate"] == pytest.approx(expected)
         assert result["individual_winrates"] == [55.0]
 
 
 class TestDelta2ToWinAdvantage:
-    """Tests for delta2_to_win_advantage method - linear conversion."""
+    """Tests for delta2_to_win_advantage (SPEC-05 B7): now returns a raw
+    log-odds contribution, not a percentage -- the old `delta2 * 1.0`
+    identity displayed directly as a percentage was exactly the defect
+    SPEC-05 fixes (see SPEC-05 §1.2). Conversion to a displayable, saturating
+    percentage happens one level up, in score_against_team (tested in
+    TestScoreAgainstTeam/TestScoreAgainstTeamLane)."""
 
-    def test_linear_conversion_positive(self, scorer):
-        """Test that delta2 converts linearly (1:1 ratio) for positive values."""
-        # delta2 = 3.40 should give ~3.40% advantage (not 10%+ from old logistic formula)
-        result = scorer.delta2_to_win_advantage(3.40, "TestChamp")
+    def test_positive_delta2_gives_positive_logit(self, scorer):
+        result = scorer.delta2_to_win_advantage(2.0)
+        assert result > 0
 
-        assert 3.0 <= result <= 4.0, f"Expected ~3.40%, got {result}%"
-        assert abs(result - 3.40) < 0.1  # Should be very close to 3.40
+    def test_negative_delta2_gives_negative_logit(self, scorer):
+        result = scorer.delta2_to_win_advantage(-2.0)
+        assert result < 0
 
-    def test_linear_conversion_negative(self, scorer):
-        """Test that delta2 converts linearly for negative values."""
-        result = scorer.delta2_to_win_advantage(-5.0, "TestChamp")
+    def test_zero_delta2_gives_zero_logit(self, scorer):
+        result = scorer.delta2_to_win_advantage(0.0)
+        assert result == pytest.approx(0.0)
 
-        assert -5.5 <= result <= -4.5, f"Expected ~-5.0%, got {result}%"
-        assert abs(result - (-5.0)) < 0.1
+    def test_matches_winrate_points_to_logit_formula(self, scorer):
+        """delta2_to_win_advantage(delta2) == winrate_points_to_logit(delta2 * K_MATCHUP)."""
+        delta2 = 5.0
+        result = scorer.delta2_to_win_advantage(delta2)
+        expected = winrate_points_to_logit(delta2 * analysis_config.K_MATCHUP)
+        assert result == pytest.approx(expected)
 
-    def test_zero_delta2_gives_zero_advantage(self, scorer):
-        """Test that delta2=0 gives 0% advantage (neutral matchup)."""
-        result = scorer.delta2_to_win_advantage(0.0, "TestChamp")
+    def test_no_longer_the_old_linear_identity(self, scorer):
+        """recalculé : avant B7, delta2_to_win_advantage(delta2, name) == delta2
+        (identité linéaire *1.0, affichée telle quelle comme un pourcentage --
+        le défaut B7a décrit en SPEC-05 §1.2). B7 le remplace par un terme
+        log-odds (delta2 * K_MATCHUP * LOGIT_PER_WINRATE_POINT = delta2 * 1.0 * 0.04),
+        donc delta2=3.40 ne renvoie plus 3.40 mais 0.136."""
+        result = scorer.delta2_to_win_advantage(3.40)
 
-        assert abs(result) < 0.1  # Should be very close to 0
+        assert result != pytest.approx(3.40)
+        assert result == pytest.approx(
+            3.40 * analysis_config.K_MATCHUP * analysis_config.LOGIT_PER_WINRATE_POINT
+        )
 
-    def test_realistic_values_from_database(self, scorer):
-        """Regression test: realistic delta2 values should give realistic advantages.
+    def test_extreme_database_values_stay_finite_and_unsaturated_here(self, scorer):
+        """Database extremes (SPEC-05 §1.2: delta2 in [-51.43, +31.74]) must
+        produce finite log-odds values, still linear at this stage --
+        saturation only happens later, at the sigmoid step in
+        score_against_team, not inside delta2_to_win_advantage itself."""
+        result_positive = scorer.delta2_to_win_advantage(31.74)
+        result_negative = scorer.delta2_to_win_advantage(-51.43)
 
-        Based on database analysis of 36,000+ matchups:
-        - delta2 = 3.40 → advantage should be ~3-5% (empirical data)
-        - delta2 = 5.00 → advantage should be ~5-7%
-        - NOT the 10%+ from previous logistic formula (3x amplification bug)
-        """
-        # User-reported bug: delta2=3.40 gave +10.06% with logistic formula
-        result_3_40 = scorer.delta2_to_win_advantage(3.40, "Riven")
-        assert 2.0 <= result_3_40 <= 5.0, f"delta2=3.40 gave {result_3_40}%, expected 2-5%"
-
-        # Additional validation
-        result_5 = scorer.delta2_to_win_advantage(5.0, "TestChamp")
-        assert result_5 < 7.0, f"delta2=5.0 gave {result_5}%, should be <7%"
-
-    def test_extreme_positive_values(self, scorer):
-        """Test that extreme positive delta2 doesn't get amplified excessively."""
-        # Database shows max delta2 = 31.74
-        result = scorer.delta2_to_win_advantage(30.0, "TestChamp")
-
-        # Linear conversion: should be ~30%, not 40%+ from sigmoid
-        assert 28.0 <= result <= 32.0
-
-    def test_extreme_negative_values(self, scorer):
-        """Test that extreme negative delta2 doesn't get amplified excessively."""
-        # Database shows min delta2 = -51.43
-        result = scorer.delta2_to_win_advantage(-50.0, "TestChamp")
-
-        # Linear conversion: should be ~-50%, not worse
-        assert -52.0 <= result <= -48.0
+        assert result_positive > 0
+        assert result_negative < 0
+        assert result_positive == pytest.approx(
+            31.74 * analysis_config.K_MATCHUP * analysis_config.LOGIT_PER_WINRATE_POINT
+        )

@@ -185,8 +185,9 @@ def test_final_score_with_synergies(temp_synergy_db):
     matchup_score = 100.0
     final_score = scorer.calculate_final_score_with_synergies(matchup_score, "Yasuo", ["Malphite"])
 
-    # Expected: 100.0 + (220.0 * 0.3) = 166.0
-    expected_score = matchup_score + (220.0 * synergy_config.SYNERGY_BONUS_MULTIPLIER)
+    # recalculé : SPEC-05 B7 remplace synergy_config.SYNERGY_BONUS_MULTIPLIER (0.3)
+    # par analysis_config.K_SYNERGY (0.5) — expected: 100.0 + (220.0 * 0.5) = 210.0
+    expected_score = matchup_score + (220.0 * analysis_config.K_SYNERGY)
     assert final_score == pytest.approx(expected_score, abs=0.1)
 
 

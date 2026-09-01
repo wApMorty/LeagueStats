@@ -76,6 +76,20 @@ def temp_db(tmp_path):
         )
     """)
 
+    # Predictions table (SPEC-05 B7 — migration 2551bbcc9eb8)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS predictions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_utc TEXT NOT NULL,
+            ally_champions TEXT NOT NULL,
+            enemy_champions TEXT NOT NULL,
+            ally_lanes TEXT,
+            predicted_probability REAL NOT NULL,
+            model_version TEXT NOT NULL,
+            outcome INTEGER
+        )
+    """)
+
     conn.commit()
     conn.close()
 
