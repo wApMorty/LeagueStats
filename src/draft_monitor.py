@@ -15,7 +15,13 @@ from .utils.display import safe_print
 from .utils.console import clear_console
 from .constants import TOP_SOLOQ_POOL, CHAMPIONS_BY_ROLE, normalize_champion_name_for_onetricks
 from .config import config
-from .config_constants import analysis_config, draft_config, role_inference_config, scraping_config
+from .config_constants import (
+    analysis_config,
+    draft_config,
+    role_inference_config,
+    scraping_config,
+    ui_config,
+)
 from .role_inference import infer_team_roles
 
 # Dedicated logger for memory diagnostics. Writes to logs/draft_monitor_memory.log
@@ -1160,7 +1166,7 @@ class DraftMonitor:
                     champion_name = self._get_display_name(champion_id)
                     matchups = self.assistant.get_matchups_for_draft(champion_name)
                     total_games = sum(m.games for m in matchups) if matchups else 0
-                    if matchups and total_games >= 500:  # Threshold for valid data
+                    if matchups and total_games >= draft_config.MIN_CHAMPION_GAMES:
                         # Calculate matchup score against enemy team
                         matchup_score = self._calculate_score_against_team(
                             matchups,
@@ -1193,8 +1199,8 @@ class DraftMonitor:
 
                 scores.sort(key=lambda x: -x[1])
 
-                # Show top 3 recommendations
-                display_count = min(3, len(scores))
+                # Show top recommendations
+                display_count = min(ui_config.MAX_RECOMMENDATIONS, len(scores))
                 top_recommendation = None
 
                 for i in range(display_count):
@@ -1418,7 +1424,7 @@ class DraftMonitor:
             for champion_id in champion_ids:
                 champion_name = self._get_display_name(champion_id)
                 matchups = self.assistant.get_matchups_for_draft(champion_name)
-                if matchups and sum(m.games for m in matchups) >= 500:  # Threshold for valid data
+                if matchups and sum(m.games for m in matchups) >= draft_config.MIN_CHAMPION_GAMES:
                     # Use blind pick scoring (empty enemy team)
                     score = self.assistant.score_against_team(matchups, [], champion_name)
                     scores.append((champion_name, score))

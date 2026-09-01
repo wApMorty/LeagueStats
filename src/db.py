@@ -2,7 +2,7 @@ import sqlite3
 from sqlite3 import Error
 from typing import List, Optional, Dict, Union, Tuple
 import requests
-from .config_constants import scraping_config
+from .config_constants import analysis_config, scraping_config, synergy_config
 from .constants import CHAMPIONS_LIST
 from .models import Matchup, MatchupDraft, Synergy
 from .analysis.aggregation import (
@@ -307,7 +307,8 @@ class Database:
         cursor = self.connection.cursor()
         try:
             cursor.execute(
-                "SELECT * FROM matchups WHERE champion = ? AND pickrate > 0.5", (champion_id,)
+                "SELECT * FROM matchups WHERE champion = ? AND pickrate > ?",
+                (champion_id, analysis_config.MIN_PICKRATE),
             )
             # No commit needed for SELECT queries!
             result = cursor.fetchall()
@@ -354,9 +355,9 @@ class Database:
                 SELECT c.name, m.winrate, m.delta1, m.delta2, m.pickrate, m.games
                 FROM matchups m
                 JOIN champions c ON m.enemy = c.id
-                WHERE m.champion = ? AND m.pickrate > 0.5
+                WHERE m.champion = ? AND m.pickrate > ?
             """
-            params = [champ_id]
+            params = [champ_id, analysis_config.MIN_PICKRATE]
             if lane is not None:
                 query += " AND m.lane = ?"
                 params.append(lane)
@@ -634,9 +635,9 @@ class Database:
                 SELECT c.name, m.delta2, m.pickrate, m.games
                 FROM matchups m
                 JOIN champions c ON m.enemy = c.id
-                WHERE m.champion = ? AND m.pickrate > 0.5
+                WHERE m.champion = ? AND m.pickrate > ?
             """
-            params = [champ_id]
+            params = [champ_id, analysis_config.MIN_PICKRATE]
             if lane is not None:
                 query += " AND m.lane = ?"
                 params.append(lane)
@@ -709,9 +710,9 @@ class Database:
                 SELECT c.name, m.delta2, m.pickrate, m.games
                 FROM matchups m
                 JOIN champions c ON m.champion = c.id
-                WHERE m.enemy = ? AND m.pickrate >= 0.5 AND m.games >= 200
+                WHERE m.enemy = ? AND m.pickrate >= ? AND m.games >= ?
             """
-            params = [champ_id]
+            params = [champ_id, analysis_config.MIN_PICKRATE, analysis_config.MIN_MATCHUP_GAMES]
             if lane is not None:
                 query += " AND m.lane = ?"
                 params.append(lane)
@@ -880,10 +881,15 @@ class Database:
                 JOIN champions c2 ON m.enemy = c2.id
                 WHERE c1.name = ? COLLATE NOCASE
                 AND c2.name = ? COLLATE NOCASE
-                AND m.pickrate >= 0.5
-                AND m.games >= 200
+                AND m.pickrate >= ?
+                AND m.games >= ?
             """
-            params = [champion_name, enemy_name]
+            params = [
+                champion_name,
+                enemy_name,
+                analysis_config.MIN_PICKRATE,
+                analysis_config.MIN_MATCHUP_GAMES,
+            ]
             if lane is not None:
                 query += " AND m.lane = ?"
                 params.append(lane)
@@ -926,10 +932,10 @@ class Database:
                 FROM matchups m
                 JOIN champions c1 ON m.champion = c1.id
                 JOIN champions c2 ON m.enemy = c2.id
-                WHERE m.pickrate >= 0.5
-                AND m.games >= 200
+                WHERE m.pickrate >= ?
+                AND m.games >= ?
             """
-            params = []
+            params = [analysis_config.MIN_PICKRATE, analysis_config.MIN_MATCHUP_GAMES]
             if lane is not None:
                 query += " AND m.lane = ?"
                 params.append(lane)
@@ -1105,9 +1111,9 @@ class Database:
                 SELECT c.name, s.winrate, s.delta1, s.delta2, s.pickrate, s.games
                 FROM synergies s
                 JOIN champions c ON s.ally = c.id
-                WHERE s.champion = ? AND s.pickrate > 0.5
+                WHERE s.champion = ? AND s.pickrate > ?
             """
-            params = [champ_id]
+            params = [champ_id, synergy_config.MIN_SYNERGY_PICKRATE]
             if lane is not None:
                 query += " AND s.lane = ?"
                 params.append(lane)
@@ -1223,10 +1229,15 @@ class Database:
                 SELECT delta2, games
                 FROM synergies
                 WHERE champion = ? AND ally = ?
-                AND pickrate >= 0.5
-                AND games >= 200
+                AND pickrate >= ?
+                AND games >= ?
             """
-            params = [champ_id, ally_id]
+            params = [
+                champ_id,
+                ally_id,
+                synergy_config.MIN_SYNERGY_PICKRATE,
+                synergy_config.MIN_SYNERGY_GAMES,
+            ]
             if lane is not None:
                 query += " AND lane = ?"
                 params.append(lane)
@@ -1266,10 +1277,10 @@ class Database:
                 FROM synergies s
                 JOIN champions c1 ON s.champion = c1.id
                 JOIN champions c2 ON s.ally = c2.id
-                WHERE s.pickrate >= 0.5
-                AND s.games >= 200
+                WHERE s.pickrate >= ?
+                AND s.games >= ?
             """
-            params = []
+            params = [synergy_config.MIN_SYNERGY_PICKRATE, synergy_config.MIN_SYNERGY_GAMES]
             if lane is not None:
                 query += " AND s.lane = ?"
                 params.append(lane)

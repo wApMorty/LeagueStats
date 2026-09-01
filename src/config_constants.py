@@ -180,6 +180,10 @@ class DraftConfig:
     AUTO_ACCEPT_QUEUE_ENABLED: bool = False
     OPEN_ONETRICKS_ON_DRAFT_END: bool = True
 
+    # SPEC-06 E7: below this total games (all matchups for a candidate
+    # champion combined), the sample is too thin to score during live draft.
+    MIN_CHAMPION_GAMES: int = 500
+
     # Draft phase detection
     READY_CHECK_COOLDOWN: float = 2.0  # Seconds after accepting queue
 
@@ -221,7 +225,9 @@ class UIConfig:
 
     # Results display
     DEFAULT_RESULTS_COUNT: int = 10
-    MAX_RECOMMENDATIONS: int = 5
+    # SPEC-06 E7: arbitré à 3 pour matcher le comportement existant du draft
+    # coach (top 3 affiché en direct), au lieu de la valeur 5 jamais câblée.
+    MAX_RECOMMENDATIONS: int = 3
 
     # Table formatting
     TABLE_WIDTH: int = 80
