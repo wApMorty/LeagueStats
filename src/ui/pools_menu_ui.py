@@ -1,7 +1,7 @@
-"""Menu 6 -- champion pool management: top-level menu, listing, statistics.
+"""Menu 6 -- gestion des pools de champions : menu principal, listing, statistiques.
 
-Extracted from src/ui/lol_coach_legacy.py (SPEC-07 E9). CRUD operations
-(create/edit/delete/duplicate) live in src/ui/pools_crud_ui.py.
+Extrait de src/ui/lol_coach_legacy.py (SPEC-07 E9). Les opérations CRUD
+(création/édition/suppression/duplication) se trouvent dans src/ui/pools_crud_ui.py.
 """
 
 from src.utils.console import clear_console
@@ -10,12 +10,12 @@ from src.ui.pools_crud_ui import create_new_pool, edit_pool, delete_pool, duplic
 
 
 def manage_champion_pools():
-    """Manage champion pools with interactive interface."""
-    clear_console()  # Clear console at start
+    """Gère les pools de champions via une interface interactive."""
+    clear_console()  # Efface la console au démarrage
     from src.pool_manager import PoolManager
     from src.assistant import Assistant
 
-    print("[INFO] Champion Pool Manager")
+    print("[INFO] Gestionnaire de pools de champions")
 
     try:
         pool_manager = PoolManager()
@@ -24,22 +24,22 @@ def manage_champion_pools():
 
         while True:
             print("\n" + "=" * 60)
-            print("CHAMPION POOL MANAGEMENT")
+            print("GESTION DES POOLS DE CHAMPIONS")
             print("=" * 60)
 
             menu = """
-Pool Management Options:
-  1. List all pools
-  2. View pool details
-  3. Create new pool
-  4. Edit existing pool
-  5. Delete pool
-  6. Duplicate pool
-  7. Search pools
-  8. Pool statistics
-  9. Back to main menu
+Options de gestion des pools :
+  1. Lister toutes les pools
+  2. Voir les détails d'une pool
+  3. Créer une nouvelle pool
+  4. Modifier une pool existante
+  5. Supprimer une pool
+  6. Dupliquer une pool
+  7. Rechercher des pools
+  8. Statistiques des pools
+  9. Retour au menu principal
 
-Choose an option (1-9): """
+Choisissez une option (1-9) : """
 
             choice = input(menu).strip()
 
@@ -61,15 +61,15 @@ Choose an option (1-9): """
                 show_pool_statistics(pool_manager)
             elif choice == "9":
                 pool_manager.save_custom_pools()
-                print("[INFO] Custom pools saved!")
+                print("[INFO] Pools personnalisées enregistrées !")
                 break
             else:
-                print("[ERROR] Invalid option. Please choose 1-9.")
+                print("[ERROR] Option invalide. Veuillez choisir 1-9.")
 
         assistant.close()
 
     except Exception as e:
-        print(f"[ERROR] Pool manager error: {e}")
+        print(f"[ERROR] Erreur du gestionnaire de pools : {e}")
         if hasattr(e, "__traceback__"):
             import traceback
 
@@ -77,17 +77,17 @@ Choose an option (1-9): """
 
 
 def list_pools(pool_manager):
-    """List all available pools."""
+    """Liste toutes les pools disponibles."""
     print("\n" + "=" * 50)
-    print("ALL CHAMPION POOLS")
+    print("TOUTES LES POOLS DE CHAMPIONS")
     print("=" * 50)
 
     pools = pool_manager.get_all_pools()
     if not pools:
-        print("No pools found.")
+        print("Aucune pool trouvée.")
         return
 
-    # Group by type
+    # Regrouper par type
     system_pools = []
     custom_pools = []
 
@@ -98,39 +98,39 @@ def list_pools(pool_manager):
             custom_pools.append((name, pool))
 
     if system_pools:
-        print("\n🔧 SYSTEM POOLS:")
+        print("\nPOOLS SYSTÈME :")
         for name, pool in sorted(system_pools):
             print(
                 f"  {name:<20} | {pool.role:<8} | {pool.size():>2} champions | {pool.description}"
             )
 
     if custom_pools:
-        print("\n👤 CUSTOM POOLS:")
+        print("\nPOOLS PERSONNALISÉES :")
         for name, pool in sorted(custom_pools):
             print(
                 f"  {name:<20} | {pool.role:<8} | {pool.size():>2} champions | {pool.description}"
             )
 
     if not custom_pools:
-        print("\n👤 CUSTOM POOLS: None created yet")
+        print("\nPOOLS PERSONNALISÉES : Aucune créée pour le moment")
 
 
 def view_pool_details(pool_manager):
-    """View details of a specific pool."""
-    pool = _select_pool_interactive(pool_manager, "View pool details")
+    """Affiche les détails d'une pool spécifique."""
+    pool = _select_pool_interactive(pool_manager, "Voir les détails d'une pool")
     if not pool:
         return
 
     print(f"\n" + "=" * 50)
-    print(f"POOL DETAILS: {pool.name}")
+    print(f"DÉTAILS DE LA POOL : {pool.name}")
     print("=" * 50)
-    print(f"Role: {pool.role}")
-    print(f"Description: {pool.description}")
-    print(f"Created by: {pool.created_by}")
-    print(f"Tags: {', '.join(pool.tags) if pool.tags else 'None'}")
-    print(f"Champions ({pool.size()}):")
+    print(f"Rôle : {pool.role}")
+    print(f"Description : {pool.description}")
+    print(f"Créée par : {pool.created_by}")
+    print(f"Tags : {', '.join(pool.tags) if pool.tags else 'Aucun'}")
+    print(f"Champions ({pool.size()}) :")
 
-    # Display champions in columns
+    # Afficher les champions en colonnes
     champions = pool.champions
     cols = 3
     for i in range(0, len(champions), cols):
@@ -139,103 +139,103 @@ def view_pool_details(pool_manager):
 
 
 def search_pools(pool_manager):
-    """Search for pools."""
-    query = input("\nEnter search query: ").strip()
+    """Recherche des pools."""
+    query = input("\nEntrez votre recherche : ").strip()
     matches = pool_manager.search_pools(query)
 
     if matches:
-        print(f"\nFound {len(matches)} pools:")
+        print(f"\n{len(matches)} pool(s) trouvée(s) :")
         for name in matches:
             pool = pool_manager.get_pool(name)
             print(f"  {name} | {pool.role} | {pool.size()} champions")
     else:
-        print("No pools found.")
+        print("Aucune pool trouvée.")
 
 
 def show_pool_statistics(pool_manager):
-    """Show pool statistics - global or individual pool analysis."""
+    """Affiche les statistiques des pools - analyse globale ou par pool."""
     print("\n" + "=" * 50)
-    print("POOL STATISTICS")
+    print("STATISTIQUES DES POOLS")
     print("=" * 50)
 
     menu = """
-Statistics Options:
-  1. Global pool statistics (counts by type/role)
-  2. Individual pool performance analysis
-  3. Back to pool management
+Options de statistiques :
+  1. Statistiques globales des pools (comptage par type/rôle)
+  2. Analyse de performance d'une pool individuelle
+  3. Retour à la gestion des pools
 
-Choose an option (1-3): """
+Choisissez une option (1-3) : """
 
     choice = input(menu).strip()
 
     if choice == "1":
-        # Global statistics (original functionality)
+        # Statistiques globales (fonctionnalité originale)
         stats = pool_manager.get_pool_stats()
 
         print("\n" + "=" * 40)
-        print("GLOBAL POOL STATISTICS")
+        print("STATISTIQUES GLOBALES DES POOLS")
         print("=" * 40)
-        print(f"Total pools: {stats['total_pools']}")
-        print(f"Custom pools: {stats['custom_pools']}")
-        print(f"System pools: {stats['system_pools']}")
+        print(f"Total des pools : {stats['total_pools']}")
+        print(f"Pools personnalisées : {stats['custom_pools']}")
+        print(f"Pools système : {stats['system_pools']}")
 
-        print("\nBy role:")
+        print("\nPar rôle :")
         for key, value in stats.items():
             if key.endswith("_pools") and not key.startswith(("total", "custom", "system")):
                 role = key.replace("_pools", "")
                 print(f"  {role.capitalize()}: {value}")
 
     elif choice == "2":
-        # Individual pool performance analysis (NEW)
+        # Analyse de performance d'une pool individuelle (NOUVEAU)
         show_individual_pool_statistics(pool_manager)
 
     elif choice == "3":
         return
 
     else:
-        print("[ERROR] Invalid option. Please choose 1-3.")
+        print("[ERROR] Option invalide. Veuillez choisir 1-3.")
 
 
 def show_individual_pool_statistics(pool_manager):
-    """Show detailed performance statistics for a specific champion pool."""
+    """Affiche les statistiques de performance détaillées pour une pool de champions spécifique."""
     from src.analysis.pool_statistics import PoolStatisticsCalculator, format_pool_statistics
     from src.assistant import Assistant
     from src.utils.display import safe_print
 
-    # Select pool
-    pool = _select_pool_interactive(pool_manager, "Select pool for statistics")
+    # Sélectionner une pool
+    pool = _select_pool_interactive(pool_manager, "Sélectionner une pool pour les statistiques")
     if not pool:
         return
 
-    safe_print(f"\n[INFO] Calculating statistics for pool: {pool.name}")
-    print("[INFO] This may take a moment...")
+    safe_print(f"\n[INFO] Calcul des statistiques pour la pool : {pool.name}")
+    print("[INFO] Cela peut prendre un moment...")
 
     try:
-        # Initialize calculator
+        # Initialiser le calculateur
         assistant = Assistant()
         calculator = PoolStatisticsCalculator(assistant.db)
 
-        # Performance optimization: Warm cache before analysis (99% faster)
-        print("[INFO] Warming cache for performance...")
+        # Optimisation de performance : préchauffer le cache avant l'analyse (99% plus rapide)
+        print("[INFO] Préchauffage du cache pour la performance...")
         assistant.warm_cache(pool.champions)
 
-        # Calculate statistics
+        # Calculer les statistiques
         stats = calculator.calculate_pool_statistics(pool.name, pool.champions)
 
-        # Clear cache to free memory
+        # Vider le cache pour libérer de la mémoire
         assistant.clear_cache()
 
-        # Display formatted output
+        # Afficher la sortie formatée
         output = format_pool_statistics(stats)
         print("\n" + output)
 
-        # Prompt to continue
-        input("\nPress Enter to continue...")
+        # Invite à continuer
+        input("\nAppuyez sur Entrée pour continuer...")
 
         assistant.close()
 
     except Exception as e:
-        print(f"[ERROR] Failed to calculate pool statistics: {e}")
+        print(f"[ERROR] Échec du calcul des statistiques de la pool : {e}")
         import traceback
 
         traceback.print_exc()

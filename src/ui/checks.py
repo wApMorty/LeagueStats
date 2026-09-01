@@ -1,6 +1,6 @@
-"""Startup checks (dependencies, database presence).
+"""Vérifications de démarrage (dépendances, présence de la base de données).
 
-Extracted from src/ui/lol_coach_legacy.py (SPEC-07 E9).
+Extrait de src/ui/lol_coach_legacy.py (SPEC-07 E9).
 """
 
 import os
@@ -9,7 +9,7 @@ from src.config import config
 
 
 def check_dependencies():
-    """Check if required dependencies are available."""
+    """Vérifie si les dépendances requises sont disponibles."""
     missing_deps = []
 
     try:
@@ -23,22 +23,22 @@ def check_dependencies():
         missing_deps.append("psutil")
 
     if missing_deps:
-        print("[ERROR] MISSING DEPENDENCIES:")
+        print("[ERROR] DÉPENDANCES MANQUANTES :")
         for dep in missing_deps:
             print(f"  - {dep}")
-        print(f"\nInstall with: pip install {' '.join(missing_deps)}")
+        print(f"\nInstallez avec : pip install {' '.join(missing_deps)}")
         return False
 
     return True
 
 
 def check_database():
-    """Check if database file exists."""
+    """Vérifie si le fichier de base de données existe."""
     db_path = config.DATABASE_PATH
     if not os.path.exists(db_path):
-        print("[ERROR] DATABASE NOT FOUND:")
-        print(f"  - Missing: {db_path}")
-        print("  - Run data parsing first: python main.py")
+        print("[ERROR] BASE DE DONNÉES INTROUVABLE :")
+        print(f"  - Manquant : {db_path}")
+        print("  - Lancez d'abord le parsing des données : python main.py")
         return False
 
     return True

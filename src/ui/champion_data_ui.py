@@ -1,4 +1,4 @@
-"""UI for champion data management (update from Riot API, recalculate scores)."""
+"""Interface pour la gestion des données de champions (mise à jour depuis l'API Riot, recalcul des scores)."""
 
 from ..db import Database
 from ..config import config
@@ -7,17 +7,21 @@ from ..utils.console import clear_console
 
 
 def update_champion_data() -> None:
-    """Update champion data with submenu."""
-    clear_console()  # Clear console at start
+    """Met à jour les données de champions via un sous-menu."""
+    clear_console()  # Efface la console au démarrage
     print("\n" + "=" * 60)
-    print("CHAMPION DATA MANAGEMENT")
+    print("GESTION DES DONNÉES DE CHAMPIONS")
     print("=" * 60)
-    print("\nOptions:")
-    print("1. Update Champion List        - Fetch latest champions from Riot API")
-    print("2. Recalculate Champion Scores - Rebuild tier list scores from existing data")
-    print("3. Back to main menu")
+    print("\nOptions :")
+    print(
+        "1. Mettre à jour la liste des champions - Récupérer les derniers champions depuis l'API Riot"
+    )
+    print(
+        "2. Recalculer les scores des champions  - Reconstruire les scores de tier list depuis les données existantes"
+    )
+    print("3. Retour au menu principal")
 
-    choice = input("\nChoose option (1-3): ").strip()
+    choice = input("\nChoisissez une option (1-3) : ").strip()
 
     if choice == "1":
         update_champion_list_from_riot()
@@ -26,83 +30,89 @@ def update_champion_data() -> None:
     elif choice == "3":
         return
     else:
-        print("[ERROR] Invalid option")
+        print("[ERROR] Option invalide")
 
 
 def update_champion_list_from_riot() -> None:
-    """Update champion list from Riot API."""
-    print("[INFO] Updating champion data from Riot API...")
+    """Met à jour la liste des champions depuis l'API Riot."""
+    print("[INFO] Mise à jour des données de champions depuis l'API Riot...")
 
     try:
         db = Database(config.DATABASE_PATH)
         db.connect()
 
-        # Ensure table structure is correct
+        # S'assurer que la structure de la table est correcte
         if not db.create_riot_champions_table():
-            print("[ERROR] Failed to create/update champions table")
+            print("[ERROR] Échec de la création/mise à jour de la table des champions")
             return
 
-        # Update from Riot API
+        # Mise à jour depuis l'API Riot
         if db.update_champions_from_riot_api():
-            # Show some stats
+            # Afficher quelques statistiques
             champion_names = db.get_all_champion_names()
-            print(f"[SUCCESS] Updated {len(champion_names)} champions in database")
+            print(f"[SUCCESS] {len(champion_names)} champions mis à jour dans la base de données")
         else:
-            print("[ERROR] Failed to update champion data")
+            print("[ERROR] Échec de la mise à jour des données de champions")
 
         db.close()
     except Exception as e:
-        print(f"[ERROR] Update error: {e}")
+        print(f"[ERROR] Erreur de mise à jour : {e}")
 
 
 def recalculate_champion_scores() -> None:
-    """Recalculate champion scores for tier lists from existing matchup data."""
-    print("\n[INFO] Recalculating Champion Scores for Tier Lists")
+    """Recalcule les scores de champions pour les tier lists à partir des données de matchups existantes."""
+    print("\n[INFO] Recalcul des scores de champions pour les tier lists")
     print("=" * 60)
-    print("\nThis will recalculate all champion scores from existing matchup data.")
-    print("Useful after modifying tier list configuration or thresholds.")
-    print("\nNote: This does NOT fetch new data from the web.")
-    print("      Use 'Parse Match Statistics' to update matchup data first.")
+    print(
+        "\nCeci va recalculer tous les scores de champions à partir des données de matchups existantes."
+    )
+    print("Utile après modification de la configuration ou des seuils de tier list.")
+    print("\nNote : Ceci ne récupère PAS de nouvelles données depuis le web.")
+    print(
+        "       Utilisez 'Analyser des statistiques' pour mettre à jour les données de matchups au préalable."
+    )
 
-    confirm = input("\nProceed with score calculation? (y/n): ").strip().lower()
+    confirm = input("\nProcéder au calcul des scores ? (y/n) : ").strip().lower()
     if confirm != "y":
-        print("[INFO] Cancelled")
+        print("[INFO] Annulé")
         return
 
     try:
         db = Database(config.DATABASE_PATH)
         db.connect()
 
-        # Check if matchup data exists
+        # Vérifier si des données de matchups existent
         cursor = db.connection.cursor()
         cursor.execute("SELECT COUNT(*) FROM matchups")
         matchup_count = cursor.fetchone()[0]
 
         if matchup_count == 0:
-            print("\n[ERROR] No matchup data found in database")
-            print("[INFO] Please run 'Parse Match Statistics' first to populate matchup data")
+            print("\n[ERROR] Aucune donnée de matchup trouvée dans la base de données")
+            print(
+                "[INFO] Veuillez d'abord lancer 'Analyser des statistiques' pour peupler les données de matchups"
+            )
             db.close()
             return
 
-        print(f"\n[INFO] Found {matchup_count:,} matchups in database")
+        print(f"\n[INFO] {matchup_count:,} matchups trouvés dans la base de données")
 
-        # Initialize champion_scores table
-        print("[INFO] Initializing champion_scores table...")
+        # Initialiser la table champion_scores
+        print("[INFO] Initialisation de la table champion_scores...")
         db.init_champion_scores_table()
 
-        # Calculate scores
-        print("[INFO] Calculating global champion scores...")
+        # Calculer les scores
+        print("[INFO] Calcul des scores globaux de champions...")
         assistant = Assistant()
         champions_scored = assistant.calculate_global_scores()
 
-        print(f"\n[SUCCESS] Successfully scored {champions_scored} champions")
-        print("[INFO] Tier lists are now ready to use")
+        print(f"\n[SUCCESS] {champions_scored} champions notés avec succès")
+        print("[INFO] Les tier lists sont maintenant prêtes à l'emploi")
 
         assistant.close()
         db.close()
 
     except Exception as e:
-        print(f"[ERROR] Calculation error: {e}")
+        print(f"[ERROR] Erreur de calcul : {e}")
         import traceback
 
         traceback.print_exc()

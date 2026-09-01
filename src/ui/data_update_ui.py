@@ -1,6 +1,6 @@
-"""Menu 3 -- scraping / statistics parsing.
+"""Menu 3 -- scraping / analyse de statistiques.
 
-Extracted from src/ui/lol_coach_legacy.py (SPEC-07 E9).
+Extrait de src/ui/lol_coach_legacy.py (SPEC-07 E9).
 """
 
 from src.config import config
@@ -10,63 +10,65 @@ from src.ui.pool_selection_ui import _select_pool_for_parsing
 
 
 def _get_patch_version():
-    """Ask user for patch version to analyze."""
+    """Demande à l'utilisateur la version du patch à analyser."""
     from src.config import config
 
-    print(f"\nCurrent patch in config: {config.CURRENT_PATCH}")
-    print("Options:")
-    print("1. Use current patch from config")
-    print("2. Specify different patch")
-    print("3. Back to main menu")
+    print(f"\nPatch actuel dans la config : {config.CURRENT_PATCH}")
+    print("Options :")
+    print("1. Utiliser le patch actuel de la config")
+    print("2. Spécifier un patch différent")
+    print("3. Retour au menu principal")
 
-    choice = input("\nChoose option (1-3): ").strip()
+    choice = input("\nChoisissez une option (1-3) : ").strip()
 
     if choice == "1":
         return config.CURRENT_PATCH
     elif choice == "2":
-        patch_input = input(f"Enter patch version (e.g., {config.CURRENT_PATCH}): ").strip()
+        patch_input = input(f"Entrez la version du patch (ex. {config.CURRENT_PATCH}) : ").strip()
         if patch_input:
-            # Validate patch format (basic validation)
+            # Valide le format du patch (validation basique)
             parts = patch_input.split(".")
             if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
                 return patch_input
             else:
-                print(f"[ERROR] Invalid patch format. Use format like {config.CURRENT_PATCH}")
+                print(
+                    f"[ERROR] Format de patch invalide. Utilisez un format comme {config.CURRENT_PATCH}"
+                )
                 return None
         else:
-            print("[ERROR] Patch version cannot be empty")
+            print("[ERROR] La version du patch ne peut pas être vide")
             return None
     elif choice == "3":
         return None
     else:
-        print("[ERROR] Invalid option")
+        print("[ERROR] Option invalide")
         return None
 
 
 def parse_match_statistics():
-    """Parse match statistics from web sources with submenu."""
-    clear_console()  # Clear console at start
-    print("[INFO] Match Statistics Parser")
+    """Parse les statistiques de matchs depuis les sources web avec sous-menu."""
+    clear_console()  # Efface la console au démarrage
+    print("[INFO] Analyseur de statistiques de matchs")
 
-    # Ask for patch version first
+    # Demande d'abord la version du patch
     patch_version = _get_patch_version()
     if not patch_version:
         return
 
-    print(f"\n✅ Patch selected: {patch_version}")
-    print("\nParsing options:")
-    print("MATCHUPS:")
-    print("1. Parse Matchups (SoloQ Pool)           - Fast (~1 min)")
-    print("2. Parse Matchups (All Champions)        - Comprehensive (~6-8 min)")
-    print("\nSYNERGIES:")
-    print("3. Parse Synergies (SoloQ Pool)          - Fast (~1 min)")
-    print("4. Parse Synergies (All Champions)       - Comprehensive (~6-8 min)")
-    print("\nCOMPLETE:")
-    print("5. Parse All Data (SoloQ Pool)           - Matchups + Synergies (~2 min)")
-    print("6. Parse All Data (All Champions)        - Matchups + Synergies (~12-16 min)")
-    print("\n7. Back to main menu")
+    print(f"\nPatch sélectionné : {patch_version}")
+    print("\nOptions d'analyse :")
+    print("MATCHUPS :")
+    print("1. Analyser les matchups (Pool SoloQ)      - Rapide (~1 min)")
+    print("2. Analyser les matchups (Tous champions)  - Complet (~6-8 min)")
+    print("\nSYNERGIES :")
+    print("3. Analyser les synergies (Pool SoloQ)      - Rapide (~1 min)")
+    print("4. Analyser les synergies (Tous champions)  - Complet (~6-8 min)")
+    print("\nCOMPLET :")
+    print("5. Analyser toutes les données (Pool SoloQ)     - Matchups + Synergies (~2 min)")
+    print("6. Analyser toutes les données (Tous champions) - Matchups + Synergies (~12-16 min)")
+    print("\n7. Retour au menu principal")
 
-    choice = input("\nChoose option (1-7): ").strip()
+    choice = input("\nChoisissez une option (1-7) : ").strip()
 
     if choice == "1":
         parse_champion_pool(patch_version)
@@ -83,17 +85,18 @@ def parse_match_statistics():
     elif choice == "7":
         return
     else:
-        print("[ERROR] Invalid option")
+        print("[ERROR] Option invalide")
 
 
 def _run_pool_pipeline(
     pool_name, pool_champions, patch_version, include_matchups, include_synergies
 ):
-    """Shared body for the four pool-scoped parse_* menu options.
+    """Corps commun aux quatre options de menu parse_* limitées à une pool.
 
-    Delegates to src.pipeline.run_pipeline() (SPEC-01 A2) so the menu gets
-    the same completeness gate, db_meta writes, file log and notifications
-    as scripts/update_all.py, instead of a hand-rolled scrape.
+    Délègue à src.pipeline.run_pipeline() (SPEC-01 A2) pour que le menu
+    bénéficie du même contrôle de complétude, des écritures db_meta, du
+    fichier de log et des notifications que scripts/update_all.py, au lieu
+    d'un scraping fait à la main.
     """
     from src.pipeline import run_pipeline
 
@@ -105,25 +108,25 @@ def _run_pool_pipeline(
     )
 
     if result.status != "ok":
-        print(f"[ERROR] Parsing error: {result.error}")
+        print(f"[ERROR] Erreur d'analyse : {result.error}")
         return
 
     stats = result.scrape_stats
     print("\n" + "=" * 60)
-    print("SCRAPING COMPLETED")
+    print("SCRAPING TERMINÉ")
     print("=" * 60)
-    print(f"Pool: {pool_name}")
-    print(f"Pages: {stats['success']}/{stats['total']} ok ({stats['failed']} échecs)")
-    print(f"Duration: {result.duration_min:.1f} min")
+    print(f"Pool : {pool_name}")
+    print(f"Pages : {stats['success']}/{stats['total']} ok ({stats['failed']} échecs)")
+    print(f"Durée : {result.duration_min:.1f} min")
     print("=" * 60)
     print(
-        f"[SUCCESS] {pool_name} data updated! "
-        f"({stats['success']} pages scraped, {result.scores_count} champions scored)"
+        f"[SUCCESS] Données de {pool_name} mises à jour ! "
+        f"({stats['success']} pages scrapées, {result.scores_count} champions scorés)"
     )
 
 
 def _run_full_pipeline(label, patch_version, include_matchups, include_synergies):
-    """Shared body for the two all-champions parse_* menu options."""
+    """Corps commun aux deux options de menu parse_* pour tous les champions."""
     from src.pipeline import run_pipeline
 
     result = run_pipeline(
@@ -133,45 +136,47 @@ def _run_full_pipeline(label, patch_version, include_matchups, include_synergies
     )
 
     if result.status != "ok":
-        print(f"[ERROR] Parsing error: {result.error}")
+        print(f"[ERROR] Erreur d'analyse : {result.error}")
         return
 
     stats = result.scrape_stats
     print("\n" + "=" * 60)
-    print("SCRAPING COMPLETED")
+    print("SCRAPING TERMINÉ")
     print("=" * 60)
-    print(f"Pages: {stats['success']}/{stats['total']} ok ({stats['failed']} échecs)")
-    print(f"Duration: {result.duration_min:.1f} min")
+    print(f"Pages : {stats['success']}/{stats['total']} ok ({stats['failed']} échecs)")
+    print(f"Durée : {result.duration_min:.1f} min")
     print("=" * 60)
     print(
-        f"[SUCCESS] {label} updated! "
-        f"({stats['success']} pages scraped, {result.scores_count} champions scored)"
+        f"[SUCCESS] {label} mis à jour ! "
+        f"({stats['success']} pages scrapées, {result.scores_count} champions scorés)"
     )
 
 
 def _select_pool_or_default():
-    """Pool selection shared by the pool-scoped parse_* options."""
+    """Sélection de pool commune aux options parse_* limitées à une pool."""
     selected_pool_info = _select_pool_for_parsing()
     if not selected_pool_info:
-        print("[WARNING] No pool selected, using default Top SoloQ pool")
-        return "Top SoloQ (Default)", TOP_SOLOQ_POOL
+        print("[WARNING] Aucune pool sélectionnée, utilisation de la pool Top SoloQ par défaut")
+        return "Top SoloQ (Défaut)", TOP_SOLOQ_POOL
     return selected_pool_info
 
 
 def parse_champion_pool(patch_version=None):
-    """Parse match statistics for selected champion pool via the shared pipeline."""
-    print("[INFO] Champion Pool Statistics Parser")
+    """Parse les statistiques de matchs pour la pool de champions sélectionnée via le pipeline partagé."""
+    print("[INFO] Analyseur de statistiques de pool de champions")
 
     pool_name, pool_champions = _select_pool_or_default()
-    print(f"\n✅ Parsing statistics for: {pool_name}")
-    print(f"🔧 Patch version: {patch_version or 'default'}")
-    print(f"Champions to process: {', '.join(pool_champions)}")
+    print(f"\nAnalyse des statistiques pour : {pool_name}")
+    print(f"Version du patch : {patch_version or 'défaut'}")
+    print(f"Champions à traiter : {', '.join(pool_champions)}")
 
     confirm = (
-        input(f"\nProceed with parsing {len(pool_champions)} champions? (y/N): ").strip().lower()
+        input(f"\nContinuer l'analyse de {len(pool_champions)} champions ? (y/N) : ")
+        .strip()
+        .lower()
     )
     if confirm != "y":
-        print("[INFO] Parsing cancelled.")
+        print("[INFO] Analyse annulée.")
         return
 
     _run_pool_pipeline(
@@ -180,35 +185,40 @@ def parse_champion_pool(patch_version=None):
 
 
 def parse_all_champions(patch_version=None):
-    """Parse match statistics for all champions via the shared pipeline."""
-    print("[INFO] Parsing ALL champions via the shared pipeline")
+    """Parse les statistiques de matchs pour tous les champions via le pipeline partagé."""
+    print("[INFO] Analyse de TOUS les champions via le pipeline partagé")
 
-    confirm = input("\nAre you sure you want to continue? (y/N): ").strip().lower()
+    confirm = input("\nÊtes-vous sûr de vouloir continuer ? (y/N) : ").strip().lower()
     if confirm != "y":
-        print("[INFO] Cancelled by user")
+        print("[INFO] Annulé par l'utilisateur")
         return
 
     _run_full_pipeline(
-        "All champion statistics", patch_version, include_matchups=True, include_synergies=False
+        "Statistiques de tous les champions",
+        patch_version,
+        include_matchups=True,
+        include_synergies=False,
     )
 
 
 def parse_synergies_pool(patch_version=None):
-    """Parse synergies for selected champion pool via the shared pipeline."""
-    print("[INFO] Champion Pool Synergies Parser")
+    """Parse les synergies pour la pool de champions sélectionnée via le pipeline partagé."""
+    print("[INFO] Analyseur de synergies de pool de champions")
 
     pool_name, pool_champions = _select_pool_or_default()
-    print(f"\n✅ Parsing synergies for: {pool_name}")
-    print(f"🔧 Patch version: {patch_version or 'default'}")
-    print(f"Champions to process: {', '.join(pool_champions)}")
+    print(f"\nAnalyse des synergies pour : {pool_name}")
+    print(f"Version du patch : {patch_version or 'défaut'}")
+    print(f"Champions à traiter : {', '.join(pool_champions)}")
 
     confirm = (
-        input(f"\nProceed with parsing synergies for {len(pool_champions)} champions? (y/N): ")
+        input(
+            f"\nContinuer l'analyse des synergies pour {len(pool_champions)} champions ? (y/N) : "
+        )
         .strip()
         .lower()
     )
     if confirm != "y":
-        print("[INFO] Parsing cancelled.")
+        print("[INFO] Analyse annulée.")
         return
 
     _run_pool_pipeline(
@@ -217,37 +227,38 @@ def parse_synergies_pool(patch_version=None):
 
 
 def parse_synergies_all(patch_version=None):
-    """Parse synergies for all champions via the shared pipeline."""
-    print("[INFO] Parsing synergies for ALL champions")
+    """Parse les synergies pour tous les champions via le pipeline partagé."""
+    print("[INFO] Analyse des synergies pour TOUS les champions")
 
-    confirm = input("\nAre you sure you want to continue? (y/N): ").strip().lower()
+    confirm = input("\nÊtes-vous sûr de vouloir continuer ? (y/N) : ").strip().lower()
     if confirm != "y":
-        print("[INFO] Cancelled by user")
+        print("[INFO] Annulé par l'utilisateur")
         return
 
     _run_full_pipeline(
-        "Synergy statistics", patch_version, include_matchups=False, include_synergies=True
+        "Statistiques de synergies", patch_version, include_matchups=False, include_synergies=True
     )
 
 
 def parse_all_data_pool(patch_version=None):
-    """Parse both matchups and synergies for selected champion pool via the shared pipeline."""
-    print("[INFO] Parsing ALL data (matchups + synergies) for Champion Pool")
+    """Parse les matchups et synergies pour la pool de champions sélectionnée via le pipeline partagé."""
+    print("[INFO] Analyse de TOUTES les données (matchups + synergies) pour la pool de champions")
 
     pool_name, pool_champions = _select_pool_or_default()
-    print(f"\n✅ Parsing complete data for: {pool_name}")
-    print(f"🔧 Patch version: {patch_version or 'default'}")
-    print(f"Champions to process: {', '.join(pool_champions)}")
+    print(f"\nAnalyse des données complètes pour : {pool_name}")
+    print(f"Version du patch : {patch_version or 'défaut'}")
+    print(f"Champions à traiter : {', '.join(pool_champions)}")
 
     confirm = (
         input(
-            f"\nProceed with parsing matchups + synergies for {len(pool_champions)} champions? (y/N): "
+            f"\nContinuer l'analyse des matchups + synergies pour {len(pool_champions)} "
+            f"champions ? (y/N) : "
         )
         .strip()
         .lower()
     )
     if confirm != "y":
-        print("[INFO] Parsing cancelled.")
+        print("[INFO] Analyse annulée.")
         return
 
     _run_pool_pipeline(
@@ -256,16 +267,16 @@ def parse_all_data_pool(patch_version=None):
 
 
 def parse_all_data_all(patch_version=None):
-    """Parse both matchups and synergies for all champions via the shared pipeline."""
-    print("[INFO] Parsing ALL data (matchups + synergies) for ALL champions")
+    """Parse les matchups et synergies pour tous les champions via le pipeline partagé."""
+    print("[INFO] Analyse de TOUTES les données (matchups + synergies) pour TOUS les champions")
 
-    confirm = input("\nAre you sure you want to continue? (y/N): ").strip().lower()
+    confirm = input("\nÊtes-vous sûr de vouloir continuer ? (y/N) : ").strip().lower()
     if confirm != "y":
-        print("[INFO] Cancelled by user")
+        print("[INFO] Annulé par l'utilisateur")
         return
 
     _run_full_pipeline(
-        "All data (matchups + synergies)",
+        "Toutes les données (matchups + synergies)",
         patch_version,
         include_matchups=True,
         include_synergies=True,

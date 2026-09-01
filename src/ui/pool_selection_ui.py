@@ -1,15 +1,15 @@
-"""Interactive pool-selection helpers shared across menu modules.
+"""Fonctions d'aide interactives pour la sélection de pool, partagées entre les modules de menu.
 
-Extracted from src/ui/lol_coach_legacy.py (SPEC-07 E9): these three
-functions were defined in the legacy file but already consumed from
-several different menu domains (data update, tier list, tournament coach,
-team builder, pools management), so they live here instead of inside any
-single menu module.
+Extrait de src/ui/lol_coach_legacy.py (SPEC-07 E9) : ces trois fonctions
+étaient définies dans le fichier legacy mais déjà utilisées par plusieurs
+domaines de menu différents (mise à jour des données, tier list, coach de
+tournoi, constructeur d'équipe, gestion des pools), elles vivent donc ici
+plutôt que dans un seul module de menu.
 """
 
 
 def _select_pool_for_analysis():
-    """Select a pool for team building analysis with enhanced interface."""
+    """Sélectionne une pool pour l'analyse de composition d'équipe, avec interface améliorée."""
     try:
         from src.pool_manager import PoolManager
 
@@ -17,32 +17,34 @@ def _select_pool_for_analysis():
 
         pools = pool_manager.get_all_pools()
         if not pools:
-            print("[ERROR] No pools found.")
+            print("[ERROR] Aucune pool trouvée.")
             return None
 
         print(f"\n" + "=" * 50)
-        print("SELECT ANALYSIS POOL")
+        print("SÉLECTIONNER UNE POOL POUR L'ANALYSE")
         print("=" * 50)
-        print("Available pools for analysis:")
+        print("Pools disponibles pour l'analyse :")
 
-        # Create numbered list
+        # Créer une liste numérotée
         pool_list = []
         idx = 1
         for name, pool in sorted(pools.items()):
             pool_list.append((name, pool))
-            status = "🔧" if pool.created_by == "system" else "👤"
-            suitable = "⭐" if pool.size() >= 5 else "⚠️"  # Indicator for analysis suitability
+            status = "[SYS]" if pool.created_by == "system" else "[PER]"
+            suitable = (
+                "[REC]" if pool.size() >= 5 else "[PTT]"
+            )  # Indicateur de pertinence pour l'analyse
             print(
                 f"  {idx:>2}. {status}{suitable} {name:<18} | {pool.role:<8} | {pool.size():>2} champs | {pool.description}"
             )
             idx += 1
 
-        print(f"\n  {idx}. Use Assistant's extended pool selector (legacy)")
-        print("\n⭐ = Recommended for analysis (5+ champions)")
-        print("⚠️ = Small pool (may have limited analysis)")
+        print(f"\n  {idx}. Utiliser le sélecteur de pool étendu de l'Assistant (legacy)")
+        print("\n[REC] = Recommandé pour l'analyse (5+ champions)")
+        print("[PTT] = Pool réduite (analyse potentiellement limitée)")
 
         try:
-            choice = input(f"\nChoose pool (1-{idx} or 'cancel'): ").strip()
+            choice = input(f"\nChoisissez une pool (1-{idx} ou 'cancel') : ").strip()
 
             if choice.lower() == "cancel":
                 return None
@@ -52,23 +54,23 @@ def _select_pool_for_analysis():
                 selected_name, selected_pool = pool_list[choice_num - 1]
                 return (selected_name, selected_pool.champions)
             elif choice_num == idx:
-                # Legacy fallback
+                # Repli legacy
                 return None
             else:
-                print(f"[ERROR] Invalid choice. Please choose 1-{idx}.")
+                print(f"[ERROR] Choix invalide. Veuillez choisir 1-{idx}.")
                 return None
 
         except ValueError:
-            print("[ERROR] Invalid input. Please enter a number.")
+            print("[ERROR] Entrée invalide. Veuillez entrer un nombre.")
             return None
 
     except Exception as e:
-        print(f"[WARNING] Pool selection error: {e}")
+        print(f"[WARNING] Erreur de sélection de pool : {e}")
         return None
 
 
 def _select_pool_for_parsing():
-    """Select a pool for statistics parsing with enhanced interface."""
+    """Sélectionne une pool pour l'analyse de statistiques, avec interface améliorée."""
     try:
         from src.pool_manager import PoolManager
 
@@ -76,31 +78,31 @@ def _select_pool_for_parsing():
 
         pools = pool_manager.get_all_pools()
         if not pools:
-            print("[ERROR] No pools found.")
+            print("[ERROR] Aucune pool trouvée.")
             return None
 
         print(f"\n" + "=" * 50)
-        print("SELECT POOL FOR PARSING")
+        print("SÉLECTIONNER UNE POOL POUR L'ANALYSE DE STATISTIQUES")
         print("=" * 50)
-        print("Available pools for statistics parsing:")
+        print("Pools disponibles pour l'analyse de statistiques :")
 
-        # Create numbered list
+        # Créer une liste numérotée
         pool_list = []
         idx = 1
         for name, pool in sorted(pools.items()):
             pool_list.append((name, pool))
-            status = "🔧" if pool.created_by == "system" else "👤"
+            status = "[SYS]" if pool.created_by == "system" else "[PER]"
             time_est = f"~{pool.size()*0.5:.2f}-{pool.size()*1:.2f}min"
             print(
                 f"  {idx:>2}. {status} {name:<18} | {pool.role:<8} | {pool.size():>2} champs | {time_est:>8} | {pool.description}"
             )
             idx += 1
 
-        print(f"\n  {idx}. Parse ALL Champions (extended analysis - ~60-90 min)")
-        print(f"  {idx+1}. Use Top SoloQ Pool (default - ~2-3 min)")
+        print(f"\n  {idx}. Analyser TOUS les champions (analyse étendue - ~60-90 min)")
+        print(f"  {idx+1}. Utiliser la pool Top SoloQ (par défaut - ~2-3 min)")
 
         try:
-            choice = input(f"\nChoose pool (1-{idx+1} or 'cancel'): ").strip()
+            choice = input(f"\nChoisissez une pool (1-{idx+1} ou 'cancel') : ").strip()
 
             if choice.lower() == "cancel":
                 return None
@@ -110,53 +112,53 @@ def _select_pool_for_parsing():
                 selected_name, selected_pool = pool_list[choice_num - 1]
                 return (selected_name, selected_pool.champions)
             elif choice_num == idx:
-                # All champions option
+                # Option tous les champions
                 from src.constants import CHAMPIONS_LIST
 
                 return ("ALL CHAMPIONS", list(CHAMPIONS_LIST))
             elif choice_num == idx + 1:
-                # Default Top SoloQ
+                # Top SoloQ par défaut
                 return None
             else:
-                print(f"[ERROR] Invalid choice. Please choose 1-{idx+1}.")
+                print(f"[ERROR] Choix invalide. Veuillez choisir 1-{idx+1}.")
                 return None
 
         except ValueError:
-            print("[ERROR] Invalid input. Please enter a number.")
+            print("[ERROR] Entrée invalide. Veuillez entrer un nombre.")
             return None
 
     except Exception as e:
-        print(f"[WARNING] Pool selection error: {e}")
+        print(f"[WARNING] Erreur de sélection de pool : {e}")
         return None
 
 
-def _select_pool_interactive(pool_manager, action_name="Select pool"):
-    """Interactive pool selection with numbered choices."""
+def _select_pool_interactive(pool_manager, action_name="Sélectionner une pool"):
+    """Sélection de pool interactive avec choix numérotés."""
     from src.utils.display import safe_print
 
     pools = pool_manager.get_all_pools()
     if not pools:
-        print("[ERROR] No pools found.")
+        print("[ERROR] Aucune pool trouvée.")
         return None
 
     print(f"\n" + "=" * 50)
     print(f"{action_name.upper()}")
     print("=" * 50)
-    print("Available pools:")
+    print("Pools disponibles :")
 
-    # Create numbered list
+    # Créer une liste numérotée
     pool_list = []
     idx = 1
     for name, pool in sorted(pools.items()):
         pool_list.append((name, pool))
-        status = "🔧" if pool.created_by == "system" else "👤"
+        status = "[SYS]" if pool.created_by == "system" else "[PER]"
         safe_print(
             f"  {idx:>2}. {status} {name:<20} | {pool.role:<8} | {pool.size():>2} champs | {pool.description}"
         )
         idx += 1
 
     try:
-        choice = input(f"\nChoose pool (1-{len(pool_list)} or 'cancel'): ").strip()
+        choice = input(f"\nChoisissez une pool (1-{len(pool_list)} ou 'cancel') : ").strip()
 
         if choice.lower() == "cancel":
             return None
@@ -166,9 +168,9 @@ def _select_pool_interactive(pool_manager, action_name="Select pool"):
             selected_name, selected_pool = pool_list[choice_num - 1]
             return selected_pool
         else:
-            print(f"[ERROR] Invalid choice. Please choose 1-{len(pool_list)}.")
+            print(f"[ERROR] Choix invalide. Veuillez choisir 1-{len(pool_list)}.")
             return None
 
     except ValueError:
-        print("[ERROR] Invalid input. Please enter a number.")
+        print("[ERROR] Entrée invalide. Veuillez entrer un nombre.")
         return None

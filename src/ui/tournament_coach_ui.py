@@ -1,6 +1,6 @@
-"""Menu 4, option 2 -- tournament draft coach (manual pick/ban entry).
+"""Menu 4, option 2 -- coach de draft de tournoi (saisie manuelle pick/ban).
 
-Extracted from src/ui/lol_coach_legacy.py (SPEC-07 E9).
+Extrait de src/ui/lol_coach_legacy.py (SPEC-07 E9).
 """
 
 import sys
@@ -17,12 +17,14 @@ from src.ui.tournament_display_ui import (
 
 
 def run_tournament_draft_coach():
-    """Manual draft coaching for tournament scenarios."""
-    clear_console()  # Clear console at start
-    print("[INFO] Tournament Draft Coach")
-    print("Perfect for external tournaments, scrimmages, or any draft outside the League client")
-    print("\nThis tool provides the same coaching logic as the real-time coach,")
-    print("but allows you to manually input pick/ban information.")
+    """Coaching manuel de draft pour les scénarios de tournoi."""
+    clear_console()  # Efface la console au démarrage
+    print("[INFO] Coach de draft de tournoi")
+    print(
+        "Parfait pour les tournois externes, les scrims, ou tout draft en dehors du client League"
+    )
+    print("\nCet outil fournit la même logique de coaching que le coach en temps réel,")
+    print("mais permet de saisir manuellement les informations de pick/ban.")
 
     try:
         from src.tournament_coach import TournamentCoach
@@ -31,15 +33,15 @@ def run_tournament_draft_coach():
         coach.start_coaching_session()
 
     except ImportError:
-        # If the module doesn't exist yet, create a basic implementation
-        print("\n[INFO] Starting tournament coaching session...")
+        # Si le module n'existe pas encore, crée une implémentation basique
+        print("\n[INFO] Démarrage de la session de coaching de tournoi...")
         _run_basic_tournament_coach()
     except Exception as e:
-        print(f"[ERROR] Tournament coach error: {e}")
+        print(f"[ERROR] Erreur du coach de tournoi : {e}")
 
 
 def _run_basic_tournament_coach():
-    """Enhanced tournament coaching implementation with full features."""
+    """Implémentation enrichie du coaching de tournoi avec toutes les fonctionnalités."""
     from src.assistant import Assistant
     from src.pool_manager import PoolManager
     import time
@@ -48,36 +50,38 @@ def _run_basic_tournament_coach():
     try:
         assistant = Assistant()
 
-        # Select coaching pool
+        # Sélectionne la pool de coaching
         print("\n" + "=" * 60)
-        print("SELECT CHAMPION POOL FOR COACHING")
+        print("SÉLECTIONNER LA POOL DE CHAMPIONS POUR LE COACHING")
         print("=" * 60)
 
         selected_pool_info = _select_pool_for_analysis()
         if not selected_pool_info:
-            print("[WARNING] No pool selected, using assistant's extended pool")
+            print(
+                "[WARNING] Aucune pool sélectionnée, utilisation de la pool étendue de l'assistant"
+            )
             champion_pool = assistant.select_extended_champion_pool()
-            pool_name = "Extended Pool"
+            pool_name = "Pool étendue"
         else:
             pool_name, champion_pool = selected_pool_info
 
-        print(f"\n✅ Using pool: {pool_name} ({len(champion_pool)} champions)")
+        print(f"\nUtilisation de la pool : {pool_name} ({len(champion_pool)} champions)")
 
-        # Initialize draft state
+        # Initialise l'état du draft
         ally_team = []
         enemy_team = []
         banned_champions = []
         draft_history = []  # (timestamp, action, champion, side)
-        auto_recommend = True  # Auto-show recommendations after picks
+        auto_recommend = True  # Affiche automatiquement les recommandations après chaque pick
 
         print("\n" + "=" * 80)
-        print("🎯 TOURNAMENT DRAFT COACHING SESSION")
+        print("SESSION DE COACHING DE DRAFT DE TOURNOI")
         print("=" * 80)
         _show_tournament_help()
 
         while True:
             try:
-                cmd = input("\n⚡ Coach > ").strip().lower()
+                cmd = input("\nCoach > ").strip().lower()
 
                 if cmd in ["quit", "exit", "q"]:
                     break
@@ -92,7 +96,7 @@ def _run_basic_tournament_coach():
                     enemy_team.clear()
                     banned_champions.clear()
                     draft_history.clear()
-                    print("✅ Draft state reset!")
+                    print("État du draft réinitialisé !")
 
                 elif cmd == "recommend":
                     _show_recommendations(
@@ -104,7 +108,7 @@ def _run_basic_tournament_coach():
                         _analyze_complete_draft(assistant, ally_team, enemy_team)
                     else:
                         print(
-                            f"⚠️ Draft incomplete: {len(ally_team)}/5 ally, {len(enemy_team)}/5 enemy"
+                            f"Draft incomplet : {len(ally_team)}/5 alliés, {len(enemy_team)}/5 adverses"
                         )
 
                 elif cmd.startswith("ally "):
@@ -112,19 +116,19 @@ def _run_basic_tournament_coach():
                     champ = assistant.validate_champion_name(champ_input)
                     if champ:
                         if champ in ally_team:
-                            print(f"⚠️ {champ} already in your team")
+                            print(f"{champ} est déjà dans votre équipe")
                         elif champ in enemy_team:
-                            print(f"⚠️ {champ} already picked by enemy")
+                            print(f"{champ} est déjà pris par l'adversaire")
                         elif champ in banned_champions:
-                            print(f"⚠️ {champ} is banned")
+                            print(f"{champ} est banni")
                         elif len(ally_team) >= 5:
-                            print(f"⚠️ Your team is full (5/5)")
+                            print(f"Votre équipe est complète (5/5)")
                         else:
                             ally_team.append(champ)
                             draft_history.append((time.time(), "ally", champ, "ally"))
-                            print(f"✅ Added {champ} to your team ({len(ally_team)}/5)")
+                            print(f"{champ} ajouté à votre équipe ({len(ally_team)}/5)")
                             if auto_recommend and enemy_team:
-                                print(f"\n📊 Top picks after adding {champ}:")
+                                print(f"\nMeilleurs picks après l'ajout de {champ} :")
                                 _show_recommendations(
                                     assistant,
                                     enemy_team,
@@ -139,19 +143,19 @@ def _run_basic_tournament_coach():
                     champ = assistant.validate_champion_name(champ_input)
                     if champ:
                         if champ in enemy_team:
-                            print(f"⚠️ {champ} already in enemy team")
+                            print(f"{champ} est déjà dans l'équipe adverse")
                         elif champ in ally_team:
-                            print(f"⚠️ {champ} already picked by you")
+                            print(f"{champ} est déjà pris par vous")
                         elif champ in banned_champions:
-                            print(f"⚠️ {champ} is banned")
+                            print(f"{champ} est banni")
                         elif len(enemy_team) >= 5:
-                            print(f"⚠️ Enemy team is full (5/5)")
+                            print(f"L'équipe adverse est complète (5/5)")
                         else:
                             enemy_team.append(champ)
                             draft_history.append((time.time(), "enemy", champ, "enemy"))
-                            print(f"✅ Enemy picked {champ} ({len(enemy_team)}/5)")
+                            print(f"L'adversaire a pick {champ} ({len(enemy_team)}/5)")
                             if auto_recommend:
-                                print(f"\n📊 Best counters to {champ}:")
+                                print(f"\nMeilleurs counters à {champ} :")
                                 _show_recommendations(
                                     assistant,
                                     enemy_team,
@@ -166,13 +170,13 @@ def _run_basic_tournament_coach():
                     champ = assistant.validate_champion_name(champ_input)
                     if champ:
                         if champ in banned_champions:
-                            print(f"⚠️ {champ} already banned")
+                            print(f"{champ} déjà banni")
                         elif champ in ally_team or champ in enemy_team:
-                            print(f"⚠️ {champ} already picked")
+                            print(f"{champ} déjà pick")
                         else:
                             banned_champions.append(champ)
                             draft_history.append((time.time(), "ban", champ, "ban"))
-                            print(f"✅ Banned {champ}")
+                            print(f"{champ} banni")
 
                 elif cmd.startswith("remove ally "):
                     champ_input = cmd[12:].strip()
@@ -180,9 +184,9 @@ def _run_basic_tournament_coach():
                     if champ and champ in ally_team:
                         ally_team.remove(champ)
                         draft_history.append((time.time(), "remove_ally", champ, "ally"))
-                        print(f"✅ Removed {champ} from your team")
+                        print(f"{champ} retiré de votre équipe")
                     else:
-                        print(f"⚠️ {champ_input} not in your team")
+                        print(f"{champ_input} n'est pas dans votre équipe")
 
                 elif cmd.startswith("remove enemy "):
                     champ_input = cmd[13:].strip()
@@ -190,9 +194,9 @@ def _run_basic_tournament_coach():
                     if champ and champ in enemy_team:
                         enemy_team.remove(champ)
                         draft_history.append((time.time(), "remove_enemy", champ, "enemy"))
-                        print(f"✅ Removed {champ} from enemy team")
+                        print(f"{champ} retiré de l'équipe adverse")
                     else:
-                        print(f"⚠️ {champ_input} not in enemy team")
+                        print(f"{champ_input} n'est pas dans l'équipe adverse")
 
                 elif cmd.startswith("remove ban "):
                     champ_input = cmd[11:].strip()
@@ -200,9 +204,9 @@ def _run_basic_tournament_coach():
                     if champ and champ in banned_champions:
                         banned_champions.remove(champ)
                         draft_history.append((time.time(), "unban", champ, "ban"))
-                        print(f"✅ Unbanned {champ}")
+                        print(f"{champ} débanni")
                     else:
-                        print(f"⚠️ {champ_input} not in ban list")
+                        print(f"{champ_input} n'est pas dans la liste des bans")
 
                 elif cmd == "history":
                     _show_draft_history(draft_history)
@@ -212,18 +216,18 @@ def _run_basic_tournament_coach():
                         ts, action, champ, side = draft_history.pop()
                         if action == "ally":
                             ally_team.remove(champ)
-                            print(f"↩️ Undone: {champ} removed from ally team")
+                            print(f"Annulé : {champ} retiré de l'équipe alliée")
                         elif action == "enemy":
                             enemy_team.remove(champ)
-                            print(f"↩️ Undone: {champ} removed from enemy team")
+                            print(f"Annulé : {champ} retiré de l'équipe adverse")
                         elif action == "ban":
                             banned_champions.remove(champ)
-                            print(f"↩️ Undone: {champ} unbanned")
+                            print(f"Annulé : {champ} débanni")
                         elif action.startswith("remove"):
-                            # Can't undo removes easily, skip
-                            print(f"⚠️ Can't undo remove action")
+                            # Impossible d'annuler facilement les retraits, on passe
+                            print(f"Impossible d'annuler une action de retrait")
                     else:
-                        print("⚠️ No actions to undo")
+                        print("Aucune action à annuler")
 
                 elif cmd.startswith("import "):
                     _handle_import_command(
@@ -235,10 +239,10 @@ def _run_basic_tournament_coach():
 
                 elif cmd == "auto on":
                     auto_recommend = True
-                    print("✅ Auto-recommendations enabled")
+                    print("Recommandations automatiques activées")
                 elif cmd == "auto off":
                     auto_recommend = False
-                    print("✅ Auto-recommendations disabled")
+                    print("Recommandations automatiques désactivées")
 
                 elif cmd in ["help", "h", "?"]:
                     _show_tournament_help()
@@ -247,37 +251,39 @@ def _run_basic_tournament_coach():
                     continue
 
                 else:
-                    print(f"❌ Unknown command: '{cmd}'. Type 'help' for available commands.")
+                    print(
+                        f"Commande inconnue : '{cmd}'. Tapez 'help' pour voir les commandes disponibles."
+                    )
 
             except KeyboardInterrupt:
-                print("\n\n👋 Exiting tournament coach...")
+                print("\n\nSortie du coach de tournoi...")
                 break
             except Exception as e:
-                print(f"❌ Error: {e}")
+                print(f"Erreur : {e}")
                 if "--debug" in sys.argv:
                     import traceback
 
                     traceback.print_exc()
 
         assistant.close()
-        print("\n✅ Tournament coaching session ended!")
+        print("\nSession de coaching de tournoi terminée !")
 
     except Exception as e:
-        print(f"❌ Tournament coaching error: {e}")
+        print(f"Erreur du coach de tournoi : {e}")
         import traceback
 
         traceback.print_exc()
 
 
 def _handle_import_command(cmd, assistant, ally_team, enemy_team, banned_champions, draft_history):
-    """Handle import commands for quick draft entry."""
+    """Gère les commandes d'import pour une saisie rapide du draft."""
     import time
 
     try:
-        # Format: import ally: Aatrox, Jax, Ahri
+        # Format : import ally: Aatrox, Jax, Ahri
         if ":" not in cmd:
-            print("⚠️ Import format: import <type>: <champion1>, <champion2>, ...")
-            print("   Example: import ally: Aatrox, Graves, Ahri")
+            print("Format d'import : import <type>: <champion1>, <champion2>, ...")
+            print("   Exemple : import ally: Aatrox, Graves, Ahri")
             return
 
         parts = cmd.split(":", 1)
@@ -287,10 +293,10 @@ def _handle_import_command(cmd, assistant, ally_team, enemy_team, banned_champio
         target_type = cmd_part.replace("import ", "").strip()
 
         if target_type not in ["ally", "enemy", "bans", "ban"]:
-            print(f"⚠️ Unknown import type: {target_type}. Use: ally, enemy, or bans")
+            print(f"Type d'import inconnu : {target_type}. Utilisez : ally, enemy ou bans")
             return
 
-        # Parse champion names
+        # Parse les noms de champions
         champ_names = [c.strip() for c in champs_part.split(",")]
 
         imported = 0
@@ -315,14 +321,14 @@ def _handle_import_command(cmd, assistant, ally_team, enemy_team, banned_champio
                     draft_history.append((time.time(), "ban", champ, "ban"))
                     imported += 1
 
-        print(f"✅ Imported {imported}/{len(champ_names)} champions to {target_type}")
+        print(f"{imported}/{len(champ_names)} champions importés dans {target_type}")
 
     except Exception as e:
-        print(f"❌ Import error: {e}")
+        print(f"Erreur d'import : {e}")
 
 
 def _export_draft(ally_team, enemy_team, banned_champions, pool_name):
-    """Export draft to JSON file."""
+    """Exporte le draft dans un fichier JSON."""
     import json
     import time
     from datetime import datetime
@@ -343,6 +349,6 @@ def _export_draft(ally_team, enemy_team, banned_champions, pool_name):
     try:
         with open(filename, "w", encoding="utf-8") as f:
             json.dump(draft_data, f, indent=2, ensure_ascii=False)
-        print(f"✅ Draft exported to: {filename}")
+        print(f"Draft exporté vers : {filename}")
     except Exception as e:
-        print(f"❌ Export failed: {e}")
+        print(f"Échec de l'export : {e}")
