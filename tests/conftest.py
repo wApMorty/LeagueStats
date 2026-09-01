@@ -1,11 +1,56 @@
 """Pytest configuration and shared fixtures for LeagueStats Coach tests."""
 
+from pathlib import Path
+
 import pytest
 import sqlite3
 
+from src import pipeline as pipeline_module
+from src.config import config
 from src.db import Database
 from src.analysis.scoring import ChampionScorer
 from src.models import Matchup
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _snapshot_production_files() -> dict:
+    """mtime of every file the suite must never write to (SPEC-07 E6)."""
+    paths = [PROJECT_ROOT / "data" / "db.db"]
+    logs_dir = PROJECT_ROOT / "logs"
+    if logs_dir.exists():
+        paths += sorted(logs_dir.glob("*.log"))
+    return {p: p.stat().st_mtime_ns for p in paths if p.exists()}
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _guard_production_untouched():
+    """Fail the run if any test wrote to the real db or log files.
+
+    Belt-and-suspenders: ``_isolate_logs`` and ``_isolate_database_path``
+    below should already prevent this, but this catches anything that
+    bypasses them (e.g. a future call site that forgets to inject a path).
+    """
+    before = _snapshot_production_files()
+    yield
+    after = _snapshot_production_files()
+    assert before == after, (
+        "La suite de tests a touché data/db.db ou logs/*.log — voir SPEC-07 E6.\n"
+        f"Avant: {before}\nAprès: {after}"
+    )
+
+
+@pytest.fixture(autouse=True)
+def _isolate_logs(monkeypatch, tmp_path):
+    """Redirect src.pipeline's log directory so no test writes to logs/update_all.log."""
+    monkeypatch.setattr(pipeline_module, "DEFAULT_LOG_DIR", tmp_path / "logs")
+
+
+@pytest.fixture(autouse=True)
+def _isolate_database_path(monkeypatch, tmp_path):
+    """Point config.DATABASE_PATH at a non-existent file so PoolManager (and
+    anything else reading it) never opens the real data/db.db under pytest."""
+    monkeypatch.setattr(config, "DATABASE_PATH", str(tmp_path / "isolated.db"))
 
 
 @pytest.fixture

@@ -37,11 +37,19 @@ from .parallel_parser import ParallelParser
 logger = logging.getLogger("update_all")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_LOG_DIR = PROJECT_ROOT / "logs"
 
 
-def _setup_logging() -> Path:
-    """File + console logging, safe under pythonw.exe (no stdout)."""
-    log_dir = PROJECT_ROOT / "logs"
+def _setup_logging(log_dir: Optional[Path] = None) -> Path:
+    """File + console logging, safe under pythonw.exe (no stdout).
+
+    Args:
+        log_dir: Directory to write ``update_all.log`` into. Defaults to
+            ``DEFAULT_LOG_DIR`` (the real project ``logs/``); tests override
+            this (directly or via the autouse fixture in ``conftest.py``) so
+            the suite never pollutes production logs (SPEC-07 E6).
+    """
+    log_dir = log_dir or DEFAULT_LOG_DIR
     log_dir.mkdir(exist_ok=True)
     log_file = log_dir / "update_all.log"
 
