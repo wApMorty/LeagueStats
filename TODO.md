@@ -67,8 +67,8 @@
 | Id | Item | PV | D | ROI |
 |---|---|---|---|---|
 | D1 | ✅ Corriger le chemin de `champion_pools.json` (écrit hors du dépôt) | 8 | 1 | **8,0** |
-| D2 | Mémoriser les préférences du draft coach | 8 | 2 | 4,0 |
-| D3 | Unifier la langue de l'interface (français) | 5 | 3 | 1,7 |
+| D2 | ✅ Mémoriser les préférences du draft coach | 8 | 2 | 4,0 |
+| D3 | 🟡 Unifier la langue de l'interface (français) — fait sauf `lol_coach_legacy.py`, différé à E9 | 5 | 3 | 1,7 |
 | D4 | Purger les emojis des sorties console | 3 | 2 | 1,5 |
 
 ### 6. Dette, tests, docs · [SPEC-07](docs/specs/SPEC-07-dette-tests-docs.md)
@@ -82,7 +82,7 @@
 | E6 | Isoler les tests (log et BD de production touchés) | 8 | 3 | 2,7 |
 | E7 | Sortir les seuils métier restants vers `config_constants` | 5 | 2 | 2,5 |
 | E8 | ✅ Corriger la casse dans `calculate_synergy_bonus` | 5 | 1 | 5,0 |
-| E9 | Démanteler `lol_coach_legacy.py` (2 576 l., 14 % couvert) | 8 | 13 | 0,6 |
+| E9 | Démanteler `lol_coach_legacy.py` (2 045 l., 14 % couvert) — inclut la traduction D3 restante | 8 | 13 | 0,6 |
 | E10 | Dégraisser `assistant.py` (2 230 l.) et `draft_monitor.py` (1 547 l.) | 8 | 13 | 0,6 |
 
 ---

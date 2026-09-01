@@ -150,7 +150,7 @@ class DraftMonitor:
 
     def start_monitoring(self):
         """Start monitoring champion select."""
-        print("[BOT] League Draft Coach - Starting...")
+        print("[BOT] League Draft Coach - Démarrage...")
 
         if not self.lcu.connect():
             return False
@@ -169,7 +169,7 @@ class DraftMonitor:
             # Auto-select top pool by default
             self.pool_name = "All Top Champions"  # System pool name
             self.current_pool = CHAMPIONS_BY_ROLE["top"]
-            safe_print(f"✅ Using pool: TOP ({', '.join(self.current_pool)})")
+            safe_print(f"✅ Pool utilisée : TOP ({', '.join(self.current_pool)})")
 
         # Performance: Warm cache for selected pool (eliminates SQL queries during draft)
         if self.current_pool:
@@ -179,17 +179,21 @@ class DraftMonitor:
         clear_console()
 
         self.is_monitoring = True
-        print("[WATCH] Monitoring for champion select...")
-        print("   (Start a game to see draft recommendations)")
+        print("[WATCH] Surveillance du champion select...")
+        print("   (Démarrez une partie pour voir les recommandations de draft)")
         if self.auto_accept_queue:
-            print("   🔥 [AUTO-ACCEPT] Queue auto-accept is ENABLED")
+            print("   🔥 [AUTO-ACCEPT] Acceptation automatique de la queue ACTIVÉE")
         if self.auto_ban_hover:
-            print("   🚫 [AUTO-BAN-HOVER] Ban hover is ENABLED")
+            print("   🚫 [AUTO-BAN-HOVER] Survol automatique des bans ACTIVÉ")
         if self.open_onetricks:
-            print("   🌐 [ONETRICKS] Open champion page on draft completion is ENABLED")
-        print("   ✏️  Type 'r <champion> <lane>' + Enter to force a role (e.g. r Pantheon support)")
-        print("   🏁 Type 'outcome win' or 'outcome loss' + Enter after the game to log the result")
-        print("   (Press Ctrl+C to stop)")
+            print("   🌐 [ONETRICKS] Ouverture de la page du champion en fin de draft ACTIVÉE")
+        print(
+            "   ✏️  Tapez 'r <champion> <lane>' + Entrée pour forcer un rôle (ex. r Pantheon support)"
+        )
+        print(
+            "   🏁 Tapez 'outcome win' ou 'outcome loss' + Entrée après la partie pour logger le résultat"
+        )
+        print("   (Ctrl+C pour arrêter)")
 
         self._start_command_listener()
 
@@ -203,7 +207,7 @@ class DraftMonitor:
                 self._log_memory_usage()
                 time.sleep(draft_config.POLL_INTERVAL)  # Check draft state periodically
         except KeyboardInterrupt:
-            print("\n[STOP] Stopping draft monitor...")
+            print("\n[STOP] Arrêt du draft monitor...")
         finally:
             self.cleanup()
 
@@ -287,9 +291,9 @@ class DraftMonitor:
 
         except Exception as e:
             if self.verbose:
-                print(f"[WARNING] Failed to open OneTriks.gg page: {e}")
+                print(f"[WARNING] Échec d'ouverture de la page OneTricks.gg: {e}")
             else:
-                print(f"[WARNING] Failed to open champion page in browser")
+                print(f"[WARNING] Échec d'ouverture de la page du champion dans le navigateur")
 
     def stop_monitoring(self):
         """Stop monitoring."""
@@ -338,14 +342,14 @@ class DraftMonitor:
                 ):
                     # Only show the message once when leaving champion select
                     if not hasattr(self, "_shown_ready_message"):
-                        print("\n[INFO] Left champion select - Game starting!")
+                        print("\n[INFO] Champion select quitté - La partie démarre !")
 
                         # Show ready message for next game
                         print("\n" + "=" * 60)
-                        print("🎮 [READY] Waiting for next game...")
+                        print("🎮 [READY] En attente de la prochaine partie...")
                         if self.auto_accept_queue:
-                            print("   🔥 Auto-accept is enabled for next queue")
-                        print("   (Queue up for another game!)")
+                            print("   🔥 Auto-accept activé pour la prochaine queue")
+                        print("   (Relancez une recherche de partie !)")
                         print("=" * 60)
 
                         self._shown_ready_message = True
@@ -413,7 +417,7 @@ class DraftMonitor:
                     and current_time - self.ready_check_accepted_time > cooldown
                 ):
                     print("\n" + "=" * 60)
-                    print("🎮 [QUEUE] GAME FOUND!")
+                    print("🎮 [QUEUE] PARTIE TROUVÉE !")
                     print("=" * 60)
 
                     # Get ready check details if available
@@ -424,21 +428,21 @@ class DraftMonitor:
 
                     # Auto-accept the queue
                     if self.lcu.accept_ready_check():
-                        print("✅ [AUTO-ACCEPT] Queue accepted automatically!")
+                        print("✅ [AUTO-ACCEPT] Queue acceptée automatiquement !")
                         self.ready_check_accepted_time = current_time
                     else:
-                        print("❌ [AUTO-ACCEPT] Failed to accept queue")
+                        print("❌ [AUTO-ACCEPT] Échec de l'acceptation de la queue")
 
-                    print("Waiting for other players...")
+                    print("En attente des autres joueurs...")
                     print("=" * 60)
 
             # Handle transitions out of ready check
             elif self.last_gameflow_phase == "ReadyCheck" and current_phase != "ReadyCheck":
                 if current_phase == "ChampSelect":
-                    print("✅ [SUCCESS] All players accepted - Entering champion select!")
+                    print("✅ [SUCCESS] Tous les joueurs ont accepté - Entrée en champion select !")
                 elif current_phase in ["Lobby", "Matchmaking"]:
-                    print("❌ [FAILED] Ready check failed - Someone didn't accept")
-                    print("🔄 [RETRY] Returning to queue...")
+                    print("❌ [FAILED] Échec du ready check - Un joueur n'a pas accepté")
+                    print("🔄 [RETRY] Retour en file d'attente...")
                     # Reset ready check timer to allow new detection
                     self.ready_check_accepted_time = 0
 
@@ -555,7 +559,7 @@ class DraftMonitor:
 
             if len(ally_picks) >= 5 and len(enemy_picks) >= 5:
                 print("\n" + "=" * 80)
-                print("🎯 [DRAFT COMPLETE] All champions locked - Final analysis!")
+                print("🎯 [DRAFT TERMINÉ] Tous les champions verrouillés - Analyse finale !")
                 print("=" * 80)
 
                 self._calculate_final_scores(
@@ -570,7 +574,7 @@ class DraftMonitor:
                     self._open_champion_page_on_onetricks()
 
         except Exception as e:
-            print(f"[ERROR] Failed to analyze complete draft: {e}")
+            print(f"[ERREUR] Échec de l'analyse du draft complet: {e}")
             if self.verbose:
                 import traceback
 
@@ -679,33 +683,33 @@ class DraftMonitor:
         """Parse and apply one 'r <champion> <lane>' correction command."""
         parts = line.strip().split()
         if len(parts) != 3 or parts[0].lower() != "r":
-            print(f"[ROLE] Unrecognized command: '{line}'. Expected format: r <champion> <lane>")
+            print(f"[ROLE] Commande non reconnue : '{line}'. Format attendu : r <champion> <lane>")
             return False
 
         _, champion_input, lane_input = parts
         lane = lane_input.lower()
         if lane not in scraping_config.LANES:
             print(
-                f"[ROLE] Unknown lane: '{lane_input}'. "
-                f"Valid values: {', '.join(scraping_config.LANES)}"
+                f"[ROLE] Lane inconnue : '{lane_input}'. "
+                f"Valeurs valides : {', '.join(scraping_config.LANES)}"
             )
             return False
 
         name_to_id = {name.lower(): champ_id for champ_id, name in self.champion_id_to_name.items()}
         champion_id = name_to_id.get(champion_input.lower())
         if champion_id is None:
-            print(f"[ROLE] Unknown champion: '{champion_input}'")
+            print(f"[ROLE] Champion inconnu : '{champion_input}'")
             return False
 
         if champion_id not in state.ally_picks and champion_id not in state.enemy_picks:
-            print(f"[ROLE] {champion_input} is not in the current draft")
+            print(f"[ROLE] {champion_input} n'est pas dans le draft en cours")
             return False
 
         self.forced_roles[champion_id] = lane
         state.inferred_roles[champion_id] = lane
         state.role_confidence[champion_id] = 1.0
         state.role_source[champion_id] = "user"
-        print(f"[ROLE] {self._get_display_name(champion_id)} forced to {lane}")
+        print(f"[ROLE] {self._get_display_name(champion_id)} forcé sur {lane}")
         return True
 
     def _handle_outcome_command(self, line: str) -> None:
@@ -719,7 +723,7 @@ class DraftMonitor:
         """
         parts = line.split()
         if len(parts) != 2 or parts[1].lower() not in ("win", "loss"):
-            print(f"[OUTCOME] Unrecognized command: '{line}'. Expected format: outcome win|loss")
+            print(f"[OUTCOME] Commande non reconnue : '{line}'. Format attendu : outcome win|loss")
             return
 
         if self._last_prediction_id is None:
@@ -731,12 +735,12 @@ class DraftMonitor:
             updated = self.assistant.db.update_prediction_outcome(self._last_prediction_id, outcome)
             if updated:
                 print(
-                    f"[OUTCOME] Prediction #{self._last_prediction_id} recorded as {parts[1].lower()}"
+                    f"[OUTCOME] Prédiction #{self._last_prediction_id} enregistrée comme {parts[1].lower()}"
                 )
             else:
-                print(f"[OUTCOME] No prediction row found for id #{self._last_prediction_id}")
+                print(f"[OUTCOME] Aucune prédiction trouvée pour l'id #{self._last_prediction_id}")
         except Exception as e:
-            print(f"[WARNING] Failed to update prediction outcome: {e}")
+            print(f"[WARNING] Échec de la mise à jour du résultat de la prédiction: {e}")
 
         # One outcome update per game, whether it succeeded or not.
         self._last_prediction_id = None
@@ -993,7 +997,7 @@ class DraftMonitor:
             clear_console()
 
         print("\n" + "=" * 80)
-        print(f"[INFO] DRAFT UPDATE - Phase: {state.phase}")
+        print(f"[INFO] MISE À JOUR DU DRAFT - Phase : {state.phase}")
         if self.verbose:
             print(
                 f"[DEBUG] Current actor: {state.current_actor}, Local player: {state.local_player_cell_id}"
@@ -1037,7 +1041,7 @@ class DraftMonitor:
         if source == "lcu":
             label = "LCU"
         elif source == "user":
-            label = "forced"
+            label = "forcé"
         else:
             confidence = state.role_confidence.get(champion_id, 0.0)
             label = f"{confidence * 100:.0f}%"
@@ -1048,31 +1052,31 @@ class DraftMonitor:
 
     def _display_draft_state(self, state: DraftState):
         """Display current draft state in terminal."""
-        print(f"\n[ALLY] ALLY TEAM:")
+        print(f"\n[ALLY] ÉQUIPE ALLIÉE :")
         if state.ally_picks:
             for i, champ_id in enumerate(state.ally_picks, 1):
                 display_name = self._get_display_name(champ_id)
                 print(f"  {i}. {display_name}{self._format_role_tag(champ_id, state)}")
         else:
-            print("  (No picks yet)")
+            print("  (Aucun pick pour l'instant)")
 
         # Only show bans during ban phases or when bans are relevant
         if state.ally_bans and self._should_show_bans(state):
             display_bans = [self._get_display_name(champ_id) for champ_id in state.ally_bans]
-            print(f"  Bans: {', '.join(display_bans)}")
+            print(f"  Bans : {', '.join(display_bans)}")
 
-        print(f"\n[ENEMY] ENEMY TEAM:")
+        print(f"\n[ENEMY] ÉQUIPE ENNEMIE :")
         if state.enemy_picks:
             for i, champ_id in enumerate(state.enemy_picks, 1):
                 display_name = self._get_display_name(champ_id)
                 print(f"  {i}. {display_name}{self._format_role_tag(champ_id, state)}")
         else:
-            print("  (No picks yet)")
+            print("  (Aucun pick pour l'instant)")
 
         # Only show bans during ban phases or when bans are relevant
         if state.enemy_bans and self._should_show_bans(state):
             display_bans = [self._get_display_name(champ_id) for champ_id in state.enemy_bans]
-            print(f"  Bans: {', '.join(display_bans)}")
+            print(f"  Bans : {', '.join(display_bans)}")
 
     def _provide_recommendations(self, state: DraftState):
         """Provide coaching recommendations based on current draft."""
@@ -1093,7 +1097,7 @@ class DraftMonitor:
 
             # Use existing coach logic
             if enemy_picks:
-                print(f"\n[PICKS] COUNTERPICK RECOMMENDATIONS:")
+                print(f"\n[PICKS] RECOMMANDATIONS DE COUNTERPICK :")
                 print("-" * 50)
 
                 # Show adaptive ban recommendations only during actual ban phases
@@ -1229,12 +1233,14 @@ class DraftMonitor:
                     enemy_changed = self._enemy_picks_changed(state)
 
                     if is_our_turn or enemy_changed:
-                        reason = "Your turn" if is_our_turn else "Enemy pick update"
+                        reason = (
+                            "À vous de jouer" if is_our_turn else "Mise à jour d'un pick ennemi"
+                        )
                         self._auto_hover_champion(top_recommendation, reason)
                         self.last_recommendation = top_recommendation
 
                 if not scores:
-                    print("  [DATA] No data available for current matchups")
+                    print("  [DATA] Aucune donnée disponible pour les matchups actuels")
 
             # Handle auto-ban-hover for ban phases (independent of pick phase)
             if self._is_ban_phase(state) and self.auto_ban_hover:
@@ -1243,23 +1249,23 @@ class DraftMonitor:
             # Phase-specific advice (dynamic based on actual game state)
             advice = None
             if state.phase == "PLANNING":
-                advice = "[PLAN] Think about team composition and ban priorities"
+                advice = "[PLAN] Réfléchissez à la composition d'équipe et aux priorités de ban"
             elif state.phase == "BAN_PICK":
                 # BAN_PICK phase includes both bans and picks - detect which we're in
                 if self._is_ban_phase(state):
-                    advice = "[BAN] Focus on banning enemy strengths"
+                    advice = "[BAN] Concentrez-vous sur les bans des forces adverses"
                 else:
-                    advice = "[PICK] Time to secure your champion!"
+                    advice = "[PICK] C'est le moment de sécuriser votre champion !"
             elif state.phase == "PICK":
-                advice = "[PICK] Time to secure your champion!"
+                advice = "[PICK] C'est le moment de sécuriser votre champion !"
             elif state.phase == "FINALIZATION":
-                advice = "[FINAL] Finalize runes and summoner spells"
+                advice = "[FINAL] Finalisez runes et sorts d'invocateur"
 
             if advice:
                 print(f"\n[ADVICE] {advice}")
 
         except Exception as e:
-            print(f"[WARNING] Error providing recommendations: {e}")
+            print(f"[WARNING] Erreur lors de la génération des recommandations: {e}")
 
     def _is_player_turn(self, state: DraftState) -> bool:
         """Check if it's the local player's turn to pick."""
@@ -1343,13 +1349,13 @@ class DraftMonitor:
         try:
             if self.lcu.hover_champion(champion_name):
                 reason_text = f" ({reason})" if reason else ""
-                print(f"  🎯 [AUTO-HOVER] Hovered {champion_name}{reason_text}")
+                print(f"  🎯 [AUTO-HOVER] {champion_name} survolé{reason_text}")
             else:
                 if self.verbose:
-                    print(f"  ⚠️ [AUTO-HOVER] Failed to hover {champion_name}")
+                    print(f"  ⚠️ [AUTO-HOVER] Échec du survol de {champion_name}")
         except Exception as e:
             if self.verbose:
-                print(f"  ❌ [AUTO-HOVER] Error hovering {champion_name}: {e}")
+                print(f"  ❌ [AUTO-HOVER] Erreur lors du survol de {champion_name}: {e}")
 
     def _do_initial_hover(self):
         """Do initial hover with the best champion from the pool when entering champion select."""
@@ -1357,37 +1363,37 @@ class DraftMonitor:
             # Clear console at start of champion select
             clear_console()
 
-            print(f"\n[INITIAL] 🎮 Champion select started - Preparing your strategy!")
+            print(f"\n[INITIAL] 🎮 Champion select démarré - Préparation de votre stratégie !")
             print("=" * 80)
 
             # Get best champion from current pool (first champion as fallback)
             if not self.current_pool:
                 if self.verbose:
-                    print("  ⚠️ [INITIAL-HOVER] No champions in pool")
+                    print("  ⚠️ [INITIAL-HOVER] Aucun champion dans la pool")
                 return
 
             # Calculate best champion from pool using smart analysis
             initial_champion = self._get_best_champion_from_pool()
 
             # Show the recommended blind pick
-            print(f"\n[PICK] 🎯 BEST BLIND PICK FROM YOUR POOL:")
+            print(f"\n[PICK] 🎯 MEILLEUR BLIND PICK DE VOTRE POOL :")
             print(f"  ✅ {initial_champion}")
-            print(f"  💡 If you're first pick, this is your safest choice!")
+            print(f"  💡 Si vous êtes premier pick, c'est votre choix le plus sûr !")
 
             # Auto-hover the champion
-            self._auto_hover_champion(initial_champion, "Best blind pick")
+            self._auto_hover_champion(initial_champion, "Meilleur blind pick")
             self.last_recommendation = initial_champion
 
             # Show ban recommendations immediately
             self._show_ban_recommendations_draft()
 
             print("\n" + "=" * 80)
-            print("[INFO] Waiting for draft to begin...")
+            print("[INFO] En attente du début du draft...")
             print("=" * 80)
 
         except Exception as e:
             if self.verbose:
-                print(f"  ⚠️ [INITIAL-HOVER] Error doing initial hover: {e}")
+                print(f"  ⚠️ [INITIAL-HOVER] Erreur lors du hover initial: {e}")
 
     def _get_best_champion_from_pool(self) -> str:
         """Get the best champion from current pool using tier list analysis."""
@@ -1441,7 +1447,7 @@ class DraftMonitor:
             return  # Skip ban recommendations in .exe mode
 
         try:
-            print(f"\n[BANS] 🛡️ STRATEGIC BAN RECOMMENDATIONS")
+            print(f"\n[BANS] 🛡️ RECOMMANDATIONS DE BAN STRATÉGIQUES")
             print("-" * 50)
 
             # Try to get pre-calculated bans from database first (fast)
@@ -1464,22 +1470,22 @@ class DraftMonitor:
                 )
 
             if ban_recommendations:
-                print(f"Consider banning these threats to your pool:")
+                print(f"Envisagez de bannir ces menaces pour votre pool :")
                 # Tuple format: (enemy, threat_score, best_delta2, best_champ, matchup_count)
                 for i, (enemy, threat_score, _best_delta2, _best_champ, matchup_count) in enumerate(
                     ban_recommendations, 1
                 ):
                     print(
-                        f"  {i}. {enemy:<12} | Threat: {threat_score:>5.2f} | Counters {matchup_count}/{len(self.current_pool)} of your champions"
+                        f"  {i}. {enemy:<12} | Menace : {threat_score:>5.2f} | Counter {matchup_count}/{len(self.current_pool)} de vos champions"
                     )
-                print(f"💡 These champions have good matchups against your pool")
+                print(f"💡 Ces champions ont de bons matchups contre votre pool")
             else:
                 if self.verbose:
-                    print(f"⚠️ No ban data available for your pool")
+                    print(f"⚠️ Aucune donnée de ban disponible pour votre pool")
 
         except Exception as e:
             if self.verbose:
-                print(f"[WARNING] Error showing ban recommendations: {e}")
+                print(f"[WARNING] Erreur lors de l'affichage des recommandations de ban: {e}")
 
     def _show_adaptive_ban_recommendations(self, state: DraftState):
         """Show ban recommendations adapted to enemy picks."""
@@ -1491,12 +1497,12 @@ class DraftMonitor:
             if not state.enemy_picks:
                 return
 
-            print(f"\n[ADAPTIVE BANS] 🎯 TARGETED BAN RECOMMENDATIONS")
+            print(f"\n[ADAPTIVE BANS] 🎯 RECOMMANDATIONS DE BAN CIBLÉES")
             print("-" * 50)
 
             # Get enemy champion names
             enemy_names = [self._get_display_name(champ_id) for champ_id in state.enemy_picks]
-            print(f"Enemy team has: {', '.join(enemy_names)}")
+            print(f"L'équipe ennemie a : {', '.join(enemy_names)}")
 
             # Try to get pre-calculated bans from database first (fast)
             ban_recommendations = None
@@ -1512,14 +1518,14 @@ class DraftMonitor:
                 )
 
             if ban_recommendations:
-                print(f"Priority bans to deny enemy synergies:")
+                print(f"Bans prioritaires pour neutraliser les synergies ennemies :")
                 for i, (enemy, threat_score, *_) in enumerate(ban_recommendations[:3], 1):
-                    print(f"  {i}. {enemy:<12} | Threat: {threat_score:>5.2f}")
-                print(f"💡 Focus on champions that synergize with their picks")
+                    print(f"  {i}. {enemy:<12} | Menace : {threat_score:>5.2f}")
+                print(f"💡 Ciblez les champions qui synergisent avec leurs picks")
 
         except Exception as e:
             if self.verbose:
-                print(f"[WARNING] Error showing adaptive ban recommendations: {e}")
+                print(f"[WARNING] Erreur lors de l'affichage des bans ciblés: {e}")
 
     def _select_champion_pool_by_name(self, pool_name: str) -> List[str]:
         """Charge une pool mémorisée par son nom, sans re-poser la question.
@@ -1551,14 +1557,14 @@ class DraftMonitor:
             pool_manager = PoolManager()
 
             print("\n" + "=" * 50)
-            print("SELECT CHAMPION POOL")
+            print("SÉLECTION DE LA POOL DE CHAMPIONS")
             print("=" * 50)
 
             # Show available pools
             pools = pool_manager.get_all_pools()
             pool_list = []
 
-            print("\nAvailable pools:")
+            print("\nPools disponibles :")
             idx = 1
             for name, pool in sorted(pools.items()):
                 pool_list.append((name, pool))
@@ -1569,15 +1575,15 @@ class DraftMonitor:
                 idx += 1
 
             # Add legacy options
-            print(f"\n  {idx}. Use Assistant's extended pool selector (legacy)")
+            print(f"\n  {idx}. Utiliser le sélecteur de pool étendu de l'assistant (legacy)")
 
             try:
-                choice = int(input(f"\nChoose pool (1-{idx}): ").strip())
+                choice = int(input(f"\nChoisissez une pool (1-{idx}) : ").strip())
 
                 if 1 <= choice <= len(pool_list):
                     selected_name, selected_pool = pool_list[choice - 1]
                     safe_print(
-                        f"✅ Using pool: {selected_name} ({', '.join(selected_pool.champions)})"
+                        f"✅ Pool utilisée : {selected_name} ({', '.join(selected_pool.champions)})"
                     )
                     # Store pool name for pre-calculated ban lookups
                     self.pool_name = selected_name
@@ -1587,18 +1593,18 @@ class DraftMonitor:
                     self.pool_name = None
                     return self.assistant.select_champion_pool()
                 else:
-                    print("[WARNING] Invalid choice, using default TOP pool")
+                    print("[WARNING] Choix invalide, utilisation de la pool TOP par défaut")
                     self.pool_name = "All Top Champions"  # System pool name
                     return CHAMPIONS_BY_ROLE["top"]
 
             except (ValueError, IndexError):
-                print("[WARNING] Invalid input, using default TOP pool")
+                print("[WARNING] Saisie invalide, utilisation de la pool TOP par défaut")
                 self.pool_name = "All Top Champions"
                 return CHAMPIONS_BY_ROLE["top"]
 
         except Exception as e:
-            print(f"[WARNING] Pool selection error: {e}")
-            print("Falling back to legacy pool selection...")
+            print(f"[WARNING] Erreur de sélection de pool: {e}")
+            print("Retour au sélecteur de pool legacy...")
             self.pool_name = None
             return self.assistant.select_champion_pool()
 
@@ -1619,21 +1625,21 @@ class DraftMonitor:
         clear_console()
 
         print("\n" + "=" * 80)
-        safe_print("🎮 FINAL DRAFT ANALYSIS - Individual Champion Scores")
+        safe_print("🎮 ANALYSE FINALE DU DRAFT - Scores individuels des champions")
         print("=" * 80)
 
         if not ally_picks or not enemy_picks:
-            print("[INFO] Incomplete draft - no final analysis available")
+            print("[INFO] Draft incomplet - aucune analyse finale disponible")
             return
 
         ally_names = [self._get_display_name(champ_id) for champ_id in ally_picks]
         enemy_names = [self._get_display_name(champ_id) for champ_id in enemy_picks]
 
-        print(f"\n[TEAMS] FINAL COMPOSITION:")
-        print(f"  Ally Team:  {' | '.join(ally_names)}")
-        print(f"  Enemy Team: {' | '.join(enemy_names)}")
+        print(f"\n[TEAMS] COMPOSITION FINALE :")
+        print(f"  Équipe alliée :  {' | '.join(ally_names)}")
+        print(f"  Équipe ennemie : {' | '.join(enemy_names)}")
 
-        safe_print(f"\n📊 TEAM PERFORMANCE ANALYSIS:")
+        safe_print(f"\n📊 ANALYSE DE PERFORMANCE D'ÉQUIPE :")
         print("-" * 60)
 
         ally_scores = []
@@ -1743,12 +1749,12 @@ class DraftMonitor:
                 return "🔴"
 
         # Display ALLY team performance (sorted)
-        safe_print(f"\n🟢 YOUR TEAM:")
+        safe_print(f"\n🟢 VOTRE ÉQUIPE :")
         safe_print(f"  {'Champion':<15} | Matchup | Synergy | Total")
         safe_print(f"  {'-'*15}-+---------+---------+-------")
         for champion_name, matchup_score, synergy_score, total_score in ally_scores:
             if matchup_score is None:
-                safe_print(f"  {champion_name:<15} | ❌ Insufficient data")
+                safe_print(f"  {champion_name:<15} | ❌ Données insuffisantes")
             else:
                 matchup_emoji = get_emoji(matchup_score)
                 synergy_emoji = get_emoji(synergy_score)
@@ -1759,12 +1765,12 @@ class DraftMonitor:
                 )
 
         # Display ENEMY team performance (sorted)
-        safe_print(f"\n🔴 ENEMY TEAM:")
+        safe_print(f"\n🔴 ÉQUIPE ENNEMIE :")
         safe_print(f"  {'Champion':<15} | Matchup | Synergy | Total")
         safe_print(f"  {'-'*15}-+---------+---------+-------")
         for champion_name, matchup_score, synergy_score, total_score in enemy_scores:
             if matchup_score is None:
-                safe_print(f"  {champion_name:<15} | ❌ Insufficient data")
+                safe_print(f"  {champion_name:<15} | ❌ Données insuffisantes")
             else:
                 matchup_emoji = get_emoji(matchup_score)
                 synergy_emoji = get_emoji(synergy_score)
@@ -1775,7 +1781,7 @@ class DraftMonitor:
                 )
 
         # Team summary comparison
-        safe_print(f"\n📈 DRAFT COMPARISON:")
+        safe_print(f"\n📈 COMPARAISON DU DRAFT :")
         print("-" * 40)
 
         # Calculate team winrates using total scores (matchup + synergy)
@@ -1792,12 +1798,12 @@ class DraftMonitor:
             ally_team_winrate = ally_team_stats["team_winrate"]
             ally_total = sum(ally_valid_scores)  # For display purposes
             safe_print(
-                f"  🟢 Your Team: {ally_total:+.2f}% total advantage → {ally_team_winrate:.2f}% team winrate"
+                f"  🟢 Votre équipe : {ally_total:+.2f}% d'avantage total → {ally_team_winrate:.2f}% de winrate d'équipe"
             )
         else:
             ally_team_winrate = 50.0
             ally_total = 0
-            safe_print(f"  🟢 Your Team: No valid data")
+            safe_print(f"  🟢 Votre équipe : Aucune donnée valide")
 
         if enemy_valid_scores:
             # Convert advantages to individual winrates
@@ -1807,12 +1813,12 @@ class DraftMonitor:
             enemy_team_winrate = enemy_team_stats["team_winrate"]
             enemy_total = sum(enemy_valid_scores)  # For display purposes
             safe_print(
-                f"  🔴 Enemy Team: {enemy_total:+.2f}% total advantage → {enemy_team_winrate:.2f}% team winrate"
+                f"  🔴 Équipe ennemie : {enemy_total:+.2f}% d'avantage total → {enemy_team_winrate:.2f}% de winrate d'équipe"
             )
         else:
             enemy_team_winrate = 50.0
             enemy_total = 0
-            safe_print(f"  🔴 Enemy Team: No valid data")
+            safe_print(f"  🔴 Équipe ennemie : Aucune donnée valide")
 
         # Normalize team winrates to ensure they sum to 100%
         if ally_team_winrate != 50.0 or enemy_team_winrate != 50.0:
@@ -1821,7 +1827,7 @@ class DraftMonitor:
             their_expected = (enemy_team_winrate / total_winrate) * 100.0
 
             safe_print(
-                f"\n  🎯 Expected Matchup (normalized): {our_expected:.2f}% vs {their_expected:.2f}%"
+                f"\n  🎯 Matchup attendu (normalisé) : {our_expected:.2f}% vs {their_expected:.2f}%"
             )
 
             # Overall assessment based on normalized winrates
@@ -1843,18 +1849,24 @@ class DraftMonitor:
                 model_version=analysis_config.MODEL_VERSION,
             )
         except Exception as e:
-            print(f"[WARNING] Failed to log prediction: {e}")
+            print(f"[WARNING] Échec de l'enregistrement de la prédiction: {e}")
 
         if draft_diff >= 5.0:
-            safe_print(f"  Assessment: ✅ Major draft advantage ({draft_diff:+.2f}% total edge)")
+            safe_print(
+                f"  Évaluation : ✅ Avantage de draft majeur ({draft_diff:+.2f}% d'écart total)"
+            )
         elif draft_diff >= 2.5:
-            safe_print(f"  Assessment: 🟡 Good draft advantage ({draft_diff:+.2f}% total edge)")
+            safe_print(
+                f"  Évaluation : 🟡 Bon avantage de draft ({draft_diff:+.2f}% d'écart total)"
+            )
         elif draft_diff >= -2.5:
-            safe_print(f"  Assessment: ➖ Even draft ({draft_diff:+.2f}% difference)")
+            safe_print(f"  Évaluation : ➖ Draft équilibré ({draft_diff:+.2f}% de différence)")
         elif draft_diff >= -5.0:
-            safe_print(f"  Assessment: 🟠 Draft disadvantage ({draft_diff:.2f}% behind)")
+            safe_print(f"  Évaluation : 🟠 Désavantage de draft ({draft_diff:.2f}% de retard)")
         else:
-            safe_print(f"  Assessment: 🔴 Major draft disadvantage ({draft_diff:.2f}% behind)")
+            safe_print(
+                f"  Évaluation : 🔴 Désavantage de draft majeur ({draft_diff:.2f}% de retard)"
+            )
 
         print("\n" + "=" * 80)
 
@@ -1868,7 +1880,7 @@ class DraftMonitor:
             # Clear cache to free memory
             self.assistant.clear_cache()
             self.assistant.close()
-        print("[PICK] Cleanup complete")
+        print("[PICK] Nettoyage terminé")
 
 
 def main():

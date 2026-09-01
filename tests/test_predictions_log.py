@@ -117,9 +117,9 @@ class TestDraftMonitorBestEffortLogging:
 
         assert monitor._last_prediction_id is None
         captured = capsys.readouterr()
-        assert "Failed to log prediction" in captured.out
+        assert "Échec de l'enregistrement de la prédiction" in captured.out
         # The rest of the analysis still ran (didn't bail out early).
-        assert "FINAL DRAFT ANALYSIS" in captured.out
+        assert "ANALYSE FINALE DU DRAFT" in captured.out
 
     def test_insert_prediction_success_stores_id(self, monitor):
         ally_ids, enemy_ids = self._wire_common_mocks(monitor)

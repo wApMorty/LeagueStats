@@ -111,7 +111,7 @@ class TestShowBanRecommendationsDraftExeMode:
 
             # Verify no ban recommendation header printed
             captured = capsys.readouterr()
-            assert "STRATEGIC BAN RECOMMENDATIONS" not in captured.out
+            assert "RECOMMANDATIONS DE BAN STRATÉGIQUES" not in captured.out
             assert "🛡️" not in captured.out
 
             # Verify no database calls were made
@@ -129,7 +129,7 @@ class TestShowBanRecommendationsDraftExeMode:
 
             # Verify header was printed (method executed)
             captured = capsys.readouterr()
-            assert "STRATEGIC BAN RECOMMENDATIONS" in captured.out
+            assert "RECOMMANDATIONS DE BAN STRATÉGIQUES" in captured.out
 
 
 class TestShowAdaptiveBanRecommendationsExeMode:
@@ -155,7 +155,7 @@ class TestShowAdaptiveBanRecommendationsExeMode:
             # Verify no adaptive ban header printed
             captured = capsys.readouterr()
             assert "ADAPTIVE BANS" not in captured.out
-            assert "TARGETED BAN RECOMMENDATIONS" not in captured.out
+            assert "RECOMMANDATIONS DE BAN CIBLÉES" not in captured.out
             assert "🎯" not in captured.out
 
             # Verify no database calls were made
@@ -179,7 +179,7 @@ class TestShowAdaptiveBanRecommendationsExeMode:
 
             # Verify header was printed (method executed)
             captured = capsys.readouterr()
-            assert "TARGETED BAN RECOMMENDATIONS" in captured.out
+            assert "RECOMMANDATIONS DE BAN CIBLÉES" in captured.out
 
     def test_show_adaptive_ban_recommendations_skip_if_no_enemy_picks(
         self, draft_monitor, draft_state, capsys
@@ -195,7 +195,7 @@ class TestShowAdaptiveBanRecommendationsExeMode:
 
             # Verify no output (early return due to no enemy picks)
             captured = capsys.readouterr()
-            assert "TARGETED BAN RECOMMENDATIONS" not in captured.out
+            assert "RECOMMANDATIONS DE BAN CIBLÉES" not in captured.out
 
 
 class TestExeModeGuardClauseCoverage:

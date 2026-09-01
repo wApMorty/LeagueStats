@@ -37,7 +37,7 @@ class TestFormatRoleTag:
 
     def test_user_forced_source(self, monitor):
         state = DraftState(inferred_roles={2350: "jungle"}, role_source={2350: "user"})
-        assert monitor._format_role_tag(2350, state) == " (jungle·forced)"
+        assert monitor._format_role_tag(2350, state) == " (jungle·forcé)"
 
     def test_inferred_high_confidence_no_warning(self, monitor):
         state = DraftState(

@@ -17,17 +17,17 @@ def _prompt_synergy_weight() -> float:
     while True:
         raw = input(
             f"Poids synergy vs matchup (0.0=matchup uniquement, 1.0=synergy uniquement) "
-            f"[defaut {default}]: "
+            f"[défaut {default}]: "
         ).strip()
         if not raw:
             return default
         try:
             value = float(raw)
         except ValueError:
-            print("[ERROR] Valeur invalide, entrez un nombre flottant entre 0.0 et 1.0.")
+            print("[ERREUR] Valeur invalide, entrez un nombre flottant entre 0.0 et 1.0.")
             continue
         if not (0.0 <= value <= 1.0):
-            print("[ERROR] La valeur doit etre comprise entre 0.0 et 1.0.")
+            print("[ERREUR] La valeur doit être comprise entre 0.0 et 1.0.")
             continue
         return value
 
@@ -54,17 +54,17 @@ def run_draft_coach(
         pool_name: Pool mémorisée (SPEC-06 D2) ; None = sélection interactive
     """
     clear_console()  # Clear console at start
-    print("[INFO] Starting Real-time Draft Coach...")
-    print("Make sure League of Legends client is running and start a game!")
+    print("[INFO] Démarrage du Draft Coach en temps réel...")
+    print("Assurez-vous que le client League of Legends est lancé et démarrez une partie !")
     if auto_hover:
-        print("🎯 [AUTO-HOVER] Champion auto-hover is ENABLED")
+        print("🎯 [AUTO-HOVER] Survol automatique des champions ACTIVÉ")
     if auto_accept_queue:
-        print("🔥 [AUTO-ACCEPT] Queue auto-accept is ENABLED")
+        print("🔥 [AUTO-ACCEPT] Acceptation automatique de la queue ACTIVÉE")
     if auto_ban_hover:
-        print("🚫 [AUTO-BAN-HOVER] Ban hover is ENABLED")
+        print("🚫 [AUTO-BAN-HOVER] Survol automatique des bans ACTIVÉ")
     if open_onetricks:
-        print("🌐 [ONETRICKS] Open champion page on draft completion is ENABLED")
-    print("Press Ctrl+C to stop monitoring.\n")
+        print("🌐 [ONETRICKS] Ouverture de la page du champion en fin de draft ACTIVÉE")
+    print("Appuyez sur Ctrl+C pour arrêter le suivi.\n")
 
     if synergy_weight is None:
         synergy_weight = _prompt_synergy_weight()
@@ -83,9 +83,9 @@ def run_draft_coach(
         )
         monitor.start_monitoring()
     except KeyboardInterrupt:
-        print("\n[INFO] Draft Coach stopped by user")
+        print("\n[INFO] Draft Coach arrêté par l'utilisateur")
     except Exception as e:
-        print(f"[ERROR] Draft coach error: {e}")
+        print(f"[ERREUR] Erreur du draft coach : {e}")
         if verbose:
             import traceback
 

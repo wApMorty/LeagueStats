@@ -7,10 +7,10 @@ def print_banner() -> None:
 ==================================================================
                       LEAGUE OF LEGENDS COACH
 
-  Complete toolkit for champion analysis and draft assistance
-  - Real-time draft monitoring
-  - Champion data management
-  - Statistical analysis and tier lists
+  Boîte à outils complète pour l'analyse de champions et l'aide au draft
+  - Suivi du draft en temps réel
+  - Gestion des données de champions
+  - Analyse statistique et tier lists
 ==================================================================
 """
     print(banner)
@@ -24,22 +24,22 @@ def print_main_menu() -> str:
         User's menu choice as string
     """
     menu = """
-MAIN MENU:
-  1. Real-time Draft Coach     - Monitor champion select and get live recommendations
-  2. Update Champion Data      - Fetch latest champions from Riot API
-  3. Parse Match Statistics    - Scrape matchup data (SoloQ Pool or All Champions)
-  4. Analysis & Tournament     - Statistical analysis and manual tournament coaching
-  5. Optimal Team Builder      - Find best champion combinations
-  6. Manage Champion Pools     - Create, edit, and manage custom champion pools
-  7. Exit
+MENU PRINCIPAL :
+  1. Draft Coach en temps réel  - Suivre le champion select et recevoir des recommandations
+  2. Mettre à jour les données  - Récupérer les derniers champions depuis l'API Riot
+  3. Analyser des statistiques  - Scraper les données de matchups (Pool SoloQ ou tous les champions)
+  4. Analyse & Tournoi          - Analyse statistique et coaching manuel de tournoi
+  5. Constructeur d'équipe      - Trouver les meilleures combinaisons de champions
+  6. Gérer les pools            - Créer, modifier et gérer des pools de champions personnalisées
+  7. Quitter
 
-Choose an option (1-7): """
+Choisissez une option (1-7) : """
     return input(menu).strip()
 
 
 def print_requirements() -> None:
     """Print system requirements for real-time draft coach."""
-    print("\nREQUIREMENTS:")
-    print("- League Client must be running")
-    print("- You must be in champion select")
+    print("\nPRÉREQUIS :")
+    print("- Le client League of Legends doit être lancé")
+    print("- Vous devez être en champion select")
     print()
