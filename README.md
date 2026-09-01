@@ -1,172 +1,106 @@
-# League Stats Coach
+# LeagueStats Coach
 
-[![CI/CD Pipeline](https://github.com/pj35/LeagueStats/actions/workflows/ci.yml/badge.svg)](https://github.com/pj35/LeagueStats/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/pj35/LeagueStats/graph/badge.svg)](https://codecov.io/gh/pj35/LeagueStats)
+[![CI/CD Pipeline](https://github.com/wApMorty/LeagueStats/actions/workflows/ci.yml/badge.svg)](https://github.com/wApMorty/LeagueStats/actions/workflows/ci.yml)
 [![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-Advanced draft coaching and champion analysis tool for League of Legends.
+Outil personnel d'analyse et de coaching de draft pour League of Legends : recommandations de picks/bans en direct pendant la sélection des champions, et recherche de compositions d'équipe optimales à partir de statistiques de matchups scrapées sur LoLalytics.
 
-## Quick Start
+## Démarrage
 
-### Run the Application
 ```bash
+pip install -r requirements.txt
 python lol_coach.py
 ```
 
-### Legacy Mode
+Menu principal :
+
+1. **Draft Coach en temps réel** — suit le champion select via le client League of Legends (LCU) et recommande picks/bans
+2. **Mettre à jour les données** — récupère la liste des champions depuis l'API Riot
+3. **Analyser des statistiques** — scrape les matchups (pool SoloQ ou tous les champions)
+4. **Analyse & Tournoi** — analyse statistique et coaching manuel de tournoi
+5. **Constructeur d'équipe** — recherche des meilleures combinaisons de champions (duos/trios)
+6. **Gérer les pools** — création et gestion de pools de champions personnalisées
+7. Quitter
+
+## Mise à jour des données
+
+Les statistiques de matchups sont scrapées sur LoLalytics avec Selenium/Firefox, en parallèle sur les 5 rôles (top/jungle/mid/bottom/support). Un scrape complet prend environ **45 minutes** avec 5 workers.
+
 ```bash
-python main.py
+python scripts/update_all.py
 ```
 
-## Features
+C'est l'implémentation de référence (contrôle de complétude, sauvegarde avant réécriture, log dans `logs/update_all.log`). Le menu 3 de `lol_coach.py` s'appuie sur le même pipeline.
 
-- **Real-time Draft Coach** - Live recommendations during champion select with ban analysis
-- **Team Builder** - Find optimal champion trios/duos with holistic evaluation (17 advanced algorithms)
-- **Multi-Role Pools** - Support for top, support, jungle, mid, adc roles
-- **Auto-Update Database** - 🔄 **Automated daily updates** via Task Scheduler (zero manual maintenance)
-- **Parallel Web Scraping** - ⚡ **87% faster** data updates (12min vs 90-120min) with 10 concurrent workers
-- **Live Progress Tracking** - Real-time podium display during trio optimization
-- **Standalone Distribution** - Portable executable for any Windows PC
-- **Remote Access** - 🌐 **PostgreSQL Direct Mode** for playing away from home (gaming café, travel)
-
-## Data Modes
-
-LeagueStats Coach supports **3 data access modes** configured in `src/config_constants.py`:
-
-### Mode 1: SQLite Local (Default)
-```python
-api_config.MODE = "sqlite_only"
-```
-- **Best for**: Home usage, maximum performance
-- **Data source**: Local SQLite database (`data/db.db`)
-- **Performance**: <10ms queries (instant)
-- **Offline**: Works without internet (after initial setup)
-
-### Mode 2: PostgreSQL Remote
-```python
-api_config.MODE = "postgresql_only"
-```
-- **Best for**: Gaming café, friend's house, travel
-- **Data source**: PostgreSQL Neon cloud database (direct connection)
-- **Performance**: 100-300ms queries (network latency)
-- **Requirements**: Internet connection
-
-### Mode 3: Hybrid (Fallback)
-```python
-api_config.MODE = "hybrid"
-```
-- **Best for**: Reliability (try remote, fallback local)
-- **Data source**: PostgreSQL primary, SQLite fallback
-- **Performance**: Varies (depends on network)
-- **Use case**: Unstable network conditions
-
-**Recommended**:
-- At home: `sqlite_only` (maximum performance)
-- Away from home: `postgresql_only` (access your data remotely)
+Il n'y a pas de mise à jour automatique planifiée : l'automatisation nocturne a été désactivée par choix, la mise à jour reste manuelle.
 
 ## Distribution
 
-Create a portable version for Gaming House or other PCs:
+Créer un exécutable Windows portable (aucun Python requis sur le PC cible) :
 
 ```bash
-python build_app.py           # Build executable
-python create_package.py      # Create ZIP package
+python build_app.py           # Génère l'exécutable
+python create_package.py      # Génère le ZIP de distribution
 ```
 
-Result: `LeagueStatsCoach_Portable.zip` ready for distribution.
-
-## Project Structure
+## Structure du projet
 
 ```
 LeagueStats/
-├── lol_coach.py          # Main application entry point
-├── main.py               # Legacy entry point  
-├── build_app.py          # Build executable
-├── create_package.py     # Create distribution ZIP
-├── src/                  # Source code modules
-├── data/                 # Database and data files  
-├── docs/                 # Documentation
-└── README.md             # This file
+├── lol_coach.py          # Point d'entrée de l'application
+├── build_app.py           # Build de l'exécutable
+├── create_package.py      # Empaquetage de la distribution
+├── scripts/
+│   └── update_all.py      # Pipeline de mise à jour des données (référence)
+├── src/
+│   ├── analysis/          # Algorithmes de scoring, agrégation, tier lists
+│   ├── ui/                # Menus et affichage
+│   ├── db.py, config.py, config_constants.py, ...
+│   └── ...
+├── data/db.db              # Base SQLite (champions, matchups, synergies)
+├── tests/                  # Suite pytest
+└── docs/                   # Documentation (specs, audits, guides)
 ```
 
-## Requirements
+## Prérequis
 
-**Development:**
 - Python 3.13+
-- Dependencies: `pip install -r requirements.txt`
-- Firefox browser (for web scraping)
+- Firefox (scraping des matchups)
+- Client League of Legends en cours d'exécution (pour le Draft Coach en temps réel, via l'API LCU locale)
 
-**Distribution:**
-- No Python required on target PC
-- Windows 10/11
-- League of Legends installed
-- Firefox browser (for parsing updates)
+Pour la version distribuée (exécutable) : Windows 10/11, League of Legends installé, Firefox pour les mises à jour de données. Aucun Python requis.
+
+## Base de données
+
+SQLite uniquement (`data/db.db`), en local. Contenu à titre indicatif — évolue à chaque scrape, voir `data/db.db` (table `db_meta`) pour l'état courant :
+
+- ~173 champions
+- ~25 000 matchups par rôle
+- pools de champions personnalisées
+
+Migrations de schéma : Alembic (voir `docs/alembic_guide.md`).
+
+## Tests
+
+```bash
+pytest tests/ -v
+```
+
+La CI mesure la couverture sur tout `src/` avec un seuil minimum de 45 % (`pyproject.toml`), destiné à monter au fil des chantiers.
 
 ## Documentation
 
-- **User Guide:** `docs/CLAUDE.md`
-- **Architecture:** `docs/PROJECT_STRUCTURE.md`
-- **Auto-Update Setup:** `docs/AUTO_UPDATE_SETUP.md` - Daily database automation
-- **Build Tools:** `build_app.py` and `create_package.py` scripts
+- `CLAUDE.md` — instructions de développement et conventions du projet
+- `TODO.md` — backlog priorisé
+- `docs/specs/` — spécifications d'implémentation par chantier
+- `docs/DATABASE_STRUCTURE.md` — schéma de la base
+- `docs/alembic_guide.md` — commandes de migration
 
-## Database
+## Historique des versions
 
-The application includes a complete database with:
-- **172 champions** (including Zaahen, Yunara) with current statistics
-- **36,000+ matchup records** with win rates and performance metrics
-- **Role-specific pools** for targeted analysis
-- **Auto-updates daily** via Task Scheduler (3 AM default, zero maintenance)
-- **Parallel scraping** updates all data in **12 minutes** (87% faster than before)
-
-Database location: `data/db.db`
-
-**Setup auto-update**: See [docs/AUTO_UPDATE_SETUP.md](docs/AUTO_UPDATE_SETUP.md) for 3-step setup guide
-
-## Recent Updates
-
-### Version 1.1.0-dev - Auto-Update & Performance (2025-12-22)
-
-**🔄 Automation Breakthrough:**
-- 🤖 **Auto-Update Database** - Daily automated updates via Task Scheduler
-- 🔕 **Background execution** - Low priority, no PC blocking
-- 🔔 **Windows notifications** - Success/failure alerts (win10toast)
-- 📊 **Detailed logging** - Full operation history in `logs/auto_update.log`
-- ⚙️ **3-step setup** - PowerShell wizard for Task Scheduler
-
-**🚀 Performance Breakthrough:**
-- ⚡ **Parallel web scraping** - 87% faster data updates (12min vs 90-120min)
-- 🔧 10 concurrent workers optimized for multi-core CPUs
-- 🔄 Automatic retry with exponential backoff for reliability
-- 📊 Real-time progress tracking with live podium display
-
-**✨ Advanced Features:**
-- 🎯 **54 Assistant methods** including holistic trio analysis (17 algorithms)
-- 🏆 Live podium display during champion optimization
-- 🚫 Intelligent ban recommendations with reverse lookup strategy
-- 📈 Competitive draft simulation (blue/red side)
-- 🎮 172 champions supported (including new champions Zaahen, Yunara)
-
-**🧪 Quality & Maintainability:**
-- ✅ 89% test coverage on analysis module
-- ✅ Modular architecture (<500 lines/file)
-- ✅ Database migrations with Alembic
-- ✅ Zero SQL injection vulnerabilities
-
-See `CHANGELOG.md` for detailed version history.
+Voir `CHANGELOG.md`.
 
 ---
 
-### Version 1.0.1 - Security & Performance Update (2025-11-27)
-
-**Security Fixes:**
-- ✅ Fixed SQL injection vulnerabilities (6 locations in `src/db.db`)
-- ✅ All database queries now use parameterized queries
-
-**Performance Improvements:**
-- ✅ Added 6 database indexes for faster queries (50-80% improvement)
-- ✅ Automatic index creation on database connection
-
----
-
-**Version:** 1.3.0
+**Version** : 1.3.0
