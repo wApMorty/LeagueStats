@@ -6,6 +6,64 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Ajouts
 
+- **SPEC-05 (B7) — modèle de score en log-odds.** `delta2_to_win_advantage()` était
+  l'identité (`delta2 * 1.0`), affichée telle quelle comme un pourcentage de winrate,
+  et `calculate_team_winrate()` combinait les winrates individuelles par moyenne
+  géométrique, bornée à [25 %, 75 %] pour masquer les sorties absurdes que ce calcul
+  produisait (SPEC-05 §1.2-1.3). Les deux défauts partagent la même cause : les
+  probabilités ne s'additionnent pas et se multiplient mal, alors que leur log-odds
+  (`logit(p) = ln(p/(1-p))`) s'additionne naturellement.
+  - Nouveau module `src/analysis/probability.py` : `logit`/`sigmoid` (inverses l'un de
+    l'autre, jamais d'exception ni de 0/1 exact dans le domaine réaliste de l'app) et
+    `winrate_points_to_logit` (pente `LOGIT_PER_WINRATE_POINT = 0.04`, la dérivée du
+    logit en p=0,5 : +1 point de winrate ≈ +0,04 en log-odds).
+  - Nouvelles constantes `AnalysisConfig` : `LOGIT_PER_WINRATE_POINT = 0.04`,
+    `K_MATCHUP = 1.0`, `K_SYNERGY = 0.5` (remplace
+    `SynergyConfig.SYNERGY_BONUS_MULTIPLIER`, supprimée — les deux ne devaient jamais
+    coexister, cf. SPEC-05 §7), `MODEL_VERSION = "b7-v1"` (à incrémenter à chaque
+    changement de coefficient, pour ne jamais mélanger deux calibrations). Valeurs de
+    départ approuvées par @pj35, à calibrer une fois `predictions` alimentée.
+  - **Scope complet** : `delta2_to_win_advantage` (signature réduite à 1 argument, le
+    paramètre `champion_name` était déjà inutilisé) renvoie désormais un log-odds
+    interne — jamais affiché brut. `score_against_team` compose ses trois termes
+    internes en log-odds et ne convertit qu'une seule fois, à la toute fin, via
+    `sigmoid`, en écart de probabilité saturant (toujours en points de pourcentage,
+    même contrat de retour pour tous les appelants existants). `calculate_team_winrate`
+    délègue à une nouvelle fonction pure `estimate_win_probability` (somme des log-odds
+    individuels puis `sigmoid`) — plus de clamp, plus de moyenne géométrique.
+  - Exemple concret (`k_m = 1.0`) : `delta2 = 3,40` → `3,3948 %` (avant : `3,4000 %`,
+    quasi identique pour un matchup typique) ; `delta2 = 30,00` → `26,8525 %` (avant :
+    `30,0000 %`, la saturation apparaît nettement à cette échelle) ; aux extrêmes
+    réelles de la base (`delta2 = -51,43` / `+31,74`, cf. SPEC-05 §1.2) : `-38,6673 %`
+    / `+28,0674 %` au lieu de `-51,4300 %` / `+31,7400 %` — les pourcentages absurdes
+    (>50 %, >100 % cumulés sur plusieurs contre-picks) disparaissent, c'est l'effet
+    recherché.
+  - Table `predictions` (migration `2551bbcc9eb8`, `python -m alembic upgrade head`
+    testée avec rollback `downgrade -1`) : journalise `(ally_champions, enemy_champions,
+    ally_lanes, predicted_probability, model_version, outcome)` en best-effort
+    (`try/except`, ne bloque jamais le draft) depuis `DraftMonitor._calculate_final_scores`.
+    Nouvelles méthodes `Database.insert_prediction`/`update_prediction_outcome`/
+    `get_latest_prediction_id` (requêtes paramétrées, style `save_pool_ban_recommendations`).
+  - **Journalisation par commande manuelle, pas par hook LCU automatique** : la spec
+    autorise explicitement cette option si le hook `gameflow`/`EndOfGame` s'avère trop
+    fragile — automatiser la détection de fin de partie sans pouvoir tester contre un
+    vrai client LCU aurait été spéculatif. Commande `outcome win`/`outcome loss` tapée
+    dans le terminal du draft coach (étend le mécanisme de commandes de SPEC-04 B5,
+    même thread stdin daemon), met à jour la dernière prédiction journalisée
+    (`DraftMonitor._last_prediction_id`) ; message clair si aucune prédiction n'est en
+    attente.
+  - `scripts/calibrate_model.py` (nouveau, diagnostic seul, aucune écriture) : courbe de
+    calibration par décile, score de Brier, et une suggestion de facteur d'échelle
+    `k_m`/`k_s` via une régression logistique à 1 paramètre écrite à la main (descente
+    de gradient pure Python — aucune dépendance nouvelle, `numpy`/`scipy`/`sklearn`
+    explicitement hors périmètre). Message clair si moins de 30 lignes labellisées.
+  - Tests : `tests/test_probability.py`, `tests/test_win_probability.py`,
+    `tests/test_predictions_log.py`, `tests/regression/test_regression_no_clamp.py`
+    (nouveaux) ; `tests/test_scoring.py`, `tests/test_bidirectional_scoring.py`,
+    `tests/test_regression_banned_champions.py`, `tests/test_regression_synergies.py`
+    (valeurs recalculées, chacune commentée) ; `tests/test_db_nocase_index.py` (chaîne
+    de migrations mise à jour avec la nouvelle tête).
+
 - **SPEC-05 (B6) — composer `pickrate × confiance(games)`.** Le filtre de qualité
   (`MIN_MATCHUP_GAMES = 200`) était binaire : au-delà du seuil, un matchup à 210
   parties pesait exactement autant qu'un à 26 354. La pondération par `pickrate`
