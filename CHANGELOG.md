@@ -2,7 +2,16 @@
 
 All notable changes to LeagueStats Coach will be documented in this file.
 
-## [Unreleased] - 2026-09-01
+## [1.3.0] - 2026-09-01
+
+### 🔧 Chore
+
+- **SPEC-07 (E1, E4, E5, E6)** — dette et hygiène : couverture mesurée sur `src/`
+  entier (seuil 45 %, était 70 % sur `src/analysis` seul) ; numéro de version
+  unifié (`src/__init__.py`, `CLAUDE.md`, ce fichier) ; fichiers parasites
+  trackés et résidus disque (Neon, Playwright) nettoyés ; suite de tests
+  isolée de `data/db.db` et `logs/update_all.log` (fixtures autouse +
+  test de garde sur les mtimes).
 
 ### ✨ Ajouts
 
@@ -466,42 +475,6 @@ Aucun changement de comportement fonctionnel.
   `xfail(strict=True)` dans `tests/test_regression_get_synergy_delta2.py`. **Non corrigée**
   ici : cette passe ne change aucun comportement d'analyse.
 
-## [1.2.0] - 2026-02-11
-
-### ✨ Features
-
-- **NEW**: PostgreSQL Direct Mode for remote data access (PR #TBD)
-  - **Problem**: API FastAPI timeout (60s+) on Render free tier, cannot play away from home without USB drive
-  - **Solution**: Direct PostgreSQL Neon connection (no API intermediary)
-    - Client .exe connects directly to PostgreSQL Neon cloud database
-    - 3 data access modes: `sqlite_only` (default), `postgresql_only` (remote), `hybrid` (fallback)
-    - ROT13 + Base64 obfuscation for connection string security
-    - READ-ONLY PostgreSQL user (GRANT SELECT only, zero risk)
-    - Latency: 100-300ms (vs 60s+ timeout API FastAPI)
-  - **Architecture**: Eliminates API FastAPI + Render hosting (cost $0/month vs $21/month)
-  - **Use cases**:
-    - At home: `sqlite_only` (<10ms queries, maximum performance)
-    - Gaming café / travel: `postgresql_only` (remote access to your data)
-    - Unstable network: `hybrid` (try PostgreSQL, fallback SQLite)
-  - **Files created**:
-    - `src/credentials.py` - ROT13 + Base64 obfuscation module
-    - `src/postgresql_data_source.py` - PostgreSQL adapter (DataSource interface)
-    - `tests/test_credentials.py` - 9 unit tests (100% pass)
-    - `tests/test_postgresql_data_source.py` - 12 unit tests (100% pass)
-    - `tests/test_hybrid_data_source_e2e.py` - 9 E2E tests (skip if DATABASE_URL not set)
-  - **Files modified**:
-    - `src/hybrid_data_source.py` - Replaced APIDataSource with PostgreSQLDataSource
-    - `requirements.txt` - Added sqlalchemy[asyncio], asyncpg, greenlet
-    - `LeagueStatsCoach.spec` - Included asyncpg native binaries for PyInstaller
-  - **Security**: READ-ONLY user, public data (LoL stats), obfuscated credentials (ROT13+Base64)
-  - **Documentation**: README.md updated with 3 data modes + use cases
-
-### 🗑️ Removed
-
-- API FastAPI integration (APIDataSource replaced by PostgreSQLDataSource)
-  - No longer uses Render hosting or API REST endpoints
-  - Direct PostgreSQL connection reduces latency by 50-90%
-
 ## [Unreleased]
 
 ### 🐛 Fix — Pools Système dynamiques & homogénéisation lane (issue #41, 2026-07-23)
@@ -627,7 +600,7 @@ Voir `docs/AUDIT_2026_06.md` et `docs/ROADMAP_2026.md` (décisions stratégiques
 
 ### 🐛 Fixes
 
-- **CRITICAL**: Fixed auto-update scraping failure in Task Scheduler (PR #TBD)
+- **CRITICAL**: Fixed auto-update scraping failure in Task Scheduler
   - **Root cause**: `pythonw.exe` (Task Scheduler) cannot launch GUI Firefox windows
   - **Impact**: Auto-update was deleting database (DROP TABLE matchups) without scraping new data
   - **Logs showed**: `0/172 champions succeeded, 172 failed` daily since 2025-12-23
@@ -645,7 +618,7 @@ Voir `docs/AUDIT_2026_06.md` et `docs/ROADMAP_2026.md` (décisions stratégiques
 
 ### ✨ Features
 
-- **NEW**: Automated log rotation system (PR #TBD)
+- **NEW**: Automated log rotation system
   - **Problem**: `auto_update.log` grows to 1+ GB, no automatic cleanup
   - **Solution**: PowerShell scripts for automated log management
     - `scripts/rotate_logs.ps1` - Rotate logs when exceeding size threshold (default: 50 MB)
@@ -703,6 +676,42 @@ Tested with `pythonw.exe` (Task Scheduler environment):
 [2025-12-29 17:05:23] SUCCESS: Auto-update completed successfully
 ```
 
+## [1.2.0] - 2026-02-11
+
+### ✨ Features
+
+- **NEW**: PostgreSQL Direct Mode for remote data access
+  - **Problem**: API FastAPI timeout (60s+) on Render free tier, cannot play away from home without USB drive
+  - **Solution**: Direct PostgreSQL Neon connection (no API intermediary)
+    - Client .exe connects directly to PostgreSQL Neon cloud database
+    - 3 data access modes: `sqlite_only` (default), `postgresql_only` (remote), `hybrid` (fallback)
+    - ROT13 + Base64 obfuscation for connection string security
+    - READ-ONLY PostgreSQL user (GRANT SELECT only, zero risk)
+    - Latency: 100-300ms (vs 60s+ timeout API FastAPI)
+  - **Architecture**: Eliminates API FastAPI + Render hosting (cost $0/month vs $21/month)
+  - **Use cases**:
+    - At home: `sqlite_only` (<10ms queries, maximum performance)
+    - Gaming café / travel: `postgresql_only` (remote access to your data)
+    - Unstable network: `hybrid` (try PostgreSQL, fallback SQLite)
+  - **Files created**:
+    - `src/credentials.py` - ROT13 + Base64 obfuscation module
+    - `src/postgresql_data_source.py` - PostgreSQL adapter (DataSource interface)
+    - `tests/test_credentials.py` - 9 unit tests (100% pass)
+    - `tests/test_postgresql_data_source.py` - 12 unit tests (100% pass)
+    - `tests/test_hybrid_data_source_e2e.py` - 9 E2E tests (skip if DATABASE_URL not set)
+  - **Files modified**:
+    - `src/hybrid_data_source.py` - Replaced APIDataSource with PostgreSQLDataSource
+    - `requirements.txt` - Added sqlalchemy[asyncio], asyncpg, greenlet
+    - `LeagueStatsCoach.spec` - Included asyncpg native binaries for PyInstaller
+  - **Security**: READ-ONLY user, public data (LoL stats), obfuscated credentials (ROT13+Base64)
+  - **Documentation**: README.md updated with 3 data modes + use cases
+
+### 🗑️ Removed
+
+- API FastAPI integration (APIDataSource replaced by PostgreSQLDataSource)
+  - No longer uses Render hosting or API REST endpoints
+  - Direct PostgreSQL connection reduces latency by 50-90%
+
 ## [1.1.0] - 2025-12-29
 
 **🎉 RELEASE MAJEURE - Sprints 1 & 2 Complétés**
@@ -759,7 +768,7 @@ Cette version marque la complétion de deux sprints majeurs axés sur la dette t
   - Top 3 rankings with medals (🥇🥈🥉)
   - Progress bar with percentage and viable count
   - ANSI escape codes for in-place terminal updates
-- **Pool Statistics Viewer** (Tâche #5, PR #TBD)
+- **Pool Statistics Viewer** (Tâche #5)
   - **Comprehensive statistical analysis** for champion pools
   - **Distribution metrics**: mean, median, min, max, standard deviation, variance
   - **Coverage analysis**: champions with/without sufficient data, percentage
@@ -768,7 +777,7 @@ Cette version marque la complétion de deux sprints majeurs axés sur la dette t
   - **Integrated into Pool Manager** as Menu option 8
   - **15 unit tests** with 100% pass rate
 - **New champions support**: Zaahen (TOP), Yunara (ADC)
-- **Bidirectional advantage calculation** in draft coach (Tâche #TBD, PR #TBD)
+- **Bidirectional advantage calculation** in draft coach
   - **More accurate predictions** accounting for matchup asymmetry
   - Combines two perspectives: our advantage vs their advantage
   - Formula: `net_advantage = our_advantage - enemy_advantage_against_us`
@@ -784,7 +793,7 @@ Cette version marque la complétion de deux sprints majeurs axés sur la dette t
 
 ### 🐛 Fixes
 
-- **CRITICAL**: Fixed live coach performance and UX issues (PR #TBD)
+- **CRITICAL**: Fixed live coach performance and UX issues
   - **Ban recommendations spam**: Now show ONLY during ban phase (before any picks)
     - Root cause: Phase name "BAN_PICK" contains "BAN" → rewrote `_is_ban_phase()` to check picks count
     - Impact: Clean draft experience, no more spam on every pick

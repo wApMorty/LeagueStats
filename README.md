@@ -169,5 +169,4 @@ See `CHANGELOG.md` for detailed version history.
 
 ---
 
-**Version:** 1.1.0-dev (Sprint 2 in progress)
-**Ready for Gaming House deployment** 🎮
+**Version:** 1.3.0
