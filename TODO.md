@@ -4,6 +4,8 @@
 **Source** : [docs/AUDIT_2026_08.md](docs/AUDIT_2026_08.md) · [docs/BACKLOG_2026_08.md](docs/BACKLOG_2026_08.md)
 **Specs d'implémentation** : [docs/specs/](docs/specs/) — une spec autoportante par chantier.
 
+> **Backlog entièrement soldé** (2026-09-01) : les sept chantiers SPEC-01 à SPEC-07 sont tous cochés. Prochaine étape : relire `docs/AUDIT_2026_08.md`/`docs/BACKLOG_2026_08.md` pour identifier le prochain cycle de travail, ou attendre un nouveau signalement utilisateur.
+>
 > L'ancien TODO.md (2 573 lignes, tâches #1 à #18) est **entièrement soldé ou annulé** : ce qui devait être fait l'a été, le reste a été tranché par `docs/ROADMAP_2026.md` (SQLite only, outil personnel, pas de SaaS, pas de Playwright). Il reste consultable dans l'historique git : `git show ef7c193:TODO.md`.
 
 ---
@@ -82,8 +84,8 @@
 | E6 | ✅ Isoler les tests (log et BD de production touchés) | 8 | 3 | 2,7 |
 | E7 | ✅ Sortir les seuils métier restants vers `config_constants` | 5 | 2 | 2,5 |
 | E8 | ✅ Corriger la casse dans `calculate_synergy_bonus` | 5 | 1 | 5,0 |
-| E9 | 🟡 Démanteler `lol_coach_legacy.py` (2 045 l., 14 % couvert) — fait ; la traduction D3 restante (menus 3-6, texte déplacé verbatim) reste à faire | 8 | 13 | 0,6 |
-| E10 | Dégraisser `assistant.py` (2 230 l.) et `draft_monitor.py` (1 547 l.) | 8 | 13 | 0,6 |
+| E9 | ✅ Démanteler `lol_coach_legacy.py` (2 045 l., 14 % couvert) | 8 | 13 | 0,6 |
+| E10 | ✅ Dégraisser `assistant.py` (2 246→491 l.) et `draft_monitor.py` (1 893→428 l.) | 8 | 13 | 0,6 |
 
 ---
 

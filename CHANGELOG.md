@@ -16,6 +16,24 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ♻️ Refactor
 
+- **SPEC-07 (E10)** — `src/assistant.py` (2246 → 491 lignes) et
+  `src/draft_monitor.py` (1893 → 428 lignes) démantelés en une vingtaine
+  de modules par domaine sous `src/analysis/` et le nouveau package
+  `src/draft/`, tous deux désormais sous le plafond de 500 lignes.
+  Déplacement de code verbatim (aucun changement de comportement),
+  même pattern de composition que E9 : les deux classes deviennent des
+  façades minces qui délèguent. `Assistant.db` devient une property qui
+  reconstruit les composants à chaque rebranchement (bug latent trouvé
+  en route : plusieurs tests rebranchaient `assistant.db` après
+  construction sans que les composants suivent, requêtant la base de
+  production au lieu de la base de test). ~180 lignes de code mort et
+  cassé supprimées (`Assistant.draft()`/`competitive_draft()`/
+  `blind_pick()`, qui appelaient une méthode inexistante). 176 tests de
+  caractérisation ajoutés en amont sur les zones à 0 % de couverture qui
+  allaient être déplacées, dont plusieurs bugs latents délibérément
+  figés (pas corrigés) : la section "WEAK AGAINST" de l'analyse
+  tactique de trio qui ne s'affiche jamais, `_handle_ready_check` qui
+  ignore `auto_accept_queue`. 953 tests passent au total.
 - **SPEC-07 (E9)** — `src/ui/lol_coach_legacy.py` (2045 lignes, 14 % couvert)
   démantelé en 9 modules par domaine de menu (`checks.py`,
   `pool_selection_ui.py`, `data_update_ui.py`, `tier_list_ui.py`,
