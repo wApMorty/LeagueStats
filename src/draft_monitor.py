@@ -2,13 +2,11 @@ import time
 import json
 import subprocess
 import os
-import logging
 import queue
 import tempfile
 import threading
 from pathlib import Path
 from typing import Dict, List, Optional, Set
-from dataclasses import dataclass, field
 from .lcu_client import LCUClient
 from .assistant import Assistant
 from .utils.display import safe_print
@@ -23,67 +21,9 @@ from .config_constants import (
     ui_config,
 )
 from .role_inference import infer_team_roles
-
-# Dedicated logger for memory diagnostics. Writes to logs/draft_monitor_memory.log
-# so the RSS trace survives the frequent console clears during a draft session.
-_mem_logger = logging.getLogger("leaguestats.draft_monitor.memory")
-
-
-def _get_memory_logger() -> logging.Logger:
-    """Lazily attach a file handler for the memory diagnostics logger."""
-    if not _mem_logger.handlers:
-        try:
-            log_dir = Path(__file__).resolve().parent.parent / "logs"
-            log_dir.mkdir(exist_ok=True)
-            handler = logging.FileHandler(log_dir / "draft_monitor_memory.log", encoding="utf-8")
-            handler.setFormatter(logging.Formatter("[%(asctime)s] %(message)s"))
-            _mem_logger.addHandler(handler)
-            _mem_logger.setLevel(logging.INFO)
-            _mem_logger.propagate = False
-        except Exception:
-            # Diagnostics must never break the monitor; degrade silently.
-            _mem_logger.addHandler(logging.NullHandler())
-    return _mem_logger
-
-
-@dataclass
-class ChampionAction:
-    """Represents a champion pick/ban action."""
-
-    champion_id: int
-    champion_name: str
-    actor_cell_id: int
-    action_type: str  # "pick" or "ban"
-    is_ally: bool
-    completed: bool
-
-
-@dataclass
-class DraftState:
-    """Current state of the draft."""
-
-    phase: str = ""
-    ally_picks: List[str] = field(default_factory=list)
-    enemy_picks: List[str] = field(default_factory=list)
-    ally_bans: List[str] = field(default_factory=list)
-    enemy_bans: List[str] = field(default_factory=list)
-    current_actor: Optional[int] = None
-    local_player_cell_id: Optional[int] = None
-    # SPEC-04 B3: lane info, filled from the LCU (ally_positions) and later
-    # inferred by role_inference.py (B4) for all 10 players.
-    ally_positions: Dict[int, str] = field(default_factory=dict)  # cellId -> lane
-    inferred_roles: Dict[int, str] = field(default_factory=dict)  # championId -> lane
-    role_confidence: Dict[int, float] = field(default_factory=dict)  # championId -> [0,1]
-    # SPEC-04 B5: championId -> "lcu" | "inferred" | "user" (manual correction).
-    role_source: Dict[int, str] = field(default_factory=dict)
-
-    def get_all_picks(self) -> List[str]:
-        """Get all picked champions."""
-        return self.ally_picks + self.enemy_picks
-
-    def get_all_actions(self) -> List[str]:
-        """Get all picks and bans."""
-        return self.ally_picks + self.enemy_picks + self.ally_bans + self.enemy_bans
+from .draft.state import ChampionAction, DraftState
+from .draft import phases
+from .draft.memory_diagnostics import log_memory_usage
 
 
 class DraftMonitor:
@@ -305,34 +245,9 @@ class DraftMonitor:
         """Stop monitoring."""
         self.is_monitoring = False
 
-    # Log RSS roughly every 5 minutes (POLL_INTERVAL is 1s by default).
-    _MEMORY_LOG_INTERVAL = 300
-
     def _log_memory_usage(self, force: bool = False) -> None:
-        """Record the process RSS to logs/draft_monitor_memory.log periodically.
-
-        This is a lightweight diagnostic to determine whether the monitor's own
-        Python process grows over a long session (a leak to bisect) or stays flat
-        (pointing at an external cause such as accumulating browser tabs).
-
-        Args:
-            force: If True, log immediately regardless of the interval.
-        """
-        if not force and self._loop_count % self._MEMORY_LOG_INTERVAL != 0:
-            return
-        try:
-            import psutil
-
-            rss_mb = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
-            _get_memory_logger().info(
-                "iteration=%d rss=%.1fMB onetricks_window=%s",
-                self._loop_count,
-                rss_mb,
-                "open" if self._onetricks_proc and self._onetricks_proc.poll() is None else "none",
-            )
-        except Exception:
-            # Diagnostics must never interrupt monitoring.
-            pass
+        """Record the process RSS to logs/draft_monitor_memory.log periodically."""
+        log_memory_usage(self._loop_count, self._onetricks_proc, force=force)
 
     def _monitor_loop(self):
         """Main monitoring loop."""
@@ -556,8 +471,7 @@ class DraftMonitor:
 
     def _is_draft_complete(self, state: DraftState) -> bool:
         """Check if the draft is complete (all 10 champions locked)."""
-        total_picks = len(state.ally_picks) + len(state.enemy_picks)
-        return total_picks >= 10
+        return phases.is_draft_complete(state)
 
     def _analyze_complete_draft(self, state: DraftState):
         """Analyze the complete draft immediately when all champions are locked."""
@@ -970,13 +884,7 @@ class DraftMonitor:
 
     def _has_draft_changed(self, current_state: DraftState) -> bool:
         """Check if draft state has changed significantly."""
-        return (
-            current_state.ally_picks != self.last_draft_state.ally_picks
-            or current_state.enemy_picks != self.last_draft_state.enemy_picks
-            or current_state.ally_bans != self.last_draft_state.ally_bans
-            or current_state.enemy_bans != self.last_draft_state.enemy_bans
-            or current_state.phase != self.last_draft_state.phase
-        )
+        return phases.has_draft_changed(current_state, self.last_draft_state)
 
     def _handle_draft_change(self, state: DraftState):
         """Handle draft state change and provide recommendations."""
@@ -1277,21 +1185,15 @@ class DraftMonitor:
 
     def _is_player_turn(self, state: DraftState) -> bool:
         """Check if it's the local player's turn to pick."""
-        if not state.current_actor or not state.local_player_cell_id:
-            return False
-        return state.current_actor == state.local_player_cell_id
+        return phases.is_player_turn(state)
 
     def _is_player_ban_turn(self, state: DraftState) -> bool:
         """Check if it's the local player's turn to ban."""
-        if not self._is_ban_phase(state):
-            return False
-        if not state.current_actor or not state.local_player_cell_id:
-            return False
-        return state.current_actor == state.local_player_cell_id
+        return phases.is_player_ban_turn(state, self.verbose)
 
     def _enemy_picks_changed(self, state: DraftState) -> bool:
         """Check if enemy team composition has changed."""
-        return state.enemy_picks != self.last_draft_state.enemy_picks
+        return phases.enemy_picks_changed(state, self.last_draft_state)
 
     def _is_ban_phase(self, state: DraftState) -> bool:
         """
@@ -1304,31 +1206,7 @@ class DraftMonitor:
         Returns:
             True if currently in an active ban phase, False otherwise
         """
-        if not state.phase:
-            return False
-
-        # Key insight: Ban phase happens BEFORE any picks
-        # If there are any picks, we're in pick phase (even if phase name is "BAN_PICK")
-        total_picks = len(state.ally_picks) + len(state.enemy_picks)
-        if total_picks > 0:
-            if self.verbose:
-                print(f"[DEBUG] Not ban phase: {total_picks} picks already made")
-            return False
-
-        # Check if we haven't exceeded typical ban limits
-        # In most draft modes, each team gets 5 bans (10 total)
-        total_bans = len(state.ally_bans) + len(state.enemy_bans)
-        if total_bans >= 10:  # Standard draft has 10 bans total
-            if self.verbose:
-                print(f"[DEBUG] Ban phase check: Max bans reached ({total_bans}/10)")
-            return False
-
-        if self.verbose:
-            print(
-                f"[DEBUG] Ban phase detected: Phase='{state.phase}', Picks={total_picks}, Bans={total_bans}/10"
-            )
-
-        return True
+        return phases.is_ban_phase(state, self.verbose)
 
     def _should_show_bans(self, state: DraftState) -> bool:
         """
@@ -1340,17 +1218,7 @@ class DraftMonitor:
         Returns:
             True if bans should be shown, False otherwise
         """
-        if not state.phase:
-            return False
-
-        # Show bans during ban phase (until enemy bans are revealed)
-        # Once enemy bans appear, ban phase is complete and we hide ban recommendations
-        if not state.enemy_bans:
-            # No enemy bans yet = still in ban phase
-            return True
-
-        # Enemy bans revealed = ban phase complete, hide bans to reduce clutter
-        return False
+        return phases.should_show_bans(state)
 
     def _auto_hover_champion(self, champion_name: str, reason: str = ""):
         """Automatically hover the recommended champion."""
