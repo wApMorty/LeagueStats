@@ -42,7 +42,7 @@ class TestDoInitialHover:
 
     def test_nominal_flow(self, monitor, capsys):
         """Clears the console, announces the blind pick, hovers, shows bans."""
-        with patch("src.draft_monitor.clear_console") as clear:
+        with patch("src.draft.automation.clear_console") as clear:
             with patch.object(monitor, "_get_best_champion_from_pool", return_value="Darius"):
                 with patch.object(monitor, "_auto_hover_champion") as hover:
                     with patch.object(monitor, "_show_ban_recommendations_draft") as bans:
@@ -65,7 +65,7 @@ class TestDoInitialHover:
         """No pool -> no scoring, no hover, no ban recommendations."""
         monitor.current_pool = []
 
-        with patch("src.draft_monitor.clear_console"):
+        with patch("src.draft.automation.clear_console"):
             with patch.object(monitor, "_get_best_champion_from_pool") as best:
                 with patch.object(monitor, "_auto_hover_champion") as hover:
                     with patch.object(monitor, "_show_ban_recommendations_draft") as bans:
@@ -84,14 +84,14 @@ class TestDoInitialHover:
         monitor.current_pool = []
         monitor.verbose = True
 
-        with patch("src.draft_monitor.clear_console"):
+        with patch("src.draft.automation.clear_console"):
             monitor._do_initial_hover()
 
         assert "[ALERTE] [INITIAL-HOVER] Aucun champion dans la pool" in capsys.readouterr().out
 
     def test_dependency_failure_is_swallowed(self, monitor, capsys):
         """A raising dependency must never break champion select."""
-        with patch("src.draft_monitor.clear_console"):
+        with patch("src.draft.automation.clear_console"):
             with patch.object(
                 monitor, "_get_best_champion_from_pool", side_effect=Exception("scorer down")
             ):
@@ -107,7 +107,7 @@ class TestDoInitialHover:
     def test_dependency_failure_message_is_verbose_only(self, monitor, capsys):
         monitor.verbose = True
 
-        with patch("src.draft_monitor.clear_console"):
+        with patch("src.draft.automation.clear_console"):
             with patch.object(
                 monitor, "_get_best_champion_from_pool", side_effect=Exception("scorer down")
             ):
@@ -118,7 +118,7 @@ class TestDoInitialHover:
 
     def test_hover_failure_still_shows_ban_recommendations(self, monitor):
         """``_auto_hover_champion`` swallows its own errors, so the flow goes on."""
-        with patch("src.draft_monitor.clear_console"):
+        with patch("src.draft.automation.clear_console"):
             with patch.object(monitor, "_get_best_champion_from_pool", return_value="Darius"):
                 with patch.object(monitor, "_auto_hover_champion", return_value=False):
                     with patch.object(monitor, "_show_ban_recommendations_draft") as bans:

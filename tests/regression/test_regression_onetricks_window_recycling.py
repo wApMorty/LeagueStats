@@ -40,9 +40,9 @@ class TestOneTricksWindowRecycling:
         second_proc = Mock()
         second_proc.poll.return_value = None
 
-        with patch("src.draft_monitor.config.get_brave_path", return_value="brave.exe"):
+        with patch("src.draft.onetricks.config.get_brave_path", return_value="brave.exe"):
             with patch(
-                "src.draft_monitor.subprocess.Popen", side_effect=[first_proc, second_proc]
+                "src.draft.onetricks.subprocess.Popen", side_effect=[first_proc, second_proc]
             ) as mock_popen:
                 # Game 1: opens the first window
                 draft_monitor._open_champion_page_on_onetricks()
@@ -63,8 +63,8 @@ class TestOneTricksWindowRecycling:
         Without a dedicated user-data-dir, Brave merges into the main instance and
         our handle cannot terminate the tab — defeating the recycling.
         """
-        with patch("src.draft_monitor.config.get_brave_path", return_value="brave.exe"):
-            with patch("src.draft_monitor.subprocess.Popen") as mock_popen:
+        with patch("src.draft.onetricks.config.get_brave_path", return_value="brave.exe"):
+            with patch("src.draft.onetricks.subprocess.Popen") as mock_popen:
                 mock_popen.return_value = Mock(poll=Mock(return_value=None))
                 draft_monitor._open_champion_page_on_onetricks()
 
