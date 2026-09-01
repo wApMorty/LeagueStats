@@ -157,13 +157,10 @@ def assistant(db):
     # Assistant creates its own DB, so we need to replace it
     assistant_instance = Assistant(verbose=False)
 
-    # Close the default DB and replace with our test DB
+    # Close the default DB and replace with our test DB (the db.setter
+    # property rewires every specialized component to the new DB).
     assistant_instance.db.close()
     assistant_instance.db = db
-
-    # Reinitialize every specialized component against the test DB (single
-    # source of truth: whatever Assistant._init_components() wires up).
-    assistant_instance._init_components()
 
     yield assistant_instance
     # Don't close db here, it's closed by the db fixture
