@@ -6,6 +6,7 @@ import math
 from ..db import Database
 from ..config_constants import analysis_config, role_inference_config
 from ..models import Matchup
+from .probability import sigmoid, winrate_points_to_logit
 
 
 def confidence(games: int) -> float:
@@ -23,6 +24,25 @@ def confidence(games: int) -> float:
         games tends to 0 (half-weight at games == CONFIDENCE_K).
     """
     return games / (games + analysis_config.CONFIDENCE_K)
+
+
+def estimate_win_probability(individual_winrates: List[float]) -> float:
+    """Team win probability from per-champion winrates, via log-odds summation
+    (SPEC-05 B7). Replaces the geometric-mean-with-clamp model: no clamp,
+    naturally saturating as advantages accumulate.
+
+    Args:
+        individual_winrates: e.g. [50 + advantage for advantage in scores],
+            where each `advantage` already comes from score_against_team
+            (matchup) blended with synergy — see DraftMonitor._final_score.
+
+    Returns:
+        Probability in ]0, 1[, never exactly 0 or 1.
+    """
+    if not individual_winrates:
+        return 0.5
+    logit_sum = sum(winrate_points_to_logit(wr - 50.0) for wr in individual_winrates)
+    return sigmoid(logit_sum)
 
 
 class ChampionScorer:
@@ -116,36 +136,26 @@ class ChampionScorer:
             sum(m.winrate * m.pickrate * confidence(m.games) for m in valid_matchups) / total_weight
         )
 
-    def delta2_to_win_advantage(self, delta2: float, champion_name: str) -> float:
-        """
-        Convert delta2 value to win advantage using empirically-validated linear scaling.
+    def delta2_to_win_advantage(self, delta2: float) -> float:
+        """Convert a delta2 value to a log-odds contribution (SPEC-05 B7).
 
-        Based on analysis of 36,000+ matchups in the database:
-        - delta2 from LoLalytics is already correlated with winrate delta
-        - Empirical ratio: 1 delta2 ≈ 1.0 percentage point advantage
-        - Previous logistic transformation incorrectly amplified values by ~3x
+        Replaces the old `delta2 * 1.0` identity (linear, unbounded, and
+        displayed as if it were already a percentage) with a proper log-odds
+        term: `delta2 * K_MATCHUP` points of winrate, converted via
+        `winrate_points_to_logit`.
 
-        The linear conversion is validated by database analysis showing:
-        - delta2 = 3.40 → actual winrate delta = ~3-5% (not 10%+ from logistic)
-        - delta2 range in DB: -51.43 to +31.74
-        - Typical matchups: delta2 between -10 and +10
+        Internal use only: the result is a log-odds, never displayed raw to
+        the user (see score_against_team, which converts back to a saturating
+        win-probability delta before returning).
 
         Args:
-            delta2: The delta2 value from matchup data (LoLalytics metric)
-            champion_name: Champion name (unused - kept for backward compatibility)
+            delta2: The delta2 value from matchup data (LoLalytics metric).
 
         Returns:
-            Win advantage percentage (positive = our team favored)
-            Range: Typically [-10, +10], extreme cases up to ±30%
-
-        Example:
-            delta2 = 3.40 → advantage = 3.40% (not 10.06% from old formula)
+            Log-odds contribution (unbounded, additive with other log-odds
+            terms — see src/analysis/probability.py).
         """
-        # Simple linear conversion (1:1 ratio validated empirically)
-        # No sigmoid needed - delta2 is not a log-odds, it's already performance-correlated
-        advantage = delta2 * 1.0
-
-        return advantage
+        return winrate_points_to_logit(delta2 * analysis_config.K_MATCHUP)
 
     def _lane_weight(
         self, enemy_name: str, enemy_lanes: Optional[dict], player_lane: Optional[str]
@@ -212,7 +222,12 @@ class ChampionScorer:
                   `enemy_lanes` for the weighting above to take effect.
 
         Returns:
-            Net advantage in percentage points (positive = favorable for us)
+            Net advantage as a saturating win-probability delta, in percentage
+            points (never raw log-odds), positive = favorable for us.
+            Numerically close to the old linear delta2 for typical matchups
+            (SPEC-05 B7: sigmoid(x) - 0.5 ≈ x/4 near x=0, and the log-odds
+            scale is calibrated so this cancels out for k_m=1.0), but bounded
+            as advantages accumulate instead of growing without limit.
 
         Edge cases:
             - Empty team (blind pick): Returns our avg_delta2 advantage (no enemy perspective)
@@ -230,7 +245,9 @@ class ChampionScorer:
                 print("[ACTION] Pass champion_name parameter to enable bidirectional calculation")
             return 0.0
 
-        # Use logistic transformation for delta2 to advantage conversion
+        # SPEC-05 B7: delta2_to_win_advantage now returns a log-odds, so every
+        # branch below converts back to a saturating probability delta via
+        # sigmoid before returning — never a raw log-odds to the caller.
         if not team:
             # Pure blind pick scenario - no enemy perspective available
             # Filter out banned champions from matchup pool
@@ -241,7 +258,7 @@ class ChampionScorer:
                     m for m in matchups if m.enemy_name.lower() not in banned_lower
                 ]
             avg_delta2_val = self.avg_delta2(available_matchups)
-            return self.delta2_to_win_advantage(avg_delta2_val, champion_name)
+            return (sigmoid(self.delta2_to_win_advantage(avg_delta2_val)) - 0.5) * 100.0
 
         # STEP 1: Calculate OUR advantage (our champion vs enemy team)
         total_delta2 = 0
@@ -279,7 +296,7 @@ class ChampionScorer:
             return 0.0  # No data available
 
         our_avg_delta2 = total_delta2 / matchup_count
-        our_advantage = self.delta2_to_win_advantage(our_avg_delta2, champion_name)
+        our_advantage = self.delta2_to_win_advantage(our_avg_delta2)
 
         # STEP 2: Calculate ENEMY advantage (enemy team's perspective vs our champion)
         # This is how strong the enemies think THEY are against us
@@ -308,9 +325,7 @@ class ChampionScorer:
             enemy_avg_delta2_against_us = (
                 sum(delta2 * weight for delta2, weight in enemy_perspective_deltas) / total_weight
             )
-            enemy_advantage_against_us = self.delta2_to_win_advantage(
-                enemy_avg_delta2_against_us, champion_name
-            )
+            enemy_advantage_against_us = self.delta2_to_win_advantage(enemy_avg_delta2_against_us)
 
             # Log if we had partial data
             if missing_enemies and self.verbose:
@@ -333,19 +348,25 @@ class ChampionScorer:
             enemy_advantage_against_us = 0.0
 
         # STEP 3: Combine perspectives for net advantage
-        # Net = how much WE counter them - how much THEY counter us
-        net_advantage = our_advantage - enemy_advantage_against_us
+        # Net = how much WE counter them - how much THEY counter us.
+        # Both terms are log-odds here (SPEC-05 B7); convert to a saturating
+        # win-probability delta only once, at the very end.
+        net_advantage_logit = our_advantage - enemy_advantage_against_us
 
-        return net_advantage
+        return (sigmoid(net_advantage_logit) - 0.5) * 100.0
 
     def calculate_team_winrate(self, individual_winrates: List[float]) -> dict:
         """
-        Calculate team win probability from individual champion winrates using geometric mean.
+        Calculate team win probability from individual champion winrates (SPEC-05 B7).
 
-        Uses probability theory to combine individual winrates:
-        - Converts winrates to probabilities (divide by 100)
-        - Calculates team probability using geometric mean (multiplicative effects)
-        - More mathematically sound than arithmetic averaging
+        Thin wrapper around the module-level `estimate_win_probability`, which
+        sums log-odds contributions instead of taking a geometric mean of the
+        winrates: five players don't win five independent coin flips, they
+        win or lose the same game together, so multiplying probabilities
+        never modeled anything real here (see SPEC-05 §1.3). No clamp either
+        — [20, 80] on individual winrates and [25, 75] on the result existed
+        only to hide the geometric mean's absurd outputs; the log-odds sum
+        naturally stays in ]0, 100[ without help.
 
         Args:
             individual_winrates: List of actual winrates (e.g. [54.2, 48.5, 52.1])
@@ -356,28 +377,8 @@ class ChampionScorer:
         if not individual_winrates:
             return {"team_winrate": 50.0, "individual_winrates": []}
 
-        # Clamp individual winrates to realistic bounds
-        clamped_winrates = []
-        for winrate in individual_winrates:
-            clamped_winrate = max(20.0, min(80.0, winrate))
-            clamped_winrates.append(clamped_winrate)
-
-        # Convert to probabilities and calculate geometric mean
-        geometric_mean = 1.0
-        for winrate in clamped_winrates:
-            probability = winrate / 100.0  # Convert to probability (0.0 to 1.0)
-            geometric_mean *= probability
-
-        # Take nth root to get geometric mean probability
-        geometric_mean = geometric_mean ** (1.0 / len(clamped_winrates))
-
-        # Convert back to percentage
-        team_winrate = geometric_mean * 100.0
-
-        # Apply conservative bounds (extreme team winrates are unrealistic)
-        team_winrate = max(25.0, min(75.0, team_winrate))
-
-        return {"team_winrate": team_winrate, "individual_winrates": clamped_winrates}
+        probability = estimate_win_probability(individual_winrates)
+        return {"team_winrate": probability * 100.0, "individual_winrates": individual_winrates}
 
     def calculate_synergy_bonus(
         self, champion_name: str, ally_names: List[str], lane: Optional[str] = None
@@ -452,7 +453,12 @@ class ChampionScorer:
     ) -> float:
         """Calculate final score combining matchup score and synergy bonus.
 
-        Formula: final_score = matchup_score + (synergy_bonus * multiplier)
+        Formula: final_score = matchup_score + (synergy_bonus * K_SYNERGY)
+
+        SPEC-05 B7: the multiplier is now `analysis_config.K_SYNERGY`, which
+        replaces `synergy_config.SYNERGY_BONUS_MULTIPLIER` (same role, same
+        default value 0.3 -> 0.5 per the model's calibration constants — the
+        two must never coexist, see SPEC-05 §7).
 
         Args:
             matchup_score: Base score from matchup analysis
@@ -464,7 +470,7 @@ class ChampionScorer:
 
         Example:
             >>> scorer.calculate_final_score_with_synergies(100.0, "Yasuo", ["Malphite"])
-            125.65  # 100 + (85.5 * 0.3)
+            142.75  # 100 + (85.5 * 0.5)
         """
         from ..config_constants import synergy_config
 
@@ -472,7 +478,7 @@ class ChampionScorer:
             return matchup_score
 
         synergy_bonus = self.calculate_synergy_bonus(champion_name, ally_names)
-        final_score = matchup_score + (synergy_bonus * synergy_config.SYNERGY_BONUS_MULTIPLIER)
+        final_score = matchup_score + (synergy_bonus * analysis_config.K_SYNERGY)
 
         if self.verbose:
             print(

@@ -15,7 +15,7 @@ from .utils.display import safe_print
 from .utils.console import clear_console
 from .constants import TOP_SOLOQ_POOL, CHAMPIONS_BY_ROLE, normalize_champion_name_for_onetricks
 from .config import config
-from .config_constants import draft_config, role_inference_config, scraping_config
+from .config_constants import analysis_config, draft_config, role_inference_config, scraping_config
 from .role_inference import infer_team_roles
 
 # Dedicated logger for memory diagnostics. Writes to logs/draft_monitor_memory.log
@@ -131,6 +131,11 @@ class DraftMonitor:
         self.ready_check_accepted_time = 0  # Track when we accepted ready check
         self.player_champion = None  # Track the player's selected champion
 
+        # SPEC-05 B7 §8-9: id of the last logged prediction row awaiting an
+        # outcome, set by _calculate_final_scores and consumed by the manual
+        # "outcome win"/"outcome loss" command. None = nothing to update.
+        self._last_prediction_id: Optional[int] = None
+
         # OneTricks browser window recycling: keep a single handle so each new
         # draft replaces the previous window instead of stacking tabs/processes
         # (otherwise Brave accumulates one tab per game → system OOM on long sessions).
@@ -176,6 +181,7 @@ class DraftMonitor:
         if self.open_onetricks:
             print("   🌐 [ONETRICKS] Open champion page on draft completion is ENABLED")
         print("   ✏️  Type 'r <champion> <lane>' + Enter to force a role (e.g. r Pantheon support)")
+        print("   🏁 Type 'outcome win' or 'outcome loss' + Enter after the game to log the result")
         print("   (Press Ctrl+C to stop)")
 
         self._start_command_listener()
@@ -545,7 +551,9 @@ class DraftMonitor:
                 print("🎯 [DRAFT COMPLETE] All champions locked - Final analysis!")
                 print("=" * 80)
 
-                self._calculate_final_scores(ally_picks, enemy_picks)
+                self._calculate_final_scores(
+                    ally_picks, enemy_picks, ally_lanes=state.inferred_roles
+                )
 
                 # Mark analysis as done
                 self.has_analyzed_final_draft = True
@@ -575,6 +583,7 @@ class DraftMonitor:
         self.ready_check_accepted_time = 0
         self.player_champion = None
         self.forced_roles = {}  # SPEC-04 B5: corrections don't carry to the next game
+        self._last_prediction_id = None  # SPEC-05 B7: predictions don't carry to the next game
 
         # Reset ready message flag
         if hasattr(self, "_shown_ready_message"):
@@ -638,7 +647,8 @@ class DraftMonitor:
         self._command_listener_thread.start()
 
     def _apply_pending_commands(self, state: DraftState) -> bool:
-        """Drain queued role-correction commands onto `state` (SPEC-04 B5).
+        """Drain queued commands: role corrections (SPEC-04 B5) and manual
+        outcome logging (SPEC-05 B7 §9).
 
         Returns True if at least one command was applied, so the caller can
         force a redisplay even when the draft itself hasn't changed.
@@ -649,6 +659,11 @@ class DraftMonitor:
                 line = self._command_queue.get_nowait()
             except queue.Empty:
                 break
+            stripped = line.strip()
+            if stripped.lower().startswith("outcome"):
+                # Never affects the draft display, so it doesn't set `applied`.
+                self._handle_outcome_command(stripped)
+                continue
             if self._handle_correction_command(line, state):
                 applied = True
         return applied
@@ -685,6 +700,39 @@ class DraftMonitor:
         state.role_source[champion_id] = "user"
         print(f"[ROLE] {self._get_display_name(champion_id)} forced to {lane}")
         return True
+
+    def _handle_outcome_command(self, line: str) -> None:
+        """Parse and apply one 'outcome win'/'outcome loss' command (SPEC-05
+        B7 §9): journalise le résultat réel de la partie sur la dernière
+        prédiction en attente, pour la calibration (scripts/calibrate_model.py).
+
+        Manual command by design (not a gameflow/EndOfGame hook, per SPEC-05:
+        untestable against a real LCU client without speculating on its
+        behavior). Best-effort: never raises, never blocks the draft loop.
+        """
+        parts = line.split()
+        if len(parts) != 2 or parts[1].lower() not in ("win", "loss"):
+            print(f"[OUTCOME] Unrecognized command: '{line}'. Expected format: outcome win|loss")
+            return
+
+        if self._last_prediction_id is None:
+            print("[OUTCOME] Aucune prédiction à mettre à jour pour cette partie")
+            return
+
+        outcome = 1 if parts[1].lower() == "win" else 0
+        try:
+            updated = self.assistant.db.update_prediction_outcome(self._last_prediction_id, outcome)
+            if updated:
+                print(
+                    f"[OUTCOME] Prediction #{self._last_prediction_id} recorded as {parts[1].lower()}"
+                )
+            else:
+                print(f"[OUTCOME] No prediction row found for id #{self._last_prediction_id}")
+        except Exception as e:
+            print(f"[WARNING] Failed to update prediction outcome: {e}")
+
+        # One outcome update per game, whether it succeeded or not.
+        self._last_prediction_id = None
 
     def _get_display_name(self, champion_id: int) -> str:
         """Get display name for champion ID."""
@@ -1525,8 +1573,19 @@ class DraftMonitor:
             self.pool_name = None
             return self.assistant.select_champion_pool()
 
-    def _calculate_final_scores(self, ally_picks: List[int], enemy_picks: List[int]):
-        """Calculate individual scores for each champion at end of draft."""
+    def _calculate_final_scores(
+        self,
+        ally_picks: List[int],
+        enemy_picks: List[int],
+        ally_lanes: Optional[Dict[int, str]] = None,
+    ):
+        """Calculate individual scores for each champion at end of draft.
+
+        Args:
+            ally_lanes: championId -> inferred lane (state.inferred_roles),
+                used only to log the prediction row (SPEC-05 B7 §8). None =
+                no lane info stored with the prediction.
+        """
         # Clear console before final analysis for clean display
         clear_console()
 
@@ -1743,6 +1802,20 @@ class DraftMonitor:
             our_expected = 50.0
             their_expected = 50.0
             draft_diff = 0.0
+
+        # SPEC-05 B7 §8: best-effort prediction logging for later calibration
+        # (scripts/calibrate_model.py). Never blocks nor slows down the draft.
+        try:
+            self._last_prediction_id = self.assistant.db.insert_prediction(
+                ally_champions=ally_picks,
+                enemy_champions=enemy_picks,
+                ally_lanes=ally_lanes,
+                predicted_probability=our_expected / 100.0,
+                model_version=analysis_config.MODEL_VERSION,
+            )
+        except Exception as e:
+            print(f"[WARNING] Failed to log prediction: {e}")
+
         if draft_diff >= 5.0:
             safe_print(f"  Assessment: ✅ Major draft advantage ({draft_diff:+.2f}% total edge)")
         elif draft_diff >= 2.5:

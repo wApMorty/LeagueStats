@@ -119,6 +119,22 @@ class AnalysisConfig:
     # Valeur initiale 500 : la médiane de la base est ~1 300 parties.
     CONFIDENCE_K: int = 500
 
+    # SPEC-05 B7 : pente du logit autour de p=0.5 (d(logit)/dp = 4 à p=0.5,
+    # donc 1 point de winrate ~= 0.04 en log-odds). Remplace le delta2 * 1.0
+    # identité de l'ancien delta2_to_win_advantage.
+    LOGIT_PER_WINRATE_POINT: float = 0.04
+
+    # Correction du double comptage résiduel entre matchups/synergies qui se
+    # recouvrent partiellement (SPEC-05 §3.3). Valeurs de départ à calibrer
+    # une fois la table `predictions` alimentée (scripts/calibrate_model.py).
+    K_MATCHUP: float = 1.0
+    K_SYNERGY: float = 0.5
+
+    # Doit changer à chaque modification de LOGIT_PER_WINRATE_POINT/K_MATCHUP/
+    # K_SYNERGY/CONFIDENCE_K, sinon scripts/calibrate_model.py mélange des
+    # prédictions issues de modèles différents.
+    MODEL_VERSION: str = "b7-v1"
+
     # Tier thresholds (0-100 scale)
     TIER_THRESHOLDS: Dict[str, float] = field(
         default_factory=lambda: {
@@ -249,10 +265,10 @@ class SynergyConfig:
     MIN_SYNERGY_PICKRATE: float = 0.5  # Minimum pickrate % for synergy inclusion
     MIN_SYNERGY_GAMES: int = 200  # Minimum games for synergy reliability
 
-    # Synergy scoring weights
-    SYNERGY_BONUS_MULTIPLIER: float = 0.3  # Multiplier for synergy bonus in final score
-    # Formula: final_score = matchup_score + (synergy_bonus * SYNERGY_BONUS_MULTIPLIER)
-    # Example: matchup_score=100, synergy_bonus=50 → final_score=100+(50*0.3)=115
+    # Synergy scoring weight: SPEC-05 B7 replaced SYNERGY_BONUS_MULTIPLIER with
+    # analysis_config.K_SYNERGY (same role, interpretable scale — see
+    # ChampionScorer.calculate_final_score_with_synergies). Don't reintroduce
+    # a second multiplier here; the two must never coexist (SPEC-05 §7).
 
     # Synergy aggregation method
     USE_WEIGHTED_AVERAGE: bool = True  # Weight synergies by ally pickrate
