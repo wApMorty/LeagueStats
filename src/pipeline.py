@@ -1,7 +1,7 @@
 """Shared data pipeline: scrape -> completeness -> scores -> bans -> freshness (SPEC-01 A2).
 
 Before this module existed, ``scripts/update_all.py`` and the in-app menu
-(``src/ui/lol_coach_legacy.py``) each reimplemented the same
+(``src/ui/data_update_ui.py``) each reimplemented the same
 scrape -> recalculate schema, but drifted apart: the menu never ran the
 completeness gate, never wrote ``db_meta``, and never logged to file or
 notified. ``run_pipeline()`` is now the single code path both call, so every

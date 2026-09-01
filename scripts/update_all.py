@@ -1,7 +1,7 @@
 """Nightly data pipeline entry point (Horizon 1 — ROADMAP_2026.md §3 H1.2).
 
 Thin CLI wrapper around src/pipeline.py:run_pipeline(), the single pipeline
-also used by the in-app menu (src/ui/lol_coach_legacy.py) — SPEC-01 A2.
+also used by the in-app menu (src/ui/data_update_ui.py) — SPEC-01 A2.
 
     1. Multi-lane scrape (lane discovery >10%, matchups + synergies tagged)
     2. Volumetric completeness check — FAILS LOUDLY on silent data loss

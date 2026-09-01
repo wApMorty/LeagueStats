@@ -22,15 +22,12 @@ from src.config import config
 from src.data_freshness import get_freshness_info, format_freshness_banner
 from src.user_prefs import load_user_prefs
 
-# Import legacy functions not yet refactored
-from src.ui.lol_coach_legacy import (
-    check_dependencies,
-    check_database,
-    parse_match_statistics,
-    run_champion_analysis,
-    run_optimal_team_builder,
-    manage_champion_pools,
-)
+# Import menu-domain UI modules (SPEC-07 E9: replaces lol_coach_legacy.py)
+from src.ui.checks import check_dependencies, check_database
+from src.ui.data_update_ui import parse_match_statistics
+from src.ui.tier_list_ui import run_champion_analysis
+from src.ui.team_builder_ui import run_optimal_team_builder
+from src.ui.pools_menu_ui import manage_champion_pools
 
 
 def main():

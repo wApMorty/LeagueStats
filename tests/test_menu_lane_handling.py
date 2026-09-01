@@ -1,6 +1,6 @@
 """Tests for the main menu's lane-aware parsing (issue #41 follow-up, SPEC-01 A2).
 
-The "Parse Match Statistics" menu (src/ui/lol_coach_legacy.py, reached from
+The "Parse Match Statistics" menu (src/ui/data_update_ui.py, reached from
 the main menu option 3) used to hardcode lane="top" for every pool-scoped
 scrape -- so selecting e.g. "All Jungle Champions" would tag every
 matchup/synergy row as if it had been scraped on the top lane.
@@ -15,7 +15,7 @@ hardcoded anywhere in the menu layer.
 
 from unittest.mock import MagicMock, patch
 
-from src.ui import lol_coach_legacy
+from src.ui import data_update_ui
 
 
 def _setup_pipeline_mocks(monkeypatch, discovered_lane):
@@ -74,13 +74,13 @@ def _setup_pipeline_mocks(monkeypatch, discovered_lane):
 class TestParseChampionPoolUsesRealLane:
     def test_jungle_pool_tagged_jungle_not_hardcoded_top(self, monkeypatch):
         monkeypatch.setattr(
-            lol_coach_legacy,
+            data_update_ui,
             "_select_pool_for_parsing",
             lambda: ("All Jungle Champions", ["LeeSin", "Vi"]),
         )
         _fake_db, seen_matchup_lanes, _ = _setup_pipeline_mocks(monkeypatch, "jungle")
 
-        lol_coach_legacy.parse_champion_pool(patch_version="14")
+        data_update_ui.parse_champion_pool(patch_version="14")
 
         assert seen_matchup_lanes == ["jungle"]
         assert "top" not in seen_matchup_lanes
@@ -89,13 +89,13 @@ class TestParseChampionPoolUsesRealLane:
 class TestParseSynergiesPoolUsesRealLane:
     def test_support_pool_tagged_support_not_hardcoded_top(self, monkeypatch):
         monkeypatch.setattr(
-            lol_coach_legacy,
+            data_update_ui,
             "_select_pool_for_parsing",
             lambda: ("All Support Champions", ["Thresh", "Lulu"]),
         )
         _fake_db, _, seen_synergy_lanes = _setup_pipeline_mocks(monkeypatch, "support")
 
-        lol_coach_legacy.parse_synergies_pool(patch_version="14")
+        data_update_ui.parse_synergies_pool(patch_version="14")
 
         assert seen_synergy_lanes == ["support"]
         assert "top" not in seen_synergy_lanes
@@ -104,7 +104,7 @@ class TestParseSynergiesPoolUsesRealLane:
 class TestParseAllDataPoolUsesRealLane:
     def test_adc_pool_tags_matchups_and_synergies_bottom_not_hardcoded_top(self, monkeypatch):
         monkeypatch.setattr(
-            lol_coach_legacy,
+            data_update_ui,
             "_select_pool_for_parsing",
             lambda: ("All ADC Champions", ["Jinx", "Caitlyn"]),
         )
@@ -112,7 +112,7 @@ class TestParseAllDataPoolUsesRealLane:
             monkeypatch, "bottom"
         )
 
-        lol_coach_legacy.parse_all_data_pool(patch_version="14")
+        data_update_ui.parse_all_data_pool(patch_version="14")
 
         assert seen_matchup_lanes == ["bottom"]
         assert seen_synergy_lanes == ["bottom"]
@@ -126,7 +126,7 @@ class TestPoolScopedRunPassesRestrictedChampionList:
         scrape_all_multilane(), otherwise a pool-scoped parse would refresh
         and re-tag every champion in the database."""
         monkeypatch.setattr(
-            lol_coach_legacy,
+            data_update_ui,
             "_select_pool_for_parsing",
             lambda: ("All Jungle Champions", ["LeeSin", "Vi"]),
         )
@@ -143,6 +143,6 @@ class TestPoolScopedRunPassesRestrictedChampionList:
                 "failed": 0,
                 "total": 2,
             }
-            lol_coach_legacy.parse_champion_pool(patch_version="14")
+            data_update_ui.parse_champion_pool(patch_version="14")
 
         assert mock_scrape.call_args.kwargs["champions"] == ["LeeSin", "Vi"]

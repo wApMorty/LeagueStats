@@ -77,7 +77,6 @@ markers = [
 # du réel hors legacy : il doit monter à chaque chantier, jamais baisser.
 [tool.coverage.run]
 source = ["src"]
-omit = ["src/ui/lol_coach_legacy.py"]  # dette isolée, traitée par SPEC-07 E9
 
 [tool.coverage.report]
 precision = 2
