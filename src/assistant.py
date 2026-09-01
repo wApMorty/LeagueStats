@@ -67,11 +67,7 @@ class Assistant:
 
         self.verbose = verbose
 
-        # Initialize specialized components
-        self.scorer = ChampionScorer(self.db, verbose=verbose)
-        self.tier_list_gen = TierListGenerator(self.db, self.scorer)
-        self.recommender = RecommendationEngine(self.db, self.scorer)
-        self.team_analyzer = TeamAnalyzer(self.db, self.scorer)
+        self._init_components()
 
         # Performance: In-memory cache for matchups (speeds up draft analysis)
         # Direct cache: champion (as picker) -> [(enemy, delta2, ...)]
@@ -81,6 +77,19 @@ class Assistant:
         self._cache_enabled = False
         self._cache_hits = 0  # Track cache hits for statistics
         self._cache_misses = 0  # Track cache misses for statistics
+
+    def _init_components(self) -> None:
+        """(Re)initialise les composants spécialisés à partir de self.db/self.verbose.
+
+        Extrait de __init__ pour que les fixtures de test puissent rebrancher
+        self.db sur une base temporaire puis rappeler cette méthode, plutôt que
+        de reconstruire les composants un par un (piège si un composant est
+        ajouté ici sans que la fixture le sache).
+        """
+        self.scorer = ChampionScorer(self.db, verbose=self.verbose)
+        self.tier_list_gen = TierListGenerator(self.db, self.scorer)
+        self.recommender = RecommendationEngine(self.db, self.scorer)
+        self.team_analyzer = TeamAnalyzer(self.db, self.scorer)
 
     def close(self) -> None:
         """Close database connection."""
@@ -1366,116 +1375,6 @@ class Assistant:
 
             traceback.print_exc()
             return results
-
-    # ==================== Draft & Competitive Methods ====================
-
-    def draft(self, nb_results: int) -> None:
-        """
-        Simple draft simulation with recommendations.
-
-        Args:
-            nb_results: Number of champion recommendations to display
-        """
-        enemy_team = []
-        ally_team = []
-
-        for i in range(5):
-            enemy_champion = input(f"Enemy Champion {i+1}: ")
-            enemy_team.append(enemy_champion)
-
-            # Show recommendations after each enemy pick
-            self._calculate_and_display_recommendations(enemy_team, ally_team, nb_results)
-
-            if i < 4:  # Don't ask for ally pick after last enemy pick
-                ally_champion = input(f"Your Champion {i+1}: ")
-                ally_team.append(ally_champion)
-
-        # Final team score
-        self.score_teams(enemy_team, ally_team)
-
-    def _get_champion_input(self, team_name: str, champion_number: int) -> str:
-        """Get champion input from user with consistent formatting."""
-        return input(f"{team_name} - Champion {champion_number}: ")
-
-    def _draft_red_side(self, enemy_team: List[str], ally_team: List[str], nb_results: int) -> None:
-        """Handle red side draft sequence."""
-        # Pick 1
-        enemy_team.append(self._get_champion_input("Equipe 1", 1))
-
-        self._calculate_and_display_recommendations(enemy_team, ally_team, nb_results)
-        ally_team.append(self._get_champion_input("Equipe 2", 1))
-        ally_team.append(self._get_champion_input("Equipe 2", 2))
-
-        # Pick 2-3
-        enemy_team.append(self._get_champion_input("Equipe 1", 2))
-        enemy_team.append(self._get_champion_input("Equipe 1", 3))
-
-        self._calculate_and_display_recommendations(enemy_team, ally_team, nb_results)
-        ally_team.append(self._get_champion_input("Equipe 2", 3))
-        ally_team.append(self._get_champion_input("Equipe 2", 4))
-
-        # Pick 4-5
-        enemy_team.append(self._get_champion_input("Equipe 1", 4))
-        enemy_team.append(self._get_champion_input("Equipe 1", 5))
-
-        self._calculate_and_display_recommendations(enemy_team, ally_team, nb_results)
-        ally_team.append(self._get_champion_input("Equipe 2", 5))
-
-    def _draft_blue_side(
-        self, enemy_team: List[str], ally_team: List[str], nb_results: int
-    ) -> None:
-        """Handle blue side draft sequence."""
-        # Initial recommendations
-        self._calculate_and_display_recommendations(enemy_team, ally_team, nb_results)
-
-        # Pick 1
-        ally_team.append(self._get_champion_input("Equipe 1", 1))
-
-        enemy_team.append(self._get_champion_input("Equipe 2", 1))
-        enemy_team.append(self._get_champion_input("Equipe 2", 2))
-
-        # Pick 2
-        self._calculate_and_display_recommendations(enemy_team, ally_team, nb_results)
-        ally_team.append(self._get_champion_input("Equipe 1", 2))
-        ally_team.append(self._get_champion_input("Equipe 1", 3))
-
-        # Pick 3-4
-        enemy_team.append(self._get_champion_input("Equipe 2", 3))
-        enemy_team.append(self._get_champion_input("Equipe 2", 4))
-
-        # Pick 4
-        self._calculate_and_display_recommendations(enemy_team, ally_team, nb_results)
-        ally_team.append(self._get_champion_input("Equipe 1", 4))
-        ally_team.append(self._get_champion_input("Equipe 1", 5))
-
-        enemy_team.append(self._get_champion_input("Equipe 2", 5))
-
-    def competitive_draft(self, nb_results: int) -> None:
-        """Simulate a competitive draft with pick recommendations."""
-        enemy_team = []
-        ally_team = []
-        side = input("Side (b/r): ")
-
-        if side.lower() == "r":
-            self._draft_red_side(enemy_team, ally_team, nb_results)
-            self.score_teams(enemy_team, ally_team)
-        elif side.lower() == "b":
-            self._draft_blue_side(enemy_team, ally_team, nb_results)
-            self.score_teams(ally_team, enemy_team)
-        else:
-            print("Couldn't parse side")
-
-    def blind_pick(self) -> None:
-        """Display tier list for blind pick scenarios."""
-        lst = self.tierlist_delta2(list(self.db.get_all_champion_names().values()))
-        _results = 10
-
-        if len(lst) < _results:
-            for index in range(len(lst)):
-                print(lst[index])
-        else:
-            for index in range(_results):
-                print(lst[index])
 
     # ==================== Holistic Trio Analysis ====================
 

@@ -161,16 +161,9 @@ def assistant(db):
     assistant_instance.db.close()
     assistant_instance.db = db
 
-    # Reinitialize components with test DB
-    from src.analysis.scoring import ChampionScorer
-    from src.analysis.tier_list import TierListGenerator
-    from src.analysis.recommendations import RecommendationEngine
-    from src.analysis.team_analysis import TeamAnalyzer
-
-    assistant_instance.scorer = ChampionScorer(db, verbose=False)
-    assistant_instance.tier_list_gen = TierListGenerator(db, assistant_instance.scorer)
-    assistant_instance.recommender = RecommendationEngine(db, assistant_instance.scorer)
-    assistant_instance.team_analyzer = TeamAnalyzer(db, assistant_instance.scorer)
+    # Reinitialize every specialized component against the test DB (single
+    # source of truth: whatever Assistant._init_components() wires up).
+    assistant_instance._init_components()
 
     yield assistant_instance
     # Don't close db here, it's closed by the db fixture
