@@ -132,9 +132,14 @@ class Assistant:
         """Get delta2 for a specific matchup using bidirectional cache."""
         return self.matchup_cache.get_delta2(champion, enemy)
 
-    def get_matchups_for_draft(self, champion: str) -> List[Matchup]:
-        """Get matchups for draft analysis (optimized with cache support)."""
-        return self.matchup_cache.get_matchups_for_draft(champion)
+    def get_matchups_for_draft(self, champion: str, lane: Optional[str] = None) -> List[Matchup]:
+        """Get matchups for draft analysis (optimized with cache support).
+
+        lane: None = all lanes combined (unchanged default). Given = restrict
+              to that lane, so a multi-lane champion's off-role matchups don't
+              dilute the score/volume for the lane actually being played.
+        """
+        return self.matchup_cache.get_matchups_for_draft(champion, lane=lane)
 
     def _convert_draft_matchups_to_standard(self, draft_matchups: List) -> List[Matchup]:
         """Convert draft format (4 cols) to Matchup objects for scoring methods."""

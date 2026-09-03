@@ -176,23 +176,34 @@ class MatchupCache:
         self._cache_misses += 1
         return self.db.get_matchup_delta2(champion, enemy)
 
-    def get_matchups_for_draft(self, champion: str) -> List[Matchup]:
+    def get_matchups_for_draft(self, champion: str, lane: Optional[str] = None) -> List[Matchup]:
         """
         Get matchups for draft analysis (optimized with cache support).
 
         This method:
-        1. Uses cache if enabled (99% faster after warm-up)
-        2. Falls back to optimized DB query if cache miss
+        1. Uses cache if enabled (99% faster after warm-up) when no lane filter
+           is requested — the cache is warmed with all-lanes data (see warm()).
+        2. Falls back to a direct, non-cached DB query when a lane is given,
+           since a lane-filtered result would otherwise be wrongly served from
+           the all-lanes cache entry.
         3. Returns Matchup objects for compatibility with scoring methods
 
         Args:
             champion: Champion name to get matchups for
+            lane: Optional lane filter. None = all lanes combined (unchanged
+                  default behavior). Given = only that lane's matchups, e.g.
+                  to avoid mixing a multi-lane champion's off-role sample into
+                  the score/volume shown for the lane actually being played.
 
         Returns:
             List of Matchup objects with complete statistics
         """
-        # Get from cache or DB (optimized 4-column format)
-        draft_matchups = self.get_matchups(champion)
+        if lane is not None:
+            self._cache_misses += 1
+            draft_matchups = self.db.get_champion_matchups_for_draft(champion, lane=lane)
+        else:
+            # Get from cache or DB (optimized 4-column format)
+            draft_matchups = self.get_matchups(champion)
 
         # Convert to Matchup objects for scoring methods
         return self._convert_draft_matchups_to_standard(draft_matchups)

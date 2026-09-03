@@ -10,7 +10,7 @@ _last_prediction_id (consumed by the "outcome win/loss" command).
 
 from typing import Dict, List, Optional
 
-from ..config_constants import analysis_config
+from ..config_constants import analysis_config, draft_config
 from ..utils.console import clear_console
 
 
@@ -66,14 +66,16 @@ class FinalDraftAnalyzer:
                 champion_matchups = self.m.assistant.get_matchups_for_draft(champion_name)
 
                 if (
-                    not champion_matchups or sum(m.games for m in champion_matchups) < 500
+                    not champion_matchups
+                    or sum(m.games for m in champion_matchups) < draft_config.MIN_CHAMPION_GAMES
                 ):  # m.games = games in 6-column format
                     if self.m.verbose:
                         total_games = (
                             sum(m.games for m in champion_matchups) if champion_matchups else 0
                         )
                         print(
-                            f"[DEBUG] {champion_name}: Insufficient data (games={total_games}, need >=500)"
+                            f"[DEBUG] {champion_name}: Insufficient data (games={total_games}, "
+                            f"need >={draft_config.MIN_CHAMPION_GAMES})"
                         )
                     ally_scores.append(
                         (champion_name, None, 0, 0.0)
@@ -109,14 +111,16 @@ class FinalDraftAnalyzer:
                 champion_matchups = self.m.assistant.get_matchups_for_draft(champion_name)
 
                 if (
-                    not champion_matchups or sum(m.games for m in champion_matchups) < 500
+                    not champion_matchups
+                    or sum(m.games for m in champion_matchups) < draft_config.MIN_CHAMPION_GAMES
                 ):  # m.games = games in 6-column format
                     if self.m.verbose:
                         total_games = (
                             sum(m.games for m in champion_matchups) if champion_matchups else 0
                         )
                         print(
-                            f"[DEBUG] {champion_name}: Insufficient data (games={total_games}, need >=500)"
+                            f"[DEBUG] {champion_name}: Insufficient data (games={total_games}, "
+                            f"need >={draft_config.MIN_CHAMPION_GAMES})"
                         )
                     enemy_scores.append((champion_name, None, 0.0, 0.0))  # Mark insufficient data
                     continue
