@@ -4,6 +4,22 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### 🐛 Fix
+
+- **Live Coach — games gonflés sur les recommandations** — `DraftRecommender.provide()`
+  appelait `get_matchups_for_draft(champion_name)` sans filtre de lane, sommant
+  les games de toutes les lanes d'un champion (ex. Yasuo top+mid+bottom) au
+  lieu de la seule lane jouée. Suspecté à tort comme un résidu du passage
+  Master+ (voir section Ajouts ci-dessous) ; la BDD était en réalité correcte.
+  `player_lane` est désormais transmis à `Assistant.get_matchups_for_draft()`
+  (nouveau paramètre `lane`, propagé jusqu'à `MatchupCache`, `Database` le
+  supportait déjà) et à `_calculate_score_against_team()`, cohérent avec
+  `_calculate_synergy_score()` qui le faisait déjà. Vérifié sur données
+  réelles : Yasuo mid passe de 165 385 games (3 lanes) à 91 696 (mid seule).
+  Au passage, seuil `games >= 500` codé en dur dans `final_analysis.py`
+  remplacé par `draft_config.MIN_CHAMPION_GAMES` (désynchronisé depuis le
+  scaling Master+ à 200). Test de régression ajouté.
+
 ### ✨ Ajouts
 
 - **Tier de scraping Master+** — passage du tier lolalytics de `diamond_plus`
