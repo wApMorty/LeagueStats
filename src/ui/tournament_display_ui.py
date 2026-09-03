@@ -50,7 +50,8 @@ def _show_tournament_draft_state(assistant, ally_team, enemy_team, banned_champi
         for champ in ally_team:
             matchups = assistant.db.get_champion_matchups_by_name(champ)
             if matchups and enemy_team:
-                advantage = assistant.score_against_team(matchups, enemy_team, champ)
+                other_allies = [a for a in ally_team if a != champ]
+                advantage = assistant.score_with_synergy(matchups, enemy_team, other_allies, champ)
                 if advantage >= 2.0:
                     status = "Fort"
                 elif advantage >= 0:
@@ -89,7 +90,8 @@ def _show_tournament_draft_state(assistant, ally_team, enemy_team, banned_champi
         for champ in ally_team:
             matchups = assistant.db.get_champion_matchups_by_name(champ)
             if matchups:
-                adv = assistant.score_against_team(matchups, enemy_team, champ)
+                other_allies = [a for a in ally_team if a != champ]
+                adv = assistant.score_with_synergy(matchups, enemy_team, other_allies, champ)
                 ally_advantages.append(adv)
 
         if ally_advantages:
@@ -145,7 +147,8 @@ def _analyze_complete_draft(assistant, ally_team, enemy_team):
     for champ in ally_team:
         matchups = assistant.db.get_champion_matchups_by_name(champ)
         if matchups:
-            advantage = assistant.score_against_team(matchups, enemy_team, champ)
+            other_allies = [a for a in ally_team if a != champ]
+            advantage = assistant.score_with_synergy(matchups, enemy_team, other_allies, champ)
             ally_scores.append((champ, advantage))
         else:
             ally_scores.append((champ, None))
@@ -154,7 +157,8 @@ def _analyze_complete_draft(assistant, ally_team, enemy_team):
     for champ in enemy_team:
         matchups = assistant.db.get_champion_matchups_by_name(champ)
         if matchups:
-            advantage = assistant.score_against_team(matchups, ally_team, champ)
+            other_enemies = [e for e in enemy_team if e != champ]
+            advantage = assistant.score_with_synergy(matchups, ally_team, other_enemies, champ)
             enemy_scores.append((champ, advantage))
         else:
             enemy_scores.append((champ, None))

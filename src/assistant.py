@@ -8,12 +8,13 @@ maintaining backward compatibility with the original API.
 from typing import Dict, List, Optional
 
 from .config import config
-from .config_constants import analysis_config
+from .config_constants import analysis_config, draft_config
 from .db import Database
 from .models import Matchup
 
 # Import specialized modules
 from .analysis.scoring import ChampionScorer
+from .draft.scoring import DraftScorer
 from .analysis.tier_list import TierListGenerator
 from .analysis.recommendations import RecommendationEngine
 from .analysis.team_analysis import TeamAnalyzer
@@ -88,8 +89,15 @@ class Assistant:
     def _init_components(self) -> None:
         """(Re)initialise les composants spécialisés à partir de self.db/self.verbose."""
         self.scorer = ChampionScorer(self._db, verbose=self.verbose)
+        # DraftScorer blends matchup + synergy the same way the Live Coach does
+        # (src/draft_monitor.py). display_name=None is safe here: name-based
+        # callers (calculate_synergy_score_by_names, final_score) never touch it —
+        # only the id-based calculate_synergy_score, unused outside the Live Coach.
+        self.draft_scorer = DraftScorer(
+            self, None, draft_config.DEFAULT_SYNERGY_WEIGHT, verbose=self.verbose
+        )
         self.tier_list_gen = TierListGenerator(self._db, self.scorer)
-        self.recommender = RecommendationEngine(self._db, self.scorer)
+        self.recommender = RecommendationEngine(self._db, self.scorer, self.draft_scorer)
         self.team_analyzer = TeamAnalyzer(self._db, self.scorer)
         self.global_scores = GlobalScoreCalculator(self._db, self.scorer, verbose=self.verbose)
         self.ban_recommender = BanRecommender(self._db, verbose=self.verbose)
@@ -235,6 +243,25 @@ class Assistant:
             enemy_lanes=enemy_lanes,
             player_lane=player_lane,
         )
+
+    def score_with_synergy(
+        self,
+        matchups: List[tuple],
+        enemy_team: List[str],
+        ally_team: List[str],
+        champion_name: str,
+        banned_champions: List[str] = None,
+    ) -> float:
+        """Bidirectional matchup score against enemy_team, blended with a
+        synergy score from ally_team — the same matchup+synergy blend the
+        Live Coach uses (DraftScorer.final_score), applied here to plain
+        champion names for callers with no LCU champion IDs (Tournament Coach).
+        """
+        matchup_score = self.scorer.score_against_team(
+            matchups, enemy_team, champion_name, banned_champions
+        )
+        synergy_score = self.draft_scorer.calculate_synergy_score_by_names(champion_name, ally_team)
+        return self.draft_scorer.final_score(matchup_score, synergy_score)
 
     def _calculate_team_winrate(self, individual_winrates: List[float]) -> dict:
         """Calculate team win probability from individual champion winrates."""

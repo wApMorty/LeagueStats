@@ -98,16 +98,38 @@ class DraftScorer:
         if not ally_team:
             return 0.0
 
+        ally_names = [self._display_name(ally_id) for ally_id in ally_team]
+        ally_names = [name for name in ally_names if name]
+        return self.calculate_synergy_score_by_names(champion_name, ally_names, lane=lane)
+
+    def calculate_synergy_score_by_names(
+        self, champion_name: str, ally_names: List[str], lane: Optional[str] = None
+    ) -> float:
+        """Same as calculate_synergy_score, for callers that already have ally
+        champion display names instead of champion IDs — e.g. the Tournament
+        Coach's manual draft state, which never goes through an id -> name
+        lookup in the first place.
+
+        Args:
+            champion_name: Name of the champion to evaluate
+            ally_names: List of allied champion display names already picked
+            lane: Lane optionnelle transmise à get_synergy_delta2. None =
+                  comportement inchangé (agrégation toutes lanes).
+
+        Returns:
+            Sum of delta2 values for synergies with allies (0.0 if no allies)
+        """
+        if not ally_names:
+            return 0.0
+
         synergy_score = 0.0
 
-        for ally_id in ally_team:
-            ally_name = self._display_name(ally_id)
-            if ally_name:
-                delta2 = self.assistant.db.get_synergy_delta2(champion_name, ally_name, lane=lane)
-                if delta2 is not None:
-                    synergy_score += delta2
-                    if self.verbose:
-                        print(f"[DEBUG] Synergy: {champion_name} + {ally_name} = {delta2:+.2f}")
+        for ally_name in ally_names:
+            delta2 = self.assistant.db.get_synergy_delta2(champion_name, ally_name, lane=lane)
+            if delta2 is not None:
+                synergy_score += delta2
+                if self.verbose:
+                    print(f"[DEBUG] Synergy: {champion_name} + {ally_name} = {delta2:+.2f}")
 
         return synergy_score
 

@@ -6,6 +6,21 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### 🐛 Fix
 
+- **Tournament Coach — synergies alliées ignorées** — `RecommendationEngine.
+  calculate_and_display_recommendations()` et les fonctions `status`/`analyze`
+  de `src/ui/tournament_display_ui.py` ne calculaient qu'un score de matchup
+  contre l'équipe ennemie ; `ally_team` ne servait qu'à exclure les champions
+  déjà pick, jamais à calculer un bonus de synergie — contrairement au Live
+  Coach (`src/draft_monitor.py`) qui blend matchup + synergie via
+  `DraftScorer`. `Assistant` construit désormais un `DraftScorer` partagé
+  (`self.draft_scorer`, poids par défaut `draft_config.DEFAULT_SYNERGY_WEIGHT`)
+  utilisé par les deux coachs : `RecommendationEngine` en reçoit une instance,
+  et `Assistant.score_with_synergy()` (nouvelle méthode) l'expose au
+  Tournament Coach pour `status`/`analyze`. `DraftScorer.calculate_synergy_score`
+  (id-based, Live Coach) délègue maintenant à la nouvelle
+  `calculate_synergy_score_by_names` (name-based), réutilisable sans mapping
+  d'ID LCU. Test de régression ajouté.
+
 - **Live Coach — games gonflés sur les recommandations** — `DraftRecommender.provide()`
   appelait `get_matchups_for_draft(champion_name)` sans filtre de lane, sommant
   les games de toutes les lanes d'un champion (ex. Yasuo top+mid+bottom) au

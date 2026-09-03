@@ -13,16 +13,22 @@ from ..models import Matchup
 class RecommendationEngine:
     """Generates champion recommendations based on team compositions."""
 
-    def __init__(self, db: Database, scorer: ChampionScorer):
+    def __init__(self, db: Database, scorer: ChampionScorer, draft_scorer=None):
         """
         Initialize RecommendationEngine.
 
         Args:
             db: Database instance
             scorer: ChampionScorer instance
+            draft_scorer: Optional DraftScorer instance (src/draft/scoring.py),
+                used to blend a synergy score with ally_team into the ranking —
+                same blend the Live Coach uses. None = matchup-only ranking
+                (legacy behavior, kept for callers/tests that build this engine
+                without one).
         """
         self.db = db
         self.scorer = scorer
+        self.draft_scorer = draft_scorer
 
     def draft_simple(self, nb_results: int) -> None:
         """
@@ -97,7 +103,16 @@ class RecommendationEngine:
                 skipped_low_data += 1
                 continue
 
-            score = self.scorer.score_against_team(matchups, enemy_team, champion_name=champion)
+            matchup_score = self.scorer.score_against_team(
+                matchups, enemy_team, champion_name=champion
+            )
+            if self.draft_scorer is not None:
+                synergy_score = self.draft_scorer.calculate_synergy_score_by_names(
+                    champion, ally_team
+                )
+                score = self.draft_scorer.final_score(matchup_score, synergy_score)
+            else:
+                score = matchup_score
             scores.append((str(champion), score))
 
         scores.sort(key=lambda x: -x[1])
