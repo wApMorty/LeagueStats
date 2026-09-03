@@ -234,8 +234,8 @@ class TestBidirectionalAdvantage:
         # Aatrox has valid matchup
         insert_matchup("Aatrox", "Garen", 54.0, 120, 180, 8.0, 2500)
 
-        # Garen has insufficient games (below 200 threshold)
-        insert_matchup("Garen", "Aatrox", 52.0, 60, 100, 5.0, 150)
+        # Garen has insufficient games (below MIN_MATCHUP_GAMES threshold)
+        insert_matchup("Garen", "Aatrox", 52.0, 60, 100, 5.0, analysis_config.MIN_MATCHUP_GAMES - 1)
 
         aatrox_matchups = db.get_champion_matchups_by_name("Aatrox")
 

@@ -108,10 +108,14 @@ class AnalysisConfig:
     """Configuration for champion analysis and tier list generation."""
 
     # Minimum thresholds for data quality
-    MIN_GAMES_THRESHOLD: int = 2000  # Minimum total games for tier lists
-    MIN_GAMES_COMPETITIVE: int = 10000  # Higher threshold for competitive
+    # Valeurs scalées à ~40% des seuils Diamond+ d'origine (2000/10000/200) suite
+    # au passage au tier Master+ (config.LOLALYTICS_TIER) : le volume de games
+    # observé à Master+ tourne autour de 37-39% du volume Diamond+ pour un
+    # champion donné (mesuré sur lolalytics, 2026-09).
+    MIN_GAMES_THRESHOLD: int = 800  # Minimum total games for tier lists
+    MIN_GAMES_COMPETITIVE: int = 4000  # Higher threshold for competitive
     MIN_PICKRATE: float = 0.5  # Minimum pickrate % for matchup inclusion
-    MIN_MATCHUP_GAMES: int = 200  # Minimum games for matchup reliability
+    MIN_MATCHUP_GAMES: int = 80  # Minimum games for matchup reliability
 
     # Lissage de confiance : un matchup à CONFIDENCE_K parties reçoit la moitié
     # du poids d'un matchup infiniment observé. Les petits échantillons sont
@@ -182,7 +186,9 @@ class DraftConfig:
 
     # SPEC-06 E7: below this total games (all matchups for a candidate
     # champion combined), the sample is too thin to score during live draft.
-    MIN_CHAMPION_GAMES: int = 500
+    # Scalé à ~40% (500->200) suite au passage au tier Master+, voir
+    # AnalysisConfig.MIN_GAMES_THRESHOLD.
+    MIN_CHAMPION_GAMES: int = 200
 
     # Draft phase detection
     READY_CHECK_COOLDOWN: float = 2.0  # Seconds after accepting queue
@@ -259,7 +265,9 @@ class PoolStatisticsConfig:
     """Configuration for pool statistics analysis."""
 
     # Minimum thresholds for data quality in pool statistics
-    MIN_GAMES_THRESHOLD: int = 100  # Minimum total games for sufficient data
+    # Scalé à ~40% (100->40) suite au passage au tier Master+, voir
+    # AnalysisConfig.MIN_GAMES_THRESHOLD.
+    MIN_GAMES_THRESHOLD: int = 40  # Minimum total games for sufficient data
     MIN_PICKRATE: float = 0.5  # Minimum pickrate % for matchup inclusion
 
 
