@@ -21,6 +21,7 @@ from typing import Dict, List, Optional
 import requests
 from tenacity import retry, stop_after_attempt, wait_exponential
 
+from .config import config
 from .config_constants import scraping_config
 
 logger = logging.getLogger(__name__)
@@ -77,7 +78,9 @@ def fetch_lane_distribution(
         LaneDiscoveryError: HTTP error or no lane data found in the HTML
         requests.RequestException: network failure (after 3 retries)
     """
-    url = f"https://lolalytics.com/lol/{champion}/build/?tier=diamond_plus&patch={patch}"
+    url = (
+        f"https://lolalytics.com/lol/{champion}/build/?tier={config.LOLALYTICS_TIER}&patch={patch}"
+    )
     http = session or requests
     response = http.get(
         url,

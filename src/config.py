@@ -65,6 +65,10 @@ class Config:
     # "14" = 14 derniers jours (évite effets de bord lors de sortie de patch + pas besoin de mettre à jour)
     CURRENT_PATCH: str = "14"
 
+    # Tier lolalytics utilisé pour toutes les URLs de scraping (paramètre "tier=").
+    # "master_plus" = Master + Grandmaster + Challenger.
+    LOLALYTICS_TIER: str = "master_plus"
+
     @classmethod
     def get_firefox_path(cls) -> str:
         """Get Firefox path with fallback options."""

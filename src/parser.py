@@ -247,7 +247,7 @@ class Parser:
 
     def get_matchup_data_on_patch(self, patch: str, champion: str, enemy: str) -> tuple:
         """Get matchup data for specific champions and patch with error handling."""
-        url = f"https://lolalytics.com/lol/{champion}/vs/{enemy}/build/?tier=diamond_plus&patch={patch}"
+        url = f"https://lolalytics.com/lol/{champion}/vs/{enemy}/build/?tier={config.LOLALYTICS_TIER}&patch={patch}"
 
         try:
             self.webdriver.get(url)
@@ -318,9 +318,9 @@ class Parser:
     def _load_champion_page(self, patch: str, champion: str, lane: Optional[str] = None) -> None:
         """Load a champion's LoLalytics build page and prime it for scraping."""
         if lane:
-            url = f"https://lolalytics.com/lol/{champion}/build/?lane={lane}&tier=diamond_plus&patch={patch}"
+            url = f"https://lolalytics.com/lol/{champion}/build/?lane={lane}&tier={config.LOLALYTICS_TIER}&patch={patch}"
         else:
-            url = f"https://lolalytics.com/lol/{champion}/build/?tier=diamond_plus&patch={patch}"
+            url = f"https://lolalytics.com/lol/{champion}/build/?tier={config.LOLALYTICS_TIER}&patch={patch}"
 
         self.webdriver.get(url)
         sleep(scraping_config.PAGE_LOAD_DELAY)

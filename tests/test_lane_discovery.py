@@ -97,7 +97,7 @@ class TestFetchLaneDistribution:
         assert distribution["top"] == 75.1
 
         url = session.get.call_args[0][0]
-        assert url == "https://lolalytics.com/lol/aatrox/build/?tier=diamond_plus&patch=14"
+        assert url == "https://lolalytics.com/lol/aatrox/build/?tier=master_plus&patch=14"
 
     def test_http_error_raises(self):
         session = self._mock_session(status_code=403)
