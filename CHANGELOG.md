@@ -4,6 +4,19 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### ✨ Ajouts
+
+- **Tier de scraping Master+** — passage du tier lolalytics de `diamond_plus`
+  à `master_plus` (Master + Grandmaster + Challenger), suite à l'atteinte du
+  rang Master en solo queue. Centralisé dans `config.LOLALYTICS_TIER`
+  (`src/config.py`), remplaçant les 3 occurrences en dur de `diamond_plus`
+  dans `parser.py`/`lane_discovery.py`. Les seuils de volume de games
+  dépendants (`MIN_GAMES_THRESHOLD`, `MIN_GAMES_COMPETITIVE`,
+  `MIN_MATCHUP_GAMES`, `MIN_CHAMPION_GAMES`,
+  `PoolStatisticsConfig.MIN_GAMES_THRESHOLD`) sont scalés à ~40 % de leurs
+  valeurs Diamond+ d'origine, ratio mesuré sur lolalytics (Yasuo mid
+  30525/83051, Zilean support 15717/40251 games Master+/Diamond+).
+
 ### 📝 Docs
 
 - **SPEC-06 (D3, D4)** — les 9 modules issus du démantèlement de
