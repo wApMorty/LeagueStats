@@ -104,9 +104,15 @@ class DraftRecommender:
                             print(f"[DEBUG] Skipping banned champion: {banned_name}")
                         continue
 
-                    # Get champion name and matchups (cached for performance)
+                    # Get champion name and matchups (cached for performance).
+                    # Lane-filtered when known (SPEC-04 B5): an unfiltered,
+                    # all-lanes fetch mixes a multi-lane champion's off-role
+                    # sample into the score/volume shown for the lane actually
+                    # being played.
                     champion_name = self.m._get_display_name(champion_id)
-                    matchups = self.m.assistant.get_matchups_for_draft(champion_name)
+                    matchups = self.m.assistant.get_matchups_for_draft(
+                        champion_name, lane=player_lane
+                    )
                     total_games = sum(m.games for m in matchups) if matchups else 0
                     if matchups and total_games >= draft_config.MIN_CHAMPION_GAMES:
                         # Calculate matchup score against enemy team
@@ -115,6 +121,7 @@ class DraftRecommender:
                             enemy_picks,
                             champion_name,
                             all_banned_ids,
+                            lane=player_lane,
                             enemy_lanes=enemy_lanes,
                             player_lane=player_lane,
                         )
