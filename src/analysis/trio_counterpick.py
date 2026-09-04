@@ -61,9 +61,18 @@ class CounterpickTrioFinder:
         sys.stdout.flush()
 
     def _find_optimal_counterpick_duo(
-        self, remaining_pool: List[str], blind_champion: str, show_ranking: bool = False
+        self,
+        remaining_pool: List[str],
+        blind_champion: str,
+        show_ranking: bool = False,
+        lane: Optional[str] = None,
     ) -> tuple:
-        """Find the best duo of counterpicks to maximize coverage against all champions."""
+        """Find the best duo of counterpicks to maximize coverage against all champions.
+
+        Args:
+            lane: Lane optionnelle transmise aux requêtes matchups internes.
+                  None = agrégation toutes lanes, comportement inchangé.
+        """
         from itertools import combinations
 
         if len(remaining_pool) < 2:
@@ -96,7 +105,9 @@ class CounterpickTrioFinder:
 
                     for our_champion in trio:
                         try:
-                            matchups = self.db.get_champion_matchups_by_name(our_champion)
+                            matchups = self.db.get_champion_matchups_by_name(
+                                our_champion, lane=lane
+                            )
                             if not matchups:
                                 continue
 
@@ -195,6 +206,7 @@ class CounterpickTrioFinder:
         self,
         champion_pool: List[str],
         validate_pool: Callable[[List[str]], Tuple[List[str], dict]],
+        lane: Optional[str] = None,
     ) -> tuple:
         """
         Find optimal 3-champion composition from a given pool.
@@ -206,6 +218,9 @@ class CounterpickTrioFinder:
 
         Args:
             champion_pool: List of champion names to choose from
+            lane: Lane optionnelle transmise aux requêtes matchups internes
+                  (SPEC-04, pool_manager.pool_role_to_lane). None = agrégation
+                  toutes lanes, comportement inchangé.
 
         Returns:
             Tuple of (blind_pick, counterpick1, counterpick2, total_score)
@@ -290,7 +305,7 @@ class CounterpickTrioFinder:
 
         try:
             best_duo, duo_score = self._find_optimal_counterpick_duo(
-                remaining_pool, best_blind, show_ranking=True
+                remaining_pool, best_blind, show_ranking=True, lane=lane
             )
         except Exception as e:
             print(f"Error finding optimal duo: {e}")
@@ -309,7 +324,7 @@ class CounterpickTrioFinder:
 
         # Add tactical analysis
         result_trio = (best_blind, best_duo[0], best_duo[1], total_score)
-        self.tactics.analyze(result_trio)
+        self.tactics.analyze(result_trio, lane=lane)
 
         return result_trio
 
@@ -319,6 +334,7 @@ class CounterpickTrioFinder:
         champion_pool: Optional[List[str]],
         validate_pool: Callable[[List[str]], Tuple[List[str], dict]],
         validate_champion: Callable[[str], Tuple[bool, int, int, float]],
+        lane: Optional[str] = None,
     ) -> tuple:
         """
         Find the best duo of champions to pair with a fixed champion.
@@ -331,6 +347,8 @@ class CounterpickTrioFinder:
         Args:
             fixed_champion: The champion that must be in the trio
             champion_pool: Pool to choose companions from (default: CHAMPION_POOL)
+            lane: Lane optionnelle transmise aux requêtes matchups internes.
+                  None = agrégation toutes lanes, comportement inchangé.
 
         Returns:
             Tuple of (fixed_champion, companion1, companion2, total_score)
@@ -387,7 +405,7 @@ class CounterpickTrioFinder:
         # Step 2: Find best duo from viable companions
         try:
             best_duo, duo_score = self._find_optimal_counterpick_duo(
-                viable_companions, fixed_champion, show_ranking=True
+                viable_companions, fixed_champion, show_ranking=True, lane=lane
             )
         except Exception as e:
             print(f"Error finding optimal duo: {e}")
@@ -404,6 +422,6 @@ class CounterpickTrioFinder:
 
         # Add tactical analysis
         result_trio = (fixed_champion, best_duo[0], best_duo[1], total_score)
-        self.tactics.analyze(result_trio)
+        self.tactics.analyze(result_trio, lane=lane)
 
         return result_trio

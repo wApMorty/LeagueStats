@@ -62,8 +62,9 @@ def _run_basic_tournament_coach():
             )
             champion_pool = assistant.select_extended_champion_pool()
             pool_name = "Pool étendue"
+            pool_lane = None
         else:
-            pool_name, champion_pool, _pool_lane = selected_pool_info
+            pool_name, champion_pool, pool_lane = selected_pool_info
 
         print(f"\nUtilisation de la pool : {pool_name} ({len(champion_pool)} champions)")
 
@@ -88,7 +89,12 @@ def _run_basic_tournament_coach():
 
                 elif cmd == "status":
                     _show_tournament_draft_state(
-                        assistant, ally_team, enemy_team, banned_champions, champion_pool
+                        assistant,
+                        ally_team,
+                        enemy_team,
+                        banned_champions,
+                        champion_pool,
+                        lane=pool_lane,
                     )
 
                 elif cmd == "reset":
@@ -100,12 +106,18 @@ def _run_basic_tournament_coach():
 
                 elif cmd == "recommend":
                     _show_recommendations(
-                        assistant, enemy_team, ally_team, banned_champions, champion_pool, 5
+                        assistant,
+                        enemy_team,
+                        ally_team,
+                        banned_champions,
+                        champion_pool,
+                        5,
+                        lane=pool_lane,
                     )
 
                 elif cmd == "analyze":
                     if len(ally_team) == 5 and len(enemy_team) == 5:
-                        _analyze_complete_draft(assistant, ally_team, enemy_team)
+                        _analyze_complete_draft(assistant, ally_team, enemy_team, lane=pool_lane)
                     else:
                         print(
                             f"Draft incomplet : {len(ally_team)}/5 alliés, {len(enemy_team)}/5 adverses"
@@ -136,6 +148,7 @@ def _run_basic_tournament_coach():
                                     banned_champions,
                                     champion_pool,
                                     3,
+                                    lane=pool_lane,
                                 )
 
                 elif cmd.startswith("enemy "):
@@ -163,6 +176,7 @@ def _run_basic_tournament_coach():
                                     banned_champions,
                                     champion_pool,
                                     3,
+                                    lane=pool_lane,
                                 )
 
                 elif cmd.startswith("ban "):

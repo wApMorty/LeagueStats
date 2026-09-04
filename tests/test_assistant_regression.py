@@ -118,7 +118,7 @@ class TestCalculateAndDisplayRecommendationsRegression:
 
         # THEN: recommender received all arguments including banned_champions
         mock_recommender.calculate_and_display_recommendations.assert_called_once_with(
-            enemy_team, ally_team, nb_results, champion_pool, banned_champions
+            enemy_team, ally_team, nb_results, champion_pool, banned_champions, lane=None
         )
 
     def test_regression_backward_compat_without_banned_champions(self, assistant_instance):

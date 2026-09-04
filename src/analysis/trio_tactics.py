@@ -13,7 +13,7 @@ enclosing ``except Exception`` — the "WEAK AGAINST" section (and the
 tests/test_assistant_trio_classic.py); fixing it is a separate decision.
 """
 
-from typing import List
+from typing import List, Optional
 
 from ..db import Database
 from ..utils.display import safe_print
@@ -26,12 +26,14 @@ class TrioTacticsReporter:
         self.db = db
         self.verbose = verbose
 
-    def analyze(self, trio: tuple) -> None:
+    def analyze(self, trio: tuple, lane: Optional[str] = None) -> None:
         """
         Provide tactical analysis on how to use the optimal trio.
 
         Args:
             trio: (champion1, champion2, champion3) - the optimal trio
+            lane: Lane optionnelle transmise aux requêtes matchups internes.
+                  None = agrégation toutes lanes, comportement inchangé.
         """
         blind_pick, counter1, counter2 = trio[:3]
 
@@ -46,7 +48,7 @@ class TrioTacticsReporter:
             role = "BLIND PICK" if i == 0 else f"COUNTERPICK #{i}"
 
             try:
-                matchups = self.db.get_champion_matchups_by_name(champion)
+                matchups = self.db.get_champion_matchups_by_name(champion, lane=lane)
                 if not matchups:
                     continue
 
@@ -87,10 +89,15 @@ class TrioTacticsReporter:
                 continue
 
         # Coverage analysis
-        self._analyze_coverage(trio_champions)
+        self._analyze_coverage(trio_champions, lane=lane)
 
-    def _analyze_coverage(self, trio: List[str]) -> None:
-        """Analyze what the trio covers and potential gaps."""
+    def _analyze_coverage(self, trio: List[str], lane: Optional[str] = None) -> None:
+        """Analyze what the trio covers and potential gaps.
+
+        Args:
+            lane: Lane optionnelle transmise aux requêtes matchups internes.
+                  None = agrégation toutes lanes, comportement inchangé.
+        """
 
         safe_print(f"\nCOVERAGE ANALYSIS:")
         safe_print("─" * 50)
@@ -107,7 +114,7 @@ class TrioTacticsReporter:
 
             for our_champion in trio:
                 try:
-                    matchups = self.db.get_champion_matchups_by_name(our_champion)
+                    matchups = self.db.get_champion_matchups_by_name(our_champion, lane=lane)
 
                     for matchup in matchups:
                         if matchup.enemy_name.lower() == enemy_champion.lower():

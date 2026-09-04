@@ -208,13 +208,15 @@ class Assistant:
         """Validate and normalize champion name with fuzzy matching."""
         return validate_champion_name(name)
 
-    def _validate_champion_data(self, champion: str) -> tuple:
+    def _validate_champion_data(self, champion: str, lane: Optional[str] = None) -> tuple:
         """Validate if a champion has sufficient data in database."""
-        return validate_champion_data(self.db, champion)
+        return validate_champion_data(self.db, champion, lane=lane)
 
-    def _validate_champion_pool(self, champion_pool: List[str]) -> tuple:
+    def _validate_champion_pool(
+        self, champion_pool: List[str], lane: Optional[str] = None
+    ) -> tuple:
         """Validate entire champion pool and return viable champions."""
-        return validate_champion_pool(self.db, champion_pool)
+        return validate_champion_pool(self.db, champion_pool, lane=lane)
 
     def print_champion_list(self, champion_list: List[tuple]) -> None:
         """Print formatted champion list."""
@@ -251,16 +253,23 @@ class Assistant:
         ally_team: List[str],
         champion_name: str,
         banned_champions: List[str] = None,
+        lane: Optional[str] = None,
     ) -> float:
         """Bidirectional matchup score against enemy_team, blended with a
         synergy score from ally_team — the same matchup+synergy blend the
         Live Coach uses (DraftScorer.final_score), applied here to plain
         champion names for callers with no LCU champion IDs (Tournament Coach).
+
+        Args:
+            lane: Lane optionnelle transmise au scoring matchup/synergie.
+                  None = agrégation toutes lanes, comportement inchangé.
         """
         matchup_score = self.scorer.score_against_team(
-            matchups, enemy_team, champion_name, banned_champions
+            matchups, enemy_team, champion_name, banned_champions, lane=lane
         )
-        synergy_score = self.draft_scorer.calculate_synergy_score_by_names(champion_name, ally_team)
+        synergy_score = self.draft_scorer.calculate_synergy_score_by_names(
+            champion_name, ally_team, lane=lane
+        )
         return self.draft_scorer.final_score(matchup_score, synergy_score)
 
     def _calculate_team_winrate(self, individual_winrates: List[float]) -> dict:
@@ -302,10 +311,11 @@ class Assistant:
         nb_results: int,
         champion_pool: List[str] = None,
         banned_champions: List[str] = None,
+        lane: Optional[str] = None,
     ) -> List[tuple]:
         """Calculate champion recommendations and display top results."""
         return self.recommender.calculate_and_display_recommendations(
-            enemy_team, ally_team, nb_results, champion_pool, banned_champions
+            enemy_team, ally_team, nb_results, champion_pool, banned_champions, lane=lane
         )
 
     # ==================== Team Analysis ====================
@@ -342,7 +352,7 @@ class Assistant:
             remaining_pool, blind_champion, show_ranking
         )
 
-    def optimal_trio_from_pool(self, champion_pool: List[str]) -> tuple:
+    def optimal_trio_from_pool(self, champion_pool: List[str], lane: Optional[str] = None) -> tuple:
         """
         Find optimal 3-champion composition from a given pool.
 
@@ -351,15 +361,25 @@ class Assistant:
         2. Find champion with best average delta2 as blind pick
         3. From remaining champions, find duo that maximizes counterpick coverage
 
+        Args:
+            lane: Lane optionnelle transmise aux requêtes matchups internes
+                  (SPEC-04, pool_manager.pool_role_to_lane). None = agrégation
+                  toutes lanes, comportement inchangé.
+
         Returns:
             Tuple of (blind_pick, counterpick1, counterpick2, total_score)
         """
         return self.trio_counterpick.optimal_trio_from_pool(
-            champion_pool, validate_pool=self._validate_champion_pool
+            champion_pool,
+            validate_pool=lambda pool: self._validate_champion_pool(pool, lane=lane),
+            lane=lane,
         )
 
     def optimal_duo_for_champion(
-        self, fixed_champion: str, champion_pool: List[str] = None
+        self,
+        fixed_champion: str,
+        champion_pool: List[str] = None,
+        lane: Optional[str] = None,
     ) -> tuple:
         """
         Find the best duo of champions to pair with a fixed champion.
@@ -369,14 +389,19 @@ class Assistant:
         2. Validate companion pool has sufficient data
         3. Find the duo that maximizes total counterpick coverage alongside fixed champion
 
+        Args:
+            lane: Lane optionnelle transmise aux requêtes matchups internes.
+                  None = agrégation toutes lanes, comportement inchangé.
+
         Returns:
             Tuple of (fixed_champion, companion1, companion2, total_score)
         """
         return self.trio_counterpick.optimal_duo_for_champion(
             fixed_champion,
             champion_pool,
-            validate_pool=self._validate_champion_pool,
-            validate_champion=self._validate_champion_data,
+            validate_pool=lambda pool: self._validate_champion_pool(pool, lane=lane),
+            validate_champion=lambda champ: self._validate_champion_data(champ, lane=lane),
+            lane=lane,
         )
 
     def _analyze_trio_tactics(self, trio: tuple) -> None:
@@ -433,18 +458,28 @@ class Assistant:
     # ==================== Holistic Trio Analysis ====================
 
     def find_optimal_trios_holistic(
-        self, champion_pool: List[str], num_results: int = 5, profile: str = "balanced"
+        self,
+        champion_pool: List[str],
+        num_results: int = 5,
+        profile: str = "balanced",
+        lane: Optional[str] = None,
     ) -> List[dict]:
         """
         Find optimal 3-champion combinations using holistic evaluation.
 
         Unlike the blind-pick approach, this evaluates all possible trios as complete units.
+
+        Args:
+            lane: Lane optionnelle transmise aux requêtes matchups internes
+                  (SPEC-04, pool_manager.pool_role_to_lane). None = agrégation
+                  toutes lanes, comportement inchangé.
         """
         return self.trio_finder.find(
             champion_pool,
             num_results=num_results,
             profile=profile,
-            validate_pool=self._validate_champion_pool,
+            validate_pool=lambda pool: self._validate_champion_pool(pool, lane=lane),
+            lane=lane,
         )
 
     def _calculate_coverage_score(self, enemy_coverage: dict, all_enemies: set) -> float:

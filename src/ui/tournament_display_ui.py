@@ -4,6 +4,8 @@ Extrait de src/ui/lol_coach_legacy.py (SPEC-07 E9). Utilisé par la boucle
 de commandes interactive de src/ui/tournament_coach_ui.py.
 """
 
+from typing import Optional
+
 
 def _show_tournament_help():
     """Affiche l'aide du coach de tournoi."""
@@ -38,8 +40,15 @@ def _show_tournament_help():
     print("=" * 60)
 
 
-def _show_tournament_draft_state(assistant, ally_team, enemy_team, banned_champions, champion_pool):
-    """Affiche l'état enrichi du draft de tournoi avec les scores individuels des champions."""
+def _show_tournament_draft_state(
+    assistant, ally_team, enemy_team, banned_champions, champion_pool, lane: Optional[str] = None
+):
+    """Affiche l'état enrichi du draft de tournoi avec les scores individuels des champions.
+
+    lane: lane résolue de la pool de coaching (pool_manager.pool_role_to_lane),
+          None si la pool n'est pas mono-rôle. Transmise aux requêtes matchups
+          pour ne pas mélanger toutes les lanes jouées par chaque champion.
+    """
     print(f"\n" + "=" * 70)
     print("ÉTAT ACTUEL DU DRAFT")
     print("=" * 70)
@@ -48,10 +57,12 @@ def _show_tournament_draft_state(assistant, ally_team, enemy_team, banned_champi
     print(f"\nVOTRE ÉQUIPE ({len(ally_team)}/5) :")
     if ally_team:
         for champ in ally_team:
-            matchups = assistant.db.get_champion_matchups_by_name(champ)
+            matchups = assistant.db.get_champion_matchups_by_name(champ, lane=lane)
             if matchups and enemy_team:
                 other_allies = [a for a in ally_team if a != champ]
-                advantage = assistant.score_with_synergy(matchups, enemy_team, other_allies, champ)
+                advantage = assistant.score_with_synergy(
+                    matchups, enemy_team, other_allies, champ, lane=lane
+                )
                 if advantage >= 2.0:
                     status = "Fort"
                 elif advantage >= 0:
@@ -88,10 +99,12 @@ def _show_tournament_draft_state(assistant, ally_team, enemy_team, banned_champi
         print(f"\nAVANTAGE DU DRAFT :")
         ally_advantages = []
         for champ in ally_team:
-            matchups = assistant.db.get_champion_matchups_by_name(champ)
+            matchups = assistant.db.get_champion_matchups_by_name(champ, lane=lane)
             if matchups:
                 other_allies = [a for a in ally_team if a != champ]
-                adv = assistant.score_with_synergy(matchups, enemy_team, other_allies, champ)
+                adv = assistant.score_with_synergy(
+                    matchups, enemy_team, other_allies, champ, lane=lane
+                )
                 ally_advantages.append(adv)
 
         if ally_advantages:
@@ -107,7 +120,13 @@ def _show_tournament_draft_state(assistant, ally_team, enemy_team, banned_champi
 
 
 def _show_recommendations(
-    assistant, enemy_team, ally_team, banned_champions, champion_pool, nb_results
+    assistant,
+    enemy_team,
+    ally_team,
+    banned_champions,
+    champion_pool,
+    nb_results,
+    lane: Optional[str] = None,
 ):
     """Affiche les recommandations formatées."""
     if not enemy_team and not ally_team:
@@ -120,7 +139,7 @@ def _show_recommendations(
     print(f"\nTOP {nb_results} RECOMMANDATIONS :")
     print("-" * 50)
     assistant._calculate_and_display_recommendations(
-        enemy_team, ally_team, nb_results, champion_pool, banned_champions
+        enemy_team, ally_team, nb_results, champion_pool, banned_champions, lane=lane
     )
 
 
@@ -136,7 +155,7 @@ def _show_draft_history(draft_history):
         print(f"  {i:2}. {action.upper():<12} {champ}")
 
 
-def _analyze_complete_draft(assistant, ally_team, enemy_team):
+def _analyze_complete_draft(assistant, ally_team, enemy_team, lane: Optional[str] = None):
     """Analyse le draft complet avec la même logique que le draft monitor."""
     print("\n" + "=" * 80)
     print("ANALYSE COMPLÈTE DU DRAFT")
@@ -145,20 +164,24 @@ def _analyze_complete_draft(assistant, ally_team, enemy_team):
     # Calcule les scores individuels
     ally_scores = []
     for champ in ally_team:
-        matchups = assistant.db.get_champion_matchups_by_name(champ)
+        matchups = assistant.db.get_champion_matchups_by_name(champ, lane=lane)
         if matchups:
             other_allies = [a for a in ally_team if a != champ]
-            advantage = assistant.score_with_synergy(matchups, enemy_team, other_allies, champ)
+            advantage = assistant.score_with_synergy(
+                matchups, enemy_team, other_allies, champ, lane=lane
+            )
             ally_scores.append((champ, advantage))
         else:
             ally_scores.append((champ, None))
 
     enemy_scores = []
     for champ in enemy_team:
-        matchups = assistant.db.get_champion_matchups_by_name(champ)
+        matchups = assistant.db.get_champion_matchups_by_name(champ, lane=lane)
         if matchups:
             other_enemies = [e for e in enemy_team if e != champ]
-            advantage = assistant.score_with_synergy(matchups, ally_team, other_enemies, champ)
+            advantage = assistant.score_with_synergy(
+                matchups, ally_team, other_enemies, champ, lane=lane
+            )
             enemy_scores.append((champ, advantage))
         else:
             enemy_scores.append((champ, None))

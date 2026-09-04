@@ -36,6 +36,7 @@ class HolisticTrioFinder:
         num_results: int = 5,
         profile: str = "balanced",
         validate_pool: Optional[Callable[[List[str]], Tuple[List[str], dict]]] = None,
+        lane: Optional[str] = None,
     ) -> List[dict]:
         """
         Find optimal 3-champion combinations using holistic evaluation.
@@ -48,6 +49,9 @@ class HolisticTrioFinder:
             profile: Scoring profile ("safe", "meta", "aggressive", "balanced")
             validate_pool: Callable validating/filtering the pool (injected by the
                 caller so it stays patchable on the Assistant facade instance)
+            lane: Lane optionnelle transmise aux requêtes matchups internes
+                  (SPEC-04, pool_manager.pool_role_to_lane). None = agrégation
+                  toutes lanes, comportement inchangé.
 
         Returns:
             List of dictionaries with trio information and scores
@@ -77,7 +81,7 @@ class HolisticTrioFinder:
 
         # Step 2.5: Preload ALL matchups for performance (single DB query instead of 147K+)
         print("Loading matchup data... ", end="", flush=True)
-        matchup_cache = self.db.get_all_matchups_bulk()
+        matchup_cache = self.db.get_all_matchups_bulk(lane=lane)
         all_champions = list(self.db.get_all_champion_names().values())
         print(f"[OK] Loaded {len(matchup_cache):,} matchups")
 
@@ -100,7 +104,9 @@ class HolisticTrioFinder:
             bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]",
         ):
             try:
-                trio_score = self._evaluate_trio_holistic(trio, matchup_cache, all_champions)
+                trio_score = self._evaluate_trio_holistic(
+                    trio, matchup_cache, all_champions, lane=lane
+                )
                 trio_rankings.append(
                     {
                         "trio": trio,
@@ -145,7 +151,11 @@ class HolisticTrioFinder:
         return trio_rankings[:num_results]
 
     def _evaluate_trio_holistic(
-        self, trio: tuple, matchup_cache: dict, all_champions: List[str]
+        self,
+        trio: tuple,
+        matchup_cache: dict,
+        all_champions: List[str],
+        lane: Optional[str] = None,
     ) -> dict:
         """
         Evaluate a trio of champions using holistic scoring with reverse lookup.
@@ -156,6 +166,10 @@ class HolisticTrioFinder:
             trio: Tuple of 3 champion names
             matchup_cache: Dict mapping (champion, enemy) -> delta2 (preloaded)
             all_champions: List of all champion names (preloaded once by the caller)
+            lane: Lane optionnelle transmise à trio_metrics.meta_score (seul
+                  appel de ce module à requêter la DB au lieu du cache déjà
+                  filtré). None = agrégation toutes lanes, comportement
+                  inchangé.
 
         Returns:
             dict with individual scores and total score
@@ -200,7 +214,9 @@ class HolisticTrioFinder:
         consistency_score = trio_metrics.consistency_score_reverse(
             trio_list, enemy_coverage, verbose=self.verbose
         )
-        meta_score = trio_metrics.meta_score(self.db, enemy_coverage, verbose=self.verbose)
+        meta_score = trio_metrics.meta_score(
+            self.db, enemy_coverage, verbose=self.verbose, lane=lane
+        )
 
         # Calculate contextual total score using adaptive weights
         total_score, used_weights = self.weights.calculate_contextual_total_score(

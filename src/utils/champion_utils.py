@@ -49,7 +49,7 @@ def validate_champion_name(name: str) -> Optional[str]:
 
 
 def validate_champion_data(
-    db: Database, champion: str, min_games: int = None
+    db: Database, champion: str, min_games: int = None, lane: Optional[str] = None
 ) -> Tuple[bool, int, int, float]:
     """
     Validate if a champion has sufficient data in database.
@@ -58,6 +58,8 @@ def validate_champion_data(
         db: Database instance
         champion: Champion name to validate
         min_games: Minimum games threshold (defaults to config value)
+        lane: Lane optionnelle transmise à la requête matchups. None =
+              agrégation toutes lanes, comportement inchangé.
 
     Returns:
         Tuple of (has_data, matchup_count, total_games, avg_delta2)
@@ -66,7 +68,7 @@ def validate_champion_data(
         min_games = analysis_config.MIN_GAMES_THRESHOLD
 
     try:
-        matchups = db.get_champion_matchups_by_name(champion)
+        matchups = db.get_champion_matchups_by_name(champion, lane=lane)
         if not matchups:
             return (False, 0, 0, 0.0)
 
@@ -94,7 +96,7 @@ def validate_champion_data(
 
 
 def validate_champion_pool(
-    db: Database, champion_pool: List[str], min_games: int = None
+    db: Database, champion_pool: List[str], min_games: int = None, lane: Optional[str] = None
 ) -> Tuple[List[str], Dict]:
     """
     Validate entire champion pool and return viable champions.
@@ -103,6 +105,8 @@ def validate_champion_pool(
         db: Database instance
         champion_pool: List of champion names to validate
         min_games: Minimum games threshold (defaults to config value)
+        lane: Lane optionnelle transmise à validate_champion_data. None =
+              agrégation toutes lanes, comportement inchangé.
 
     Returns:
         Tuple of (viable_champions, validation_report)
@@ -113,7 +117,9 @@ def validate_champion_pool(
     print("Validating champion pool data...")
 
     for champion in champion_pool:
-        has_data, matchups, games, delta2 = validate_champion_data(db, champion, min_games)
+        has_data, matchups, games, delta2 = validate_champion_data(
+            db, champion, min_games, lane=lane
+        )
 
         validation_report[champion] = {
             "has_data": has_data,

@@ -69,6 +69,7 @@ class RecommendationEngine:
         nb_results: int,
         champion_pool: Optional[List[str]] = None,
         banned_champions: Optional[List[str]] = None,
+        lane: Optional[str] = None,
     ) -> List[tuple]:
         """
         Calculate champion recommendations and display top results.
@@ -79,6 +80,9 @@ class RecommendationEngine:
             nb_results: Number of results to display
             champion_pool: Pool to select from (defaults to TOP_SOLOQ_POOL)
             banned_champions: List of banned champions to exclude
+            lane: Lane optionnelle transmise au scoring matchup/synergie
+                  (SPEC-04, pool_manager.pool_role_to_lane sur champion_pool).
+                  None = agrégation toutes lanes, comportement inchangé.
 
         Returns:
             List of (champion, advantage) tuples, sorted by score
@@ -96,7 +100,7 @@ class RecommendationEngine:
             if champion in enemy_team or champion in ally_team or champion in banned_champions:
                 continue
 
-            matchups = self.db.get_champion_matchups_by_name(champion)
+            matchups = self.db.get_champion_matchups_by_name(champion, lane=lane)
             total_games = sum(m.games for m in matchups)
 
             if total_games < analysis_config.MIN_GAMES_COMPETITIVE:
@@ -104,11 +108,11 @@ class RecommendationEngine:
                 continue
 
             matchup_score = self.scorer.score_against_team(
-                matchups, enemy_team, champion_name=champion
+                matchups, enemy_team, champion_name=champion, lane=lane
             )
             if self.draft_scorer is not None:
                 synergy_score = self.draft_scorer.calculate_synergy_score_by_names(
-                    champion, ally_team
+                    champion, ally_team, lane=lane
                 )
                 score = self.draft_scorer.final_score(matchup_score, synergy_score)
             else:

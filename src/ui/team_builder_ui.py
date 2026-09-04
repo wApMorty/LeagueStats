@@ -3,7 +3,7 @@
 Extrait de src/ui/lol_coach_legacy.py (SPEC-07 E9).
 """
 
-from typing import List
+from typing import List, Optional
 
 from src.assistant import Assistant
 from src.utils.console import clear_console
@@ -31,8 +31,9 @@ def run_optimal_team_builder():
         if not selected_pool_info:
             print("[WARNING] Aucune pool sélectionnée, utilisation de la pool Top SoloQ par défaut")
             selected_pool = ast.select_extended_champion_pool()
+            pool_lane = None
         else:
-            pool_name, pool_champions, _pool_lane = selected_pool_info
+            pool_name, pool_champions, pool_lane = selected_pool_info
             selected_pool = pool_champions
             print(f"\nUtilisation de la pool : {pool_name} ({len(pool_champions)} champions)")
 
@@ -40,7 +41,7 @@ def run_optimal_team_builder():
             print(f"\n" + "=" * 60)
             print(f"ANALYSE DU TRIO OPTIMAL")
             print("=" * 60)
-            result = ast.optimal_trio_from_pool(selected_pool)
+            result = ast.optimal_trio_from_pool(selected_pool, lane=pool_lane)
             blind, counter1, counter2, score = result
             print(f"\nRÉSULTAT FINAL :")
             print(f"Blind Pick : {blind}")
@@ -49,7 +50,7 @@ def run_optimal_team_builder():
 
             # Proposer de sauvegarder le trio comme nouveau pool
             _offer_save_optimization_result(
-                [blind, counter1, counter2], f"Trio optimal (Score : {score:.2f})"
+                [blind, counter1, counter2], f"Trio optimal (Score : {score:.2f})", lane=pool_lane
             )
 
         elif choice == "2":
@@ -58,7 +59,7 @@ def run_optimal_team_builder():
                 print(f"\n" + "=" * 60)
                 print(f"DUO OPTIMAL POUR {champion.upper()}")
                 print("=" * 60)
-                duo_result = ast.optimal_duo_for_champion(champion, selected_pool)
+                duo_result = ast.optimal_duo_for_champion(champion, selected_pool, lane=pool_lane)
 
                 # Si la méthode retourne un résultat, proposer de le sauvegarder
                 if duo_result and isinstance(duo_result, tuple) and len(duo_result) == 4:
@@ -66,7 +67,9 @@ def run_optimal_team_builder():
                     fixed_champ, companion1, companion2, score = duo_result
                     duo_champions = [fixed_champ, companion1, companion2]
                     _offer_save_optimization_result(
-                        duo_champions, f"Duo optimal pour {champion} (Score : {score:.2f})"
+                        duo_champions,
+                        f"Duo optimal pour {champion} (Score : {score:.2f})",
+                        lane=pool_lane,
                     )
             else:
                 print("[ERROR] Aucun nom de champion fourni")
@@ -86,7 +89,7 @@ def run_optimal_team_builder():
 
             # Lance l'analyse holistique des trios
             trio_results = ast.find_optimal_trios_holistic(
-                selected_pool, num_results=5, profile=scoring_profile
+                selected_pool, num_results=5, profile=scoring_profile, lane=pool_lane
             )
 
             # Affiche les résultats
@@ -97,7 +100,9 @@ def run_optimal_team_builder():
                 best_trio = trio_results[0]["trio"]
                 best_score = trio_results[0]["total_score"]
                 _offer_save_optimization_result(
-                    list(best_trio), f"Trio holistique (Score : {best_score:.2f})"
+                    list(best_trio),
+                    f"Trio holistique (Score : {best_score:.2f})",
+                    lane=pool_lane,
                 )
 
         else:
@@ -109,13 +114,15 @@ def run_optimal_team_builder():
         print(f"[ERROR] Erreur du constructeur d'équipe : {e}")
 
 
-def _offer_save_optimization_result(champions: List[str], suggested_name: str):
+def _offer_save_optimization_result(
+    champions: List[str], suggested_name: str, lane: Optional[str] = None
+):
     """Propose de sauvegarder les résultats d'optimisation comme nouvelle pool de champions."""
     if not champions:
         return
 
     # Affiche les recommandations de ban pour cette pool optimisée
-    _show_ban_recommendations(champions)
+    _show_ban_recommendations(champions, lane=lane)
 
     save_choice = input(f"\nSauvegarder ce résultat comme nouvelle pool ? (y/N) : ").strip().lower()
     if save_choice != "y":
@@ -270,7 +277,7 @@ def _display_holistic_trio_results(trio_results: List[dict], profile: str = "bal
         print(f"[ERROR] Erreur lors de l'affichage des résultats des trios : {e}")
 
 
-def _show_ban_recommendations(champions: List[str]):
+def _show_ban_recommendations(champions: List[str], lane: Optional[str] = None):
     """Affiche les recommandations de ban pour une pool de champions."""
     try:
         print(f"\n" + "=" * 60)
@@ -282,7 +289,7 @@ def _show_ban_recommendations(champions: List[str]):
 
         assistant = Assistant()
 
-        ban_recommendations = assistant.get_ban_recommendations(champions, num_bans=5)
+        ban_recommendations = assistant.get_ban_recommendations(champions, num_bans=5, lane=lane)
 
         if ban_recommendations:
             print(f"\nMenaces principales à bannir :")

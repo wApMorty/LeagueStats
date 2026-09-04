@@ -7,7 +7,7 @@ casser le cycle d'import entre le calcul des poids adaptatifs (métriques
 deux composants importent ces fonctions plutôt que de s'importer l'un l'autre.
 """
 
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from ..config_constants import analysis_config
 from ..db import Database
@@ -213,7 +213,9 @@ def consistency_score(trio: tuple, all_matchups: List[List], verbose: bool = Fal
         return 50.0
 
 
-def meta_score(db: Database, enemy_coverage: dict, verbose: bool = False) -> float:
+def meta_score(
+    db: Database, enemy_coverage: dict, verbose: bool = False, lane: Optional[str] = None
+) -> float:
     """
     Calculate performance against popular/meta champions.
 
@@ -221,6 +223,10 @@ def meta_score(db: Database, enemy_coverage: dict, verbose: bool = False) -> flo
     - Gets pickrate for each enemy champion from database
     - Calculates weighted average of delta2 scores by pickrate
     - Higher pickrate champions have more influence on the score
+
+    Args:
+        lane: Lane optionnelle transmise à la requête matchups (pickrate de
+              l'ennemi). None = agrégation toutes lanes, comportement inchangé.
 
     Returns:
         Score 0-100 representing performance vs meta champions
@@ -236,7 +242,7 @@ def meta_score(db: Database, enemy_coverage: dict, verbose: bool = False) -> flo
         for enemy, (delta2, _) in enemy_coverage.items():
             try:
                 # Get pickrate for this enemy champion
-                enemy_matchups = db.get_champion_matchups_by_name(enemy)
+                enemy_matchups = db.get_champion_matchups_by_name(enemy, lane=lane)
                 if not enemy_matchups:
                     continue
 
