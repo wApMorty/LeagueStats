@@ -117,6 +117,12 @@ class AnalysisConfig:
     MIN_PICKRATE: float = 0.5  # Minimum pickrate % for matchup inclusion
     MIN_MATCHUP_GAMES: int = 80  # Minimum games for matchup reliability
 
+    # Sentinel `lane` value in champion_scores for the toutes-lanes aggregate
+    # score (fallback for multi-lane/custom pools). Distinct from
+    # ScrapingConfig.LANES (top/jungle/middle/bottom/support), which tag the
+    # lane-scoped rows used for role-specific tier lists.
+    ALL_LANES_KEY: str = "all"
+
     # Lissage de confiance : un matchup à CONFIDENCE_K parties reçoit la moitié
     # du poids d'un matchup infiniment observé. Les petits échantillons sont
     # ramenés vers le neutre plutôt que comptés au même titre que les gros.

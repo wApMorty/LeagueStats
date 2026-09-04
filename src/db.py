@@ -231,16 +231,24 @@ class Database:
         )
 
     def init_champion_scores_table(self) -> None:
-        """Create or reset champion_scores table for tier list calculations."""
+        """Create or reset champion_scores table for tier list calculations.
+
+        One row per (champion, lane): lane=analysis_config.ALL_LANES_KEY holds
+        the toutes-lanes aggregate (previous behavior, used as fallback for
+        multi-lane/custom pools), plus one row per scraped lane so tier lists
+        can be scoped to the lane actually played.
+        """
         self.execute_query("DROP TABLE IF EXISTS champion_scores")
         self.execute_query("""CREATE TABLE champion_scores (
-            id INTEGER PRIMARY KEY,
+            id INTEGER NOT NULL,
+            lane TEXT NOT NULL DEFAULT 'all',
             avg_delta2 REAL,
             variance REAL,
             coverage REAL,
             peak_impact REAL,
             volatility REAL,
             target_ratio REAL,
+            PRIMARY KEY (id, lane),
             FOREIGN KEY (id) REFERENCES champions(id) ON DELETE CASCADE
         )""")
 
@@ -1342,18 +1350,24 @@ class Database:
         peak_impact: float,
         volatility: float,
         target_ratio: float,
+        lane: str = analysis_config.ALL_LANES_KEY,
     ) -> None:
-        """Save or update champion scores in the database."""
+        """Save or update champion scores in the database.
+
+        lane: analysis_config.ALL_LANES_KEY (default) for the toutes-lanes
+              aggregate, or one of scraping_config.LANES for a lane-scoped score.
+        """
         cursor = self.connection.cursor()
         try:
             cursor.execute(
                 """
                 INSERT OR REPLACE INTO champion_scores
-                (id, avg_delta2, variance, coverage, peak_impact, volatility, target_ratio)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                (id, lane, avg_delta2, variance, coverage, peak_impact, volatility, target_ratio)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
                 (
                     champion_id,
+                    lane,
                     avg_delta2,
                     variance,
                     coverage,
@@ -1364,18 +1378,20 @@ class Database:
             )
             self.connection.commit()
         except Error as e:
-            print(f"Error saving champion scores for ID {champion_id}: {e}")
+            print(f"Error saving champion scores for ID {champion_id} (lane={lane}): {e}")
 
-    def get_champion_scores(self, champion_id: int) -> Optional[Dict[str, float]]:
-        """Get champion scores by champion ID."""
+    def get_champion_scores(
+        self, champion_id: int, lane: str = analysis_config.ALL_LANES_KEY
+    ) -> Optional[Dict[str, float]]:
+        """Get champion scores by champion ID, scoped to a lane (default: all lanes)."""
         cursor = self.connection.cursor()
         try:
             cursor.execute(
                 """
                 SELECT avg_delta2, variance, coverage, peak_impact, volatility, target_ratio
-                FROM champion_scores WHERE id = ?
+                FROM champion_scores WHERE id = ? AND lane = ?
             """,
-                (champion_id,),
+                (champion_id, lane),
             )
             result = cursor.fetchone()
 
@@ -1390,27 +1406,33 @@ class Database:
                 }
             return None
         except Error as e:
-            print(f"Error getting champion scores for ID {champion_id}: {e}")
+            print(f"Error getting champion scores for ID {champion_id} (lane={lane}): {e}")
             return None
 
-    def get_champion_scores_by_name(self, champion_name: str) -> Optional[Dict[str, float]]:
-        """Get champion scores by champion name."""
+    def get_champion_scores_by_name(
+        self, champion_name: str, lane: str = analysis_config.ALL_LANES_KEY
+    ) -> Optional[Dict[str, float]]:
+        """Get champion scores by champion name, scoped to a lane (default: all lanes)."""
         champion_id = self.get_champion_id(champion_name)
         if champion_id is None:
             return None
-        return self.get_champion_scores(champion_id)
+        return self.get_champion_scores(champion_id, lane=lane)
 
-    def get_all_champion_scores(self) -> List[tuple]:
-        """Get all champion scores with champion names."""
+    def get_all_champion_scores(self, lane: str = analysis_config.ALL_LANES_KEY) -> List[tuple]:
+        """Get all champion scores with champion names, scoped to a lane (default: all lanes)."""
         cursor = self.connection.cursor()
         try:
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT c.name, cs.avg_delta2, cs.variance, cs.coverage,
                        cs.peak_impact, cs.volatility, cs.target_ratio
                 FROM champion_scores cs
                 JOIN champions c ON cs.id = c.id
+                WHERE cs.lane = ?
                 ORDER BY c.name
-            """)
+            """,
+                (lane,),
+            )
             return cursor.fetchall()
         except Error as e:
             print(f"Error getting all champion scores: {e}")
