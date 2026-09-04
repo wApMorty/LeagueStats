@@ -28,4 +28,4 @@ def test_display_tier_list_does_not_raise_import_error():
 
     # Ne doit pas lever ImportError (bug initial) ni aucune autre exception
     # liée à l'affichage pour un jeu de données valide.
-    _display_tier_list(tier_list, "Test Pool", "COUNTER PICK", "counter_pick")
+    _display_tier_list(tier_list, "Test Pool", "COUNTER PICK", "counter_pick", "middle")
