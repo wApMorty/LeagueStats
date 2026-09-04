@@ -54,7 +54,12 @@ def test_calculate_global_scores_does_not_raise_attribute_error():
     mock_db = Mock()
     mock_db.connect.return_value = None
     mock_db.get_all_champion_names.return_value = {1: "Aatrox"}
-    mock_db.get_champion_matchups_by_name.return_value = [_make_matchup()]
+    # Only the toutes-lanes aggregate (lane=None) has data here -- mirrors a
+    # champion with no per-lane tagged matchups yet. Keeps this test's
+    # assertion count independent of scraping_config.LANES.
+    mock_db.get_champion_matchups_by_name.side_effect = lambda champion_name, lane=None, **kwargs: (
+        [_make_matchup()] if lane is None else []
+    )
     mock_db.get_champion_id.return_value = 1
     mock_db.save_champion_scores.return_value = None
 

@@ -49,13 +49,15 @@ def temp_db(tmp_path):
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS champion_scores (
-            id INTEGER PRIMARY KEY,
+            id INTEGER NOT NULL,
+            lane TEXT NOT NULL DEFAULT 'all',
             avg_delta2 REAL,
             variance REAL,
             coverage REAL,
             peak_impact REAL,
             volatility REAL,
             target_ratio REAL,
+            PRIMARY KEY (id, lane),
             FOREIGN KEY (id) REFERENCES champions(id) ON DELETE CASCADE
         )
     """)
@@ -125,8 +127,9 @@ def temp_db(tmp_path):
             champ_id = result[0]
             cursor.execute(
                 """
-                INSERT INTO champion_scores (id, avg_delta2, variance, coverage, peak_impact, volatility, target_ratio)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO champion_scores
+                (id, lane, avg_delta2, variance, coverage, peak_impact, volatility, target_ratio)
+                VALUES (?, 'all', ?, ?, ?, ?, ?, ?)
             """,
                 (champ_id, avg_delta2, variance, coverage, peak_impact, volatility, target_ratio),
             )
