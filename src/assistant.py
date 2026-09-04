@@ -389,7 +389,9 @@ class Assistant:
 
     # ==================== Ban Recommendations ====================
 
-    def get_ban_recommendations(self, champion_pool: List[str], num_bans: int = 5) -> List[tuple]:
+    def get_ban_recommendations(
+        self, champion_pool: List[str], num_bans: int = 5, lane: Optional[str] = None
+    ) -> List[tuple]:
         """
         Get ban recommendations against a specific champion pool using reverse lookup.
 
@@ -401,9 +403,11 @@ class Assistant:
                            best_response_champion, matchups_count)
             Sorted by threat_score (descending)
         """
-        return self.ban_recommender.get_ban_recommendations(champion_pool, num_bans)
+        return self.ban_recommender.get_ban_recommendations(champion_pool, num_bans, lane=lane)
 
-    def precalculate_pool_bans(self, pool_name: str, champion_pool: List[str]) -> bool:
+    def precalculate_pool_bans(
+        self, pool_name: str, champion_pool: List[str], lane: Optional[str] = None
+    ) -> bool:
         """
         Pre-calculate and store ban recommendations for a champion pool in database.
 
@@ -412,7 +416,7 @@ class Assistant:
         Returns:
             True if successful, False otherwise
         """
-        return self.ban_recommender.precalculate_pool_bans(pool_name, champion_pool)
+        return self.ban_recommender.precalculate_pool_bans(pool_name, champion_pool, lane=lane)
 
     def precalculate_all_custom_pool_bans(self) -> Dict[str, int]:
         """

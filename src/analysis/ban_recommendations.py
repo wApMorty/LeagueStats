@@ -4,7 +4,7 @@ Extracted from src/assistant.py (SPEC-07 E10, lot 2) : déplacement verbatim,
 aucun changement de comportement.
 """
 
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from ..config_constants import analysis_config
 from ..db import Database
@@ -17,7 +17,9 @@ class BanRecommender:
         self.db = db
         self.verbose = verbose
 
-    def get_ban_recommendations(self, champion_pool: List[str], num_bans: int = 5) -> List[tuple]:
+    def get_ban_recommendations(
+        self, champion_pool: List[str], num_bans: int = 5, lane: Optional[str] = None
+    ) -> List[tuple]:
         """
         Get ban recommendations against a specific champion pool using reverse lookup.
 
@@ -27,6 +29,11 @@ class BanRecommender:
         Args:
             champion_pool: List of champion names in your pool
             num_bans: Number of ban recommendations to return
+            lane: Lane optionnelle transmise aux requêtes matchups internes.
+                  None = agrégation toutes lanes, comportement inchangé. Une
+                  pool mono-rôle (SPEC-04, pool_manager.pool_role_to_lane)
+                  doit filtrer sur cette lane pour ne pas noyer le vrai
+                  matchup de rôle dans les autres lanes du champion.
 
         Returns:
             List of tuples (enemy_name, threat_score, best_response_delta2,
@@ -37,7 +44,7 @@ class BanRecommender:
         all_potential_enemies = set()
         for our_champion in champion_pool:
             try:
-                matchups = self.db.get_champion_matchups_by_name(our_champion)
+                matchups = self.db.get_champion_matchups_by_name(our_champion, lane=lane)
                 for m in matchups:
                     if (
                         m.pickrate >= analysis_config.MIN_PICKRATE
@@ -61,7 +68,7 @@ class BanRecommender:
             # Check all our champions against this enemy
             for our_champion in champion_pool:
                 try:
-                    delta2 = self.db.get_matchup_delta2(our_champion, enemy_champion)
+                    delta2 = self.db.get_matchup_delta2(our_champion, enemy_champion, lane=lane)
 
                     if delta2 is not None:
                         matchups_found += 1
@@ -74,7 +81,9 @@ class BanRecommender:
                         # Also get pickrate data for this enemy (approximate from one of our matchups)
                         if enemy_pickrate == 0.0:
                             try:
-                                matchups = self.db.get_champion_matchups_by_name(our_champion)
+                                matchups = self.db.get_champion_matchups_by_name(
+                                    our_champion, lane=lane
+                                )
                                 for m in matchups:
                                     if m.enemy_name == enemy_champion:
                                         enemy_pickrate = m.pickrate
@@ -142,7 +151,9 @@ class BanRecommender:
             ]
         ]
 
-    def precalculate_pool_bans(self, pool_name: str, champion_pool: List[str]) -> bool:
+    def precalculate_pool_bans(
+        self, pool_name: str, champion_pool: List[str], lane: Optional[str] = None
+    ) -> bool:
         """
         Pre-calculate and store ban recommendations for a champion pool in database.
 
@@ -152,6 +163,9 @@ class BanRecommender:
         Args:
             pool_name: Name of the champion pool
             champion_pool: List of champion names in the pool
+            lane: Lane optionnelle transmise aux requêtes matchups internes
+                  (voir get_ban_recommendations). None = agrégation toutes
+                  lanes, comportement inchangé.
 
         Returns:
             True if successful, False otherwise
@@ -166,7 +180,7 @@ class BanRecommender:
             all_potential_enemies = set()
             for our_champion in champion_pool:
                 try:
-                    matchups = self.db.get_champion_matchups_by_name(our_champion)
+                    matchups = self.db.get_champion_matchups_by_name(our_champion, lane=lane)
                     for m in matchups:
                         if (
                             m.pickrate >= analysis_config.MIN_PICKRATE
@@ -190,7 +204,7 @@ class BanRecommender:
                 # Check all our champions against this enemy
                 for our_champion in champion_pool:
                     try:
-                        delta2 = self.db.get_matchup_delta2(our_champion, enemy_champion)
+                        delta2 = self.db.get_matchup_delta2(our_champion, enemy_champion, lane=lane)
 
                         if delta2 is not None:
                             matchups_found += 1
@@ -203,7 +217,9 @@ class BanRecommender:
                             # Get pickrate data for this enemy
                             if enemy_pickrate == 0.0:
                                 try:
-                                    matchups = self.db.get_champion_matchups_by_name(our_champion)
+                                    matchups = self.db.get_champion_matchups_by_name(
+                                        our_champion, lane=lane
+                                    )
                                     for m in matchups:
                                         if m.enemy_name == enemy_champion:
                                             enemy_pickrate = m.pickrate
@@ -266,7 +282,7 @@ class BanRecommender:
         Returns:
             Dictionary mapping pool names to number of bans calculated
         """
-        from ..pool_manager import PoolManager
+        from ..pool_manager import PoolManager, pool_role_to_lane
 
         results = {}
 
@@ -297,7 +313,12 @@ class BanRecommender:
                 if self.verbose:
                     print(f"[INFO] Processing pool: {pool_name} ({len(pool.champions)} champions)")
 
-                success = self.precalculate_pool_bans(pool_name, pool.champions)
+                # SPEC-04: une pool mono-rôle (top/jungle/mid/adc/support) a
+                # une lane résoluble ; une pool "custom" multi-rôles n'en a
+                # pas (None = agrégation toutes lanes, comportement inchangé).
+                success = self.precalculate_pool_bans(
+                    pool_name, pool.champions, lane=pool_role_to_lane(pool.role)
+                )
 
                 if success:
                     # Get count of saved bans

@@ -59,6 +59,7 @@ class DraftMonitor:
         self.verbose = verbose
         self.current_pool = TOP_SOLOQ_POOL  # Default pool
         self.pool_name = None  # Pool name for pre-calculated ban lookups
+        self.pool_lane = None  # SPEC-04: lane du rôle de current_pool, si mono-rôle
         self.auto_select_pool = auto_select_pool
         # SPEC-06 D2: pool mémorisée d'une session précédente, réutilisée sans
         # re-poser la question si elle existe toujours.
@@ -127,6 +128,7 @@ class DraftMonitor:
         else:
             # Auto-select top pool by default
             self.pool_name = "All Top Champions"  # System pool name
+            self.pool_lane = "top"
             self.current_pool = CHAMPIONS_BY_ROLE["top"]
             safe_print(f"[OK] Pool utilisée : TOP ({', '.join(self.current_pool)})")
 

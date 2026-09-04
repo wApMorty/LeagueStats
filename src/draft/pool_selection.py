@@ -29,7 +29,7 @@ class PoolSelector:
         renommée depuis la dernière session (SPEC-06 D2).
         """
         try:
-            from ..pool_manager import PoolManager
+            from ..pool_manager import PoolManager, pool_role_to_lane
 
             pool_manager = PoolManager()
             pool = pool_manager.get_pool(pool_name)
@@ -39,6 +39,7 @@ class PoolSelector:
 
             safe_print(f"[OK] Pool mémorisée utilisée : {pool_name} ({', '.join(pool.champions)})")
             self.m.pool_name = pool_name
+            self.m.pool_lane = pool_role_to_lane(pool.role)
             return pool.champions
         except Exception as e:
             print(f"[WARNING] Erreur lors du chargement de la pool mémorisée: {e}")
@@ -47,7 +48,7 @@ class PoolSelector:
     def select_interactive(self) -> List[str]:
         """Interactive pool selection with custom pools support."""
         try:
-            from ..pool_manager import PoolManager
+            from ..pool_manager import PoolManager, pool_role_to_lane
 
             pool_manager = PoolManager()
 
@@ -82,23 +83,28 @@ class PoolSelector:
                     )
                     # Store pool name for pre-calculated ban lookups
                     self.m.pool_name = selected_name
+                    self.m.pool_lane = pool_role_to_lane(selected_pool.role)
                     return selected_pool.champions
                 elif choice == idx:
                     # Fallback to assistant's method (no pool_name)
                     self.m.pool_name = None
+                    self.m.pool_lane = None
                     return self.m.assistant.select_champion_pool()
                 else:
                     print("[WARNING] Choix invalide, utilisation de la pool TOP par défaut")
                     self.m.pool_name = "All Top Champions"  # System pool name
+                    self.m.pool_lane = "top"
                     return CHAMPIONS_BY_ROLE["top"]
 
             except (ValueError, IndexError):
                 print("[WARNING] Saisie invalide, utilisation de la pool TOP par défaut")
                 self.m.pool_name = "All Top Champions"
+                self.m.pool_lane = "top"
                 return CHAMPIONS_BY_ROLE["top"]
 
         except Exception as e:
             print(f"[WARNING] Erreur de sélection de pool: {e}")
             print("Retour au sélecteur de pool legacy...")
             self.m.pool_name = None
+            self.m.pool_lane = None
             return self.m.assistant.select_champion_pool()

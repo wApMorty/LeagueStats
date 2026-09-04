@@ -64,7 +64,7 @@ class BanAdvisor:
                 if self.m.verbose:
                     print(f"[DEBUG] No pre-calculated bans found, calculating in real-time...")
                 ban_recommendations = self.m.assistant.get_ban_recommendations(
-                    self.m.current_pool, num_bans=3
+                    self.m.current_pool, num_bans=3, lane=getattr(self.m, "pool_lane", None)
                 )
 
             if not ban_recommendations:
@@ -143,7 +143,7 @@ class BanAdvisor:
                 if self.m.verbose:
                     print(f"[DEBUG] No pre-calculated bans found, calculating in real-time...")
                 ban_recommendations = self.m.assistant.get_ban_recommendations(
-                    self.m.current_pool, num_bans=3
+                    self.m.current_pool, num_bans=3, lane=getattr(self.m, "pool_lane", None)
                 )
 
             if ban_recommendations:
@@ -189,7 +189,7 @@ class BanAdvisor:
             # Fallback to real-time calculation if no pre-calculated data
             if not ban_recommendations:
                 ban_recommendations = self.m.assistant.get_ban_recommendations(
-                    self.m.current_pool, num_bans=3
+                    self.m.current_pool, num_bans=3, lane=getattr(self.m, "pool_lane", None)
                 )
 
             if ban_recommendations:
