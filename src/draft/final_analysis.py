@@ -30,9 +30,15 @@ class FinalDraftAnalyzer:
 
         Args:
             ally_lanes: championId -> inferred lane (state.inferred_roles),
-                used only to log the prediction row (SPEC-05 B7 §8). None =
-                no lane info stored with the prediction.
+                for both teams despite the name (SPEC-04 §4.3 merges ally and
+                enemy assignments into a single dict). Used both to log the
+                prediction row (SPEC-05 B7 §8) and, per champion, to filter
+                its matchups to its own lane instead of blending every lane
+                it has ever been played in (same bug class as fix #46, one
+                screen further). None = no lane info at all, unfiltered
+                all-lanes behaviour preserved.
         """
+        role_map = ally_lanes or {}
         # Clear console before final analysis for clean display
         clear_console()
 
@@ -60,10 +66,14 @@ class FinalDraftAnalyzer:
         # Calculate scores for ALLY team (without displaying yet)
         for i, champion_id in enumerate(ally_picks):
             champion_name = self.m._get_display_name(champion_id)
+            own_lane = role_map.get(champion_id)
 
             try:
-                # Get champion matchups (cached for performance) - uses 6-column format
-                champion_matchups = self.m.assistant.get_matchups_for_draft(champion_name)
+                # Get champion matchups (cached for performance) - uses 6-column format,
+                # filtered to this champion's own lane when known (SPEC-04).
+                champion_matchups = self.m.assistant.get_matchups_for_draft(
+                    champion_name, lane=own_lane
+                )
 
                 if (
                     not champion_matchups
@@ -84,15 +94,27 @@ class FinalDraftAnalyzer:
 
                 # Use the new normalized scoring system
                 enemy_names = [self.m._get_display_name(enemy_id) for enemy_id in enemy_picks]
+                enemy_lanes = {
+                    self.m._get_display_name(enemy_id): role_map[enemy_id]
+                    for enemy_id in enemy_picks
+                    if enemy_id in role_map
+                }
 
                 # Calculate matchup score against enemies
                 matchup_score = self.m.assistant.score_against_team(
-                    champion_matchups, enemy_names, champion_name
+                    champion_matchups,
+                    enemy_names,
+                    champion_name,
+                    lane=own_lane,
+                    enemy_lanes=enemy_lanes,
+                    player_lane=own_lane,
                 )
 
                 # Calculate synergy score with other allies (excluding self)
                 other_allies = [aid for aid in ally_picks if aid != champion_id]
-                synergy_score = self.m._calculate_synergy_score(champion_name, other_allies)
+                synergy_score = self.m._calculate_synergy_score(
+                    champion_name, other_allies, lane=own_lane
+                )
 
                 # Total score = configurable blend of matchup and synergy (see _final_score)
                 total_score = self.m._final_score(matchup_score, synergy_score)
@@ -105,10 +127,14 @@ class FinalDraftAnalyzer:
         # Calculate scores for ENEMY team (without displaying yet)
         for i, champion_id in enumerate(enemy_picks):
             champion_name = self.m._get_display_name(champion_id)
+            own_lane = role_map.get(champion_id)
 
             try:
-                # Get champion matchups (cached for performance) - uses 6-column format
-                champion_matchups = self.m.assistant.get_matchups_for_draft(champion_name)
+                # Get champion matchups (cached for performance) - uses 6-column format,
+                # filtered to this champion's own lane when known (SPEC-04).
+                champion_matchups = self.m.assistant.get_matchups_for_draft(
+                    champion_name, lane=own_lane
+                )
 
                 if (
                     not champion_matchups
@@ -127,15 +153,27 @@ class FinalDraftAnalyzer:
 
                 # Use the new normalized scoring system
                 ally_names = [self.m._get_display_name(ally_id) for ally_id in ally_picks]
+                ally_lanes_by_name = {
+                    self.m._get_display_name(ally_id): role_map[ally_id]
+                    for ally_id in ally_picks
+                    if ally_id in role_map
+                }
 
                 # Calculate matchup score against our team
                 matchup_score = self.m.assistant.score_against_team(
-                    champion_matchups, ally_names, champion_name
+                    champion_matchups,
+                    ally_names,
+                    champion_name,
+                    lane=own_lane,
+                    enemy_lanes=ally_lanes_by_name,
+                    player_lane=own_lane,
                 )
 
                 # Calculate synergy score with other enemies (excluding self)
                 other_enemies = [eid for eid in enemy_picks if eid != champion_id]
-                synergy_score = self.m._calculate_synergy_score(champion_name, other_enemies)
+                synergy_score = self.m._calculate_synergy_score(
+                    champion_name, other_enemies, lane=own_lane
+                )
 
                 # Total score = configurable blend of matchup and synergy (see _final_score)
                 total_score = self.m._final_score(matchup_score, synergy_score)

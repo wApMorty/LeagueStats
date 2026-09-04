@@ -61,12 +61,12 @@ def monitor():
 
     monitor.champion_id_to_name = dict(NAMES)
 
-    monitor.assistant.get_matchups_for_draft.side_effect = lambda name: [
+    monitor.assistant.get_matchups_for_draft.side_effect = lambda name, lane=None: [
         Matchup("Dummy", 50.0, 0.0, 0.0, 5.0, 1000)
     ]
-    monitor.assistant.score_against_team.side_effect = (
-        lambda matchups, enemies, name: MATCHUP_SCORES[name]
-    )
+    monitor.assistant.score_against_team.side_effect = lambda matchups, enemies, name, lane=None, enemy_lanes=None, player_lane=None: MATCHUP_SCORES[
+        name
+    ]
     monitor.assistant.db.get_synergy_delta2.return_value = SYNERGY_PER_PAIR
     # Ally team 55.0% vs enemy team 52.0% (first call = ally, second = enemy)
     monitor.assistant._calculate_team_winrate.side_effect = [
@@ -193,7 +193,7 @@ class TestFinalScoresDegradedCases:
     def test_champion_without_enough_games_is_marked_insufficient(self, monitor, capsys):
         """< 500 total games -> the row shows "Données insuffisantes"."""
 
-        def thin_data(name):
+        def thin_data(name, lane=None):
             games = 10 if name == "Ally3" else 1000
             return [Matchup("Dummy", 50.0, 0.0, 0.0, 5.0, games)]
 
@@ -210,7 +210,7 @@ class TestFinalScoresDegradedCases:
     def test_scoring_exception_is_marked_insufficient_too(self, monitor, capsys):
         """A raising scorer produces the very same "insufficient" row."""
 
-        def flaky(matchups, enemies, name):
+        def flaky(matchups, enemies, name, lane=None, enemy_lanes=None, player_lane=None):
             if name == "Ally2":
                 raise RuntimeError("scorer down")
             return MATCHUP_SCORES[name]
@@ -224,7 +224,7 @@ class TestFinalScoresDegradedCases:
         assert "  Ally2           | Données insuffisantes" in out
 
     def test_no_valid_ally_data_falls_back_to_neutral(self, monitor, capsys):
-        monitor.assistant.get_matchups_for_draft.side_effect = lambda name: (
+        monitor.assistant.get_matchups_for_draft.side_effect = lambda name, lane=None: (
             [] if name.startswith("Ally") else [Matchup("Dummy", 50.0, 0.0, 0.0, 5.0, 1000)]
         )
         monitor.assistant._calculate_team_winrate.side_effect = [{"team_winrate": 52.0}]
@@ -238,7 +238,7 @@ class TestFinalScoresDegradedCases:
 
     def test_no_valid_data_at_all_is_a_neutral_draft(self, monitor, capsys):
         """Both teams at the default 50.0 skip the normalization block."""
-        monitor.assistant.get_matchups_for_draft.side_effect = lambda name: []
+        monitor.assistant.get_matchups_for_draft.side_effect = lambda name, lane=None: []
 
         with patch("src.draft.final_analysis.clear_console"):
             monitor._calculate_final_scores(ALLY_IDS, ENEMY_IDS)
@@ -258,3 +258,98 @@ class TestFinalScoresDegradedCases:
         out = capsys.readouterr().out
         assert "  Équipe alliée :  Champion1" in out
         assert "  Équipe ennemie : Champion6" in out
+
+
+class TestFinalScoresLaneAwareness:
+    """Regression: the end-of-draft screen blended every lane a champion has
+    ever played into one score (same bug class as fix #46, one screen
+    further -- audit 2026-09-04). ``ally_lanes`` is actually
+    ``state.inferred_roles``, covering both teams despite its name."""
+
+    ROLE_MAP = {
+        1: "top",
+        2: "jungle",
+        3: "middle",
+        4: "bottom",
+        5: "support",
+        6: "top",
+        7: "jungle",
+        8: "middle",
+        9: "bottom",
+        10: "support",
+    }
+
+    def test_matchups_are_fetched_per_champion_own_lane(self, monitor):
+        with patch("src.draft.final_analysis.clear_console"):
+            monitor._calculate_final_scores(ALLY_IDS, ENEMY_IDS, ally_lanes=self.ROLE_MAP)
+
+        lane_by_champion = {
+            call.args[0]: call.kwargs.get("lane")
+            for call in monitor.assistant.get_matchups_for_draft.call_args_list
+        }
+        assert lane_by_champion == {
+            "Ally1": "top",
+            "Ally2": "jungle",
+            "Ally3": "middle",
+            "Ally4": "bottom",
+            "Ally5": "support",
+            "Enemy6": "top",
+            "Enemy7": "jungle",
+            "Enemy8": "middle",
+            "Enemy9": "bottom",
+            "Enemy10": "support",
+        }
+
+    def test_score_against_team_receives_own_lane_and_opposing_lane_map(self, monitor):
+        with patch("src.draft.final_analysis.clear_console"):
+            monitor._calculate_final_scores(ALLY_IDS, ENEMY_IDS, ally_lanes=self.ROLE_MAP)
+
+        kwargs_by_champion = {
+            call.args[2]: call.kwargs
+            for call in monitor.assistant.score_against_team.call_args_list
+        }
+
+        assert kwargs_by_champion["Ally1"]["lane"] == "top"
+        assert kwargs_by_champion["Ally1"]["player_lane"] == "top"
+        assert kwargs_by_champion["Ally1"]["enemy_lanes"] == {
+            "Enemy6": "top",
+            "Enemy7": "jungle",
+            "Enemy8": "middle",
+            "Enemy9": "bottom",
+            "Enemy10": "support",
+        }
+
+        assert kwargs_by_champion["Enemy6"]["lane"] == "top"
+        assert kwargs_by_champion["Enemy6"]["player_lane"] == "top"
+        assert kwargs_by_champion["Enemy6"]["enemy_lanes"] == {
+            "Ally1": "top",
+            "Ally2": "jungle",
+            "Ally3": "middle",
+            "Ally4": "bottom",
+            "Ally5": "support",
+        }
+
+    def test_synergy_score_is_filtered_to_own_lane(self, monitor):
+        with patch("src.draft.final_analysis.clear_console"):
+            monitor._calculate_final_scores(ALLY_IDS, ENEMY_IDS, ally_lanes=self.ROLE_MAP)
+
+        lanes_used = {
+            call.kwargs.get("lane")
+            for call in monitor.assistant.db.get_synergy_delta2.call_args_list
+        }
+        assert lanes_used == {"top", "jungle", "middle", "bottom", "support"}
+
+    def test_missing_lane_info_preserves_unfiltered_behaviour(self, monitor):
+        """No ally_lanes at all -> lane=None everywhere, identical to the
+        pre-fix behaviour (backward compatible default)."""
+        with patch("src.draft.final_analysis.clear_console"):
+            monitor._calculate_final_scores(ALLY_IDS, ENEMY_IDS)
+
+        assert all(
+            call.kwargs.get("lane") is None
+            for call in monitor.assistant.get_matchups_for_draft.call_args_list
+        )
+        assert all(
+            not call.kwargs.get("enemy_lanes")
+            for call in monitor.assistant.score_against_team.call_args_list
+        )
