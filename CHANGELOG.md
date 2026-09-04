@@ -6,6 +6,26 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### 🐛 Fix
 
+- **Générateur de tier list — lane ignorée (scores blend toutes lanes)** —
+  `champion_scores` ne stockait qu'un score par champion, calculé par
+  `GlobalScoreCalculator.calculate_all()` via
+  `db.get_champion_matchups_by_name(champion)` sans filtre lane (même bug
+  que le Live Coach avant le fix #46) : un champion multi-lane (ex. Yasuo
+  top/mid/bottom) avait ses matchups de toutes ses lanes mélangés dans un
+  score unique, et `TierListGenerator.generate_tier_list()` n'avait aucun
+  paramètre `lane` pour les distinguer — alors même que le sélecteur de pool
+  connaît déjà le rôle de chaque pool (`ChampionPool.role`) et le jetait
+  avant d'appeler le générateur. Migration `3e87f22f2ec1` : `champion_scores`
+  gagne une colonne `lane` (clé composite `(id, lane)`) ; `'all'` conserve
+  l'agrégat toutes-lanes historique (repli pour les pools multi-lane/custom),
+  et une ligne est ajoutée par lane scrapée. `GlobalScoreCalculator`,
+  `TierListGenerator.generate_tier_list()` et `Assistant.generate_tier_list()`
+  acceptent désormais un paramètre `lane` optionnel, câblé depuis l'UI via
+  le rôle de la pool sélectionnée (`pool_manager.pool_role_to_lane()`).
+  Table dérivée entièrement recalculée au prochain parsing ou "Recalculer
+  les scores" (quelques secondes en plus, accepté). Test de régression
+  ajouté.
+
 - **Tournament Coach — synergies alliées ignorées** — `RecommendationEngine.
   calculate_and_display_recommendations()` et les fonctions `status`/`analyze`
   de `src/ui/tournament_display_ui.py` ne calculaient qu'un score de matchup
