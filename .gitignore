@@ -14,8 +14,8 @@ CLAUDE.MD
 build
 dist
 *Release
-.zip
-.spec
+*.zip
+*.spec
 
 # Coverage files
 .coverage

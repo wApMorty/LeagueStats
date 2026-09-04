@@ -1,16 +1,18 @@
 <#
 .SYNOPSIS
-    Log rotation script for LeagueStats Coach auto-update logs.
+    Log rotation script for LeagueStats Coach pipeline logs.
 
 .DESCRIPTION
-    This script manages log file rotation to prevent auto_update.log from growing too large.
+    This script manages log file rotation to prevent update_all.log (written
+    by src/pipeline.py, the pipeline actually in use since scripts/auto_update_db.py
+    was superseded) from growing too large.
     - Rotates log file when it exceeds maximum size
     - Keeps a configurable number of backup files
     - Optionally compresses old backups to save disk space
     - Can be scheduled via Task Scheduler (daily or weekly)
 
 .PARAMETER MaxSizeMB
-    Maximum size of auto_update.log before rotation (default: 50 MB)
+    Maximum size of update_all.log before rotation (default: 50 MB)
 
 .PARAMETER MaxBackups
     Maximum number of backup files to keep (default: 5)
@@ -51,7 +53,7 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ProjectRoot = Split-Path -Parent $ScriptDir
 
 # Paths
-$LogFile = Join-Path $ProjectRoot "logs\auto_update.log"
+$LogFile = Join-Path $ProjectRoot "logs\update_all.log"
 $LogDir = Join-Path $ProjectRoot "logs"
 $RotationLog = Join-Path $ProjectRoot $LogRotationFile
 
@@ -100,7 +102,7 @@ Write-RotationLog "Log file size ($LogFileSizeMB MB) exceeds threshold ($MaxSize
 
 # Generate backup filename with timestamp
 $Timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-$BackupFile = Join-Path $LogDir "auto_update_$Timestamp.log"
+$BackupFile = Join-Path $LogDir "update_all_$Timestamp.log"
 
 try {
     # Rotate: Rename current log to backup
@@ -126,9 +128,9 @@ try {
     }
 
     # Clean up old backups (keep only MaxBackups)
-    $BackupPattern = "auto_update_*.log"
+    $BackupPattern = "update_all_*.log"
     if ($Compress) {
-        $BackupPattern = "auto_update_*.log.zip"
+        $BackupPattern = "update_all_*.log.zip"
     }
 
     $AllBackups = Get-ChildItem -Path $LogDir -Filter $BackupPattern |
