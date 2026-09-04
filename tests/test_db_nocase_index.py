@@ -94,8 +94,9 @@ def test_migration_is_chained_on_head():
     Elle n'est plus la tête : SPEC-03 B8 a empilé ea9a2b4722f1 par-dessus
     (contrainte d'unicité par lane, 2026-09-01), puis SPEC-04 B4 a empilé
     9ed81a3f7fc2 (table champion_lanes, 2026-09-01), puis SPEC-05 B7 a empilé
-    2551bbcc9eb8 (table predictions, 2026-09-01) -- recalculé : nouvelle tête
-    de la chaîne.
+    2551bbcc9eb8 (table predictions, 2026-09-01), puis 3e87f22f2ec1 (colonne
+    lane sur champion_scores, 2026-09-04) -- recalculé : nouvelle tête de la
+    chaîne.
     """
     from alembic.config import Config
     from alembic.script import ScriptDirectory
@@ -105,6 +106,9 @@ def test_migration_is_chained_on_head():
     assert script.get_revision("ab14babf365b").down_revision == "b7e41c9a3f02"
     assert script.get_revision("ea9a2b4722f1").down_revision == "ab14babf365b"
     assert script.get_revision("9ed81a3f7fc2").down_revision == "ea9a2b4722f1"
+    assert script.get_revision("2551bbcc9eb8").down_revision == "9ed81a3f7fc2"
+    assert script.get_revision("3e87f22f2ec1").down_revision == "2551bbcc9eb8"
     heads = list(script.get_heads())
     assert len(heads) == 1
-    assert script.get_revision(heads[0]).down_revision == "9ed81a3f7fc2"
+    assert heads[0] == "3e87f22f2ec1"
+    assert script.get_revision(heads[0]).down_revision == "2551bbcc9eb8"

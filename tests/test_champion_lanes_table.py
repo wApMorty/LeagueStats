@@ -31,6 +31,21 @@ class TestMigration:
             "CREATE TABLE champions (id INTEGER PRIMARY KEY, key TEXT, name TEXT NOT NULL, title TEXT)"
         )
         conn.execute("INSERT INTO champions (id, name) VALUES (1, 'Aatrox')")
+        # Pre-3e87f22f2ec1 schema: migration 3e87f22f2ec1 (add lane column to
+        # champion_scores) drops and recreates this table, so it must exist
+        # before upgrading through it.
+        conn.execute("""
+            CREATE TABLE champion_scores (
+                id INTEGER PRIMARY KEY,
+                avg_delta2 REAL,
+                variance REAL,
+                coverage REAL,
+                peak_impact REAL,
+                volatility REAL,
+                target_ratio REAL,
+                FOREIGN KEY (id) REFERENCES champions(id) ON DELETE CASCADE
+            )
+        """)
         conn.commit()
         conn.close()
 
