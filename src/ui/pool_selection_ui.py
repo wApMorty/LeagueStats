@@ -9,9 +9,14 @@ plutôt que dans un seul module de menu.
 
 
 def _select_pool_for_analysis():
-    """Sélectionne une pool pour l'analyse de composition d'équipe, avec interface améliorée."""
+    """Sélectionne une pool pour l'analyse de composition d'équipe, avec interface améliorée.
+
+    Retourne (nom, champions, lane) où lane est la valeur matchups.lane
+    correspondant au role de la pool (None si la pool n'est pas scopée à une
+    lane unique, ex. role="custom").
+    """
     try:
-        from src.pool_manager import PoolManager
+        from src.pool_manager import PoolManager, pool_role_to_lane
 
         pool_manager = PoolManager()
 
@@ -52,7 +57,11 @@ def _select_pool_for_analysis():
             choice_num = int(choice)
             if 1 <= choice_num <= len(pool_list):
                 selected_name, selected_pool = pool_list[choice_num - 1]
-                return (selected_name, selected_pool.champions)
+                return (
+                    selected_name,
+                    selected_pool.champions,
+                    pool_role_to_lane(selected_pool.role),
+                )
             elif choice_num == idx:
                 # Repli legacy
                 return None

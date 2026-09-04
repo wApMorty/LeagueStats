@@ -275,15 +275,18 @@ class Assistant:
         return self.tier_list_gen.generate_by_delta2(champion_list)
 
     def generate_tier_list(
-        self, champion_pool: List[str], analysis_type: str = "blind_pick"
+        self, champion_pool: List[str], analysis_type: str = "blind_pick", lane: str = None
     ) -> List[dict]:
         """
         Generate tier list with S/A/B/C classification using global normalization.
 
+        lane: Optional lane filter (scraping_config.LANES value, e.g. "middle").
+              None = toutes lanes agrégées (comportement historique).
+
         Delegates to TierListGenerator for actual implementation.
         """
         return self.tier_list_gen.generate_tier_list(
-            champion_pool, analysis_type, verbose=self.verbose
+            champion_pool, analysis_type, lane=lane, verbose=self.verbose
         )
 
     # ==================== Recommendations ====================
@@ -312,12 +315,13 @@ class Assistant:
 
     def calculate_global_scores(self) -> int:
         """
-        Calculate and save scores for all champions in the database.
+        Calculate and save scores for all champions in the database, both as a
+        toutes-lanes aggregate and scoped to each lane they're played in.
 
         Should be called after parsing/updating matchup data.
 
         Returns:
-            Number of champions scored and saved
+            Number of (champion, lane) rows scored and saved
         """
         return self.global_scores.calculate_all()
 

@@ -8,6 +8,26 @@ from .config import get_resource_path
 
 POOLS_FILENAME = "champion_pools.json"
 
+# Inverse of PoolManager._LANE_TO_ROLE: maps a ChampionPool.role ("top",
+# "jungle", "mid", "adc", "support") to the matching
+# scraping_config.LANES/matchups.lane value used to scope tier list scores.
+# "mid" -> "middle" and "adc" -> "bottom" are the only non-identity cases
+# (LoLalytics lane naming vs. pool role naming). A role outside this map
+# ("custom", multi-role pools) has no single lane, so it resolves to None.
+_ROLE_TO_LANE = {
+    "top": "top",
+    "jungle": "jungle",
+    "mid": "middle",
+    "adc": "bottom",
+    "support": "support",
+}
+
+
+def pool_role_to_lane(role: str) -> Optional[str]:
+    """Resolve a ChampionPool.role to its matchups.lane value, or None if the
+    pool isn't scoped to a single lane (e.g. role="custom")."""
+    return _ROLE_TO_LANE.get(role)
+
 
 def get_project_root() -> str:
     """Racine du dépôt en mode développement (remonte de src/ vers la racine)."""

@@ -314,7 +314,7 @@ def run_pipeline(
 
         assistant = Assistant(Database(config.DATABASE_PATH), verbose=False)
         scores_count = assistant.calculate_global_scores()
-        logger.info("champion_scores recalculated: %d champions", scores_count)
+        logger.info("champion_scores recalculated: %d (champion, lane) rows", scores_count)
 
         ban_results = assistant.precalculate_all_custom_pool_bans()
         logger.info(

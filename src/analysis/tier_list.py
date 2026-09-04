@@ -98,17 +98,25 @@ class TierListGenerator:
         return self.generate_by_delta2(champion_list)
 
     def generate_tier_list(
-        self, champion_pool: List[str], analysis_type: str = "blind_pick", verbose: bool = False
+        self,
+        champion_pool: List[str],
+        analysis_type: str = "blind_pick",
+        lane: str = None,
+        verbose: bool = False,
     ) -> List[dict]:
         """
         Generate a tier list for a champion pool using pre-computed global scores.
 
         Uses global normalization: normalizes metrics based on ALL champions in the
-        database, making scores comparable across different pools.
+        database (scoped to the same lane), making scores comparable across
+        different pools.
 
         Args:
             champion_pool: List of champion names to include in tier list
             analysis_type: "blind_pick" or "counter_pick"
+            lane: Optional lane filter (one of scraping_config.LANES, e.g.
+                  "middle"). None = toutes lanes agrégées (comportement
+                  historique ; utilisé pour les pools multi-lane/custom).
             verbose: Enable verbose logging
 
         Returns:
@@ -122,6 +130,8 @@ class TierListGenerator:
         """
         import statistics
 
+        lane_key = lane or analysis_config.ALL_LANES_KEY
+
         # Check if champion_scores table exists and has data
         if not self.db.champion_scores_table_exists():
             print("[WARNING] Champion scores not found in database.")
@@ -129,10 +139,10 @@ class TierListGenerator:
             return []
 
         # Step 1: Collect all scores from database for global normalization
-        all_scores_data = self.db.get_all_champion_scores()
+        all_scores_data = self.db.get_all_champion_scores(lane=lane_key)
 
         if not all_scores_data:
-            print("[ERROR] No champion scores found in database")
+            print(f"[ERROR] No champion scores found in database for lane={lane_key}")
             return []
 
         # Extract global ranges for normalization
@@ -202,11 +212,11 @@ class TierListGenerator:
 
         for champion in champion_pool:
             # Get pre-computed scores from database
-            scores = self.db.get_champion_scores_by_name(champion)
+            scores = self.db.get_champion_scores_by_name(champion, lane=lane_key)
 
             if scores is None:
                 if verbose:
-                    print(f"  [SKIP] {champion}: No scores in database")
+                    print(f"  [SKIP] {champion}: No scores in database for lane={lane_key}")
                 continue
 
             # Calculate normalized score based on analysis type

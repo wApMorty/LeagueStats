@@ -63,7 +63,7 @@ def _run_basic_tournament_coach():
             champion_pool = assistant.select_extended_champion_pool()
             pool_name = "Pool étendue"
         else:
-            pool_name, champion_pool = selected_pool_info
+            pool_name, champion_pool, _pool_lane = selected_pool_info
 
         print(f"\nUtilisation de la pool : {pool_name} ({len(champion_pool)} champions)")
 

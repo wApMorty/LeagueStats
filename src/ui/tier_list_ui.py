@@ -49,8 +49,10 @@ def run_tier_list_generator():
             print("[ERROR] Aucune pool sélectionnée")
             return
 
-        pool_name, champion_pool = selected_pool_info
+        pool_name, champion_pool, pool_lane = selected_pool_info
+        lane_desc = pool_lane or "toutes lanes agrégées"
         print(f"\n[SUCCESS] Pool sélectionnée : {pool_name} ({len(champion_pool)} champions)")
+        print(f"[INFO] Scores scopés à : {lane_desc}")
 
         # Étape 2 : sélectionner le type d'analyse
         print("\n" + "=" * 60)
@@ -82,7 +84,7 @@ def run_tier_list_generator():
         print("=" * 60)
 
         assistant = Assistant()
-        tier_list = assistant.generate_tier_list(champion_pool, analysis_type)
+        tier_list = assistant.generate_tier_list(champion_pool, analysis_type, lane=pool_lane)
         assistant.close()
 
         if not tier_list:
@@ -90,7 +92,7 @@ def run_tier_list_generator():
             return
 
         # Étape 4 : afficher les résultats
-        _display_tier_list(tier_list, pool_name, type_name, analysis_type)
+        _display_tier_list(tier_list, pool_name, type_name, analysis_type, lane_desc)
 
     except Exception as e:
         print(f"[ERROR] Erreur de génération de tier list : {e}")
@@ -99,7 +101,9 @@ def run_tier_list_generator():
         traceback.print_exc()
 
 
-def _display_tier_list(tier_list: List[dict], pool_name: str, type_name: str, analysis_type: str):
+def _display_tier_list(
+    tier_list: List[dict], pool_name: str, type_name: str, analysis_type: str, lane_desc: str
+):
     """Affiche les résultats formatés de la tier list."""
     from src.config_constants import analysis_config
     from src.utils.display import safe_print
@@ -111,6 +115,7 @@ def _display_tier_list(tier_list: List[dict], pool_name: str, type_name: str, an
     else:
         safe_print(f"{type_name} TIER LIST - {pool_name} ({len(tier_list)} champions)")
         print("Focus : puissance situationnelle et potentiel de counter")
+    safe_print(f"Lane : {lane_desc}")
     print("=" * 80)
 
     # Regrouper par tier

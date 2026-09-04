@@ -32,7 +32,7 @@ def run_optimal_team_builder():
             print("[WARNING] Aucune pool sélectionnée, utilisation de la pool Top SoloQ par défaut")
             selected_pool = ast.select_extended_champion_pool()
         else:
-            pool_name, pool_champions = selected_pool_info
+            pool_name, pool_champions, _pool_lane = selected_pool_info
             selected_pool = pool_champions
             print(f"\nUtilisation de la pool : {pool_name} ({len(pool_champions)} champions)")
 

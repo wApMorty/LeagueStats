@@ -103,9 +103,9 @@ def recalculate_champion_scores() -> None:
         # Calculer les scores
         print("[INFO] Calcul des scores globaux de champions...")
         assistant = Assistant()
-        champions_scored = assistant.calculate_global_scores()
+        rows_scored = assistant.calculate_global_scores()
 
-        print(f"\n[SUCCESS] {champions_scored} champions notés avec succès")
+        print(f"\n[SUCCESS] {rows_scored} scores (champion, lane) calculés avec succès")
         print("[INFO] Les tier lists sont maintenant prêtes à l'emploi")
 
         assistant.close()
