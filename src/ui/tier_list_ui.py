@@ -102,7 +102,7 @@ def run_tier_list_generator():
 def _display_tier_list(tier_list: List[dict], pool_name: str, type_name: str, analysis_type: str):
     """Affiche les résultats formatés de la tier list."""
     from src.config_constants import analysis_config
-    from src.assistant import safe_print
+    from src.utils.display import safe_print
 
     print("\n" + "=" * 80)
     if analysis_type == "blind_pick":
