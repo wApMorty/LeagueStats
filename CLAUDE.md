@@ -3,7 +3,7 @@
 **Projet**: LeagueStats Coach
 **Version**: 1.3.0
 **Mainteneur**: @pj35
-**Dernière mise à jour**: 2026-09-01
+**Dernière mise à jour**: 2026-09-04
 
 ---
 
@@ -33,7 +33,7 @@ Pour toute décision architecturale non triviale, **toujours proposer 2-3 approc
 
 ### Vue d'Ensemble
 
-LeagueStats Coach est un outil d'analyse et de coaching pour League of Legends qui aide les joueurs à optimiser leurs choix de champions en draft. Le projet analyse 171 champions et 36,000+ matchups pour générer des tier lists et recommandations.
+LeagueStats Coach est un outil d'analyse et de coaching pour League of Legends qui aide les joueurs à optimiser leurs choix de champions en draft. Le projet analyse 173 champions et ~25 000 matchups (par rôle) pour générer des tier lists et recommandations.
 
 ---
 
@@ -155,7 +155,7 @@ cursor.execute("SELECT * FROM champions WHERE name = ?", (name,))
 ### Tests
 
 **Framework**: pytest + pytest-cov + pytest-mock
-**Couverture**: 89% du module analysis (objectif 70%+ largement dépassé)
+**Couverture**: seuil 45% sur tout `src/` (mesure honnête, était 70% sur `src/analysis` seul avant SPEC-07 E1) ; ~62% mesuré actuellement
 
 **Structure**:
 ```
@@ -276,21 +276,23 @@ git branch -d feature/task-name
 
 ### Code Principal
 
-**Modules refactorisés (Sprint 1 ✅)**:
-- `src/analysis/` - Algorithmes d'analyse (220 lignes max/fichier)
-- `src/ui/` - Interface utilisateur modulaire
+**Modules d'analyse et UI**:
+- `src/analysis/` - Algorithmes d'analyse et de scoring
+- `src/draft/` - Logique du Live Coach (extraite de `draft_monitor.py`, SPEC-07 E10)
+- `src/ui/` - Interface utilisateur modulaire (un module par menu/domaine)
 
-**Web Scraping (Sprint 2 ✅)**:
-- `src/parallel_parser.py` - Scraping parallèle (87% plus rapide)
-- `src/cloudflare_detector.py` - Détection pages Cloudflare
+**Web Scraping**:
+- `src/parallel_parser.py` - Scraping parallèle
+- `src/cloudflare_detector.py` - Détection pages Cloudflare (conservé fonctionnel bien que Cloudflare n'oppose plus de challenge, cf. `docs/ROADMAP_2026.md`)
 
 **Autres modules**:
 - `src/db.py` - Database layer
-- `src/draft_monitor.py` - Real-time draft coach
+- `src/draft_monitor.py` - Façade du Live Coach (délègue à `src/draft/`)
+- `src/pipeline.py` - Orchestrateur unique du pipeline de données (scrape → contrôle de complétude → recalcul scores/bans → notification)
 
 ### Tests
 
-- `tests/` - Framework pytest avec 89% coverage
+- `tests/` - Framework pytest, couverture mesurée sur tout `src/` (seuil 45%, ~62% actuel)
 - `tests/regression/` - Tests de régression bugs
 
 ### Database Migrations (Alembic)
@@ -340,6 +342,6 @@ python -m alembic revision -m "Description"
 
 ---
 
-**Dernière mise à jour**: 2026-09-01
+**Dernière mise à jour**: 2026-09-04
 **Maintenu par**: Claude Code (Sonnet 5)
 **Pour**: @pj35 - LeagueStats Coach v1.3.0

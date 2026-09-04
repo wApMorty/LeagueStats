@@ -3,7 +3,7 @@
 **Items** : B6, B7 · **Priorité** : 5 · **Effort estimé** : ~2 jours
 **Constats d'audit** : M3, M4, M5 (`docs/AUDIT_2026_08.md` §4)
 **Prérequis** : SPEC-03 recommandée (sinon double refonte du scoring)
-**Statut** : ⚠️ **B7 est à valider avec @pj35 avant implémentation** — le cadre mathématique est posé ici, les coefficients de départ méritent une discussion.
+**Statut** : ✅ **B6 et B7 implémentés** (2026-09-01, `CHANGELOG.md [1.3.0]`) — coefficients de départ validés par @pj35, `src/analysis/probability.py` + `ChampionScorer`. Calibration empirique (`scripts/calibrate_model.py`) à mener une fois assez de parties journalisées (`predictions` table).
 
 ---
 

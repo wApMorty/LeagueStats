@@ -1,13 +1,15 @@
 # 📕 Runbook — Pipeline de Scraping LoLalytics
 
 **Créé** : 2026-06-12 (Horizon 1, ROADMAP_2026.md §3 H1.5)
-**Public** : @pj35 (ou l'assistant IA) quand la mise à jour nocturne casse.
+**Public** : @pj35 (ou l'assistant IA) quand une mise à jour des données casse.
 
 ---
 
 ## 1. Vue d'Ensemble du Pipeline
 
-`scripts/update_all.py` (Task Scheduler, ~3h du matin) :
+`scripts/update_all.py` (lancement manuel — l'automatisation nocturne Task
+Scheduler est suspendue par choix depuis mars 2026, voir README.md/TODO.md ;
+ce runbook s'applique identiquement en déclenchement manuel) :
 
 ```
 1. Découverte des lanes   src/lane_discovery.py   HTTP requests (~172 GET légers)

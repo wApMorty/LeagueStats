@@ -67,34 +67,13 @@ datas=[('data/db.db', '.'), ('README.md', '.')]
 
 ---
 
-## 🗑️ Fichiers obsolètes (à supprimer)
+## 🗑️ Reliquats historiques (nettoyage effectué)
 
-### **Reliquats d'anciennes architectures**
-
-❌ `db.db` (racine du projet)
-- Ancien emplacement avant refactoring
-- Peut causer confusion avec get_resource_path()
-- **Action** : Supprimer
-
-❌ `db_2.db` (racine du projet)
-- Backup manuel obsolète
-- **Action** : Supprimer
-
-❌ `LeagueStatsCoach_Release/db.db`
-- Build ancien
-- **Action** : Supprimer manuellement
-
-### **Nettoyage manuel**
-
-```bash
-rm -f db.db db_2.db LeagueStatsCoach_Release/db.db
-```
-
-Fichiers a supprimer :
-- `db.db` (racine)
-- `db_2.db`
-- `LeagueStatsCoach_Release/` (dossier complet)
-- `build/`, `dist/`, `__pycache__/`
+Cette section documentait un nettoyage ponctuel (`db.db` à la racine, `db_2.db`,
+`LeagueStatsCoach_Release/db.db` périmé) réalisé depuis — ces fichiers
+n'existent plus. `data/db.db` reste le seul fichier `.db` de développement ;
+`LeagueStatsCoach_Release/db.db` est régénéré à chaque `python build_app.py`
+(artefact de build, gitignoré).
 
 ---
 
@@ -244,4 +223,4 @@ zip -r LeagueStatsCoach_v1.2.zip .
 
 ---
 
-**Dernière mise à jour** : 3 octobre 2025
+**Dernière mise à jour** : 2026-09-04 (section "reliquats historiques" mise à jour — nettoyage confirmé effectué)

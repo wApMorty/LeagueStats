@@ -55,6 +55,45 @@ All notable changes to LeagueStats Coach will be documented in this file.
   remplacé par `draft_config.MIN_CHAMPION_GAMES` (désynchronisé depuis le
   scaling Master+ à 200). Test de régression ajouté.
 
+- **CI cassée par la migration `3e87f22f2ec1`** — le `DROP TABLE champion_scores`
+  de la migration du jour (ajout de la colonne `lane`) échouait dans
+  `tests/test_champion_lanes_table.py`/`tests/test_migration_unique_lane.py` :
+  leurs fixtures construisaient une base minimale sans jamais créer
+  `champion_scores` avant de stamper une révision antérieure et upgrader vers
+  head. `tests/test_db_nocase_index.py::test_migration_is_chained_on_head`
+  avait aussi une assertion codée en dur sur l'ancienne tête de chaîne
+  Alembic. 962 tests passent (était 951 passed/6 failed/5 errors).
+
+- **Audit de suivi (2026-09-04) — 3 autres blend-bugs lane, non couverts par
+  les fixes ci-dessus** — vérification sur pièces post-SPEC-01→07 (au lieu de
+  se fier aux cases cochées de `TODO.md`) : B2 ("lecture filtrée par lane")
+  était coché fait alors que 3 zones du produit blendaient encore toutes les
+  lanes.
+  - **Live Coach — écran de fin de draft** : `FinalDraftAnalyzer.analyze()`
+    appelait `get_matchups_for_draft()`/`score_against_team()` sans lane —
+    exactement le bug de #46, un écran plus loin. Chaque champion (allié et
+    ennemi) est maintenant scoré avec sa propre lane inférée
+    (`state.inferred_roles`).
+  - **Bans** — `BanRecommender` (pipeline post-scrape, 3 écrans de bans du
+    Live Coach, Team Builder) ne filtrait jamais par lane. `DraftMonitor`
+    gagne `pool_lane` (résolu par `PoolSelector` via
+    `pool_manager.pool_role_to_lane()`), câblé jusqu'aux requêtes matchups
+    internes. Pas de migration de schéma : chaque pool est déjà mono-rôle
+    (ou `custom`/multi-rôle, lane=`None`), seule la lecture devait filtrer.
+  - **Team Builder (menu 5) et Tournament Coach** — les 3 options du Team
+    Builder (`trio_holistic.py`, `trio_counterpick.py`, `trio_tactics.py`,
+    `trio_metrics.py`) et le Tournament Coach (matchups — seule la synergie
+    avait été corrigée ci-dessus) jetaient la lane déjà résolue par
+    `pool_selection_ui._select_pool_for_analysis()` (`_pool_lane`, inutilisée).
+    Paramètre `lane` optionnel ajouté sur toute la chaîne d'appel jusqu'à
+    `db.py`. Hors périmètre (documenté dans le code) : le calibrage des poids
+    adaptatifs de `trio_weights.py` reste toutes-lanes — échantillon global
+    mis en cache une fois par session, ne pondère que l'importance relative
+    de 4 métriques abstraites, pas les scores affichés.
+  - 3 tests de régression ajoutés (`tests/test_draft_monitor_final_scores_display.py`,
+    `tests/test_draft_monitor_ban_advice_lane.py`, `tests/test_trio_lane_aware.py`,
+    `tests/test_ban_recommendations.py`). 990 tests passent au total.
+
 ### ✨ Ajouts
 
 - **Tier de scraping Master+** — passage du tier lolalytics de `diamond_plus`
@@ -115,6 +154,28 @@ All notable changes to LeagueStats Coach will be documented in this file.
 - **SPEC-06 (E7)** — derniers seuils métier hardcodés (`pickrate`/`games`
   dans les requêtes SQL de `db.py`, seuil de games et nombre de
   recommandations dans `draft_monitor.py`) sortis vers `config_constants`.
+
+- **Audit de suivi (2026-09-04) — hygiène et documentation** —
+  `.gitignore` : les patterns `.zip`/`.spec` (sans wildcard) ne matchaient
+  que des fichiers nommés exactement ainsi, corrigés en `*.zip`/`*.spec` ;
+  artefact de build obsolète de 69 Mo (`LeagueStatsCoach_Portable.zip`,
+  jamais tracké) supprimé. `scripts/rotate_logs.ps1` ciblait
+  `logs/auto_update.log`, qui n'est plus le log actif depuis le passage à
+  `scripts/update_all.py` — redirigé vers `logs/update_all.log`. `CLAUDE.md`
+  et `.github/copilot-instructions.md` (le plus périmé, référençait encore
+  `main.py`) réalignés sur l'état réel (173 champions/~25k matchups, seuil
+  de couverture 45%, plus de terminologie Sprint). `docs/PROJECT_STRUCTURE.md`
+  entièrement réécrit (décrivait une arborescence pré-refactor).
+  `docs/CI_CD_SETUP.md` (seuil de couverture), `docs/DATABASE_STRUCTURE.md`
+  (footer, reliquats déjà nettoyés), `docs/runbook_scraping.md` et
+  `docs/AUTO_UPDATE_SETUP.md` (contredisaient le statut "automatisation
+  suspendue par choix") corrigés. `docs/DRAFT_SITES_INTEGRATION_RESEARCH.md`
+  (supprimé collatéralement par `17c621b`, toujours cité par
+  `docs/ROADMAP_2026.md`) restauré depuis l'historique git dans
+  `docs/archive/`. `docs/AUDIT_2026_06.md`, `AUDIT_2026_08.md`,
+  `BACKLOG_2026_08.md` et `docs/specs/SPEC-01` à `SPEC-07` (chantiers
+  entièrement exécutés) déplacés vers `docs/archive/` ; `TODO.md` réécrit
+  avec le backlog restant (dette de code, couverture, features candidates).
 
 ## [1.3.0] - 2026-09-01
 

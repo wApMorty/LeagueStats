@@ -1,7 +1,7 @@
 # 🗺️ Roadmap 2026 — LeagueStats Coach
 
 **Date** : 2026-06-11
-**Base factuelle** : `docs/AUDIT_2026_06.md` (audit complet du même jour)
+**Base factuelle** : `docs/archive/AUDIT_2026_06.md` (audit complet du même jour)
 **Statut** : ✅ **Validée** — les 3 décisions stratégiques ont été tranchées par @pj35 le 2026-06-11 (voir §2). Exécution lancée (Horizon 0).
 
 Cette roadmap **remplace la priorisation de TODO.md**, dont les scores et statuts ne reflètent plus la réalité (cf. audit §2). Elle repart d'un principe simple :
@@ -123,7 +123,7 @@ Objectif : réaliser les Décisions B et C, et re-payer la dette re-contractée 
 1. **Tâche #15 partie 2 — scoring lane-aware** : exploiter la colonne `lane` (détection via LCU `get_assigned_position()`, pondération same-lane). Les données seront déjà là grâce à H1 — il ne reste que le scoring + UX. *(L'essentiel de la difficulté initialement estimée à 13 aura été absorbé par H1.)*
 2. **UX de confiance** : affichage systématique de la fraîcheur des données + volumétrie dans l'app (déjà amorcé en H1) ; indicateurs de fiabilité par recommandation (nb de games du matchup).
 3. **GUI légère** (ex-Tâche #6 re-scopée) : panneau web local (FastAPI + HTMX/React léger servi sur localhost) plutôt qu'un rewrite desktop — réutilise les algos en l'état.
-4. **Intégration sites de draft** (recherche déjà faite : `DRAFT_SITES_INTEGRATION_RESEARCH.md`) : valeur forte pour les tournois, mais dépend du reverse-engineering WebSocket DraftLol — spike de 1-2 jours avant d'engager.
+4. **Intégration sites de draft** (recherche déjà faite : `docs/archive/DRAFT_SITES_INTEGRATION_RESEARCH.md`, restaurée le 2026-09-04 après suppression collatérale — à revalider, contenu d'octobre 2025) : valeur forte pour les tournois, mais dépend du reverse-engineering WebSocket DraftLol — spike de 1-2 jours avant d'engager.
 5. Backlog long terme inchangé (Discord bot, overlay, ML…) — à re-prioriser à ce moment-là.
 
 ---

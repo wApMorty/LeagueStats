@@ -2,6 +2,8 @@
 
 **Created**: 2025-12-28 (Tâche #10)
 **Status**: ✅ Complete
+**Coverage threshold updated**: 2026-09-04 (89% → 45% mesuré sur tout `src/`, cf. SPEC-07 E1 —
+l'ancien seuil ne portait que sur `src/analysis`, 5% du code)
 
 ---
 
@@ -10,7 +12,7 @@
 Le projet utilise GitHub Actions pour l'intégration et déploiement continu (CI/CD) avec:
 - **Tests automatiques** sur chaque push/PR
 - **Quality gates** (pylint, black, mypy, bandit)
-- **Coverage enforcement** (89% minimum)
+- **Coverage enforcement** (45% minimum, sur tout `src/`)
 - **Build validation** (main branch uniquement)
 - **Performance benchmarks** (main branch uniquement)
 
@@ -70,7 +72,7 @@ Le token est visible dans l'URL du badge sur Codecov.io.
 | Job | Durée | Quand | Description |
 |-----|-------|-------|-------------|
 | **quality** | ~2 min | Tous push/PR | Pylint, Black, Mypy, Bandit |
-| **tests** | ~3 min | Tous push/PR | Tests + coverage 89% |
+| **tests** | ~3 min | Tous push/PR | Tests + coverage 45% |
 | **performance** | ~5 min | Main branch uniquement | Benchmarks (informatif) |
 | **build** | ~6 min | Main branch uniquement | Build .exe validation |
 | **ci-status** | <10 sec | Toujours | Résumé statut |
@@ -81,7 +83,7 @@ Le token est visible dans l'URL du badge sur Codecov.io.
 Push/PR
 ├─ [Parallel]
 │  ├─ quality (2 min) ← Fail-fast si Black fail
-│  └─ tests (3 min)   ← Coverage 89%
+│  └─ tests (3 min)   ← Coverage 45%
 │
 ├─ ci-status (always)
 │
@@ -101,7 +103,7 @@ Push/PR
 ### Required Checks (Bloquent le merge)
 
 - ✅ **Code Quality**: Pylint 8.0+, Black formatting, Bandit security
-- ✅ **Tests & Coverage**: 146 tests, 89% coverage minimum
+- ✅ **Tests & Coverage**: voir README.md pour le nombre de tests actuel, 45% coverage minimum (sur tout `src/`)
 
 ### Optional Checks (Informatifs)
 
@@ -139,7 +141,7 @@ mypy src/ --ignore-missing-imports
 bandit -r src/ -f screen
 
 # 3. Run tests with coverage
-pytest tests/ -v --cov=src --cov-fail-under=89
+pytest tests/ -v --cov=src --cov-fail-under=45
 
 # 4. (Optional) Run benchmarks
 pytest tests/ -k "benchmark" --benchmark-only
@@ -151,16 +153,16 @@ pytest tests/ -k "benchmark" --benchmark-only
 - Black: `line-length=100`, `target-version=py313`
 - Pylint: `fail-under=8.0`, désactive docstrings warnings
 - Mypy: `python_version=3.13`, `ignore_missing_imports=true`
-- Pytest: `--cov-fail-under=89`, markers pour tests slow/benchmark
+- Pytest: `--cov-fail-under=45` (sur tout `src/`), markers pour tests slow/benchmark
 - Bandit: Exclude tests, skip assert warnings
 
 ---
 
 ## 🚨 Common Issues
 
-### Issue 1: Coverage Below 89%
+### Issue 1: Coverage Below 45%
 
-**Symptom**: CI fails with "Coverage 87.5% < 89%"
+**Symptom**: CI fails with "Coverage 43.5% < 45%"
 
 **Solution**:
 ```bash
@@ -222,7 +224,7 @@ Statut actuel du workflow (vert = passing, rouge = failing)
 
 [![codecov](https://codecov.io/gh/wApMorty/LeagueStats/branch/inspiring-rhodes/graph/badge.svg)](https://codecov.io/gh/wApMorty/LeagueStats)
 
-Pourcentage coverage tests (target: 89%+)
+Pourcentage coverage tests (seuil : 45%+, sur tout `src/`)
 
 ### Python Version
 
@@ -302,15 +304,15 @@ GitHub Actions recommande d'utiliser versions spécifiques (v4, v5) au lieu de @
 CI/CD est considéré réussi si:
 
 - ✅ Tous les PRs passent tests + quality gates
-- ✅ Coverage maintenue à 89%+
-- ✅ Build successful sur main branch
-- ✅ Codecov badge montre 89%+
+- ✅ Coverage maintenue à 45%+ (sur tout `src/`)
+- ✅ Build successful sur master
+- ✅ Codecov badge montre 45%+
 - ✅ Feedback en <5 minutes sur PRs
 
 **Current Status**: ✅ READY (après setup Codecov token)
 
 ---
 
-**Last Updated**: 2025-12-28
+**Last Updated**: 2026-09-04 (seuil de couverture corrigé, cf. bandeau en tête de document)
 **Maintainer**: @pj35
 **CI/CD Version**: v1.0.0 (Tâche #10)

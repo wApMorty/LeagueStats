@@ -1,5 +1,15 @@
 # Auto-Update Database Setup Guide
 
+> **⚠️ Automatisation suspendue par choix (@pj35, depuis mars 2026)** — la mise à
+> jour des données est manuelle (`python scripts/update_all.py` ou le menu 3 de
+> l'application), voir `README.md`. Ce guide décrit `scripts/auto_update_db.py`,
+> l'**ancien** orchestrateur (Task Scheduler, ~3h du matin) — superseded par
+> `scripts/update_all.py` (pas de tâche planifiée équivalente aujourd'hui).
+> Conservé comme référence si l'automatisation nocturne est un jour réactivée,
+> auquel cas la tâche planifiée devrait pointer vers `update_all.py` plutôt que
+> vers le script décrit ci-dessous (`docs/archive/BACKLOG_2026_08.md`, section
+> "Si un jour l'automatisation nocturne reprend").
+
 ## 📋 Overview
 
 The LeagueStats Coach auto-update system automatically updates your champion matchup database daily using **parallel scraping** (12 minutes execution time). This eliminates manual database maintenance and ensures you always have fresh data.

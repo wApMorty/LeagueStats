@@ -7,11 +7,9 @@ Documentation complète du projet League Stats Coach.
 ## 📚 Index de la documentation
 
 ### **État du Projet & Direction**
-- [AUDIT_2026_08.md](AUDIT_2026_08.md) - **Audit courant (2026-08-28)** : fiabilité, performance, métier, UX — vérifié sur pièces
-- [BACKLOG_2026_08.md](BACKLOG_2026_08.md) - Backlog issu de l'audit d'août, trié le 29/08 → reporté dans [../TODO.md](../TODO.md)
-- [specs/](specs/) - **Specs d'implémentation** (SPEC-01 à SPEC-07), une par chantier, autoportantes
+- [../TODO.md](../TODO.md) - **Backlog actuel** : priorités en cours, dette de code, features candidates
 - [ROADMAP_2026.md](ROADMAP_2026.md) - Décisions stratégiques tranchées le 2026-06-11 (SQLite only, outil perso, pas de Playwright) — toujours en vigueur
-- [AUDIT_2026_06.md](AUDIT_2026_06.md) - Audit précédent (2026-06-11), base de la roadmap ; conservé pour comparaison
+- [archive/](archive/) - Cycles d'audit/backlog/specs **entièrement exécutés**, conservés pour l'historique : `AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`, `DRAFT_SITES_INTEGRATION_RESEARCH.md`
 
 ### **Architecture & Structure**
 - [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) - Structure générale du projet et organisation des fichiers
@@ -74,7 +72,7 @@ Documentation complète du projet League Stats Coach.
 
 ## 🔄 Mise à jour de cette doc
 
-Dernière mise à jour : 25 juillet 2026
+Dernière mise à jour : 2026-09-04
 
 Lorsque vous ajoutez une nouvelle documentation :
 1. Créer le fichier dans `docs/`

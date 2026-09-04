@@ -1,6 +1,6 @@
 """RÉGRESSION : les lectures bulk et unitaires doivent donner la même valeur.
 
-Bug (constat M2 de docs/AUDIT_2026_08.md, corrigé par SPEC-03 / B1)
+Bug (constat M2 de docs/archive/AUDIT_2026_08.md, corrigé par SPEC-03 / B1)
 ------------------------------------------------------------------
 `get_matchup_delta2()` faisait la moyenne pondérée par `games` des lignes
 multi-lane, tandis que `get_all_matchups_bulk()` écrasait silencieusement les
