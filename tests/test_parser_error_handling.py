@@ -154,7 +154,7 @@ class TestCookieBannerExceptionHandling:
         mock_parser.webdriver.execute_script.side_effect = RuntimeError("JS failed")
 
         # ActionChains also fails
-        with patch("src.parser.ActionChains") as mock_actions:
+        with patch("src.parser_cookie_banner.ActionChains") as mock_actions:
             mock_chain = MagicMock()
             mock_chain.move_by_offset.return_value = mock_chain
             mock_chain.click.return_value = mock_chain
