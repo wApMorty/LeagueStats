@@ -150,10 +150,15 @@ class TestTargetSpecs:
 
 
 class TestMainUsesLaneDiscovery:
-    def test_main_calls_discovery_and_grouping(self, logger, monkeypatch):
+    def test_main_calls_discovery_and_grouping(self, logger, monkeypatch, tmp_path):
         """main() must discover lanes and group by lane before repairing,
         instead of scraping every missing champion on an untagged default
         lane (the pre-fix behavior)."""
+        # SPEC-07 E6: main() calls the real _setup_logging(), which writes to
+        # <project_root>/logs/repair_<target>.log. Redirect project_root so
+        # this test never touches the real logs/repair_matchups.log.
+        monkeypatch.setattr(repair_data, "project_root", tmp_path)
+
         fake_db = MagicMock()
         monkeypatch.setattr(repair_data, "Database", MagicMock(return_value=fake_db))
         monkeypatch.setattr(
