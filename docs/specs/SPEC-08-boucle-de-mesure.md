@@ -33,26 +33,41 @@ L'infrastructure de mesure existe pourtant intégralement :
 
 > *« Manual command by design (not a gameflow/EndOfGame hook, per SPEC-05: untestable against a real LCU client without speculating on its behavior). »*
 
-**Cette décision est révisée ici**, sur preuve empirique : une commande manuelle à 0 % de taux d'emploi ne produit aucune donnée, donc aucune calibration, donc aucune amélioration du modèle. L'objection de testabilité reste valable et est traitée en §2.1 (spike de terrain avant implémentation) et §5 (tests sur mocks, comme le reste de `lcu_client.py`).
+**Cette décision est révisée ici**, sur preuve empirique : une commande manuelle à 0 % de taux d'emploi ne produit aucune donnée, donc aucune calibration, donc aucune amélioration du modèle.
+
+L'objection de testabilité était fondée et elle est **levée** : le spike du 2026-09-05 (§2.1) a relevé la forme réelle des réponses sur le client de @pj35, il n'y a donc plus rien à supposer du comportement du LCU. Les tests se font sur mocks à partir de ces payloads vérifiés (§5), comme pour le reste de `lcu_client.py`.
 
 ---
 
 ## 2. Le travail
 
-### 2.1 — Spike préalable, obligatoire (~1 h)
+### 2.1 — Spike : ✅ FAIT le 2026-09-05, résultats ci-dessous
 
-**Ne pas coder avant d'avoir observé le vrai client.** Avec League of Legends lancé et une partie terminée dans l'historique, relever la forme réelle des réponses :
+Réalisé sur le client réel (compte `Morty`, EUW1, LCU port 41133). **Ne pas le refaire : les formes ci-dessous sont vérifiées, les utiliser telles quelles.**
 
-```python
-# Depuis le repo, client LoL lancé :
-from src.lcu_client import LCUClient
-c = LCUClient(verbose=True); c.connect()
-print(c._make_request("/lol-match-history/v1/products/lol/current-summoner/matches?begIndex=0&endIndex=3"))
-print(c._make_request("/lol-gameflow/v1/session"))          # noter la valeur de "phase"
-print(c._make_request("/lol-end-of-game/v1/eog-stats-block"))  # pendant l'écran de fin uniquement
+**A. `/lol-match-history/v1/products/lol/current-summoner/matches?begIndex=0&endIndex=2`**
+
+Structure : `{"accountId", "platformId", "games": {"gameCount", "gameIndexBegin", "gameIndexEnd", "games": [...]}}` — noter le **double** `games.games`. `endIndex=2` a renvoyé **3** parties : il est **inclusif**.
+
+Chaque partie porte : `gameId`, `gameCreation` (epoch **ms**, ex. `1788639943655`), `gameCreationDate` (ISO, ex. `"2026-09-05T20:25:43.655Z"`), `gameDuration`, `queueId` (`420` = SoloQ), `gameMode`, `endOfGameResult` (`"GameComplete"`), `teams` (`[{"teamId": 100, "win": "Win"}, {"teamId": 200, "win": "Fail"}]`).
+
+> ⚠️ **Piège majeur** : `participants` ne contient ici qu'**une seule entrée** — le joueur courant. Les 9 autres joueurs sont **absents**. On y lit `participants[0].championId`, `participants[0].teamId` et `participants[0].stats.win` (booléen Python), rien de plus.
+
+**B. `/lol-match-history/v1/games/{gameId}`** — c'est cet endpoint qui donne l'équipe complète :
+
+```
+nb participants: 10
+championIds (participantId, championId, teamId):
+  (1, 126, 100) (2, 104, 100) (3, 105, 100) (4, 202, 100) (5, 99, 100)
+  (6, 36, 200)  (7, 77, 200)  (8, 950, 200) (9, 800, 200) (10, 63, 200)
+teams: [{"teamId": 100, "win": "Win"}, {"teamId": 200, "win": "Fail"}]
 ```
 
-Consigner dans la PR : les clés réellement présentes, et si `endIndex` est inclusif. Si la forme diffère de §2.3, **adapter la spec plutôt que le client**.
+`participantId` 1-5 ⇒ `teamId` 100, 6-10 ⇒ `teamId` 200. La variante `/lol-match-history/v1/products/lol/current-summoner/matches/{gameId}` renvoie **404** — ne pas l'utiliser.
+
+**C. `/lol-gameflow/v1/session`** → `phase` valait `"InProgress"` (partie en cours au moment du spike). Les phases de fin (`WaitingForStats`, `PreEndOfGame`, `EndOfGame`) n'ont pas pu être observées. **Ce n'est pas bloquant** : le déclencheur n'est qu'une optimisation de confort, le rattrapage au démarrage (§2.6b) couvre tous les cas. Traiter la liste de phases comme configurable (§3) et ne jamais faire dépendre la correction d'une valeur exacte.
+
+**D. `/lol-end-of-game/v1/eog-stats-block`** → `None` hors écran de fin, comme attendu. Endpoint écarté (§2.2).
 
 ### 2.2 — Choix d'architecture : historique de matchs, pas écran de fin
 
@@ -62,25 +77,35 @@ Trois sources possibles, une seule retenue :
 |---|---|---|---|
 | `/lol-end-of-game/v1/eog-stats-block` | Résultat immédiat, riche | Disponible **seulement** pendant l'écran de fin (quelques secondes si le joueur le passe) ; perdu si l'app est fermée | ❌ trop volatil seul |
 | `/lol-gameflow/v1/session` phase `EndOfGame` | Signal de fin fiable | Ne contient **pas** le résultat | ✅ comme *déclencheur* |
-| `/lol-match-history/v1/products/lol/current-summoner/matches` | Interrogeable **à tout moment**, contient `gameId`, `gameCreation`, `participants[].stats.win` | Latence de quelques secondes après la partie | ✅ comme **source de vérité** |
+| `/lol-match-history/v1/products/lol/current-summoner/matches` | Interrogeable **à tout moment**, contient `gameId`, `gameCreation`, `queueId` et le résultat du joueur | Ne renvoie qu'**un** participant (§2.1A) : la composition des équipes est absente | ✅ comme **source de vérité** du résultat |
+| `/lol-match-history/v1/games/{gameId}` | Les **10 participants** avec `championId` et `teamId` | Un appel HTTP par partie | ✅ comme **confirmation d'appariement** |
 
 **Décision** : l'historique de matchs est la source de vérité ; le gameflow n'est qu'un déclencheur. Conséquence majeure : **un rattrapage au démarrage devient possible**, donc fermer l'application entre deux parties ne perd plus le résultat. C'est ce qui rend le dispositif robuste là où le hook `EndOfGame` seul ne l'aurait pas été.
 
-### 2.3 — `LCUClient` : une méthode de lecture
+### 2.3 — `LCUClient` : deux méthodes de lecture
 
-Dans `src/lcu_client.py` (493 lignes — **ne pas dépasser 500**, une seule méthode courte ici, le reste va dans le nouveau module) :
+`src/lcu_client.py` est à **493 lignes** et le plafond projet est 500 : n'y mettre que ces deux méthodes, courtes, et **placer toute la normalisation et l'appariement dans `outcome_tracker.py`** (§2.4). Si le fichier menace de dépasser 500, extraire un mixin `src/lcu_match_history.py` sur le modèle de `src/parser_cookie_banner.py`.
 
 ```python
 def get_recent_matches(self, count: int = 5) -> List[Dict[str, Any]]:
     """Les `count` dernières parties du joueur courant, les plus récentes d'abord.
 
     Chaque entrée normalisée : {"game_id": int, "game_creation_ms": int,
-    "queue_id": int, "win": bool, "ally_champion_ids": List[int]}.
+    "queue_id": int, "win": bool, "player_champion_id": int, "team_id": int}.
     Retourne [] si le client est absent ou la réponse inattendue (best-effort).
+    """
+
+def get_match_participants(self, game_id: int) -> Dict[int, List[int]]:
+    """Les championId de chaque équipe d'une partie : {100: [...], 200: [...]}.
+
+    Retourne {} si indisponible (best-effort).
     """
 ```
 
-Elle lit `games.games[]`, et pour chaque partie : `gameId`, `gameCreation`, `queueId`, le `participant` du joueur local (via `participantIdentities` ↔ `participants[].stats.win`), et les `championId` des 5 joueurs de son équipe (`participants[].teamId` égal à celui du joueur local).
+- `get_recent_matches` lit `payload["games"]["games"]` (double niveau, cf. §2.1A), puis pour chaque partie `gameId`, `gameCreation`, `queueId`, et **`participants[0]`** — qui est le joueur courant et le seul présent : `championId`, `teamId`, `stats.win`. Rappel : `endIndex` est **inclusif**, donc `count - 1`.
+- `get_match_participants` appelle `/lol-match-history/v1/games/{game_id}` et regroupe `participants[].championId` par `participants[].teamId`.
+
+Ne jamais lever : toute forme inattendue (clé manquante, `None`, liste vide) donne `[]` / `{}`.
 
 ### 2.4 — Nouveau module `src/draft/outcome_tracker.py`
 
@@ -96,14 +121,26 @@ class OutcomeTracker:
         """
 ```
 
-**Règle d'appariement** — une partie `M` valide une prédiction `P` si et seulement si :
+**Règle d'appariement**, en deux passes (le détail des 10 participants coûte un appel HTTP par partie : ne le demander que pour les candidates retenues par le temps).
 
-1. `M.game_creation_ms` est **postérieur** à `P.created_utc` (la partie a commencé après la fin de la draft) ;
+*Passe 1 — filtre temporel*, sur `get_recent_matches` seul. Une partie `M` est candidate pour une prédiction `P` si :
+
+1. `M.game_creation_ms` est **postérieur** à `P.created_utc` (la partie commence après la fin de la draft) ;
 2. l'écart est inférieur à `OUTCOME_MATCH_WINDOW_HOURS` (défaut 6 h) ;
-3. au moins `OUTCOME_MIN_ALLY_OVERLAP` (défaut 4) des 5 `ally_champions` de `P` figurent dans `M.ally_champion_ids` — 4 et non 5, pour tolérer un dodge/remake partiel ou un pick de dernière seconde modifié après le log ;
-4. `M.game_id` n'a pas déjà été rattaché à une autre prédiction.
+3. `M.game_id` n'est pas déjà rattaché à une autre prédiction.
 
-En cas d'ambiguïté (plusieurs parties candidates), retenir **la plus proche dans le temps**. En cas d'ambiguïté inverse (une partie candidate pour deux prédictions), la prédiction la plus proche gagne, l'autre reste en attente : **une donnée fausse est pire qu'une donnée absente** — c'est l'invariant de toute cette spec.
+`created_utc` est écrit par `datetime('now')` de SQLite, donc au format `'YYYY-MM-DD HH:MM:SS'` en **UTC** — le parser comme tel (`datetime.strptime(..., "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)`), et `game_creation_ms` via `datetime.fromtimestamp(ms / 1000, tz=timezone.utc)`. Ne jamais comparer un naïf à un aware.
+
+*Passe 2 — confirmation par composition*, via `get_match_participants(M.game_id)` :
+
+4. `M.teams[P_team]` (l'équipe du joueur, donnée par `team_id` de la passe 1) doit partager au moins `OUTCOME_MIN_ALLY_OVERLAP` (défaut 4) champions avec `P.ally_champions` ;
+5. **et** l'équipe adverse doit partager au moins autant de champions avec `P.enemy_champions`.
+
+Le seuil est à 4 sur 5 et non 5 sur 5 pour tolérer un pick modifié après le log de fin de draft. La double vérification (alliés **et** ennemis) rend l'appariement quasi certain — c'est ce que le spike a rendu possible en découvrant l'endpoint de détail.
+
+En cas d'ambiguïté (plusieurs parties candidates pour une prédiction), retenir **la plus proche dans le temps**. En cas d'ambiguïté inverse (une partie candidate pour deux prédictions), la prédiction la plus proche gagne, l'autre reste en attente : **une donnée fausse est pire qu'une donnée absente** — c'est l'invariant de toute cette spec.
+
+Le résultat lui-même vient de `M.win` (`participants[0].stats.win`, booléen), pas de `teams[].win` (chaîne `"Win"`/`"Fail"`, plus fragile).
 
 ### 2.5 — Migration Alembic : `predictions.game_id`
 
@@ -159,8 +196,14 @@ OUTCOME_MATCH_WINDOW_HOURS: float = 6.0
 # Nombre de prédictions en attente examinées au démarrage (rattrapage).
 OUTCOME_BACKFILL_LIMIT: int = 20
 
-# Champions alliés communs exigés entre une prédiction et une partie pour
-# les apparier (sur 5). 4 tolère un pick modifié après le log de la draft.
+# Parties lues dans l'historique LCU à chaque tentative de résolution.
+# Attention : le paramètre `endIndex` de l'endpoint est INCLUSIF (vérifié
+# 2026-09-05), donc la requête utilise endIndex = OUTCOME_HISTORY_DEPTH - 1.
+OUTCOME_HISTORY_DEPTH: int = 10
+
+# Champions communs exigés (sur 5) entre une prédiction et une partie, des
+# deux côtés — alliés ET ennemis. 4 tolère un pick modifié après le log de
+# fin de draft.
 OUTCOME_MIN_ALLY_OVERLAP: int = 4
 
 # Phases gameflow déclenchant une tentative de résolution.
@@ -183,19 +226,24 @@ OUTCOME_TRIGGER_PHASES: tuple = ("WaitingForStats", "PreEndOfGame", "EndOfGame")
 
 ## 5. Tests exigés
 
-Hermétiques, sans client LoL réel : mocker `LCUClient.get_recent_matches` et utiliser la fixture `temp_db`.
+Hermétiques, sans client LoL réel : mocker `LCUClient.get_recent_matches` / `get_match_participants` et utiliser la fixture `temp_db`.
 
 `tests/test_outcome_tracker.py` :
 - appariement nominal (1 prédiction, 1 partie correspondante) → labellisée, `game_id` posé ;
 - partie **antérieure** à la prédiction → rejetée ;
 - partie hors fenêtre de 6 h → rejetée ;
 - 3 champions alliés communs sur 5 → rejetée ; 4 sur 5 → acceptée ;
+- alliés concordants mais **ennemis** discordants → rejetée (la passe 2 vérifie les deux côtés) ;
 - deux parties candidates → la plus proche dans le temps gagne ;
 - deux prédictions, une seule partie → une seule labellisée, l'autre reste `NULL` ;
 - deuxième passage → 0 résolution supplémentaire (idempotence) ;
-- LCU indisponible (`get_recent_matches` retourne `[]`) → retourne 0, ne lève pas.
+- LCU indisponible (`get_recent_matches` retourne `[]`) → retourne 0, ne lève pas ;
+- `get_match_participants` retourne `{}` (détail indisponible) → abstention, pas de labellisation au jugé ;
+- **économie d'appels** : `get_match_participants` n'est appelée que pour les parties retenues par la passe temporelle (vérifier par compteur de mock).
 
-`tests/test_lcu_matches.py` : normalisation de `get_recent_matches` à partir d'un payload figé issu du spike (défaite, victoire, payload tronqué, réponse `None`).
+`tests/test_lcu_matches.py` : normalisation à partir des payloads figés du spike (§2.1).
+- `get_recent_matches` : victoire, défaite, structure `games.games` absente, `participants` vide, réponse `None`, `endIndex` correctement calculé à `count - 1` ;
+- `get_match_participants` : les 10 participants regroupés en `{100: [...], 200: [...]}`, réponse 404/`None` → `{}`.
 
 `tests/test_draft_monitor_lifecycle.py` (existant, à étendre) : la transition de phase déclenche `resolve_pending` **une seule fois** ; rester dans la même phase ne le rappelle pas.
 
