@@ -103,7 +103,12 @@ def run_tier_list_generator():
 
         # Étape 4 : afficher les résultats
         _display_tier_list(
-            tier_list, pool_name, type_name, analysis_type, lane_desc, games_by_champion
+            tier_list,
+            pool_name,
+            type_name,
+            analysis_type,
+            lane_desc,
+            games_by_champion=games_by_champion,
         )
 
     except Exception as e:
@@ -119,6 +124,7 @@ def _display_tier_list(
     type_name: str,
     analysis_type: str,
     lane_desc: str,
+    *,
     games_by_champion: Optional[Dict[str, int]] = None,
 ):
     """Affiche les résultats formatés de la tier list.

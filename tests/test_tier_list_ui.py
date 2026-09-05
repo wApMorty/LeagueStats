@@ -27,7 +27,12 @@ def test_games_volume_shown_when_provided(capsys):
     tier_list = [_entry("Ahri")]
 
     _display_tier_list(
-        tier_list, "Test Pool", "BLIND PICK", "blind_pick", "middle", {"Ahri": 91696}
+        tier_list,
+        "Test Pool",
+        "BLIND PICK",
+        "blind_pick",
+        "middle",
+        games_by_champion={"Ahri": 91696},
     )
 
     out = capsys.readouterr().out
@@ -50,7 +55,9 @@ def test_missing_champion_in_map_is_silently_skipped(capsys):
     must not crash the display — no volume tag, nothing else."""
     tier_list = [_entry("Ahri")]
 
-    _display_tier_list(tier_list, "Test Pool", "BLIND PICK", "blind_pick", "middle", {})
+    _display_tier_list(
+        tier_list, "Test Pool", "BLIND PICK", "blind_pick", "middle", games_by_champion={}
+    )
 
     out = capsys.readouterr().out
     assert "games" not in out
