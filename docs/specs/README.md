@@ -1,9 +1,9 @@
-# 📐 Specs d'implémentation — lot 2026-09 (SPEC-08 à SPEC-10)
+# 📐 Specs d'implémentation — lot 2026-09 (SPEC-08 à SPEC-11)
 
-**Créées** : 2026-09-05
+**Créées** : 2026-09-05 (SPEC-08 à SPEC-10), complétées le 2026-09-06 (SPEC-11)
 **Base** : analyse d'état du 2026-09-05 (vérifiée sur le code et la base de production, non publiée comme audit séparé — les constats sont intégrés dans chaque spec)
 **Validé par** : @pj35, le 2026-09-05, ordre et arbitrages inclus
-**Destinataire** : agent d'implémentation autonome (Claude Sonnet 5, effort max) ou développeur humain
+**Destinataire** : agent d'implémentation autonome (Claude Sonnet 5, effort max) ou développeur humain — sauf SPEC-11, note de cadrage non actionable (voir son statut)
 
 Le lot précédent (`SPEC-01` à `SPEC-07`) est **entièrement soldé** — voir `../archive/specs/`. Les Horizons 0 à 2 de `../ROADMAP_2026.md` le sont aussi : pipeline fiable, dette de code résorbée (plus aucun fichier > 500 lignes), 990 tests verts, 65,5 % de couverture.
 
@@ -20,6 +20,7 @@ Deux problèmes distincts, deux specs, dans cet ordre :
 - **SPEC-08** — toutes les constantes de décision du modèle sont devinées, jamais mesurées. L'infrastructure de calibration existe intégralement… et n'a jamais reçu une seule donnée, parce que fermer la boucle demande de taper une commande manuelle après la partie. 12 prédictions en base, 0 résultat renseigné.
 - **SPEC-09** — sur l'écran le plus utilisé du produit, un champion sans données disparaît **sans un mot**, et 60 combos (champion, lane) qui se jouent réellement ne sont jamais scrapés.
 - **SPEC-10** — le filet de sécurité sur le chemin critique temps réel, aujourd'hui à 2,6 % et 18,6 % de couverture sur ses deux maillons les plus exposés.
+- **SPEC-11** — pas un bug, une ambition produit (@pj35, 2026-09-06) : faire évoluer le modèle prédictif vers une pondération par lane restante puis, à terme, une recherche façon Stockfish sur l'arbre de draft. Note de cadrage, explicitement **bloquée** tant que SPEC-08 n'a pas produit une première calibration réelle — chercher profond sur une évaluation non calibrée amplifierait ses erreurs plutôt que de les corriger.
 
 ---
 
@@ -30,15 +31,19 @@ SPEC-08  Boucle de mesure (auto-outcome LCU)  ───┐ priorité 1, indépen
 SPEC-09  Rendre l'ignorance visible           ───┘ priorité 2, indépendante (parallélisable avec 08)
 
 SPEC-10  Couverture du chemin critique        ───  priorité 3, APRÈS 08 (qui ajoute du code dans lcu_client.py)
+
+SPEC-11  Lane restante + recherche Stockfish  ───  🔵 recherche, APRÈS 08 + une calibration réelle
+                                                    (scripts/calibrate_model.py, ~30 parties labellisées)
 ```
 
 | Spec | Objet | Fichiers principaux touchés | Effort |
 |---|---|---|---|
-| [SPEC-08](SPEC-08-boucle-de-mesure.md) ⭐ | Résultat de partie automatique via LCU | `src/lcu_client.py`, `src/draft/outcome_tracker.py` (nouveau), `src/draft/lifecycle.py`, `src/repositories/predictions.py`, `alembic/versions/` | ~1 jour |
-| [SPEC-09](SPEC-09-ignorance-visible.md) | Champions écartés affichés, seuil de lane 10 % → 5 % | `src/draft/recommendations.py`, `src/draft/automation.py`, `src/config_constants.py`, `src/pipeline.py` | ~0,5-1 jour |
+| [SPEC-08](SPEC-08-boucle-de-mesure.md) ⭐ | Résultat de partie automatique via LCU | `src/lcu_client.py`, `src/draft/outcome_tracker.py` (nouveau), `src/draft/lifecycle.py`, `src/repositories/predictions.py`, `alembic/versions/` | ~1 jour — ✅ mergée le 2026-09-06 |
+| [SPEC-09](SPEC-09-ignorance-visible.md) | Champions écartés affichés, seuil de lane 10 % → 5 % | `src/draft/recommendations.py`, `src/draft/automation.py`, `src/config_constants.py`, `src/pipeline.py` | ~0,5-1 jour — ✅ mergée le 2026-09-06 |
 | [SPEC-10](SPEC-10-couverture-chemin-critique.md) | Couverture LCU / pool_selection / champion_utils / phases | `tests/` | ~1 jour |
+| [SPEC-11](SPEC-11-lane-restante-et-recherche.md) 🔵 | Pondération par lane restante, puis recherche minimax | `src/analysis/scoring.py` (à terme) | non estimé — non actionable |
 
-**Pourquoi SPEC-08 en premier** : sans elle, toute discussion sur la qualité du modèle reste une conversation d'opinions, et chaque semaine écoulée est une semaine de parties perdues pour la calibration. Elle ne change aucun comportement visible — elle rend le reste *arbitrable sur pièces*.
+**Pourquoi SPEC-08 en premier** : sans elle, toute discussion sur la qualité du modèle reste une conversation d'opinions, et chaque semaine écoulée est une semaine de parties perdues pour la calibration. Elle ne change aucun comportement visible — elle rend le reste *arbitrable sur pièces*, y compris l'ambition de SPEC-11.
 
 **Ce qui est délibérément écarté du lot** : les features candidates de `../../TODO.md` (GUI légère, intégration DraftLol, templates de composition). Elles ajoutent de la surface à un moteur dont on ne sait pas encore mesurer la qualité. À rouvrir une fois SPEC-08 alimentée en données.
 

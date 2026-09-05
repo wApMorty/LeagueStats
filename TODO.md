@@ -85,16 +85,27 @@ encore mesurer la qualité.*
    résultat réel des parties). L'exécution de `scripts/calibrate_model.py` et l'ajustement de
    `K_MATCHUP`/`K_SYNERGY`/`SAME_LANE_WEIGHT` deviendront possibles à ~30 parties labellisées,
    avec bump obligatoire de `MODEL_VERSION`. **C'est le prochain chantier naturel après SPEC-08.**
-3. **Intégration sites de draft externes** (DraftLol, etc.) — recherche disponible dans
+3. **Évolution du modèle prédictif — lane restante, puis recherche façon Stockfish** (@pj35,
+   2026-09-06) — voir [SPEC-11](docs/specs/SPEC-11-lane-restante-et-recherche.md) 🔵 note de
+   cadrage, non actionable avant l'item 2 ci-dessus. Deux étages : (a) pondérer chaque candidat
+   non plus seulement par les ennemis déjà pickés mais par la probabilité des lanes ennemies
+   *encore ouvertes* (`champion_lanes.share` le permet déjà, sans nouveau scrape) ; (b) une
+   recherche minimax sur l'arbre de draft — la draft a l'information parfaite, un ordre de
+   pick/ban connu et une profondeur bornée (~10 picks), ce qui la rend plus tractable qu'il n'y
+   paraît malgré ~170 champions (élagage : pool active côté allié, top-N plausible côté ennemi).
+   Le modèle log-odds actuel est déjà l'équivalent de l'éval statique de Stockfish — ce qui
+   manque, c'est la recherche par-dessus. **Ordre impératif** : chercher profond sur une éval non
+   calibrée amplifierait ses erreurs plutôt que de les corriger.
+4. **Intégration sites de draft externes** (DraftLol, etc.) — recherche disponible dans
    `docs/archive/DRAFT_SITES_INTEGRATION_RESEARCH.md` (restaurée le 2026-09-04, contenu d'octobre
    2025 à revalider). Dépend du reverse-engineering du WebSocket DraftLol — spike de 1-2 jours
    avant d'engager.
-4. **GUI légère locale** (FastAPI + HTMX/React servi en localhost) — ex-Tâche #6 re-scopée,
+5. **GUI légère locale** (FastAPI + HTMX/React servi en localhost) — ex-Tâche #6 re-scopée,
    réutilise les algorithmes en l'état.
-5. **Depuis `docs/TOURNAMENT_COACH_IMPROVEMENTS.md`** : chargement de draft depuis JSON,
+6. **Depuis `docs/TOURNAMENT_COACH_IMPROVEMENTS.md`** : chargement de draft depuis JSON,
    comparaison multi-drafts, templates de composition, simulation IA vs IA, base de drafts
    historiques, timer pick/ban, tracking explicite de phase ban/pick.
-6. **Décision produit** : réactiver `TeamAnalyzer` (`src/analysis/team_analysis.py`, code testé
+7. **Décision produit** : réactiver `TeamAnalyzer` (`src/analysis/team_analysis.py`, code testé
    mais appelé par aucun menu) sur un écran, ou le supprimer.
 
 ---
