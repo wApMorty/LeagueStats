@@ -74,8 +74,14 @@ class ScrapingConfig:
     DEFAULT_LANE: str = "default"
 
     # A lane is scraped for a champion when its share of the champion's games
-    # exceeds this threshold (ROADMAP_2026.md H1: « lanes à pickrate >10% »).
-    LANE_PICKRATE_THRESHOLD: float = 10.0
+    # exceeds this threshold. Originally 10.0 (ROADMAP_2026.md H1: « lanes à
+    # pickrate >10% »); révisé à 5.0 par SPEC-09 E2 (2026-09-05) — mesuré sur
+    # la base du 2026-09-05, 10% laissait invisibles 60 combos
+    # (champion, lane) qui se jouent réellement (283 -> 343 combos, soit
+    # +21%), typiquement les picks de niche où un coach a le plus de valeur
+    # (ex: Malphite middle 8.7%, Pantheon middle 9.0%, Lissandra top 9.6%).
+    # Coût accepté : scrape complet ~45 -> ~55 min (+21% de pages, 5 workers).
+    LANE_PICKRATE_THRESHOLD: float = 5.0
 
     # Lane discovery is plain HTTP (the distribution is in the SSR HTML,
     # no JS rendering needed) — much cheaper than a Selenium page load.
@@ -315,9 +321,16 @@ class DataQualityConfig:
     - A single LoLalytics lane page yields ~94 matchups above the 0.5%
       pickrate cutoff, so a champion playing 1 lane lands around ~90.
     - Mono-lane DB (the failure mode): 16 179 matchups / 12 943 synergies.
-    - Multi-lane with the >10% lane threshold is estimated at ~25k matchups.
-      MIN_TOTAL_MATCHUPS sits between the two; recalibrate upward after the
-      first nightly runs (see docs/runbook_scraping.md).
+    - Multi-lane at the original >10% lane threshold measured ~25k matchups
+      (283 (champion, lane) combos, base 2026-09-05).
+      MIN_TOTAL_MATCHUPS sits between the two.
+
+    SPEC-09 E2 (2026-09-05): ScrapingConfig.LANE_PICKRATE_THRESHOLD lowered
+    10% -> 5%, raising the combo count to ~343 (+21%) and the expected total
+    matchups to ~30k. MIN_TOTAL_MATCHUPS is left at 20000 — still a valid
+    floor under the higher volume, comfortably clear of the mono-lane
+    failure mode — but recalibrate upward once real nightly runs at the new
+    threshold confirm the actual total (see docs/runbook_scraping.md).
     """
 
     # Every champion in the champions table must have at least this many

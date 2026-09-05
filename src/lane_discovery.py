@@ -8,7 +8,8 @@ icon followed by the share of the champion's games on that lane
 
 Architecture decision (validated 2026-06-12): lanes to scrape are discovered
 dynamically per champion, keeping only lanes above
-``scraping_config.LANE_PICKRATE_THRESHOLD`` (>10%, per ROADMAP_2026.md H1).
+``scraping_config.LANE_PICKRATE_THRESHOLD`` (>5%, revised by SPEC-09 E2 from
+the original >10% of ROADMAP_2026.md H1 — see the constant's docstring).
 
 If LoLalytics changes this DOM, see docs/runbook_scraping.md § Lane discovery.
 """

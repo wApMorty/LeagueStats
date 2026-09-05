@@ -6,6 +6,8 @@ de commandes interactive de src/ui/tournament_coach_ui.py.
 
 from typing import Optional
 
+from src.utils.display import format_games_count
+
 
 def _show_tournament_help():
     """Affiche l'aide du coach de tournoi."""
@@ -69,7 +71,11 @@ def _show_tournament_draft_state(
                     status = "Bon"
                 else:
                     status = "Faible"
-                print(f"  • {champ:<15} {status:>10}  ({advantage:+.2f}%)")
+                # SPEC-09 E5: volume derrière le score, même convention que
+                # le Live Coach (recommendations.py "· 91 696 games").
+                total_games = sum(m.games for m in matchups)
+                volume_tag = f" · {format_games_count(total_games)} games"
+                print(f"  • {champ:<15} {status:>10}  ({advantage:+.2f}%){volume_tag}")
             else:
                 print(f"  • {champ:<15}")
     else:
@@ -162,6 +168,8 @@ def _analyze_complete_draft(assistant, ally_team, enemy_team, lane: Optional[str
     print("=" * 80)
 
     # Calcule les scores individuels
+    # SPEC-09 E5: total_games voyage avec chaque score pour l'affichage du
+    # volume derrière l'avantage annoncé (même convention que le Live Coach).
     ally_scores = []
     for champ in ally_team:
         matchups = assistant.db.get_champion_matchups_by_name(champ, lane=lane)
@@ -170,9 +178,10 @@ def _analyze_complete_draft(assistant, ally_team, enemy_team, lane: Optional[str
             advantage = assistant.score_with_synergy(
                 matchups, enemy_team, other_allies, champ, lane=lane
             )
-            ally_scores.append((champ, advantage))
+            total_games = sum(m.games for m in matchups)
+            ally_scores.append((champ, advantage, total_games))
         else:
-            ally_scores.append((champ, None))
+            ally_scores.append((champ, None, 0))
 
     enemy_scores = []
     for champ in enemy_team:
@@ -182,9 +191,10 @@ def _analyze_complete_draft(assistant, ally_team, enemy_team, lane: Optional[str
             advantage = assistant.score_with_synergy(
                 matchups, ally_team, other_enemies, champ, lane=lane
             )
-            enemy_scores.append((champ, advantage))
+            total_games = sum(m.games for m in matchups)
+            enemy_scores.append((champ, advantage, total_games))
         else:
-            enemy_scores.append((champ, None))
+            enemy_scores.append((champ, None, 0))
 
     # Trie par avantage
     ally_scores.sort(key=lambda x: x[1] if x[1] is not None else -999, reverse=True)
@@ -193,40 +203,44 @@ def _analyze_complete_draft(assistant, ally_team, enemy_team, lane: Optional[str
     # Affiche l'équipe alliée
     print(f"\nPERFORMANCE DE VOTRE ÉQUIPE :")
     print("-" * 60)
-    for champ, advantage in ally_scores:
+    for champ, advantage, total_games in ally_scores:
         if advantage is None:
             print(f"  {champ:<15} | Données insuffisantes")
-        elif advantage >= 2.0:
-            print(f"  {champ:<15} | {advantage:+.2f}% (Excellent)")
+            continue
+        volume_tag = f" · {format_games_count(total_games)} games"
+        if advantage >= 2.0:
+            print(f"  {champ:<15} | {advantage:+.2f}% (Excellent){volume_tag}")
         elif advantage >= 1.0:
-            print(f"  {champ:<15} | {advantage:+.2f}% (Bon)")
+            print(f"  {champ:<15} | {advantage:+.2f}% (Bon){volume_tag}")
         elif advantage >= -1.0:
-            print(f"  {champ:<15} | {advantage:+.2f}% (Neutre)")
+            print(f"  {champ:<15} | {advantage:+.2f}% (Neutre){volume_tag}")
         elif advantage >= -2.0:
-            print(f"  {champ:<15} | {advantage:.2f}% (Mauvais)")
+            print(f"  {champ:<15} | {advantage:.2f}% (Mauvais){volume_tag}")
         else:
-            print(f"  {champ:<15} | {advantage:.2f}% (Très mauvais)")
+            print(f"  {champ:<15} | {advantage:.2f}% (Très mauvais){volume_tag}")
 
     # Affiche l'équipe adverse
     print(f"\nPERFORMANCE DE L'ÉQUIPE ADVERSE :")
     print("-" * 60)
-    for champ, advantage in enemy_scores:
+    for champ, advantage, total_games in enemy_scores:
         if advantage is None:
             print(f"  {champ:<15} | Données insuffisantes")
-        elif advantage >= 2.0:
-            print(f"  {champ:<15} | {advantage:+.2f}% (Fort contre nous)")
+            continue
+        volume_tag = f" · {format_games_count(total_games)} games"
+        if advantage >= 2.0:
+            print(f"  {champ:<15} | {advantage:+.2f}% (Fort contre nous){volume_tag}")
         elif advantage >= 1.0:
-            print(f"  {champ:<15} | {advantage:+.2f}% (Bon contre nous)")
+            print(f"  {champ:<15} | {advantage:+.2f}% (Bon contre nous){volume_tag}")
         elif advantage >= -1.0:
-            print(f"  {champ:<15} | {advantage:+.2f}% (Neutre)")
+            print(f"  {champ:<15} | {advantage:+.2f}% (Neutre){volume_tag}")
         elif advantage >= -2.0:
-            print(f"  {champ:<15} | {advantage:.2f}% (Faible contre nous)")
+            print(f"  {champ:<15} | {advantage:.2f}% (Faible contre nous){volume_tag}")
         else:
-            print(f"  {champ:<15} | {advantage:.2f}% (Très faible contre nous)")
+            print(f"  {champ:<15} | {advantage:.2f}% (Très faible contre nous){volume_tag}")
 
     # Calcul du winrate d'équipe par moyenne géométrique
-    ally_valid = [adv for _, adv in ally_scores if adv is not None]
-    enemy_valid = [adv for _, adv in enemy_scores if adv is not None]
+    ally_valid = [adv for _, adv, _ in ally_scores if adv is not None]
+    enemy_valid = [adv for _, adv, _ in enemy_scores if adv is not None]
 
     if ally_valid and enemy_valid:
         print(f"\nPRÉDICTION DU MATCHUP D'ÉQUIPE :")

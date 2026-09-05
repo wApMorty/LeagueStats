@@ -109,8 +109,32 @@ class TestRunPipeline:
         meta_calls = {call.args[0]: call.args[1] for call in mocks["db"].set_meta.call_args_list}
         assert meta_calls["last_scrape_status"] == "ok"
         assert "last_full_success_utc" in meta_keys
+        # SPEC-09 E4: a full (non recompute_only) run also recalculates
+        # champion_scores/pool_ban_recommendations, so last_recompute_utc
+        # must be written here too, not only under recompute_only.
+        assert "last_recompute_utc" in meta_keys
         mocks["notifier"].notify_success.assert_called_once()
         mocks["repair"].assert_not_called()
+
+    def test_last_recompute_utc_reflects_this_run_after_full_scrape(self, monkeypatch):
+        """SPEC-09 E4 regression: last_recompute_utc was only written inside
+        the ``if recompute_only:`` branch, even though a full scrape also
+        recalculates scores/bans (steps 3-4) — the key silently kept a stale
+        value from whenever recompute-only had last run (observed: 2026-08-28
+        while the scrape was 2026-09-03 and bans recomputed 2026-09-04).
+        Fix: written unconditionally right after the recompute, in both
+        paths. No reader depended on the key yet, so this was correctness
+        debt rather than a live bug, but it would mislead the first screen
+        that displays it."""
+        from datetime import datetime, timezone
+
+        before = datetime.now(timezone.utc).isoformat()
+        result, mocks = self._run(monkeypatch)
+        after = datetime.now(timezone.utc).isoformat()
+
+        assert result.status == "ok"
+        meta_calls = {call.args[0]: call.args[1] for call in mocks["db"].set_meta.call_args_list}
+        assert before <= meta_calls["last_recompute_utc"] <= after
 
         # SPEC-01 A5: a backup is taken before the scrape (DROP happens
         # inside scrape_all_multilane) and kept + pruned on a clean run.

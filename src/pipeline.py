@@ -325,6 +325,17 @@ def run_pipeline(
         assistant.close()
         assistant = None
 
+        # SPEC-09 E4: written unconditionally right after the recompute that
+        # actually happened, in BOTH paths — a full scrape also recalculates
+        # champion_scores/pool_ban_recommendations (steps 3-4 above) but this
+        # used to be written only under recompute_only, leaving the metadata
+        # stuck on a stale date (observed: 2026-08-28 while the last scrape
+        # was 2026-09-03 and bans had been recomputed 2026-09-04). No reader
+        # depends on this key today (data_freshness.py reads last_scrape_utc
+        # instead), so there was no user-visible impact yet — but the value
+        # was wrong and would mislead the first screen that displays it.
+        db.set_meta("last_recompute_utc", datetime.now(timezone.utc).isoformat())
+
         # ── 4b. Targeted repair for warning-only gaps (SPEC-01 A4) ──────────
         if completeness_report is not None and completeness_report.warnings:
             repair_results = _repair_incomplete_champions(
@@ -338,7 +349,6 @@ def run_pipeline(
             matchups_count = cursor.fetchone()[0]
             cursor.execute("SELECT COUNT(*) FROM synergies")
             synergies_count = cursor.fetchone()[0]
-            db.set_meta("last_recompute_utc", datetime.now(timezone.utc).isoformat())
             db.set_meta("last_update_patch", str(resolved_patch))
             db.set_meta("matchups_count", str(matchups_count))
             db.set_meta("synergies_count", str(synergies_count))

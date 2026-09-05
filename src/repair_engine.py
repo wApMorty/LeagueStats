@@ -17,7 +17,8 @@ LANE HANDLING:
     Reuses the same dynamic lane discovery as the nightly multi-lane pipeline
     (src/lane_discovery.py, src/multilane.py) instead of scraping an untagged
     default lane: missing champions are grouped by their actually-played
-    lane(s) (>10% pickrate) and each (champion, lane) page is scraped and
+    lane(s) (scraping_config.LANE_PICKRATE_THRESHOLD, >5% since SPEC-09 E2)
+    and each (champion, lane) page is scraped and
     tagged accordingly, exactly like scripts/update_all.py. Champions whose
     lane discovery fails fall back to the untagged default lane, same as the
     nightly pipeline.

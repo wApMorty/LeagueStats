@@ -25,3 +25,14 @@ def safe_print(text: str) -> None:
     except UnicodeEncodeError:
         # Stream could not be reconfigured above -- drop to ASCII rather than crash
         print(text.encode("ascii", "replace").decode("ascii"))
+
+
+def format_games_count(games: int) -> str:
+    """Format a games count with a space thousands separator (SPEC-09 E5).
+
+    Matches the "91 696" convention already used by the Live Coach
+    (src/draft/recommendations.py) so the volume-of-data indicator reads the
+    same everywhere it appears, without pulling in locale-dependent
+    formatting for a single-purpose display tweak.
+    """
+    return f"{games:,}".replace(",", " ")

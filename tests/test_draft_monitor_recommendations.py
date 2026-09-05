@@ -82,3 +82,53 @@ def test_displayed_breakdown_matches_the_ranking(monitor, state, capsys):
     assert "Matchup: +20.00%" in output
     # Sett est 4e : hors du top 3, donc jamais affiché
     assert "Sett" not in output
+
+
+def test_champion_without_data_is_listed_as_skipped_not_dropped(monitor, capsys):
+    """SPEC-09 E1 : un champion de la pool sans matchups pour la lane doit
+    apparaître comme écarté, jamais disparaître silencieusement.
+
+    Avant le fix, l'absence de `else` dans `DraftRecommender.provide()`
+    faisait sortir ce champion de la liste sans laisser de trace : le joueur
+    ne pouvait pas distinguer "mauvais pick" de "aucune donnée en base".
+    """
+    pool = ["Aatrox", "Darius", "Malphite"]
+    monitor.current_pool = pool
+    monitor.champion_id_to_name = {**CHAMPION_IDS, 54: "Malphite"}
+    state = DraftState(
+        phase="BAN_PICK",
+        enemy_picks=[64],
+        ally_picks=[],
+        local_player_cell_id=1,
+        ally_positions={1: "middle"},
+    )
+
+    def fake_matchups(champion_name, lane=None):
+        if champion_name == "Malphite":
+            return []  # aucune donnée pour cette lane
+        return [
+            Matchup(
+                enemy_name="LeeSin",
+                winrate=52.0,
+                delta1=100.0,
+                delta2=150.0,
+                pickrate=5.0,
+                games=1000,
+            )
+        ]
+
+    monitor.assistant.get_matchups_for_draft.side_effect = fake_matchups
+
+    with (
+        patch.object(monitor, "_calculate_score_against_team", return_value=10.0),
+        patch.object(monitor, "_calculate_synergy_score", return_value=0.0),
+    ):
+        monitor._provide_recommendations(state)
+
+    output = capsys.readouterr().out
+    assert "Malphite (0 games)" in output
+    assert "Sans données exploitables en middle" in output
+    # Malphite ne doit jamais apparaître dans le classement [1st]/[2nd]/[3rd]
+    for rank_line in output.splitlines():
+        if rank_line.strip().startswith(("[1st]", "[2nd]", "[3rd]")):
+            assert "Malphite" not in rank_line

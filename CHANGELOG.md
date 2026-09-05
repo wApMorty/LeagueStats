@@ -6,6 +6,71 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### 🐛 Fix
 
+- **SPEC-09 (E1) — champion sans données écarté silencieusement des
+  recommandations** — `DraftRecommender.provide()` (`src/draft/recommendations.py`)
+  n'avait pas de branche `else` quand un champion de la pool n'atteignait pas
+  `draft_config.MIN_CHAMPION_GAMES` pour la lane jouée : il sortait de la
+  liste sans laisser de trace, rendant impossible de distinguer « mauvais
+  matchup » de « aucune donnée en base » — exactement le piège que l'outil
+  doit éviter (un outil d'aide à la décision qui ne sait pas doit le dire).
+  Incohérence interne au produit : l'écran de fin de draft
+  (`final_analysis.py`) affichait déjà « Données insuffisantes » pour le même
+  cas. Les champions écartés sont désormais accumulés et affichés en section
+  distincte après le top N (`[DATA] Sans données exploitables en <lane> :
+  Champion (N games), ...`), jamais mêlés au classement puisqu'ils ne sont
+  pas classables. Même règle appliquée à `HoverAutomation.
+  get_best_champion_from_pool()` (voir E3 ci-dessous).
+
+- **SPEC-09 (E3) — le meilleur blind pick ignorait la lane connue (5e
+  résidu)** — `HoverAutomation.get_best_champion_from_pool()`
+  (`src/draft/automation.py`) appelait `get_matchups_for_draft(champion_name)`
+  sans `lane=`, alors que la lane est déjà connue à cet instant via
+  `self.m.pool_lane` (pool mono-rôle, résolu par `PoolSelector`) ou
+  `last_draft_state.ally_positions` (position LCU) — 5e résidu de la famille
+  de bugs corrigée en septembre 2026 sur les autres écrans du Live Coach
+  (voir « Audit de suivi » ci-dessous). L'audit du 2026-09-04 l'a manqué
+  parce qu'il a balayé les appels atteignables depuis `DraftRecommender` et
+  `FinalDraftAnalyzer` sans jamais remonter jusqu'à `automation.py` — et
+  **non** parce que ce chemin serait rare : `MonitorLifecycle.monitor_loop`
+  appelle `_do_initial_hover()` dès l'ouverture du champion select dès que
+  `auto_hover` est actif, ce qui est le réglage en usage
+  (`user_prefs.json` : `"auto_hover": true`). Le champion annoncé comme
+  « votre choix le plus sûr » et auto-hover dans le client était donc choisi
+  sur l'agrégat toutes-lanes **à chaque partie**. Ajout de
+  `_resolve_player_lane()` : `pool_lane` en priorité, sinon la position LCU
+  du dernier état de draft connu, sinon `None` — jamais de repli silencieux
+  sur l'agrégat toutes-lanes. Test de régression ajouté
+  (`tests/regression/test_regression_blind_pick_lane_filter.py`).
+
+- **SPEC-09 (E4) — `db_meta.last_recompute_utc` ment hors mode
+  `recompute_only`** — `db.set_meta("last_recompute_utc", ...)` n'était écrit
+  que dans la branche `if recompute_only:` de `run_pipeline()`
+  (`src/pipeline.py`), alors qu'un scrape complet recalcule aussi
+  `champion_scores` et `pool_ban_recommendations` (étapes 3-4) sans jamais
+  toucher cette métadonnée. Constat en base : valeur bloquée au 2026-08-28
+  (dernier `recompute_only`) alors que le scrape datait du 2026-09-03 et les
+  bans du 2026-09-04. Aucun lecteur ne dépend de cette clé aujourd'hui
+  (`data_freshness.py` lit `last_scrape_utc`), donc pas d'impact utilisateur
+  actuel — mais la valeur était fausse et le serait devenue visiblement dès
+  qu'un écran l'affiche. Écriture sortie de la branche `recompute_only`,
+  placée juste après le recalcul effectif, dans les deux chemins.
+
+- **SPEC-09 (E2) — seuil de scrape des lanes 10 % → 5 % (60 combos
+  invisibles au coach)** — `ScrapingConfig.LANE_PICKRATE_THRESHOLD` à 10 %
+  laissait 60 combos (champion, lane) qui se jouent réellement invisibles au
+  coach (283 → 343 combos mesurés sur la base du 2026-09-05, +21 %) :
+  Malphite middle (8,7 %), Pantheon middle (9,0 %), Lissandra top (9,6 %),
+  Anivia support (9,5 %), Brand jungle (9,3 %), Zilean middle (9,2 %),
+  Gangplank middle (8,6 %), Taliyah bottom (8,7 %)... précisément les picks
+  de niche où un coach a le plus de valeur ajoutée. Coût accepté : scrape
+  complet ~45 → ~55 min (+21 % de pages, 5 workers). Arbitré et validé par
+  @pj35 le 2026-09-05. Commentaires mis à jour partout où l'ancien « >10 % »
+  était cité en dur (`lane_discovery.py`, `multilane.py`, `repair_engine.py`,
+  `DataQualityConfig`) : `MIN_TOTAL_MATCHUPS` reste à 20000 (toujours un
+  plancher valide sous le volume plus élevé attendu, ~30k), à recalibrer à
+  la hausse une fois un scrape réel confirmant le total exact au nouveau
+  seuil.
+
 - **Générateur de tier list — lane ignorée (scores blend toutes lanes)** —
   `champion_scores` ne stockait qu'un score par champion, calculé par
   `GlobalScoreCalculator.calculate_all()` via
@@ -95,6 +160,21 @@ All notable changes to LeagueStats Coach will be documented in this file.
     `tests/test_ban_recommendations.py`). 990 tests passent au total.
 
 ### ✨ Ajouts
+
+- **SPEC-09 (E5) — volume de games affiché hors Live Coach** — le Live Coach
+  affiche le volume derrière chaque recommandation (`· 91 696 games`,
+  `recommendations.py`) ; les autres écrans n'affichaient aucun indicateur
+  de fiabilité. Ajout du même tag (`format_games_count()`, nouveau dans
+  `src/utils/display.py`) sur trois écrans, un commit chacun : la tier list
+  (`src/ui/tier_list_ui.py`, `_display_tier_list()` accepte un
+  `games_by_champion` optionnel, keyword-only), le coach de draft tournoi
+  (`src/ui/tournament_display_ui.py`, état du draft et analyse finale — le
+  volume s'ajoute sans requête supplémentaire, les matchups étaient déjà
+  récupérés à l'endroit où le score est calculé), et le trio optimal du Team
+  Builder (`src/ui/team_builder_ui.py`, nouvelle fonction `_games_tag()`,
+  best-effort). Item volontairement souple (SPEC-09) : pas de refonte
+  d'affichage, un test par écran vérifiant la présence du volume dans la
+  sortie.
 
 - **Tier de scraping Master+** — passage du tier lolalytics de `diamond_plus`
   à `master_plus` (Master + Grandmaster + Challenger), suite à l'atteinte du
