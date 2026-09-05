@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-09-06 (SPEC-08 et SPEC-09 mergées ; reste SPEC-10 — voir §Priorités)
+**Mis à jour** : 2026-09-06 (lot SPEC-08→10 entièrement mergé — voir §Priorités)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -17,21 +17,36 @@ Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique com
 
 ---
 
-## Priorités actuelles — lot SPEC-08 → SPEC-10
+## Priorités actuelles — lot SPEC-08 → SPEC-10 ✅ Soldé (2026-09-06)
 
 **Validées par @pj35 le 2026-09-05.** Specs autoportantes dans [`docs/specs/`](docs/specs/README.md).
+Les trois chantiers sont mergés sur master ; 1206 tests passent (990 avant le lot), couverture
+globale 65,5 % → 72,51 %, seuil CI relevé 45 % → 60 %.
 
 | Rang | Chantier | Spec | État |
 |---|---|---|---|
 | 1 | **Fermer la boucle de mesure** (résultat de partie automatique via LCU) | [SPEC-08](docs/specs/SPEC-08-boucle-de-mesure.md) | ✅ **Mergée le 2026-09-06** |
 | 2 | **Rendre l'ignorance visible** (champions écartés affichés, seuil de lane 10 % → 5 %) | [SPEC-09](docs/specs/SPEC-09-ignorance-visible.md) | ✅ **Mergée le 2026-09-06** |
-| 3 | **Couverture du chemin critique temps réel** | [SPEC-10](docs/specs/SPEC-10-couverture-chemin-critique.md) | 🔴 **À faire** — `pool_selection_ui.py` à 2,6 % et `lcu_client.py` à 18,6 %, le chemin exact des bugs lane de septembre |
+| 3 | **Couverture du chemin critique temps réel** | [SPEC-10](docs/specs/SPEC-10-couverture-chemin-critique.md) | ✅ **Mergée le 2026-09-06** — `pool_selection_ui.py` 2,6 % → 100 %, `lcu_client.py` 18,6 % → 83,7 % |
 | 4 | **Calibration du modèle** | — | ⏳ **Débloquée par SPEC-08, en attente de données** : lancer `python scripts/calibrate_model.py` une fois ~30 parties labellisées (le compteur `[OUTCOME]` affiche la progression à chaque résolution). Tout ajustement de `K_MATCHUP`/`K_SYNERGY`/`SAME_LANE_WEIGHT` exige un bump de `MODEL_VERSION` |
-| — | Features candidates | — | À rouvrir après la calibration, aucune n'est bloquante |
+| 5 | **Évolution du modèle prédictif** (lane restante, puis recherche façon Stockfish) | [SPEC-11](docs/specs/SPEC-11-lane-restante-et-recherche.md) 🔵 | Note de cadrage, non actionable avant le rang 4 |
+| — | Autres features candidates | — | À rouvrir après la calibration, aucune n'est bloquante |
 
-### Actions manuelles restantes après le merge du 2026-09-06
+### Dette signalée par SPEC-10, non corrigée (hors périmètre de la spec — à trier)
 
-- [ ] Appliquer la migration : `python -m alembic upgrade head` (ajoute `predictions.game_id`)
+- `LCUClient._find_credentials_process()` (`src/lcu_client.py`) : sur un token tronqué par la
+  limite de longueur de ligne de commande de l'OS, le commentaire annonce un repli sur le
+  lockfile, mais `password` n'est jamais réinitialisé — le token tronqué (donc invalide) est
+  renvoyé tel quel. Edge case rare, mais latent.
+- `BanRecommender.get_ban_recommendations()` (`src/analysis/ban_recommendations.py`) est aveugle
+  à l'état de la draft (bans/picks) : la seule protection réelle contre la recommandation d'un
+  champion déjà banni vit dans `BanAdvisor.handle_auto_ban_hover()`, pas dans `BanRecommender`
+  lui-même. Fonctionne aujourd'hui parce que ce dernier est l'unique appelant côté Live Coach,
+  mais c'est un invariant qui devrait être porté par la classe qui produit la recommandation.
+
+### Actions manuelles restantes
+
+- [x] Migration appliquée : `predictions.game_id` (2026-09-05, une fois `lol_coach.py` fermé)
 - [ ] Relancer un scrape complet au nouveau seuil de lane : `python scripts/update_all.py`
       (~55 min désormais, ~343 combos (champion, lane) attendus contre 283)
 - [ ] Après ce scrape, envisager de relever `MIN_TOTAL_MATCHUPS` (`src/data_quality.py`, laissé à
