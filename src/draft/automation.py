@@ -13,6 +13,7 @@ from typing import List, Optional, Tuple
 
 from ..config_constants import draft_config
 from ..utils.console import clear_console
+from ..utils.display import format_games_count
 
 
 class HoverAutomation:
@@ -134,7 +135,9 @@ class HoverAutomation:
                     skipped.append((champion_name, total_games))
 
             if skipped:
-                skipped_names = ", ".join(f"{name} ({games} games)" for name, games in skipped)
+                skipped_names = ", ".join(
+                    f"{name} ({format_games_count(games)} games)" for name, games in skipped
+                )
                 lane_suffix = f" en {player_lane}" if player_lane else ""
                 print(f"  [DATA] Sans données exploitables{lane_suffix} : {skipped_names}")
 

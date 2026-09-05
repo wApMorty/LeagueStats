@@ -4,9 +4,15 @@ scored candidates on their all-lanes aggregate instead.
 Bug report (SPEC-09 E3, 2026-09-05): the 5th residual of the lane-filter bug
 family fixed across the Live Coach in September 2026 (Live Coach recommend-
 ations, end-of-draft screen, bans, Team Builder, Tournament Coach — see
-CHANGELOG.md [Unreleased]), not caught by the 2026-09-04 audit because it
-lives on a rarely-exercised code path: the "Meilleur blind pick" announced
-and auto-hovered at the very start of champion select.
+CHANGELOG.md [Unreleased]). The 2026-09-04 audit missed it because it swept
+the call sites reachable from ``DraftRecommender``/``FinalDraftAnalyzer`` and
+never reached ``automation.py`` — NOT because the path is rare. It runs on
+every single draft: ``MonitorLifecycle.monitor_loop`` calls
+``_do_initial_hover()`` as soon as champion select opens whenever
+``auto_hover`` is on, and it is on in practice (``user_prefs.json``:
+``"auto_hover": true``). The champion announced as "votre choix le plus sûr"
+and auto-hovered in the client was therefore picked on all-lanes data every
+game.
 
 Root cause: ``HoverAutomation.get_best_champion_from_pool()``
 (``src/draft/automation.py``) called

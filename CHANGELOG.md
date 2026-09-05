@@ -28,10 +28,15 @@ All notable changes to LeagueStats Coach will be documented in this file.
   `self.m.pool_lane` (pool mono-rôle, résolu par `PoolSelector`) ou
   `last_draft_state.ally_positions` (position LCU) — 5e résidu de la famille
   de bugs corrigée en septembre 2026 sur les autres écrans du Live Coach
-  (voir « Audit de suivi » ci-dessous), non détecté par l'audit du
-  2026-09-04 car ce code path (le hover initial en tout début de champion
-  select) est rarement exercé. Un champion multi-lane de la pool voyait donc
-  son score de blind pick calculé sur l'agrégat toutes-lanes. Ajout de
+  (voir « Audit de suivi » ci-dessous). L'audit du 2026-09-04 l'a manqué
+  parce qu'il a balayé les appels atteignables depuis `DraftRecommender` et
+  `FinalDraftAnalyzer` sans jamais remonter jusqu'à `automation.py` — et
+  **non** parce que ce chemin serait rare : `MonitorLifecycle.monitor_loop`
+  appelle `_do_initial_hover()` dès l'ouverture du champion select dès que
+  `auto_hover` est actif, ce qui est le réglage en usage
+  (`user_prefs.json` : `"auto_hover": true`). Le champion annoncé comme
+  « votre choix le plus sûr » et auto-hover dans le client était donc choisi
+  sur l'agrégat toutes-lanes **à chaque partie**. Ajout de
   `_resolve_player_lane()` : `pool_lane` en priorité, sinon la position LCU
   du dernier état de draft connu, sinon `None` — jamais de repli silencieux
   sur l'agrégat toutes-lanes. Test de régression ajouté

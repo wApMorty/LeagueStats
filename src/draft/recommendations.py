@@ -17,6 +17,7 @@ they must be invoked via self.m.<method>, not sibling methods here.
 from typing import List, Tuple
 
 from ..config_constants import draft_config, ui_config
+from ..utils.display import format_games_count
 from .state import DraftState
 
 
@@ -182,7 +183,7 @@ class DraftRecommender:
                         if direct_counter_name:
                             lane_tag += f" vs {direct_counter_name}"
                         lane_tag += ")"
-                    volume_tag = f" · {games:,} games".replace(",", " ")
+                    volume_tag = f" · {format_games_count(games)} games"
 
                     print(f"  {rank} {display_name}{lane_tag} {score_text} {breakdown}{volume_tag}")
 
@@ -213,7 +214,9 @@ class DraftRecommender:
                 # SPEC-09 E1: écartés affichés à part, jamais mêlés au
                 # classement (ils ne sont pas classables faute de données).
                 if skipped:
-                    skipped_names = ", ".join(f"{name} ({games} games)" for name, games in skipped)
+                    skipped_names = ", ".join(
+                        f"{name} ({format_games_count(games)} games)" for name, games in skipped
+                    )
                     lane_suffix = f" en {player_lane}" if player_lane else ""
                     print(f"  [DATA] Sans données exploitables{lane_suffix} : {skipped_names}")
 
