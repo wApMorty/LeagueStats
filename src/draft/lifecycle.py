@@ -67,6 +67,15 @@ class MonitorLifecycle:
                                     f"[DEBUG] Gameflow phase: {current_phase} - Resetting for next game"
                                 )
                             self.m._reset_for_next_game()
+                        self.m._in_outcome_trigger_phase = False
+                    elif current_phase in draft_config.OUTCOME_TRIGGER_PHASES:
+                        # SPEC-08 §2.6a: only on the False->True transition,
+                        # never on every tick spent in the same phase.
+                        if not self.m._in_outcome_trigger_phase:
+                            self.m._resolve_pending_outcomes()
+                        self.m._in_outcome_trigger_phase = True
+                    else:
+                        self.m._in_outcome_trigger_phase = False
 
                 return
 
@@ -200,6 +209,7 @@ class MonitorLifecycle:
         self.m.player_champion = None
         self.m.forced_roles = {}  # SPEC-04 B5: corrections don't carry to the next game
         self.m._last_prediction_id = None  # SPEC-05 B7: predictions don't carry to the next game
+        self.m._in_outcome_trigger_phase = False  # SPEC-08: re-arm the transition detector
 
         # Reset ready message flag
         if hasattr(self.m, "_shown_ready_message"):

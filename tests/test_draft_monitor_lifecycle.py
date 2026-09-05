@@ -386,3 +386,121 @@ class TestResetForNextGame:
 
         assert monitor.last_draft_state == DraftState()
         assert monitor.forced_roles == {}
+
+    def test_outcome_trigger_flag_is_reset(self, monitor):
+        """SPEC-08: re-arms the transition detector for the next game."""
+        monitor._in_outcome_trigger_phase = True
+
+        with patch("src.draft.lifecycle.clear_console"):
+            monitor._reset_for_next_game()
+
+        assert monitor._in_outcome_trigger_phase is False
+
+
+class TestOutcomeResolutionTrigger:
+    """``_monitor_loop()`` outside champion select — SPEC-08 §2.6a: entering
+    a gameflow phase in ``OUTCOME_TRIGGER_PHASES`` calls
+    ``_resolve_pending_outcomes()`` exactly once per transition."""
+
+    @staticmethod
+    def _outside_champion_select(monitor, phase):
+        monitor.lcu.is_in_ready_check.return_value = (
+            False  # keep the ready-check branch out of scope
+        )
+        monitor.lcu.is_in_champion_select.return_value = False
+        monitor.lcu.get_gameflow_session.return_value = {"phase": phase}
+
+    def test_entering_a_trigger_phase_resolves_once(self, monitor):
+        self._outside_champion_select(monitor, "WaitingForStats")
+
+        with patch.object(monitor, "_resolve_pending_outcomes") as resolve:
+            monitor._monitor_loop()
+
+        resolve.assert_called_once_with()
+        assert monitor._in_outcome_trigger_phase is True
+
+    @pytest.mark.parametrize("phase", ["WaitingForStats", "PreEndOfGame", "EndOfGame"])
+    def test_all_three_trigger_phases_resolve(self, monitor, phase):
+        self._outside_champion_select(monitor, phase)
+
+        with patch.object(monitor, "_resolve_pending_outcomes") as resolve:
+            monitor._monitor_loop()
+
+        resolve.assert_called_once_with()
+
+    def test_staying_in_the_same_trigger_phase_does_not_re_resolve(self, monitor):
+        self._outside_champion_select(monitor, "WaitingForStats")
+        monitor._in_outcome_trigger_phase = True  # already resolved on a prior tick
+
+        with patch.object(monitor, "_resolve_pending_outcomes") as resolve:
+            monitor._monitor_loop()
+
+        resolve.assert_not_called()
+        assert monitor._in_outcome_trigger_phase is True
+
+    def test_moving_between_trigger_phases_does_not_re_resolve(self, monitor):
+        """WaitingForStats -> PreEndOfGame is still 'inside the set': the
+        flag collapses the whole set into one boolean, so this must not
+        count as leaving and re-entering."""
+        self._outside_champion_select(monitor, "WaitingForStats")
+        with patch.object(monitor, "_resolve_pending_outcomes"):
+            monitor._monitor_loop()
+
+        self._outside_champion_select(monitor, "PreEndOfGame")
+        with patch.object(monitor, "_resolve_pending_outcomes") as resolve:
+            monitor._monitor_loop()
+
+        resolve.assert_not_called()
+
+    def test_leaving_and_re_entering_resolves_again(self, monitor):
+        self._outside_champion_select(monitor, "EndOfGame")
+        with patch.object(monitor, "_resolve_pending_outcomes"):
+            monitor._monitor_loop()
+        assert monitor._in_outcome_trigger_phase is True
+
+        # Back in game (not a trigger phase, not a reset phase either).
+        self._outside_champion_select(monitor, "InProgress")
+        with patch.object(monitor, "_resolve_pending_outcomes") as resolve:
+            monitor._monitor_loop()
+        resolve.assert_not_called()
+        assert monitor._in_outcome_trigger_phase is False
+
+        # New game reaches EndOfGame again: must resolve once more.
+        self._outside_champion_select(monitor, "EndOfGame")
+        with patch.object(monitor, "_resolve_pending_outcomes") as resolve:
+            monitor._monitor_loop()
+        resolve.assert_called_once_with()
+
+    def test_reset_phase_never_triggers_a_resolution(self, monitor):
+        """Lobby/Matchmaking/None/'' are the reset phases, never the outcome
+        trigger -- both branches are mutually exclusive."""
+        monitor.has_analyzed_final_draft = False  # skip the reset branch entirely
+        self._outside_champion_select(monitor, "Lobby")
+
+        with patch.object(monitor, "_resolve_pending_outcomes") as resolve:
+            monitor._monitor_loop()
+
+        resolve.assert_not_called()
+        assert monitor._in_outcome_trigger_phase is False
+
+    def test_champion_select_hot_path_never_calls_resolve(self, monitor):
+        """Never in the champion-select branch (SPEC-08 §2.6a: 'jamais dans
+        le chemin chaud du champion select')."""
+        monitor.lcu.is_in_ready_check.return_value = False
+        monitor.lcu.is_in_champion_select.return_value = True
+        monitor.lcu.get_champion_select_session.return_value = None
+
+        with patch.object(monitor, "_resolve_pending_outcomes") as resolve:
+            monitor._monitor_loop()
+
+        resolve.assert_not_called()
+
+    def test_no_gameflow_session_does_not_raise_or_resolve(self, monitor):
+        monitor.lcu.is_in_ready_check.return_value = False
+        monitor.lcu.is_in_champion_select.return_value = False
+        monitor.lcu.get_gameflow_session.return_value = None
+
+        with patch.object(monitor, "_resolve_pending_outcomes") as resolve:
+            monitor._monitor_loop()  # must not raise
+
+        resolve.assert_not_called()

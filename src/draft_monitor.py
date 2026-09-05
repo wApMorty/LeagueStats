@@ -25,6 +25,7 @@ from .draft.commands import CommandListener
 from .draft.recommendations import DraftRecommender
 from .draft.final_analysis import FinalDraftAnalyzer
 from .draft.lifecycle import MonitorLifecycle
+from .draft.outcome_tracker import OutcomeTracker
 
 
 class DraftMonitor:
@@ -87,6 +88,7 @@ class DraftMonitor:
         self.recommender = DraftRecommender(self)
         self.final_analyzer = FinalDraftAnalyzer(self)
         self.lifecycle = MonitorLifecycle(self)
+        self.outcome_tracker = OutcomeTracker(self)
         self.last_recommendation = None  # Track last recommendation to avoid spam
         self.last_ban_recommendation = None  # Track last ban recommendation to avoid spam
         self.has_done_initial_hover = False  # Track if we've done the initial hover
@@ -99,6 +101,12 @@ class DraftMonitor:
         # outcome, set by _calculate_final_scores and consumed by the manual
         # "outcome win"/"outcome loss" command. None = nothing to update.
         self._last_prediction_id: Optional[int] = None
+
+        # SPEC-08 §2.6a: True while the last-seen gameflow phase was one of
+        # draft_config.OUTCOME_TRIGGER_PHASES, so the loop can detect the
+        # False->True transition and call resolve_pending() exactly once per
+        # post-game window instead of once per poll tick.
+        self._in_outcome_trigger_phase: bool = False
 
         # OneTricks browser window recycling: keep a single handle so each new
         # draft replaces the previous window instead of stacking tabs/processes
@@ -114,6 +122,13 @@ class DraftMonitor:
 
         if not self.lcu.connect():
             return False
+
+        # SPEC-08 §2.6b: catch up on outcomes for games played while the app
+        # was closed, before entering the poll loop -- the LCU is connected
+        # at this point, which the startup path in src/ui/draft_coach_ui.py
+        # (named by the spec) cannot guarantee without connecting a second
+        # time. Best-effort: never raises, never blocks startup.
+        self._resolve_pending_outcomes(limit=draft_config.OUTCOME_BACKFILL_LIMIT)
 
         # Load champion ID mappings
         self._load_champion_mappings()
@@ -264,6 +279,10 @@ class DraftMonitor:
     def _handle_outcome_command(self, line: str) -> None:
         """Parse and apply one 'outcome win'/'outcome loss' command (SPEC-05 B7 §9)."""
         self.commands.handle_outcome_command(line)
+
+    def _resolve_pending_outcomes(self, limit: Optional[int] = None) -> int:
+        """Labellise les prédictions en attente depuis l'historique LCU (SPEC-08)."""
+        return self.outcome_tracker.resolve_pending(limit)
 
     def _get_display_name(self, champion_id: int) -> str:
         """Get display name for champion ID."""
