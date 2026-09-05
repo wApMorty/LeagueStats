@@ -119,6 +119,43 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ♻️ Refactor
 
+- **TODO.md P4 — les 6 derniers fichiers >500 lignes du projet, soldés
+  (2026-09-05)** — même méthode que SPEC-07 E9/E10 ci-dessous (façade mince +
+  déplacement verbatim, sans changement de comportement) :
+  - `src/db.py` (1698 → 395 lignes) : nouveau package `src/repositories/`,
+    un module par domaine de table (champions, matchups, matchups_draft,
+    synergies, champion_scores, pool_bans, predictions, meta).
+  - `src/parallel_parser.py` (974 → 223 lignes) : découpage en mixins par
+    mode de scrape (`parallel_parser_legacy.py` pour le scrape mono-lane
+    complet, `parallel_parser_roles.py` pour le scrape par rôle/lane,
+    chemin actif) plutôt qu'en modules composés — l'état partagé
+    (executor, verrous, cache champion) est trop dense pour une
+    composition par domaine sans tout recâbler.
+  - `scripts/repair_data.py` (650 → 363 lignes) : moteur extrait vers
+    `src/repair_engine.py` (même principe que `src/pipeline.py` pour
+    `scripts/update_all.py`). Un monkey-patch de `_get_or_create_parser`
+    (tracking des instances Parser à fermer) a dû être adapté pour cibler
+    explicitement le module qui définit désormais `_scrape_champion`.
+  - `src/constants.py` (593 → 465 lignes) : les 3 fonctions de
+    normalisation de nom de champion extraites vers
+    `src/champion_name_normalization.py` — le fichier reste principalement
+    des listes de champions par rôle (données, pas logique).
+  - `src/assistant.py` (527 → 380 lignes) : façade Team Builder
+    (trio/holistic, ~230 lignes de délégations) extraite en mixin dans
+    `src/assistant_trio_facade.py`.
+  - `src/parser.py` (522 → 345 lignes) : bandeau cookies Didomi (4
+    stratégies de repli, concern autonome) extrait en mixin dans
+    `src/parser_cookie_banner.py`.
+
+  Plusieurs tests patchaient des noms de module par chemin exact
+  (`patch("src.parallel_parser.ThreadPoolExecutor", ...)`,
+  `patch("src.parser.ActionChains", ...)`, `repair_data._scrape_champion`) :
+  mis à jour vers les nouveaux modules quand le nom patché y a déménagé —
+  sinon le patch devient un no-op silencieux (la fonction cible résout ses
+  propres noms via les globals de son module de définition, pas celui de
+  l'appelant). 990 tests passent, black/pylint (9.11/10, stable) conformes
+  à chaque étape.
+
 - **SPEC-07 (E10)** — `src/assistant.py` (2246 → 491 lignes) et
   `src/draft_monitor.py` (1893 → 428 lignes) démantelés en une vingtaine
   de modules par domaine sous `src/analysis/` et le nouveau package

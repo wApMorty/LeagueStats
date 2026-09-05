@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-09-04
+**Mis à jour** : 2026-09-05 (dette de code P4 soldée — voir §1)
 **Source** : audit de suivi du 2026-09-04 (vérification sur pièces post-SPEC-01→07), non publié comme
 document séparé — synthèse directement intégrée ici. Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -17,25 +17,26 @@ document séparé — synthèse directement intégrée ici. Historique complet :
 
 | Rang | Chantier | Pourquoi maintenant |
 |---|---|---|
-| 1 | **Dette de code — fichiers >500 lignes** | Règle critique `CLAUDE.md` violée sur 6 fichiers ; aucune urgence fonctionnelle mais ralentit tout le reste |
-| 2 | **Couverture des modules trio_*/ban_recommendations** | Ne sont testés que par des tests de caractérisation qui figent le comportement actuel — n'auraient pas détecté le bug lane de septembre |
+| 1 | **Couverture des modules trio_*/ban_recommendations** | Ne sont testés que par des tests de caractérisation qui figent le comportement actuel — n'auraient pas détecté le bug lane de septembre |
 | — | Features candidates | À piocher par appétit, aucune n'est bloquante |
 
 ---
 
-## 1. Dette de code — fichiers >500 lignes 🔴
+## 1. Dette de code — fichiers >500 lignes ✅ Soldé (2026-09-05)
 
-Refactor lourd façon E9/E10 (démantèlement `lol_coach_legacy.py`/`assistant.py` en 2026-09) : extraire
-par domaine, tests de caractérisation avant tout déplacement de code.
+Les 6 fichiers dépassant 500 lignes ont tous été démantelés, façon E9/E10 (façade mince +
+modules/mixins par domaine, déplacement verbatim, tests de régression au besoin) :
 
-| Fichier | Lignes | Note |
-|---|---|---|
-| ~~`src/db.py`~~ | ~~1698~~ → 395 | ✅ Fait (2026-09-05) — `src/repositories/` (7 modules, un par domaine de table), `Database` façade mince |
-| `src/parallel_parser.py` | 974 | Scraping parallèle |
-| `scripts/repair_data.py` | 650 | Réparation ciblée |
-| `src/constants.py` | 593 | Essentiellement des listes de champions par rôle — vérifier si un découpage a de la valeur ou si c'est un faux positif de la règle |
-| `src/assistant.py` | 527 | Juste au-dessus, déjà largement une façade mince après SPEC-07 E10 |
-| `src/parser.py` | 522 | Parsing des pages LoLalytics |
+| Fichier | Avant | Après | Approche |
+|---|---|---|---|
+| `src/db.py` | 1698 | 395 | `src/repositories/` — 7 modules, un par domaine de table (champions, matchups, matchups_draft, synergies, champion_scores, pool_bans, predictions, meta) |
+| `src/parallel_parser.py` | 974 | 223 | Mixins par mode de scrape (`parallel_parser_legacy.py`, `parallel_parser_roles.py`) — état partagé (executor, verrous) trop dense pour une composition par domaine |
+| `scripts/repair_data.py` | 650 | 363 | Moteur extrait vers `src/repair_engine.py` (même principe que `src/pipeline.py`/`scripts/update_all.py`) |
+| `src/constants.py` | 593 | 465 | Normalisation de noms de champion (3 fonctions) extraite vers `src/champion_name_normalization.py` — le fichier reste surtout des listes de données statiques |
+| `src/assistant.py` | 527 | 380 | Façade Team Builder (trio/holistic) extraite en mixin (`src/assistant_trio_facade.py`) |
+| `src/parser.py` | 522 | 345 | Bandeau cookies (concern autonome) extrait en mixin (`src/parser_cookie_banner.py`) |
+
+Plus gros fichier restant du projet : `src/lcu_client.py` (493 lignes) — sous le seuil.
 
 ## 2. Couverture — modules trio_*/ban_recommendations 🟠
 
