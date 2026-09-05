@@ -30,7 +30,7 @@ par domaine, tests de caractérisation avant tout déplacement de code.
 
 | Fichier | Lignes | Note |
 |---|---|---|
-| `src/db.py` | 1698 | Le plus gros — déjà lane-aware partout, découpage par domaine de table (matchups/synergies/champion_scores/pools/predictions) |
+| ~~`src/db.py`~~ | ~~1698~~ → 395 | ✅ Fait (2026-09-05) — `src/repositories/` (7 modules, un par domaine de table), `Database` façade mince |
 | `src/parallel_parser.py` | 974 | Scraping parallèle |
 | `scripts/repair_data.py` | 650 | Réparation ciblée |
 | `src/constants.py` | 593 | Essentiellement des listes de champions par rôle — vérifier si un découpage a de la valeur ou si c'est un faux positif de la règle |
