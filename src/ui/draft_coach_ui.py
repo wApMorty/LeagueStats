@@ -81,6 +81,11 @@ def run_draft_coach(
             synergy_weight=synergy_weight,
             preselected_pool_name=pool_name,
         )
+        # SPEC-08 §2.6b's startup outcome backfill runs inside
+        # start_monitoring(), right after self.lcu.connect() succeeds and
+        # before the poll loop starts -- not here, since the LCU isn't
+        # connected yet at this point and connecting here too would just
+        # duplicate that call (see DraftMonitor.start_monitoring).
         monitor.start_monitoring()
     except KeyboardInterrupt:
         print("\n[INFO] Draft Coach arrêté par l'utilisateur")

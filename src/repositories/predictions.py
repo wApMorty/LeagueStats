@@ -67,12 +67,20 @@ class PredictionsRepository:
                 pass
             return None
 
-    def update_prediction_outcome(self, prediction_id: int, outcome: int) -> bool:
+    def update_prediction_outcome(
+        self, prediction_id: int, outcome: int, game_id: Optional[int] = None
+    ) -> bool:
         """Set outcome (1=win, 0=loss) on an existing prediction row.
 
         Args:
             prediction_id: Row id returned by insert_prediction.
             outcome: 1 for a win, 0 for a loss.
+            game_id: LCU game id that produced this outcome (SPEC-08), or
+                None for a manually-typed 'outcome win|loss' command. A
+                partial unique index on predictions.game_id (migration
+                13cbeb46785a) guarantees one game never labels two rows --
+                a duplicate assignment raises sqlite3.IntegrityError, caught
+                below and reported as a failed update, never a crash.
 
         Returns:
             True if a row was updated, False otherwise (including on failure).
@@ -80,8 +88,8 @@ class PredictionsRepository:
         try:
             cursor = self.db.connection.cursor()
             cursor.execute(
-                "UPDATE predictions SET outcome = ? WHERE id = ?",
-                (outcome, prediction_id),
+                "UPDATE predictions SET outcome = ?, game_id = ? WHERE id = ?",
+                (outcome, game_id, prediction_id),
             )
             self.db.connection.commit()
             return cursor.rowcount > 0
@@ -107,3 +115,62 @@ class PredictionsRepository:
         except Exception as e:
             print(f"[ERROR] Failed to get latest prediction id: {e}")
             return None
+
+    def get_pending_predictions(self, limit: Optional[int] = None) -> List[Dict]:
+        """Predictions without an outcome yet (SPEC-08), most recent first.
+
+        Args:
+            limit: Maximum number of rows to return. None = unbounded.
+
+        Returns:
+            A list of dicts: {"id", "created_utc" (raw 'YYYY-MM-DD HH:MM:SS'
+            UTC string, as written by SQLite's datetime('now') --
+            OutcomeTracker parses it), "ally_champions" and "enemy_champions"
+            (decoded from CSV to List[int]), "predicted_probability"}. A row
+            whose CSV fails to decode is skipped rather than raised.
+        """
+        try:
+            cursor = self.db.connection.cursor()
+            query = (
+                "SELECT id, created_utc, ally_champions, enemy_champions, "
+                "predicted_probability FROM predictions WHERE outcome IS NULL "
+                "ORDER BY id DESC"
+            )
+            if limit is not None:
+                cursor.execute(query + " LIMIT ?", (limit,))
+            else:
+                cursor.execute(query)
+            rows = cursor.fetchall()
+        except Exception as e:
+            print(f"[ERROR] Failed to get pending predictions: {e}")
+            return []
+
+        pending: List[Dict] = []
+        for pred_id, created_utc, ally_csv, enemy_csv, predicted_probability in rows:
+            try:
+                ally_champions = [int(c) for c in ally_csv.split(",") if c]
+                enemy_champions = [int(c) for c in enemy_csv.split(",") if c]
+            except (ValueError, AttributeError):
+                continue
+            pending.append(
+                {
+                    "id": pred_id,
+                    "created_utc": created_utc,
+                    "ally_champions": ally_champions,
+                    "enemy_champions": enemy_champions,
+                    "predicted_probability": predicted_probability,
+                }
+            )
+        return pending
+
+    def count_labelled_predictions(self) -> int:
+        """Total number of predictions with a known outcome (SPEC-08 progress
+        counter towards analysis_config.MIN_ROWS_FOR_CALIBRATION)."""
+        try:
+            cursor = self.db.connection.cursor()
+            cursor.execute("SELECT COUNT(*) FROM predictions WHERE outcome IS NOT NULL")
+            row = cursor.fetchone()
+            return row[0] if row else 0
+        except Exception as e:
+            print(f"[ERROR] Failed to count labelled predictions: {e}")
+            return 0

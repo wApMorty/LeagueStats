@@ -395,8 +395,16 @@ class Database:
             ally_champions, enemy_champions, ally_lanes, predicted_probability, model_version
         )
 
-    def update_prediction_outcome(self, prediction_id: int, outcome: int) -> bool:
-        return self._predictions.update_prediction_outcome(prediction_id, outcome)
+    def update_prediction_outcome(
+        self, prediction_id: int, outcome: int, game_id: Optional[int] = None
+    ) -> bool:
+        return self._predictions.update_prediction_outcome(prediction_id, outcome, game_id)
 
     def get_latest_prediction_id(self) -> Optional[int]:
         return self._predictions.get_latest_prediction_id()
+
+    def get_pending_predictions(self, limit: Optional[int] = None) -> List[Dict]:
+        return self._predictions.get_pending_predictions(limit)
+
+    def count_labelled_predictions(self) -> int:
+        return self._predictions.count_labelled_predictions()

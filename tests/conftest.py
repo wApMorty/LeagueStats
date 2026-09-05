@@ -121,7 +121,8 @@ def temp_db(tmp_path):
         )
     """)
 
-    # Predictions table (SPEC-05 B7 — migration 2551bbcc9eb8)
+    # Predictions table (SPEC-05 B7 — migration 2551bbcc9eb8; game_id added
+    # by SPEC-08 — migration 13cbeb46785a)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS predictions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -131,9 +132,14 @@ def temp_db(tmp_path):
             ally_lanes TEXT,
             predicted_probability REAL NOT NULL,
             model_version TEXT NOT NULL,
-            outcome INTEGER
+            outcome INTEGER,
+            game_id INTEGER
         )
     """)
+    cursor.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_predictions_game_id "
+        "ON predictions(game_id) WHERE game_id IS NOT NULL"
+    )
 
     conn.commit()
     conn.close()

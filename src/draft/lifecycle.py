@@ -67,6 +67,22 @@ class MonitorLifecycle:
                                     f"[DEBUG] Gameflow phase: {current_phase} - Resetting for next game"
                                 )
                             self.m._reset_for_next_game()
+                        self.m._last_outcome_trigger_phase = None
+                    elif current_phase in draft_config.OUTCOME_TRIGGER_PHASES:
+                        # One attempt per end-of-game phase actually entered,
+                        # not one for the whole sequence: the three phases
+                        # follow each other (WaitingForStats -> PreEndOfGame
+                        # -> EndOfGame) and the match history usually does not
+                        # carry the game yet at the first one. Collapsing them
+                        # into a single boolean spent the only attempt on the
+                        # least likely to succeed, pushing the result to the
+                        # next session's startup backfill. Still never once per
+                        # tick: only when the phase itself changes.
+                        if self.m._last_outcome_trigger_phase != current_phase:
+                            self.m._resolve_pending_outcomes()
+                        self.m._last_outcome_trigger_phase = current_phase
+                    else:
+                        self.m._last_outcome_trigger_phase = None
 
                 return
 
@@ -200,6 +216,7 @@ class MonitorLifecycle:
         self.m.player_champion = None
         self.m.forced_roles = {}  # SPEC-04 B5: corrections don't carry to the next game
         self.m._last_prediction_id = None  # SPEC-05 B7: predictions don't carry to the next game
+        self.m._last_outcome_trigger_phase = None  # SPEC-08: re-arm the transition detector
 
         # Reset ready message flag
         if hasattr(self.m, "_shown_ready_message"):

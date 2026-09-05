@@ -9,6 +9,7 @@ from typing import Optional, Dict, Any
 from dataclasses import dataclass
 
 from .config_constants import LCU_POSITION_TO_LANE
+from .lcu_match_history import _MatchHistoryMixin
 
 # Disable SSL warnings since LCU uses self-signed certificates
 import urllib3
@@ -31,7 +32,7 @@ class LCUCredentials:
         return f"Basic {credentials}"
 
 
-class LCUClient:
+class LCUClient(_MatchHistoryMixin):
     """League Client Update API client for connecting to the LoL client."""
 
     def __init__(self, verbose: bool = False):
