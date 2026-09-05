@@ -64,7 +64,7 @@ addopts = [
     "--cov=src",
     "--cov-report=term-missing",
     "--cov-report=xml",
-    "--cov-fail-under=45",
+    "--cov-fail-under=60",
 ]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
@@ -73,8 +73,11 @@ markers = [
 ]
 
 # Coverage configuration
-# Mesure honnête sur tout src/ (SPEC-07 E1). Seuil 45 % = légèrement au-dessus
-# du réel hors legacy : il doit monter à chaque chantier, jamais baisser.
+# Mesure honnête sur tout src/ (SPEC-07 E1). Seuil relevé 45 % -> 60 % par
+# SPEC-10 (couverture du chemin critique temps réel) : le réel mesuré est
+# 72,51 % après ce chantier (lcu_client.py, ui/pool_selection_ui.py,
+# utils/champion_utils.py, draft/phases.py) ; le seuil garde volontairement
+# de la marge sous ce chiffre pour ne pas casser la CI au premier refactor.
 [tool.coverage.run]
 source = ["src"]
 

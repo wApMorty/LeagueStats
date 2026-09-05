@@ -355,6 +355,67 @@ All notable changes to LeagueStats Coach will be documented in this file.
   entièrement exécutés) déplacés vers `docs/archive/` ; `TODO.md` réécrit
   avec le backlog restant (dette de code, couverture, features candidates).
 
+### ✅ Test
+
+- **SPEC-10 — couverture du chemin critique temps réel** — les quatre
+  maillons du chemin exact des bugs lane de septembre 2026 (LCU → mapping de
+  noms → détection de phase → résolution rôle-pool → lane) étaient les moins
+  couverts du projet alors qu'une régression y produit un coach silencieusement
+  faux, jamais une exception : `src/ui/pool_selection_ui.py` (2,6 % → 100 %),
+  `src/lcu_client.py` (18,6 % → 83,70 %), `src/utils/champion_utils.py`
+  (33,3 % → 99,05 %), `src/draft/phases.py` (40,0 % → 92,50 %). Couverture
+  globale 65,5 % → 72,51 %. 5 nouveaux fichiers de tests, 149 tests ajoutés
+  (1206 au total, tous verts) :
+  - `tests/test_lcu_client.py` : `_make_request` (200/204/404/500, corps vide,
+    JSON invalide, `RequestException`, absence de credentials), découverte des
+    credentials (lockfile bien formé/absent/malformé, repli process — toujours
+    sur mock, jamais sur le vrai système ou processus), normalisation de nom
+    (apostrophes, espaces, accents, id Riot `MonkeyKing` pour Wukong),
+    `hover_champion`/`lock_champion` (action introuvable, PATCH en échec →
+    `False`, jamais d'exception). Un écart doc/code découvert et documenté
+    sans être corrigé (hors périmètre) : le commentaire de
+    `_find_credentials_process` dit qu'un token tronqué (`...`) doit être
+    ignoré au profit du lockfile, mais le `continue` ne réinitialise pas
+    `password` — le token tronqué est donc renvoyé quand même.
+  - `tests/test_pool_selection_ui.py` : les 3 sélecteurs interactifs de
+    `pool_selection_ui.py`, en particulier `_select_pool_for_analysis()` qui
+    résout `ChampionPool.role` → lane via `pool_manager.pool_role_to_lane()` —
+    chaque rôle connu vers sa lane, rôle `custom`/inconnu vers `None` (jamais
+    une lane arbitraire).
+  - `tests/test_champion_utils.py` : `validate_champion_name` (correspondance
+    exacte, préfixe unique auto-complété, préfixe ambigu → suggestions,
+    inconnu), `validate_champion_data`/`validate_champion_pool` (seuils
+    matchups/games, erreur DB dégradée sans lever), les sélecteurs interactifs.
+  - `tests/test_draft_phases.py` : `is_ban_phase`/`should_show_bans` sur
+    chaque combinaison picks/bans/phase rencontrée (dont file de bans vide,
+    10 bans atteints, phase inconnue), plus les prédicats plus simples
+    jusque-là non testés (`is_draft_complete`, `has_draft_changed`,
+    `is_player_turn`, `enemy_picks_changed`).
+  - `tests/test_trio_ban_intent_invariants.py` : quelques tests d'intention
+    (§3.5 de la spec) sur `trio_holistic`/`trio_counterpick`/
+    `ban_recommendations`, dont la couverture de lignes (73-88 % avant ce
+    lot) ne dit rien sur la justesse — ils verrouillent des invariants
+    métier plutôt que le comportement observé : `HolisticTrioFinder.find()`
+    et `CounterpickTrioFinder.optimal_trio_from_pool()` appelés directement
+    (sans passer par la façade `Assistant`) transmettent bien `lane` à leurs
+    requêtes DB, y compris `lane=None` explicite ; le score de menace de
+    `BanRecommender` est monotone (un moins bon `best_response_delta2` ne
+    peut jamais être classé moins menaçant) ; `BanAdvisor` ne survole jamais
+    un champion déjà banni dans la draft en cours, comparaison insensible à
+    la casse. Vérifié à l'écriture que chaque test échoue si l'invariant
+    correspondant est cassé. Le seuil `--cov-fail-under` de `pyproject.toml`
+    relevé de 45 à 60 (avec marge sous les 72,51 % réels pour ne pas casser
+    la CI au premier refactor).
+
+  Écart de comportement constaté mais non corrigé (hors périmètre SPEC-10,
+  signalé pour un futur chantier) : `BanRecommender.get_ban_recommendations()`
+  ne reçoit jamais l'état de la draft en cours (bans/picks) et peut donc, en
+  théorie, inclure dans `all_potential_enemies` un champion qui appartient à
+  la pool elle-même si un autre champion de la pool l'a affronté en matchup
+  miroir — la seule protection réelle contre un ban déjà posé vit dans
+  `BanAdvisor.handle_auto_ban_hover()` (verrouillée ci-dessus), pas dans
+  `BanRecommender`.
+
 ## [1.3.0] - 2026-09-01
 
 ### 🔧 Chore
