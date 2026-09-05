@@ -14,6 +14,8 @@ patches two of these directly on the monitor instance and counts calls —
 they must be invoked via self.m.<method>, not sibling methods here.
 """
 
+from typing import List, Tuple
+
 from ..config_constants import draft_config, ui_config
 from .state import DraftState
 
@@ -65,6 +67,10 @@ class DraftRecommender:
                             )
 
                 scores = []
+                # SPEC-09 E1: champions with no exploitable data for this lane
+                # must be shown as "ignored", never silently dropped from the
+                # pool — see module-level principle in SPEC-09.
+                skipped: List[Tuple[str, int]] = []
 
                 # Collect all banned champion IDs for score calculation
                 all_banned_ids = state.ally_bans + state.enemy_bans
@@ -145,6 +151,11 @@ class DraftRecommender:
                         scores.append(
                             (champion_id, final_score, matchup_score, synergy_score, total_games)
                         )
+                    else:
+                        # SPEC-09 E1: no exploitable data for this champion in
+                        # this lane — not "a bad pick", just unknown. Recorded
+                        # for display, never merged into the ranking below.
+                        skipped.append((champion_name, total_games))
 
                 scores.sort(key=lambda x: -x[1])
 
@@ -196,8 +207,15 @@ class DraftRecommender:
                         self.m._auto_hover_champion(top_recommendation, reason)
                         self.m.last_recommendation = top_recommendation
 
-                if not scores:
+                if not scores and not skipped:
                     print("  [DATA] Aucune donnée disponible pour les matchups actuels")
+
+                # SPEC-09 E1: écartés affichés à part, jamais mêlés au
+                # classement (ils ne sont pas classables faute de données).
+                if skipped:
+                    skipped_names = ", ".join(f"{name} ({games} games)" for name, games in skipped)
+                    lane_suffix = f" en {player_lane}" if player_lane else ""
+                    print(f"  [DATA] Sans données exploitables{lane_suffix} : {skipped_names}")
 
             # Handle auto-ban-hover for ban phases (independent of pick phase)
             if self.m._is_ban_phase(state) and self.m.auto_ban_hover:
