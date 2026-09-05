@@ -145,6 +145,13 @@ class AnalysisConfig:
     # prédictions issues de modèles différents.
     MODEL_VERSION: str = "b7-v1"
 
+    # SPEC-05 §4 B7 step 5 : en dessous de ce nombre de prédictions
+    # labellisées, une courbe de calibration ou un k_m/k_s suggéré est du
+    # bruit, pas un signal. Déplacé depuis scripts/calibrate_model.py
+    # (SPEC-08) car src/draft/outcome_tracker.py doit afficher la même
+    # valeur dans son compteur de progression ("n / 30 requises").
+    MIN_ROWS_FOR_CALIBRATION: int = 30
+
     # Tier thresholds (0-100 scale)
     TIER_THRESHOLDS: Dict[str, float] = field(
         default_factory=lambda: {
@@ -207,6 +214,30 @@ class DraftConfig:
     #               + synergy_score * min(1, 2 * synergy_weight)
     # At the default 0.5, both coefficients clamp to 1, so this is exactly
     # matchup_score + synergy_score (unchanged historical behavior).
+
+    # ── SPEC-08 : boucle de mesure (résultat de partie automatique via LCU) ──
+
+    # Fenêtre max entre la fin d'une draft et le début de la partie
+    # correspondante dans l'historique LCU. 6 h couvre une partie lancée après
+    # une longue file ou une pause, sans risquer d'apparier la session du soir
+    # avec celle du lendemain matin.
+    OUTCOME_MATCH_WINDOW_HOURS: float = 6.0
+
+    # Nombre de prédictions en attente examinées au démarrage (rattrapage).
+    OUTCOME_BACKFILL_LIMIT: int = 20
+
+    # Parties lues dans l'historique LCU à chaque tentative de résolution.
+    # Attention : le paramètre `endIndex` de l'endpoint est INCLUSIF (vérifié
+    # 2026-09-05), donc la requête utilise endIndex = OUTCOME_HISTORY_DEPTH - 1.
+    OUTCOME_HISTORY_DEPTH: int = 10
+
+    # Champions communs exigés (sur 5) entre une prédiction et une partie, des
+    # deux côtés — alliés ET ennemis. 4 tolère un pick modifié après le log de
+    # fin de draft.
+    OUTCOME_MIN_ALLY_OVERLAP: int = 4
+
+    # Phases gameflow déclenchant une tentative de résolution.
+    OUTCOME_TRIGGER_PHASES: tuple = ("WaitingForStats", "PreEndOfGame", "EndOfGame")
 
 
 @dataclass

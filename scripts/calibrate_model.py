@@ -36,11 +36,6 @@ from src.config import config
 from src.config_constants import analysis_config
 from src.db import Database
 
-# Below this many labeled predictions, a calibration curve or a suggested
-# k_m/k_s is noise, not signal -- SPEC-05 §4 B7 step 5: "à n'écrire qu'une
-# fois assez de données accumulées".
-MIN_ROWS_FOR_CALIBRATION = 30
-
 Row = Tuple[float, int]  # (predicted_probability, outcome)
 
 
@@ -152,9 +147,10 @@ def main() -> None:
     version_note = "all model versions" if args.all_versions else f"model_version={model_version!r}"
     print(f"[CALIBRATE] {len(rows)} labeled predictions ({version_note}).")
 
-    if len(rows) < MIN_ROWS_FOR_CALIBRATION:
+    if len(rows) < analysis_config.MIN_ROWS_FOR_CALIBRATION:
         print(
-            f"[CALIBRATE] Not enough data yet ({len(rows)} < {MIN_ROWS_FOR_CALIBRATION}). "
+            f"[CALIBRATE] Not enough data yet "
+            f"({len(rows)} < {analysis_config.MIN_ROWS_FOR_CALIBRATION}). "
             "Play more games and log outcomes with 'outcome win'/'outcome loss' during "
             "the draft coach session before trusting anything below -- this is a "
             "diagnostic script, not a source of truth on a handful of games."
