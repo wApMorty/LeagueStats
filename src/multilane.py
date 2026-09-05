@@ -2,8 +2,9 @@
 
 Pipeline:
     1. Refresh champions from the Riot API, reset matchups/synergies tables
-    2. Discover the lanes played by each champion (>10% of its games),
-       via cheap HTTP requests (src/lane_discovery.py)
+    2. Discover the lanes played by each champion (share of its games above
+       scraping_config.LANE_PICKRATE_THRESHOLD, revised 10% -> 5% by
+       SPEC-09 E2), via cheap HTTP requests (src/lane_discovery.py)
     3. Scrape matchups + synergies together, one page visit per (lane,
        champion) pair (SPEC-02), tagging every row with its lane
        (migration b7e41c9a3f02)

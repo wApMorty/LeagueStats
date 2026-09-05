@@ -78,8 +78,18 @@ class TestSelectLanes:
         assert select_lanes({}, threshold=10.0) == []
 
     def test_default_threshold_from_config(self):
-        distribution = {"top": 50.0, "jungle": 10.0}  # 10.0 is NOT > 10.0
+        distribution = {"top": 50.0, "jungle": 5.0}  # 5.0 is NOT > 5.0 (new default)
         assert select_lanes(distribution) == ["top"]
+
+    def test_lane_at_6_percent_kept_at_new_threshold_dropped_at_old(self):
+        """SPEC-09 E2: LANE_PICKRATE_THRESHOLD lowered 10% -> 5%. A lane at
+        6% (e.g. Malphite middle 8.7%, Lissandra top 9.6% on the base of
+        2026-09-05 — real combos invisible to the coach at the old 10%
+        threshold) must be scraped at the new default, and would not have
+        been at the previous one."""
+        distribution = {"top": 50.0, "jungle": 6.0}
+        assert select_lanes(distribution) == ["top", "jungle"]  # new default (5.0)
+        assert select_lanes(distribution, threshold=10.0) == ["top"]  # old threshold
 
 
 class TestFetchLaneDistribution:
