@@ -3,7 +3,7 @@
 Extrait de src/ui/lol_coach_legacy.py (SPEC-07 E9).
 """
 
-from typing import List
+from typing import Dict, List, Optional
 
 from src.utils.console import clear_console
 from src.ui.pool_selection_ui import _select_pool_for_analysis
@@ -85,6 +85,16 @@ def run_tier_list_generator():
 
         assistant = Assistant()
         tier_list = assistant.generate_tier_list(champion_pool, analysis_type, lane=pool_lane)
+
+        # SPEC-09 E5 : volume de games derrière chaque score, même convention
+        # que le Live Coach (recommendations.py) — indicateur de fiabilité,
+        # absent jusqu'ici de cet écran. Calculé avant assistant.close().
+        games_by_champion: Dict[str, int] = {}
+        for entry in tier_list:
+            champ = entry["champion"]
+            matchups = assistant.get_matchups_for_draft(champ, lane=pool_lane)
+            games_by_champion[champ] = sum(m.games for m in matchups) if matchups else 0
+
         assistant.close()
 
         if not tier_list:
@@ -92,7 +102,9 @@ def run_tier_list_generator():
             return
 
         # Étape 4 : afficher les résultats
-        _display_tier_list(tier_list, pool_name, type_name, analysis_type, lane_desc)
+        _display_tier_list(
+            tier_list, pool_name, type_name, analysis_type, lane_desc, games_by_champion
+        )
 
     except Exception as e:
         print(f"[ERROR] Erreur de génération de tier list : {e}")
@@ -102,11 +114,21 @@ def run_tier_list_generator():
 
 
 def _display_tier_list(
-    tier_list: List[dict], pool_name: str, type_name: str, analysis_type: str, lane_desc: str
+    tier_list: List[dict],
+    pool_name: str,
+    type_name: str,
+    analysis_type: str,
+    lane_desc: str,
+    games_by_champion: Optional[Dict[str, int]] = None,
 ):
-    """Affiche les résultats formatés de la tier list."""
+    """Affiche les résultats formatés de la tier list.
+
+    games_by_champion: SPEC-09 E5, volume de games par champion (None ou
+        absent = pas affiché, best-effort — ne doit jamais faire échouer
+        l'affichage pour un jeu de données incomplet).
+    """
     from src.config_constants import analysis_config
-    from src.utils.display import safe_print
+    from src.utils.display import format_games_count, safe_print
 
     print("\n" + "=" * 80)
     if analysis_type == "blind_pick":
@@ -150,7 +172,9 @@ def _display_tier_list(
             score = entry["score"]
             metrics = entry["metrics"]
 
-            print(f"  {i}. {champion:<15} | Score: {score:>5.1f} / 100")
+            volume = games_by_champion.get(champion) if games_by_champion else None
+            volume_tag = f" · {format_games_count(volume)} games" if volume is not None else ""
+            print(f"  {i}. {champion:<15} | Score: {score:>5.1f} / 100{volume_tag}")
 
             # Afficher les métriques selon le type d'analyse
             if analysis_type == "blind_pick":
