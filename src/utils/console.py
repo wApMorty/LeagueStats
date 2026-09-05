@@ -59,6 +59,19 @@ def clear_console() -> None:
         os.system("clear")
 
 
+def is_headless_mode() -> bool:
+    """
+    Detect if running in headless mode (pythonw.exe, Task Scheduler, etc.).
+
+    In headless mode, sys.stdout is None, so tqdm progress bars should be disabled
+    to avoid crashes.
+
+    Returns:
+        True if stdout is not available (headless mode), False otherwise
+    """
+    return sys.stdout is None or not hasattr(sys.stdout, "write")
+
+
 def clear_and_banner(banner_func: Optional[Callable[[], None]] = None) -> None:
     """
     Clear console and optionally re-display banner.

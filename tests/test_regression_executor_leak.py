@@ -251,7 +251,10 @@ class TestParseAllChampionsCallsCleanup:
 
             with (
                 patch.object(pp, "_cleanup_existing_resources", side_effect=mock_cleanup),
-                patch("src.parallel_parser.ThreadPoolExecutor", side_effect=mock_executor_init),
+                patch(
+                    "src.parallel_parser_legacy.ThreadPoolExecutor",
+                    side_effect=mock_executor_init,
+                ),
                 patch("src.assistant.Assistant"),
             ):
                 pp.parse_all_champions(mock_db, lambda x: x)
@@ -284,7 +287,7 @@ class TestParseAllChampionsCallsCleanup:
 
             with (
                 patch.object(pp, "_cleanup_existing_resources") as mock_cleanup,
-                patch("src.parallel_parser.ThreadPoolExecutor") as mock_exec_class,
+                patch("src.parallel_parser_legacy.ThreadPoolExecutor") as mock_exec_class,
                 patch("src.assistant.Assistant"),
             ):
                 mock_exec_class.return_value = MagicMock()
@@ -328,7 +331,10 @@ class TestParseAllSynergiesCallsCleanup:
 
             with (
                 patch.object(pp, "_cleanup_existing_resources", side_effect=mock_cleanup),
-                patch("src.parallel_parser.ThreadPoolExecutor", side_effect=mock_executor_init),
+                patch(
+                    "src.parallel_parser_legacy.ThreadPoolExecutor",
+                    side_effect=mock_executor_init,
+                ),
             ):
                 pp.parse_all_synergies(mock_db, lambda x: x)
 
@@ -357,7 +363,7 @@ class TestParseAllSynergiesCallsCleanup:
 
             with (
                 patch.object(pp, "_cleanup_existing_resources") as mock_cleanup,
-                patch("src.parallel_parser.ThreadPoolExecutor") as mock_exec_class,
+                patch("src.parallel_parser_legacy.ThreadPoolExecutor") as mock_exec_class,
             ):
                 mock_exec_class.return_value = MagicMock()
                 pp.parse_all_synergies(mock_db, lambda x: x)
