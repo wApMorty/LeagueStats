@@ -7,7 +7,24 @@ from typing import List, Optional
 
 from src.assistant import Assistant
 from src.utils.console import clear_console
+from src.utils.display import format_games_count
 from src.ui.pool_selection_ui import _select_pool_for_analysis
+
+
+def _games_tag(assistant: Assistant, champion: str, lane: Optional[str]) -> str:
+    """SPEC-09 E5: volume de games derrière un champion affiché, même
+    convention que le Live Coach (recommendations.py, "· 91 696 games").
+
+    Best-effort : un champion sans données (ou une erreur de lookup) ne doit
+    jamais faire échouer l'affichage du résultat d'optimisation — retourne
+    simplement une chaîne vide.
+    """
+    try:
+        matchups = assistant.get_matchups_for_draft(champion, lane=lane)
+        total_games = sum(m.games for m in matchups) if matchups else 0
+        return f" · {format_games_count(total_games)} games"
+    except Exception:
+        return ""
 
 
 def run_optimal_team_builder():
@@ -44,8 +61,11 @@ def run_optimal_team_builder():
             result = ast.optimal_trio_from_pool(selected_pool, lane=pool_lane)
             blind, counter1, counter2, score = result
             print(f"\nRÉSULTAT FINAL :")
-            print(f"Blind Pick : {blind}")
-            print(f"Counterpicks : {counter1}, {counter2}")
+            print(f"Blind Pick : {blind}{_games_tag(ast, blind, pool_lane)}")
+            print(
+                f"Counterpicks : {counter1}{_games_tag(ast, counter1, pool_lane)}, "
+                f"{counter2}{_games_tag(ast, counter2, pool_lane)}"
+            )
             print(f"Score total : {score:.2f}")
 
             # Proposer de sauvegarder le trio comme nouveau pool
