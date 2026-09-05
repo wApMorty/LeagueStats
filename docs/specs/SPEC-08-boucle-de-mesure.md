@@ -159,7 +159,11 @@ L'index partiel garantit qu'une même partie ne labellise jamais deux prédictio
 
 ### 2.6 — Deux points de déclenchement
 
-**(a) En cours de session** — dans `MonitorLifecycle.monitor_loop()` (`src/draft/lifecycle.py:59`), la lecture du gameflow existe déjà. Quand `phase` entre dans `("WaitingForStats", "PreEndOfGame", "EndOfGame")` alors qu'elle n'y était pas au tick précédent, appeler `OutcomeTracker.resolve_pending()`. **Une seule fois par transition** (garder un drapeau, comme `has_analyzed_final_draft`), et jamais dans le chemin chaud du champion select.
+**(a) En cours de session** — dans `MonitorLifecycle.monitor_loop()` (`src/draft/lifecycle.py:59`), la lecture du gameflow existe déjà. Quand `phase` entre dans `("WaitingForStats", "PreEndOfGame", "EndOfGame")`, appeler `OutcomeTracker.resolve_pending()`.
+
+Mémoriser la **dernière phase déclencheuse vue** (pas un simple booléen sur l'ensemble) et retenter à chaque changement de phase à l'intérieur du groupe : une tentative par phase effectivement traversée, jamais une par tick de polling, et jamais dans le chemin chaud du champion select.
+
+> Correction du 2026-09-05, en revue de l'implémentation : cette section demandait d'abord « une seule fois par transition, avec un drapeau ». C'était une erreur de spécification. Les trois phases se succèdent, et `WaitingForStats` — la première, donc la seule tentée — est justement celle où l'historique LCU ne porte généralement pas encore la partie. L'unique tentative était dépensée sur le cas le moins susceptible de réussir, reportant le résultat au rattrapage de la session suivante et vidant le déclencheur direct de son intérêt. Une nouvelle tentative coûte une requête SQL qui sort immédiatement quand rien n'est en attente.
 
 **(b) Au démarrage du Draft Coach** — dans `src/ui/draft_coach_ui.py`, avant d'entrer dans la boucle : un `resolve_pending(limit=OUTCOME_BACKFILL_LIMIT)` rattrape ce qui a été joué app fermée. C'est ce point qui rend le dispositif fiable en usage réel.
 
