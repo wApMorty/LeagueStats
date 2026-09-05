@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-09-05 (lot SPEC-08→10 ouvert — voir §Priorités)
+**Mis à jour** : 2026-09-06 (SPEC-08 et SPEC-09 mergées ; reste SPEC-10 — voir §Priorités)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -12,7 +12,8 @@ Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique com
 > et l'hygiène du dépôt. Détail dans `CHANGELOG.md [Unreleased]`.
 >
 > **Un 5e résidu a été trouvé le 2026-09-05** : le « meilleur blind pick » du hover initial
-> (`src/draft/automation.py:93`) score toujours sur l'agrégat toutes-lanes. Traité en SPEC-09 E3.
+> (`src/draft/automation.py`) scorait sur l'agrégat toutes-lanes, sur un chemin exercé à **chaque**
+> draft (`user_prefs.json` porte `auto_hover: true`). Corrigé par SPEC-09 E3.
 
 ---
 
@@ -20,12 +21,21 @@ Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique com
 
 **Validées par @pj35 le 2026-09-05.** Specs autoportantes dans [`docs/specs/`](docs/specs/README.md).
 
-| Rang | Chantier | Spec | Pourquoi maintenant |
+| Rang | Chantier | Spec | État |
 |---|---|---|---|
-| 1 | **Fermer la boucle de mesure** (résultat de partie automatique via LCU) | [SPEC-08](docs/specs/SPEC-08-boucle-de-mesure.md) | Toutes les constantes du modèle sont devinées. L'infra de calibration existe et n'a **jamais** reçu une donnée : 12 prédictions en base, 0 résultat. Chaque semaine sans elle est une semaine de parties perdues |
-| 2 | **Rendre l'ignorance visible** (champions écartés affichés, seuil de lane 10 % → 5 %) | [SPEC-09](docs/specs/SPEC-09-ignorance-visible.md) | Sur l'écran le plus utilisé, un champion sans données disparaît sans un mot ; 60 combos (champion, lane) réellement joués ne sont jamais scrapés |
-| 3 | **Couverture du chemin critique temps réel** | [SPEC-10](docs/specs/SPEC-10-couverture-chemin-critique.md) | `pool_selection_ui.py` à 2,6 % et `lcu_client.py` à 18,6 % — c'est le chemin exact des bugs lane de septembre |
-| — | Features candidates | — | À rouvrir **après** que SPEC-08 ait produit des données, aucune n'est bloquante |
+| 1 | **Fermer la boucle de mesure** (résultat de partie automatique via LCU) | [SPEC-08](docs/specs/SPEC-08-boucle-de-mesure.md) | ✅ **Mergée le 2026-09-06** |
+| 2 | **Rendre l'ignorance visible** (champions écartés affichés, seuil de lane 10 % → 5 %) | [SPEC-09](docs/specs/SPEC-09-ignorance-visible.md) | ✅ **Mergée le 2026-09-06** |
+| 3 | **Couverture du chemin critique temps réel** | [SPEC-10](docs/specs/SPEC-10-couverture-chemin-critique.md) | 🔴 **À faire** — `pool_selection_ui.py` à 2,6 % et `lcu_client.py` à 18,6 %, le chemin exact des bugs lane de septembre |
+| 4 | **Calibration du modèle** | — | ⏳ **Débloquée par SPEC-08, en attente de données** : lancer `python scripts/calibrate_model.py` une fois ~30 parties labellisées (le compteur `[OUTCOME]` affiche la progression à chaque résolution). Tout ajustement de `K_MATCHUP`/`K_SYNERGY`/`SAME_LANE_WEIGHT` exige un bump de `MODEL_VERSION` |
+| — | Features candidates | — | À rouvrir après la calibration, aucune n'est bloquante |
+
+### Actions manuelles restantes après le merge du 2026-09-06
+
+- [ ] Appliquer la migration : `python -m alembic upgrade head` (ajoute `predictions.game_id`)
+- [ ] Relancer un scrape complet au nouveau seuil de lane : `python scripts/update_all.py`
+      (~55 min désormais, ~343 combos (champion, lane) attendus contre 283)
+- [ ] Après ce scrape, envisager de relever `MIN_TOTAL_MATCHUPS` (`src/data_quality.py`, laissé à
+      20 000 : plancher toujours valide mais désormais large sous un volume attendu de ~30 k)
 
 ---
 
