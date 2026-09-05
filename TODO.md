@@ -1,8 +1,8 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-09-05 (dette de code P4 soldée — voir §1)
-**Source** : audit de suivi du 2026-09-04 (vérification sur pièces post-SPEC-01→07), non publié comme
-document séparé — synthèse directement intégrée ici. Historique complet : `docs/archive/`
+**Mis à jour** : 2026-09-05 (lot SPEC-08→10 ouvert — voir §Priorités)
+**Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
+Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
 
 > **Le backlog SPEC-01 à SPEC-07 (coché soldé le 2026-09-01) avait un angle mort** : les items
@@ -10,15 +10,22 @@ document séparé — synthèse directement intégrée ici. Historique complet :
 > du produit blendaient encore toutes les lanes (Live Coach fin de draft, bans, Team Builder,
 > Tournament Coach) — corrigé le 2026-09-04, avec la CI (cassée par la migration lane du jour même)
 > et l'hygiène du dépôt. Détail dans `CHANGELOG.md [Unreleased]`.
+>
+> **Un 5e résidu a été trouvé le 2026-09-05** : le « meilleur blind pick » du hover initial
+> (`src/draft/automation.py:93`) score toujours sur l'agrégat toutes-lanes. Traité en SPEC-09 E3.
 
 ---
 
-## Priorités actuelles
+## Priorités actuelles — lot SPEC-08 → SPEC-10
 
-| Rang | Chantier | Pourquoi maintenant |
-|---|---|---|
-| 1 | **Couverture des modules trio_*/ban_recommendations** | Ne sont testés que par des tests de caractérisation qui figent le comportement actuel — n'auraient pas détecté le bug lane de septembre |
-| — | Features candidates | À piocher par appétit, aucune n'est bloquante |
+**Validées par @pj35 le 2026-09-05.** Specs autoportantes dans [`docs/specs/`](docs/specs/README.md).
+
+| Rang | Chantier | Spec | Pourquoi maintenant |
+|---|---|---|---|
+| 1 | **Fermer la boucle de mesure** (résultat de partie automatique via LCU) | [SPEC-08](docs/specs/SPEC-08-boucle-de-mesure.md) | Toutes les constantes du modèle sont devinées. L'infra de calibration existe et n'a **jamais** reçu une donnée : 12 prédictions en base, 0 résultat. Chaque semaine sans elle est une semaine de parties perdues |
+| 2 | **Rendre l'ignorance visible** (champions écartés affichés, seuil de lane 10 % → 5 %) | [SPEC-09](docs/specs/SPEC-09-ignorance-visible.md) | Sur l'écran le plus utilisé, un champion sans données disparaît sans un mot ; 60 combos (champion, lane) réellement joués ne sont jamais scrapés |
+| 3 | **Couverture du chemin critique temps réel** | [SPEC-10](docs/specs/SPEC-10-couverture-chemin-critique.md) | `pool_selection_ui.py` à 2,6 % et `lcu_client.py` à 18,6 % — c'est le chemin exact des bugs lane de septembre |
+| — | Features candidates | — | À rouvrir **après** que SPEC-08 ait produit des données, aucune n'est bloquante |
 
 ---
 
@@ -38,28 +45,36 @@ modules/mixins par domaine, déplacement verbatim, tests de régression au besoi
 
 Plus gros fichier restant du projet : `src/lcu_client.py` (493 lignes) — sous le seuil.
 
-## 2. Couverture — modules trio_*/ban_recommendations 🟠
+## 2. Couverture — modules trio_*/ban_recommendations 🟠 → reclassé dans SPEC-10
 
-`trio_holistic.py`, `trio_counterpick.py`, `trio_metrics.py`, `trio_weights.py`, `matchup_cache.py`,
-`champion_scores.py`, `ban_recommendations.py` ne sont exercés qu'indirectement via `Assistant`, par
-des tests de caractérisation qui pinnent le comportement actuel plutôt que de le spécifier — ils
-n'auraient pas empêché le bug lane de septembre. Des tests directs sur ces modules (voir
-`tests/test_trio_lane_aware.py`, `tests/test_ban_recommendations.py` pour un point de départ)
-combleraient l'angle mort.
+**Diagnostic révisé le 2026-09-05 après mesure.** Ces modules sont en réalité bien couverts en
+lignes (73,7 % à 88,4 % : `ban_recommendations` 73,7, `matchup_cache` 75,5, `trio_holistic` 77,9,
+`trio_metrics` 81,0, `trio_weights` 86,3, `trio_counterpick` 88,4). Le problème n'est donc pas la
+**quantité** de couverture mais sa **nature** : des tests de caractérisation qui figent le
+comportement observé au lieu de spécifier le comportement attendu — ils passent tout aussi bien
+quand le comportement est faux, et n'auraient pas détecté le bug lane.
+
+Ajouter des tests de ligne ici n'apporterait rien. Ce qu'il faut, ce sont quelques tests
+**d'intention** sur les invariants métier : c'est [SPEC-10](docs/specs/SPEC-10-couverture-chemin-critique.md) §3.5.
+Les vrais trous de couverture sont ailleurs (`pool_selection_ui.py` 2,6 %, `lcu_client.py` 18,6 %,
+`champion_utils.py` 33,3 %, `draft/phases.py` 40,0 %) — même spec, §3.1 à §3.4.
 
 ---
 
 ## Features candidates
 
 *Sources : `docs/ROADMAP_2026.md` Horizon 3, `docs/TOURNAMENT_COACH_IMPROVEMENTS.md` (section
-"Future Enhancements"), constats du 2026-09-04. Aucune n'est engagée — à trier par appétit.*
+"Future Enhancements"), constats du 2026-09-04. Aucune n'est engagée — à trier par appétit,
+et **après** le lot SPEC-08→10 : elles ajoutent de la surface à un moteur dont on ne sait pas
+encore mesurer la qualité.*
 
-1. **UX de confiance** — afficher systématiquement la fraîcheur des données et le nombre de games
-   derrière chaque recommandation (l'infra existe déjà : `db_meta`, `confidence(games)`).
-2. **Calibration du modèle log-odds** — l'infra de journalisation existe déjà
-   (`Database.insert_prediction`/`update_prediction_outcome`, appelée en fin de draft et via la
-   commande `outcome win|loss`). `scripts/calibrate_model.py` existe déjà comme point de départ —
-   reste à l'exécuter/l'affiner une fois assez de parties en base.
+1. ~~**UX de confiance**~~ → **engagée** : la fraîcheur est déjà affichée au démarrage
+   (`src/data_freshness.py`, `lol_coach.py:111`) et le volume de games sur les recommandations du
+   Live Coach. Le reste (volume sur les autres écrans) est SPEC-09 E5.
+2. ~~**Calibration du modèle log-odds**~~ → **engagée** : SPEC-08 fournit le maillon manquant (le
+   résultat réel des parties). L'exécution de `scripts/calibrate_model.py` et l'ajustement de
+   `K_MATCHUP`/`K_SYNERGY`/`SAME_LANE_WEIGHT` deviendront possibles à ~30 parties labellisées,
+   avec bump obligatoire de `MODEL_VERSION`. **C'est le prochain chantier naturel après SPEC-08.**
 3. **Intégration sites de draft externes** (DraftLol, etc.) — recherche disponible dans
    `docs/archive/DRAFT_SITES_INTEGRATION_RESEARCH.md` (restaurée le 2026-09-04, contenu d'octobre
    2025 à revalider). Dépend du reverse-engineering du WebSocket DraftLol — spike de 1-2 jours

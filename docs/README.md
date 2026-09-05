@@ -8,6 +8,7 @@ Documentation complète du projet League Stats Coach.
 
 ### **État du Projet & Direction**
 - [../TODO.md](../TODO.md) - **Backlog actuel** : priorités en cours, dette de code, features candidates
+- [specs/](specs/README.md) - **Specs d'implémentation en cours** : lot 2026-09 (`SPEC-08` boucle de mesure, `SPEC-09` ignorance visible, `SPEC-10` couverture du chemin critique)
 - [ROADMAP_2026.md](ROADMAP_2026.md) - Décisions stratégiques tranchées le 2026-06-11 (SQLite only, outil perso, pas de Playwright) — toujours en vigueur
 - [archive/](archive/) - Cycles d'audit/backlog/specs **entièrement exécutés**, conservés pour l'historique : `AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`, `DRAFT_SITES_INTEGRATION_RESEARCH.md`
 
@@ -72,7 +73,7 @@ Documentation complète du projet League Stats Coach.
 
 ## 🔄 Mise à jour de cette doc
 
-Dernière mise à jour : 2026-09-04
+Dernière mise à jour : 2026-09-05
 
 Lorsque vous ajoutez une nouvelle documentation :
 1. Créer le fichier dans `docs/`
