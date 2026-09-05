@@ -96,6 +96,61 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Ajouts
 
+- **SPEC-08 — fermer la boucle de mesure : résultat de partie automatique via
+  LCU** — `predictions` avait 12 lignes et 0 outcome renseigné : le seul
+  chemin d'écriture était la commande manuelle `outcome win|loss`
+  (`src/draft/commands.py`), empruntée zéro fois sur 12 parties draftées
+  entre le 01/09 et le 05/09. Sans résultat réel en base, aucune calibration
+  de `K_MATCHUP`/`K_SYNERGY`/`SAME_LANE_WEIGHT` n'est possible malgré une
+  infrastructure de mesure complète (`scripts/calibrate_model.py`,
+  `PredictionsRepository`). Révise sur preuve empirique la décision de
+  SPEC-05 de garder ce chemin manuel par souci de testabilité — un spike sur
+  le vrai client (compte Morty, EUW1, 2026-09-05) a relevé les formes de
+  réponse exactes du LCU, levant l'objection.
+  - `LCUClient` gagne deux méthodes de lecture (`get_recent_matches`,
+    `get_match_participants`), extraites dans un nouveau mixin
+    `src/lcu_match_history.py` (même principe que
+    `parser_cookie_banner.py`) pour garder `lcu_client.py` sous 500 lignes
+    (493 avant ce chantier).
+  - Nouveau `src/draft/outcome_tracker.py` (`OutcomeTracker.resolve_pending`)
+    rapproche les prédictions en attente de l'historique de matchs du LCU en
+    deux passes : filtre temporel (fenêtre de 6h après la fin de la draft),
+    puis confirmation par composition d'équipe (≥4/5 champions communs, des
+    deux côtés) — l'historique de matchs est la source de vérité (consultable
+    à tout moment), le gameflow n'est qu'un déclencheur optionnel, ce qui
+    permet un **rattrapage au démarrage** même si l'appli a été fermée
+    pendant la partie. Ambiguïtés résolues par un tri unique du plus proche
+    au plus lointain dans le temps ; abstention systématique en cas de doute
+    (une donnée fausse est pire qu'une donnée absente).
+  - Migration `13cbeb46785a` : colonne `predictions.game_id` + index unique
+    partiel (`WHERE game_id IS NOT NULL`), qui garantit l'idempotence d'un
+    relancement du rattrapage au niveau base, pas seulement applicatif.
+  - Deux déclencheurs : la transition de phase gameflow vers
+    `WaitingForStats`/`PreEndOfGame`/`EndOfGame` pendant une session active
+    (`MonitorLifecycle.monitor_loop`, une fois par transition), et un
+    rattrapage explicite au démarrage de `DraftMonitor.start_monitoring()`
+    (`OUTCOME_BACKFILL_LIMIT` prédictions examinées). Divergence du
+    placement suggéré par la spec (`src/ui/draft_coach_ui.py`) : fait dans
+    `start_monitoring()` juste après `self.lcu.connect()` pour éviter une
+    connexion LCU dupliquée — `draft_coach_ui.py` ne peut pas garantir que
+    le LCU est déjà connecté à cet endroit.
+  - `MIN_ROWS_FOR_CALIBRATION` déplacé de `scripts/calibrate_model.py` vers
+    `AnalysisConfig` (`config_constants.py`) : la valeur (30) est maintenant
+    affichée par le compteur de progression `[OUTCOME]` en plus du script de
+    calibration, donc centralisée pour n'exister qu'à un seul endroit.
+  - Best-effort de bout en bout : `OutcomeTracker.resolve_pending` ne lève
+    jamais (LCU indisponible, réponse inattendue, échec DB → abstention,
+    retour 0), conformément à l'invariant produit du Live Coach.
+  - Nouvelle tête de la chaîne Alembic (`13cbeb46785a`, était
+    `3e87f22f2ec1`) : `tests/test_db_nocase_index.py::test_migration_is_chained_on_head`
+    mettait la tête en dur, mis à jour (même catégorie de piège que le fix
+    CI du 2026-09-04 sur la migration précédente).
+  - 50 tests ajoutés (`tests/test_lcu_matches.py`,
+    `tests/test_outcome_tracker.py`, `tests/test_migration_predictions_game_id.py`,
+    extension de `tests/test_draft_monitor_lifecycle.py`) sur mocks/fixtures
+    hermétiques, aucun appel à un vrai client LoL. 1040 tests passent au
+    total (était 990).
+
 - **Tier de scraping Master+** — passage du tier lolalytics de `diamond_plus`
   à `master_plus` (Master + Grandmaster + Challenger), suite à l'atteinte du
   rang Master en solo queue. Centralisé dans `config.LOLALYTICS_TIER`
