@@ -389,18 +389,18 @@ class TestResetForNextGame:
 
     def test_outcome_trigger_flag_is_reset(self, monitor):
         """SPEC-08: re-arms the transition detector for the next game."""
-        monitor._in_outcome_trigger_phase = True
+        monitor._last_outcome_trigger_phase = "EndOfGame"
 
         with patch("src.draft.lifecycle.clear_console"):
             monitor._reset_for_next_game()
 
-        assert monitor._in_outcome_trigger_phase is False
+        assert monitor._last_outcome_trigger_phase is None
 
 
 class TestOutcomeResolutionTrigger:
-    """``_monitor_loop()`` outside champion select — SPEC-08 §2.6a: entering
-    a gameflow phase in ``OUTCOME_TRIGGER_PHASES`` calls
-    ``_resolve_pending_outcomes()`` exactly once per transition."""
+    """``_monitor_loop()`` outside champion select — SPEC-08 §2.6a: each
+    end-of-game phase entered calls ``_resolve_pending_outcomes()`` once, and
+    staying in the same phase across ticks never calls it again."""
 
     @staticmethod
     def _outside_champion_select(monitor, phase):
@@ -417,7 +417,7 @@ class TestOutcomeResolutionTrigger:
             monitor._monitor_loop()
 
         resolve.assert_called_once_with()
-        assert monitor._in_outcome_trigger_phase is True
+        assert monitor._last_outcome_trigger_phase == "WaitingForStats"
 
     @pytest.mark.parametrize("phase", ["WaitingForStats", "PreEndOfGame", "EndOfGame"])
     def test_all_three_trigger_phases_resolve(self, monitor, phase):
@@ -429,41 +429,47 @@ class TestOutcomeResolutionTrigger:
         resolve.assert_called_once_with()
 
     def test_staying_in_the_same_trigger_phase_does_not_re_resolve(self, monitor):
+        """Repeated poll ticks in one phase must not re-query: that is the
+        per-tick spam the detector exists to prevent."""
         self._outside_champion_select(monitor, "WaitingForStats")
-        monitor._in_outcome_trigger_phase = True  # already resolved on a prior tick
+        monitor._last_outcome_trigger_phase = "WaitingForStats"  # resolved on a prior tick
 
         with patch.object(monitor, "_resolve_pending_outcomes") as resolve:
             monitor._monitor_loop()
 
         resolve.assert_not_called()
-        assert monitor._in_outcome_trigger_phase is True
+        assert monitor._last_outcome_trigger_phase == "WaitingForStats"
 
-    def test_moving_between_trigger_phases_does_not_re_resolve(self, monitor):
-        """WaitingForStats -> PreEndOfGame is still 'inside the set': the
-        flag collapses the whole set into one boolean, so this must not
-        count as leaving and re-entering."""
-        self._outside_champion_select(monitor, "WaitingForStats")
-        with patch.object(monitor, "_resolve_pending_outcomes"):
-            monitor._monitor_loop()
+    def test_each_trigger_phase_entered_retries_the_resolution(self, monitor):
+        """WaitingForStats -> PreEndOfGame -> EndOfGame must retry at each
+        step, not spend a single attempt on the whole sequence.
 
-        self._outside_champion_select(monitor, "PreEndOfGame")
-        with patch.object(monitor, "_resolve_pending_outcomes") as resolve:
-            monitor._monitor_loop()
-
-        resolve.assert_not_called()
+        The LCU match history usually does not carry the game yet at
+        WaitingForStats — the first and least likely phase to succeed. A
+        single boolean over the whole set would burn the only attempt there
+        and defer the result to the next session's startup backfill, which
+        defeats the point of the live trigger. Retrying costs one SQL query
+        that returns immediately when nothing is pending.
+        """
+        for phase in ("WaitingForStats", "PreEndOfGame", "EndOfGame"):
+            self._outside_champion_select(monitor, phase)
+            with patch.object(monitor, "_resolve_pending_outcomes") as resolve:
+                monitor._monitor_loop()
+            resolve.assert_called_once_with()
+            assert monitor._last_outcome_trigger_phase == phase
 
     def test_leaving_and_re_entering_resolves_again(self, monitor):
         self._outside_champion_select(monitor, "EndOfGame")
         with patch.object(monitor, "_resolve_pending_outcomes"):
             monitor._monitor_loop()
-        assert monitor._in_outcome_trigger_phase is True
+        assert monitor._last_outcome_trigger_phase == "EndOfGame"
 
         # Back in game (not a trigger phase, not a reset phase either).
         self._outside_champion_select(monitor, "InProgress")
         with patch.object(monitor, "_resolve_pending_outcomes") as resolve:
             monitor._monitor_loop()
         resolve.assert_not_called()
-        assert monitor._in_outcome_trigger_phase is False
+        assert monitor._last_outcome_trigger_phase is None
 
         # New game reaches EndOfGame again: must resolve once more.
         self._outside_champion_select(monitor, "EndOfGame")
@@ -481,7 +487,7 @@ class TestOutcomeResolutionTrigger:
             monitor._monitor_loop()
 
         resolve.assert_not_called()
-        assert monitor._in_outcome_trigger_phase is False
+        assert monitor._last_outcome_trigger_phase is None
 
     def test_champion_select_hot_path_never_calls_resolve(self, monitor):
         """Never in the champion-select branch (SPEC-08 §2.6a: 'jamais dans

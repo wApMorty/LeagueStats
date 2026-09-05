@@ -125,9 +125,15 @@ All notable changes to LeagueStats Coach will be documented in this file.
   - Migration `13cbeb46785a` : colonne `predictions.game_id` + index unique
     partiel (`WHERE game_id IS NOT NULL`), qui garantit l'idempotence d'un
     relancement du rattrapage au niveau base, pas seulement applicatif.
-  - Deux déclencheurs : la transition de phase gameflow vers
-    `WaitingForStats`/`PreEndOfGame`/`EndOfGame` pendant une session active
-    (`MonitorLifecycle.monitor_loop`, une fois par transition), et un
+  - Deux déclencheurs : les phases gameflow de fin de partie
+    (`WaitingForStats`/`PreEndOfGame`/`EndOfGame`) pendant une session active
+    (`MonitorLifecycle.monitor_loop`, une tentative par phase effectivement
+    traversée — jamais une par tick de polling ; la spec disait d'abord « une
+    seule fois par transition », corrigé en revue : l'historique LCU ne porte
+    généralement pas encore la partie à `WaitingForStats`, donc dépenser
+    l'unique tentative sur la première phase reportait le résultat au
+    rattrapage de la session suivante et vidait le déclencheur direct de son
+    intérêt), et un
     rattrapage explicite au démarrage de `DraftMonitor.start_monitoring()`
     (`OUTCOME_BACKFILL_LIMIT` prédictions examinées). Divergence du
     placement suggéré par la spec (`src/ui/draft_coach_ui.py`) : fait dans

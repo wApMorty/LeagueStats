@@ -102,11 +102,13 @@ class DraftMonitor:
         # "outcome win"/"outcome loss" command. None = nothing to update.
         self._last_prediction_id: Optional[int] = None
 
-        # SPEC-08 §2.6a: True while the last-seen gameflow phase was one of
-        # draft_config.OUTCOME_TRIGGER_PHASES, so the loop can detect the
-        # False->True transition and call resolve_pending() exactly once per
-        # post-game window instead of once per poll tick.
-        self._in_outcome_trigger_phase: bool = False
+        # SPEC-08 §2.6a: last gameflow phase seen among
+        # draft_config.OUTCOME_TRIGGER_PHASES (None outside them), so the loop
+        # resolves once per end-of-game phase actually entered rather than
+        # once per poll tick. Holding the phase name rather than a boolean is
+        # deliberate: the first phase of the sequence is the one least likely
+        # to find the game in the LCU history, so the later ones must retry.
+        self._last_outcome_trigger_phase: Optional[str] = None
 
         # OneTricks browser window recycling: keep a single handle so each new
         # draft replaces the previous window instead of stacking tabs/processes
