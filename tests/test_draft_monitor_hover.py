@@ -168,7 +168,7 @@ class TestGetBestChampionFromPool:
         assert monitor._get_best_champion_from_pool() == "Aatrox"
         monitor.assistant.score_against_team.assert_not_called()
 
-    def test_champions_below_min_games_are_skipped(self, monitor):
+    def test_champions_below_min_games_are_skipped(self, monitor, capsys):
         """Only champions with >= MIN_CHAMPION_GAMES total games get scored."""
         monitor.assistant.get_matchups_for_draft.side_effect = [
             matchups(draft_config.MIN_CHAMPION_GAMES - 1),  # Aatrox: too thin
@@ -179,6 +179,13 @@ class TestGetBestChampionFromPool:
 
         assert monitor._get_best_champion_from_pool() == "Darius"
         assert monitor.assistant.score_against_team.call_count == 1
+
+        # SPEC-09 E1: Aatrox/Garen must be reported as skipped, not silently
+        # dropped from the pool.
+        out = capsys.readouterr().out
+        assert "[DATA] Sans données exploitables" in out
+        assert "Aatrox" in out and "Garen" in out
+        assert "Darius" not in out.split("[DATA]")[1]
 
     def test_all_champions_below_min_games_fall_back_to_first_of_pool(self, monitor):
         monitor.assistant.get_matchups_for_draft.return_value = matchups(10)

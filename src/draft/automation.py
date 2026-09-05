@@ -9,6 +9,8 @@ assistant, writes last_recommendation, and calls into the ban-advice domain
 many cross-domain touches for plain composition.
 """
 
+from typing import List, Optional, Tuple
+
 from ..config_constants import draft_config
 from ..utils.console import clear_console
 
@@ -70,6 +72,28 @@ class HoverAutomation:
             if self.m.verbose:
                 print(f"  [ALERTE] [INITIAL-HOVER] Erreur lors du hover initial: {e}")
 
+    def _resolve_player_lane(self) -> Optional[str]:
+        """SPEC-09 E3: lane being played, by order of preference.
+
+        1. ``self.m.pool_lane`` - resolved by ``PoolSelector`` from the
+           pool's own role (``pool_manager.pool_role_to_lane()``), already
+           set as soon as a mono-role pool is selected, before champion
+           select even opens.
+        2. ``self.m.last_draft_state.ally_positions`` - the LCU-assigned
+           position, once champion select has started.
+        3. ``None`` - legitimate in a queue that assigns no roles. Callers
+           must NOT silently fall back to scoring the all-lanes aggregate
+           instead (SPEC-09 "Hors périmètre": a missing lane is not a
+           licence to substitute a misleading one).
+        """
+        pool_lane = getattr(self.m, "pool_lane", None)
+        if pool_lane:
+            return pool_lane
+        last_state = getattr(self.m, "last_draft_state", None)
+        if last_state is not None:
+            return last_state.ally_positions.get(last_state.local_player_cell_id)
+        return None
+
     def get_best_champion_from_pool(self) -> str:
         """Get the best champion from current pool using tier list analysis."""
         try:
@@ -86,15 +110,33 @@ class HoverAutomation:
                 # Fallback to first champion if no IDs found
                 return self.m.current_pool[0]
 
+            # SPEC-09 E3: the blind pick was previously scored on the
+            # champion's all-lanes aggregate even when the lane was already
+            # known (5th residual of the September 2026 lane-filter bug
+            # family) - thread the lane through like every other call site.
+            player_lane = self._resolve_player_lane()
+
             # Calculate scores for pool champions (blind pick scenario)
             scores = []
+            # SPEC-09 E1: same rule as DraftRecommender.provide() - a
+            # champion without exploitable data for this lane is reported,
+            # never silently dropped from the pool.
+            skipped: List[Tuple[str, int]] = []
             for champion_id in champion_ids:
                 champion_name = self.m._get_display_name(champion_id)
-                matchups = self.m.assistant.get_matchups_for_draft(champion_name)
-                if matchups and sum(m.games for m in matchups) >= draft_config.MIN_CHAMPION_GAMES:
+                matchups = self.m.assistant.get_matchups_for_draft(champion_name, lane=player_lane)
+                total_games = sum(m.games for m in matchups) if matchups else 0
+                if matchups and total_games >= draft_config.MIN_CHAMPION_GAMES:
                     # Use blind pick scoring (empty enemy team)
                     score = self.m.assistant.score_against_team(matchups, [], champion_name)
                     scores.append((champion_name, score))
+                else:
+                    skipped.append((champion_name, total_games))
+
+            if skipped:
+                skipped_names = ", ".join(f"{name} ({games} games)" for name, games in skipped)
+                lane_suffix = f" en {player_lane}" if player_lane else ""
+                print(f"  [DATA] Sans données exploitables{lane_suffix} : {skipped_names}")
 
             if scores:
                 # Sort by score and return best champion
