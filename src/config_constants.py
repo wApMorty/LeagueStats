@@ -158,6 +158,13 @@ class AnalysisConfig:
     # valeur dans son compteur de progression ("n / 30 requises").
     MIN_ROWS_FOR_CALIBRATION: int = 30
 
+    # SPEC-12 : au-delà de MIN_ROWS_FOR_CALIBRATION, le diagnostic de
+    # calibration se re-déclenche automatiquement (console du Draft Coach)
+    # tous les AUTO_CALIBRATION_CHECK_INTERVAL prédictions labellisées
+    # supplémentaires -- plutôt qu'à chaque partie une fois le seuil franchi,
+    # ce qui répéterait un rappel quasi identique après chaque game.
+    AUTO_CALIBRATION_CHECK_INTERVAL: int = 20
+
     # Tier thresholds (0-100 scale)
     TIER_THRESHOLDS: Dict[str, float] = field(
         default_factory=lambda: {
