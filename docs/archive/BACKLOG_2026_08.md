@@ -162,7 +162,7 @@ Six questions avant chaque draft (auto-hover, auto-accept, auto-ban, onetricks, 
 `pyproject.toml` mesure `src/analysis` seul avec un seuil à 70 % : la CI valide 87 % sur 5 % du code pendant que `draft_monitor.py` est à 26 %. Élargir à `src/` et poser le seuil au niveau réel (38 %), quitte à le remonter ensuite. Sans ça, rien ne freine la reprise de poids des monolithes (+1 248 lignes depuis juin) — et le lot B va beaucoup toucher à `draft_monitor.py`.
 
 **E5 — Hygiène** *(quick win)*
-Supprimer les fichiers parasites **trackés dans git** (`2.0.0`, `90%`, `Dict[str`), le dossier `server/` orphelin sur disque, `node_modules/` + `package*.json` (résidus Ruflo), `config/.env.neon`, `outputs/t13_neon_readonly_user.yaml`, `ADMIN_API_KEY` dans `.env` (serveur supprimé), `logs/auto_update.log` (12,7 Mo, mort depuis mars). Restreindre le `*.json` global du `.gitignore`.
+Supprimer les fichiers parasites **trackés dans git** (`2.0.0`, `90%`, `Dict[str`), le dossier `server/` orphelin sur disque, `node_modules/` + `package*.json` (résidus Ruflo), `config/.env.neon`, `outputs/t13_neon_readonly_user.yaml`, `logs/auto_update.log` (12,7 Mo, mort depuis mars). Restreindre le `*.json` global du `.gitignore`.
 
 **E6 — Isoler les tests**
 La suite écrit dans `logs/update_all.log` (fichier de production — on y lit des `RuntimeError: geckodriver missing` levés depuis `unittest/mock.py`) et `PoolManager()` ouvre la vraie `data/db.db` à chaque instanciation. Diagnostic faussé pour qui lit les logs — c'est une des raisons pour lesquelles l'historique du pipeline est illisible.

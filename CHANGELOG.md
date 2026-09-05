@@ -706,7 +706,7 @@ tranchées le 2026-06-11).
   optionnel (défaut `config.DATABASE_PATH`)
 - **🗑️ Removed**: appels de sync Neon dans `src/ui/lol_coach_legacy.py` (fonction
   `sync_to_neon()` + 6 sites d'appel) et bloc « sync Neon » + « refresh API Render »
-  (`ADMIN_API_KEY`) de `scripts/auto_update_db.py`
+  de `scripts/auto_update_db.py`
 - **🔧 Chore**: dépendances client allégées — `sqlalchemy[asyncio]`, `asyncpg`,
   `greenlet`, `httpx` retirées de `requirements.txt` (SQLAlchemy reste disponible via
   Alembic en dev) ; `LeagueStatsCoach.spec` ne collecte plus les binaires asyncpg/greenlet

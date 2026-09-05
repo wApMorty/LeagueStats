@@ -155,8 +155,6 @@ git rm "2.0.0" "90%" "Dict[str"
 | `logs/auto_update.log` | 12,7 Mo, dernière écriture 19/03/2026 |
 | `e2e/` | Vide |
 
-**`.env`** : retirer `ADMIN_API_KEY` (destiné au serveur Render supprimé). Mettre `.env.example` en cohérence.
-
 **`.gitignore`** : la règle `*.json` est globale et ignore silencieusement tout nouveau fichier JSON légitime. La restreindre aux fichiers de données réels (`champion_pools.json`, `user_prefs.json`, `benchmark.json`) — **en vérifiant d'abord** qu'aucun JSON actuellement ignoré ne devrait être versionné (`git status --ignored | grep json`).
 
 ---
