@@ -21,6 +21,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from src import repair_engine
+
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
 repair_data = importlib.import_module("repair_data")
@@ -41,7 +43,7 @@ class TestRepairMatchupsParallel:
         def fake_scrape(target, champion, patch_version, headless, lane):
             return champion, lane, [("Camille", 50.0, 0.0, 0.0, 15.0, 100)]
 
-        with patch.object(repair_data, "_scrape_champion", side_effect=fake_scrape):
+        with patch.object(repair_engine, "_scrape_champion", side_effect=fake_scrape):
             groups = {"top": ["Jayce"]}
             stats = repair_data.repair_parallel(MATCHUPS, db, groups, "14", 2, True, logger)
 
@@ -62,7 +64,7 @@ class TestRepairMatchupsParallel:
         def fake_scrape(target, champion, patch_version, headless, lane):
             return champion, lane, [("Sylas", 50.0, 0.0, 0.0, 10.0, 100)]
 
-        with patch.object(repair_data, "_scrape_champion", side_effect=fake_scrape):
+        with patch.object(repair_engine, "_scrape_champion", side_effect=fake_scrape):
             groups = {"top": ["Pyke"], "support": ["Pyke"]}
             stats = repair_data.repair_parallel(MATCHUPS, db, groups, "14", 2, True, logger)
 
@@ -83,7 +85,7 @@ class TestRepairMatchupsParallel:
         def fake_scrape(target, champion, patch_version, headless, lane):
             return champion, lane, [("Enemy", 50.0, 0.0, 0.0, 10.0, 100)]
 
-        with patch.object(repair_data, "_scrape_champion", side_effect=fake_scrape):
+        with patch.object(repair_engine, "_scrape_champion", side_effect=fake_scrape):
             groups = {None: ["Broken"]}
             stats = repair_data.repair_parallel(MATCHUPS, db, groups, "14", 2, True, logger)
 
@@ -101,7 +103,7 @@ class TestRepairMatchupsParallel:
         def fake_scrape(target, champion, patch_version, headless, lane):
             return champion, lane, []
 
-        with patch.object(repair_data, "_scrape_champion", side_effect=fake_scrape):
+        with patch.object(repair_engine, "_scrape_champion", side_effect=fake_scrape):
             groups = {"top": ["NoData"]}
             stats = repair_data.repair_parallel(MATCHUPS, db, groups, "14", 2, True, logger)
 
@@ -118,7 +120,7 @@ class TestRepairSynergiesParallel:
         def fake_scrape(target, champion, patch_version, headless, lane):
             return champion, lane, [("Sylas", 50.0, 0.0, 0.0, 10.0, 100)]
 
-        with patch.object(repair_data, "_scrape_champion", side_effect=fake_scrape):
+        with patch.object(repair_engine, "_scrape_champion", side_effect=fake_scrape):
             groups = {"top": ["Pyke"], "support": ["Pyke"]}
             stats = repair_data.repair_parallel(SYNERGIES, db, groups, "14", 2, True, logger)
 
