@@ -4,6 +4,18 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### ✨ Feature
+
+- **URL OneTricks.gg filtrée par lane** — `OneTricksWindow.open_champion_page()`
+  (`src/draft/onetricks.py`) ouvrait toujours la page « toutes lanes » du
+  champion (`/champions/builds/<Champion>`), alors que la lane jouée est déjà
+  connue à cet instant via la même résolution que le reste du Live Coach
+  (`HoverAutomation._resolve_player_lane()` : `pool_lane` puis
+  `last_draft_state.ally_positions`, LCU). L'URL porte désormais
+  `?role=<lane>` quand la lane est connue, avec conversion vers le nommage
+  propre à onetricks.gg (`middle`→`mid`, `bottom`→`bot`), sinon comportement
+  inchangé (page toutes lanes).
+
 ### 🐛 Fix
 
 - **SPEC-09 (E1) — champion sans données écarté silencieusement des

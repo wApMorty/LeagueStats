@@ -16,6 +16,15 @@ import tempfile
 from ..config import config
 from ..constants import normalize_champion_name_for_onetricks
 
+# Internal lane values (state.ally_positions / matchups.lane naming: "top",
+# "jungle", "middle", "bottom", "support") to onetricks.gg's own ?role= query
+# param naming ("mid"/"bot" instead of "middle"/"bottom"; top/jungle/support
+# are identical so absent from this map).
+_LANE_TO_ONETRICKS_ROLE = {
+    "middle": "mid",
+    "bottom": "bot",
+}
+
 
 class OneTricksWindow:
     """Recycle a single OneTricks.gg Brave app window across drafts."""
@@ -73,6 +82,13 @@ class OneTricksWindow:
             # Normalize champion name for OneTricks.gg URL
             normalized_name = normalize_champion_name_for_onetricks(self.m.player_champion)
             onetricks_url = f"https://www.onetricks.gg/champions/builds/{normalized_name}"
+
+            # Scope the page to the lane actually being played, when known
+            # (same lane resolution as the tier list / matchups, SPEC-09 E3).
+            lane = self.m.hover._resolve_player_lane()
+            if lane:
+                role = _LANE_TO_ONETRICKS_ROLE.get(lane, lane)
+                onetricks_url += f"?role={role}"
 
             # Try to get Brave browser path
             try:
