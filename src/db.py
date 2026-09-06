@@ -205,6 +205,9 @@ class Database:
     def get_all_champion_lane_distributions(self) -> Dict[int, Dict[str, float]]:
         return self._champions.get_all_champion_lane_distributions()
 
+    def get_lane_distributions_by_name(self) -> Dict[str, Dict[str, float]]:
+        return self._champions.get_lane_distributions_by_name()
+
     # ========== Matchups ==========
 
     def init_matchups_table(self) -> None:

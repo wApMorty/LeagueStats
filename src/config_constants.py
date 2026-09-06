@@ -165,6 +165,24 @@ class AnalysisConfig:
     # ce qui répéterait un rappel quasi identique après chaque game.
     AUTO_CALIBRATION_CHECK_INTERVAL: int = 20
 
+    # SPEC-11 (étage b, "1 ply glouton") : le terme de risque de
+    # src/analysis/one_ply_lookahead.py moyenne les LOOKAHEAD_TOP_K pires
+    # delta2 plausibles restants (parmi ceux qui passent filter_valid_
+    # matchups) et l'ajoute -- jamais ne le substitue -- à la contribution
+    # des slots ennemis encore inconnus. Petit par construction : plus il
+    # est grand, plus le "pire cas" se rapproche d'une moyenne banale et
+    # perd son sens.
+    LOOKAHEAD_TOP_K: int = 3
+
+    # Poids du terme de risque ci-dessus dans la moyenne pondérée globale
+    # (mêmes unités que blind_picks/SAME_LANE_WEIGHT : un poids de 1.0 pèse
+    # comme un ennemi connu de plus). Terme additif et strictement monotone
+    # (min/moyenne d'un sous-ensemble <= moyenne de l'ensemble) : ne peut
+    # jamais améliorer le score, seulement le dégrader ou le laisser
+    # inchangé -- voir one_ply_lookahead.py pour pourquoi cette propriété
+    # est ce qui distingue ce terme d'une resimulation naïve.
+    LOOKAHEAD_WEIGHT: float = 1.0
+
     # Tier thresholds (0-100 scale)
     TIER_THRESHOLDS: Dict[str, float] = field(
         default_factory=lambda: {

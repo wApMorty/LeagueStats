@@ -153,6 +153,26 @@ class TestSaveChampionLaneDistribution:
         assert db_with_lanes.get_all_champion_lane_distributions() == {}
 
 
+class TestGetLaneDistributionsByName:
+    """SPEC-11: same data as get_all_champion_lane_distributions(), keyed by
+    lowercased name -- src/analysis/lane_restante.py only has champion names
+    (Matchup.enemy_name) to work with, never ids."""
+
+    def test_keys_by_lowercased_name_instead_of_id(self, db_with_lanes):
+        db_with_lanes.save_champion_lane_distribution(1, {"top": 75.1, "jungle": 22.0})
+        db_with_lanes.save_champion_lane_distribution(2, {"top": 90.0})
+
+        by_name = db_with_lanes.get_lane_distributions_by_name()
+
+        assert by_name == {
+            "aatrox": {"top": 75.1, "jungle": 22.0},
+            "darius": {"top": 90.0},
+        }
+
+    def test_no_data_returns_empty_dict(self, db_with_lanes):
+        assert db_with_lanes.get_lane_distributions_by_name() == {}
+
+
 class TestFallbackToMatchups:
     def test_falls_back_when_champion_lanes_empty(self, db_with_lanes):
         cursor = db_with_lanes.connection.cursor()

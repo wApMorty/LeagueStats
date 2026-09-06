@@ -6,24 +6,8 @@ import math
 from ..db import Database
 from ..config_constants import analysis_config, role_inference_config
 from ..models import Matchup
-from .probability import sigmoid, winrate_points_to_logit
-
-
-def confidence(games: int) -> float:
-    """Statistical confidence weight for a sample of `games` games (SPEC-05 B6).
-
-    Composes with `pickrate` (which predicts the opponent's pick, and stays
-    untouched) rather than replacing it: the product `pickrate * confidence(games)`
-    is the weight to use wherever matchups/synergies are averaged.
-
-    Args:
-        games: Number of games backing the sample.
-
-    Returns:
-        A value in [0, 1) that tends to 1 as games grows large and to 0 as
-        games tends to 0 (half-weight at games == CONFIDENCE_K).
-    """
-    return games / (games + analysis_config.CONFIDENCE_K)
+from . import lane_restante
+from .probability import confidence, sigmoid, winrate_points_to_logit
 
 
 def estimate_win_probability(individual_winrates: List[float]) -> float:
@@ -45,7 +29,7 @@ def estimate_win_probability(individual_winrates: List[float]) -> float:
     return sigmoid(logit_sum)
 
 
-class ChampionScorer:
+class ChampionScorer(lane_restante.ScoringGateMixin):
     """Handles scoring calculations for champion matchups and team compositions."""
 
     def __init__(self, db: Database, verbose: bool = False):
@@ -58,6 +42,7 @@ class ChampionScorer:
         """
         self.db = db
         self.verbose = verbose
+        self._init_lane_restante_cache()
 
     def filter_valid_matchups(self, matchups: List[Matchup]) -> List[Matchup]:
         """
@@ -287,9 +272,11 @@ class ChampionScorer:
                 available_matchups = [
                     m for m in remaining_matchups if m.enemy_name.lower() not in banned_lower
                 ]
-            avg_delta2_val = self.avg_delta2(available_matchups)
-            total_delta2 += blind_picks * avg_delta2_val
-            matchup_count += blind_picks
+            delta2_contribution, weight_contribution = self._blind_slots_contribution(
+                available_matchups, blind_picks, player_lane, enemy_lanes
+            )
+            total_delta2 += delta2_contribution
+            matchup_count += weight_contribution
 
         # Convert average delta2 to advantage
         if matchup_count == 0:

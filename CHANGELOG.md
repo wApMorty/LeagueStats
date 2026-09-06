@@ -173,6 +173,98 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Ajouts
 
+- **SPEC-11 (étage b, "1 ply glouton") — robustesse face au pire pick
+  ennemi plausible** (@pj35, 2026-09-06) — `score_against_team()` note un
+  candidat contre le board *actuel* uniquement, jamais contre ce que
+  l'ennemi pourrait encore jouer. Trois portées proposées (1 pli glouton /
+  vrai minimax multi-plis / outil à la demande isolé du Live Coach) ; la
+  première a été retenue, protégée par le même interrupteur que l'étage a.
+  - **Un vrai bug de conception trouvé en écrivant les tests, avant tout
+    câblage** : la première implémentation simulait "l'ennemi ajoute son
+    pire pick à l'équipe" en rejouant `score_against_team()` avec ce
+    candidat ajouté à `team`. Empiriquement **non monotone** : retirer le
+    pire candidat du pool "aveugle" pour le rendre "connu" peut faire
+    remonter la moyenne de ce qu'il en reste, au point de rendre le score
+    final **meilleur** qu'avant l'ajout — l'inverse de ce qu'un pire cas
+    doit garantir.
+  - `src/analysis/one_ply_lookahead.py` (nouveau) : conception corrigée,
+    un terme **additif et strictement monotone**.
+    `worst_case_term()` moyenne les `LOOKAHEAD_TOP_K` (3) pires `delta2`
+    plausibles restants (`filter_valid_matchups`) et l'**ajoute** — jamais
+    ne le substitue — à la contribution des slots ennemis encore inconnus,
+    poids `LOOKAHEAD_WEIGHT` (1.0). min/moyenne d'un sous-ensemble ≤
+    moyenne de l'ensemble : ce terme ne peut par construction qu'égaler ou
+    dégrader le score, jamais l'améliorer (vérifié par test).
+  - Coût nul en requêtes DB supplémentaires (tout vient de
+    `available_matchups`, déjà chargé pour l'étage a) — contrairement à la
+    conception initiale, qui aurait rejoué `score_against_team()` (donc
+    `get_matchup_delta2`) plusieurs fois par candidat. S'applique partout
+    où `score_against_team()` est appelé (Live Coach, Team Builder,
+    Tournament Coach), pas seulement au Live Coach.
+  - `ScoringGateMixin._blind_slots_contribution()` (`src/analysis/
+    lane_restante.py`) centralise désormais l'appel aux étages a et b
+    depuis `score_against_team()`, qui repassait à 517 lignes (plafond
+    500) avec l'ajout inline de l'étage b — extraction dans le mixin
+    existant plutôt que nouveau fichier.
+  - 7 tests ajoutés (`tests/test_one_ply_lookahead.py`), dont un test de
+    bout en bout verrouillant la monotonie sur `score_against_team()`.
+    1258 tests passent au total (était 1251).
+
+- **SPEC-11 (étage a) — pondération par lane restante** (@pj35, 2026-09-06) —
+  `ChampionScorer.score_against_team()` (`src/analysis/scoring.py`) diluait
+  chaque pick ennemi encore inconnu ("blind pick") avec une moyenne neutre,
+  sans jamais tenir compte du fait qu'un de ces slots deviendra, en fin de
+  draft, l'adversaire de notre lane — le risque des lanes ennemies pas
+  encore pickées n'entrait nulle part dans le calcul, seul le board visible
+  était pondéré par proximité de lane (`_lane_weight()`,
+  SAME_LANE_WEIGHT/OTHER_LANE_WEIGHT).
+  - `src/analysis/lane_restante.py` (nouveau) : `blind_pick_contribution()`
+    isole, parmi les slots encore ouverts, celui qui représente
+    statistiquement le futur adversaire direct — pondéré `SAME_LANE_WEIGHT`
+    et estimé par une moyenne de `delta2` pondérée en plus par la
+    plausibilité de chaque candidat sur cette lane
+    (`champion_lanes.share`, plancher `EPSILON` comme dans
+    `role_inference.py`). Les autres slots gardent le calcul inchangé.
+  - **Garde-fou runtime plutôt qu'attente manuelle** : `is_enabled(db)`
+    n'active ce calcul qu'à partir de `analysis_config.
+    MIN_ROWS_FOR_CALIBRATION` (30) prédictions labellisées — sous ce seuil,
+    comportement bit-à-bit identique à avant (vérifié par test). Décision
+    explicite de @pj35 : implémenter tout de suite plutôt que d'attendre la
+    calibration complète du modèle (K_MATCHUP/K_SYNERGY), révisant la
+    séquence initialement documentée dans SPEC-11 — voir ce document §3bis
+    pour pourquoi un raffinement à un seul niveau n'est pas exposé au même
+    risque qu'une recherche multi-plis (qui, elle, reste bloquée).
+  - **Traçabilité** : `ChampionScorer.effective_model_version()` /
+    `Assistant.effective_model_version()` suffixent `MODEL_VERSION` en
+    `"<version>+lane-restante"` dès que l'interrupteur est actif ;
+    `src/draft/final_analysis.py` journalise désormais ce libellé plutôt
+    que la constante brute, pour qu'une future calibration ne mélange
+    jamais les deux régimes de scoring.
+  - `Database.get_lane_distributions_by_name()` (nouveau, dans
+    `src/repositories/champions.py`) : mêmes données que
+    `get_all_champion_lane_distributions()` (avec son repli sur le volume
+    de matchups), réindexées par nom de champion en minuscules — chargées
+    une seule fois par instance de `ChampionScorer`, jamais requêtées par
+    candidat pendant une draft.
+  - `confidence()` déplacé de `src/analysis/scoring.py` vers
+    `src/analysis/probability.py` (ré-exporté par `scoring.py`, aucun
+    appelant existant à modifier) : `lane_restante.py` en avait besoin, et
+    l'importer depuis `scoring.py` aurait créé un cycle d'import
+    (`scoring.py` importe déjà `lane_restante` — signalé par
+    `pylint` R0401, corrigé plutôt que masqué par un import différé).
+  - Scope volontairement limité au cas où au moins un ennemi est déjà
+    pické — le blind pick total (`team=[]`, ex.
+    `HoverAutomation.get_best_champion_from_pool()`) ne reçoit pas
+    `player_lane`/`enemy_lanes` à cet appel aujourd'hui ; étendre ce
+    chemin est noté comme gap séparé dans SPEC-11 §3bis, non traité ici.
+  - 15 tests ajoutés (`tests/test_lane_restante.py`,
+    `tests/test_scoring_lane_restante.py`, extensions de
+    `tests/test_champion_lanes_table.py`, `tests/test_assistant_
+    integration.py`, `tests/test_draft_monitor_final_scores_display.py`).
+    1251 tests passent au total (était 1236), aucune régression sur la
+    suite `score_against_team` existante (71 tests, comportement identique
+    hors interrupteur actif).
+
 - **SPEC-12 — diagnostic de calibration auto-déclenché dans le Draft Coach**
   (@pj35, 2026-09-06) — le résultat de partie est automatique depuis SPEC-08,
   mais rien n'appelait `scripts/calibrate_model.py` : soit le joueur y pense
