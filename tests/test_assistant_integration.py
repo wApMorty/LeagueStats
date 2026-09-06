@@ -116,3 +116,20 @@ class TestAssistantWithRealDatabase:
         assert champion_id is not None
 
         assistant.close()
+
+
+class TestEffectiveModelVersion:
+    """SPEC-11: Assistant.effective_model_version() delegates to
+    self.scorer, not a second, independently-cached gate check."""
+
+    def test_delegates_to_scorer(self, temp_db):
+        from src.config_constants import analysis_config
+
+        db = Database(str(temp_db))
+        db.connect()
+        assistant = Assistant(db)
+
+        assert assistant.effective_model_version() == assistant.scorer.effective_model_version()
+        assert assistant.effective_model_version() == analysis_config.MODEL_VERSION  # gate off
+
+        assistant.close()

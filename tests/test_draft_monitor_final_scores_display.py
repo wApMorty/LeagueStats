@@ -177,6 +177,10 @@ class TestFinalScoresComparison:
         assert kwargs["ally_lanes"] == {1: "top"}
         assert kwargs["predicted_probability"] == pytest.approx(0.514018, abs=1e-5)
         assert monitor._last_prediction_id == 7
+        # SPEC-11: model_version comes from Assistant.effective_model_version()
+        # (suffixed when lane-restante weighting is active), never the raw
+        # analysis_config.MODEL_VERSION constant directly.
+        assert kwargs["model_version"] == monitor.assistant.effective_model_version()
 
 
 class TestFinalScoresDegradedCases:

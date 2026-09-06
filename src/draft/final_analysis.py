@@ -10,7 +10,7 @@ _last_prediction_id (consumed by the "outcome win/loss" command).
 
 from typing import Dict, List, Optional
 
-from ..config_constants import analysis_config, draft_config
+from ..config_constants import draft_config
 from ..utils.console import clear_console
 
 
@@ -298,7 +298,10 @@ class FinalDraftAnalyzer:
                 enemy_champions=enemy_picks,
                 ally_lanes=ally_lanes,
                 predicted_probability=our_expected / 100.0,
-                model_version=analysis_config.MODEL_VERSION,
+                # SPEC-11 : suffixé par Assistant.effective_model_version()
+                # quand la pondération par lane restante est active, pour
+                # que calibrate_model.py ne mélange jamais les deux régimes.
+                model_version=self.m.assistant.effective_model_version(),
             )
         except Exception as e:
             print(f"[WARNING] Échec de l'enregistrement de la prédiction: {e}")

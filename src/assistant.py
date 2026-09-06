@@ -246,6 +246,14 @@ class Assistant(_TrioFacadeMixin):
             player_lane=player_lane,
         )
 
+    def effective_model_version(self) -> str:
+        """SPEC-11 : analysis_config.MODEL_VERSION, suffixé quand la
+        pondération par lane restante (self.scorer) est active. À utiliser
+        au lieu de la constante brute partout où une prédiction est
+        journalisée, pour que scripts/calibrate_model.py ne mélange jamais
+        les deux régimes de scoring."""
+        return self.scorer.effective_model_version()
+
     def score_with_synergy(
         self,
         matchups: List[tuple],
