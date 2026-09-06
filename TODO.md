@@ -29,7 +29,7 @@ globale 65,5 % → 72,51 %, seuil CI relevé 45 % → 60 %.
 | 2 | **Rendre l'ignorance visible** (champions écartés affichés, seuil de lane 10 % → 5 %) | [SPEC-09](docs/specs/SPEC-09-ignorance-visible.md) | ✅ **Mergée le 2026-09-06** |
 | 3 | **Couverture du chemin critique temps réel** | [SPEC-10](docs/specs/SPEC-10-couverture-chemin-critique.md) | ✅ **Mergée le 2026-09-06** — `pool_selection_ui.py` 2,6 % → 100 %, `lcu_client.py` 18,6 % → 83,7 % |
 | 4 | **Calibration du modèle** | — | ⏳ **En attente de données** — le diagnostic se déclenche tout seul désormais (SPEC-12, mergé le 2026-09-06 : `OutcomeTracker` affiche `[CALIBRATE]` dès 30 prédictions labellisées, puis tous les +20). Tout ajustement de `K_MATCHUP`/`K_SYNERGY`/`SAME_LANE_WEIGHT` reste une décision manuelle, avec bump de `MODEL_VERSION` |
-| 5 | **Évolution du modèle prédictif** (lane restante, puis recherche façon Stockfish) | [SPEC-11](docs/specs/SPEC-11-lane-restante-et-recherche.md) 🔵 | Note de cadrage, non actionable avant le rang 4 |
+| 5 | **Évolution du modèle prédictif** (lane restante + robustesse au pire pick) | [SPEC-11](docs/specs/SPEC-11-lane-restante-et-recherche.md) 🟡 | ✅ **Étages a et b (portée réduite) mergés le 2026-09-06** — le vrai minimax multi-plis reste non actionable |
 | — | Autres features candidates | — | À rouvrir après la calibration, aucune n'est bloquante |
 
 ### Dette signalée par SPEC-10, non corrigée (hors périmètre de la spec — à trier)
@@ -100,17 +100,20 @@ encore mesurer la qualité.*
    résultat réel des parties). L'exécution de `scripts/calibrate_model.py` et l'ajustement de
    `K_MATCHUP`/`K_SYNERGY`/`SAME_LANE_WEIGHT` deviendront possibles à ~30 parties labellisées,
    avec bump obligatoire de `MODEL_VERSION`. **C'est le prochain chantier naturel après SPEC-08.**
-3. **Évolution du modèle prédictif — lane restante, puis recherche façon Stockfish** (@pj35,
-   2026-09-06) — voir [SPEC-11](docs/specs/SPEC-11-lane-restante-et-recherche.md) 🔵 note de
-   cadrage, non actionable avant l'item 2 ci-dessus. Deux étages : (a) pondérer chaque candidat
-   non plus seulement par les ennemis déjà pickés mais par la probabilité des lanes ennemies
-   *encore ouvertes* (`champion_lanes.share` le permet déjà, sans nouveau scrape) ; (b) une
-   recherche minimax sur l'arbre de draft — la draft a l'information parfaite, un ordre de
-   pick/ban connu et une profondeur bornée (~10 picks), ce qui la rend plus tractable qu'il n'y
-   paraît malgré ~170 champions (élagage : pool active côté allié, top-N plausible côté ennemi).
-   Le modèle log-odds actuel est déjà l'équivalent de l'éval statique de Stockfish — ce qui
-   manque, c'est la recherche par-dessus. **Ordre impératif** : chercher profond sur une éval non
-   calibrée amplifierait ses erreurs plutôt que de les corriger.
+3. ~~**Évolution du modèle prédictif — lane restante**~~ → **engagée et mergée le 2026-09-06**
+   (@pj35) — voir [SPEC-11](docs/specs/SPEC-11-lane-restante-et-recherche.md) 🟡. Décision
+   explicite de @pj35 de ne pas attendre l'item 2 : les deux étages sont protégés par le même
+   interrupteur automatique (≥30 prédictions labellisées) plutôt que par une attente manuelle.
+   - **Étage a** (livré) : un candidat n'est plus pondéré que par les ennemis déjà pickés, mais
+     aussi par la probabilité des lanes ennemies *encore ouvertes* (`champion_lanes.share`, sans
+     nouveau scrape).
+   - **Étage b** (livré, portée réduite "1 ply glouton" choisie parmi 3 options) : robustesse face
+     au pire pick ennemi plausible restant, via un terme additif et strictement monotone —
+     **pas** le vrai minimax multi-plis d'origine, qui reste hors périmètre (voir ci-dessous).
+   - **Le vrai minimax multi-plis reste 🔵 non actionable** : ordre de pick/ban de la draft à
+     modéliser, récursion, budget de calcul — tout reste à faire, et attend toujours une
+     calibration réelle (item 2). Une recherche multi-plis compose l'erreur de son évaluation à
+     chaque niveau, contrairement au terme additif de l'étage b qui ne compose rien.
 4. **Intégration sites de draft externes** (DraftLol, etc.) — recherche disponible dans
    `docs/archive/DRAFT_SITES_INTEGRATION_RESEARCH.md` (restaurée le 2026-09-04, contenu d'octobre
    2025 à revalider). Dépend du reverse-engineering du WebSocket DraftLol — spike de 1-2 jours
