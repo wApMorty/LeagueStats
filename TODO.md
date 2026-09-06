@@ -28,7 +28,7 @@ globale 65,5 % → 72,51 %, seuil CI relevé 45 % → 60 %.
 | 1 | **Fermer la boucle de mesure** (résultat de partie automatique via LCU) | [SPEC-08](docs/specs/SPEC-08-boucle-de-mesure.md) | ✅ **Mergée le 2026-09-06** |
 | 2 | **Rendre l'ignorance visible** (champions écartés affichés, seuil de lane 10 % → 5 %) | [SPEC-09](docs/specs/SPEC-09-ignorance-visible.md) | ✅ **Mergée le 2026-09-06** |
 | 3 | **Couverture du chemin critique temps réel** | [SPEC-10](docs/specs/SPEC-10-couverture-chemin-critique.md) | ✅ **Mergée le 2026-09-06** — `pool_selection_ui.py` 2,6 % → 100 %, `lcu_client.py` 18,6 % → 83,7 % |
-| 4 | **Calibration du modèle** | — | ⏳ **Débloquée par SPEC-08, en attente de données** : lancer `python scripts/calibrate_model.py` une fois ~30 parties labellisées (le compteur `[OUTCOME]` affiche la progression à chaque résolution). Tout ajustement de `K_MATCHUP`/`K_SYNERGY`/`SAME_LANE_WEIGHT` exige un bump de `MODEL_VERSION` |
+| 4 | **Calibration du modèle** | — | ⏳ **En attente de données** — le diagnostic se déclenche tout seul désormais (SPEC-12, mergé le 2026-09-06 : `OutcomeTracker` affiche `[CALIBRATE]` dès 30 prédictions labellisées, puis tous les +20). Tout ajustement de `K_MATCHUP`/`K_SYNERGY`/`SAME_LANE_WEIGHT` reste une décision manuelle, avec bump de `MODEL_VERSION` |
 | 5 | **Évolution du modèle prédictif** (lane restante, puis recherche façon Stockfish) | [SPEC-11](docs/specs/SPEC-11-lane-restante-et-recherche.md) 🔵 | Note de cadrage, non actionable avant le rang 4 |
 | — | Autres features candidates | — | À rouvrir après la calibration, aucune n'est bloquante |
 
