@@ -20,12 +20,19 @@ de la spec en une seule passe -- une prédiction avec plusieurs parties
 candidates prend la plus proche, et une partie candidate pour plusieurs
 prédictions revient à la prédiction la plus proche, l'autre restant en
 attente (une donnée fausse est pire qu'une donnée absente).
+
+SPEC-12 : chaque résolution réussie vérifie aussi si le nombre de
+prédictions labellisées vient de franchir un seuil de calibration
+(_maybe_notify_calibration), pour afficher le diagnostic de
+src/draft/calibration_notice.py sans action de l'utilisateur.
 """
 
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+from ..analysis.calibration import fetch_labeled_predictions
 from ..config_constants import analysis_config, draft_config
+from . import calibration_notice
 
 
 class OutcomeTracker:
@@ -73,6 +80,13 @@ class OutcomeTracker:
         # d'ambiguïté de la spec (§2.4) avec un seul tri.
         pairs.sort(key=lambda pair: pair[2])
 
+        # SPEC-12 : mesuré avant la boucle pour détecter un franchissement de
+        # seuil de calibration après coup, sans dépendre de resolved_count
+        # (qui compte toutes les résolutions, pas seulement celles de la
+        # MODEL_VERSION courante).
+        model_version = analysis_config.MODEL_VERSION
+        before_count = len(fetch_labeled_predictions(self.m.assistant.db, model_version))
+
         participants_cache: Dict[int, Dict[int, List[int]]] = {}
         used_prediction_ids: Set[int] = set()
         used_game_ids: Set[int] = set()
@@ -108,6 +122,7 @@ class OutcomeTracker:
 
         if resolved_count:
             self._print_summary(resolved_count)
+            self._maybe_notify_calibration(before_count, model_version)
         return resolved_count
 
     def _temporal_candidates(
@@ -189,3 +204,23 @@ class OutcomeTracker:
             f"· {total_labelled} labellisées au total "
             f"({analysis_config.MIN_ROWS_FOR_CALIBRATION} requises pour calibrer)"
         )
+
+    def _maybe_notify_calibration(self, before_count: int, model_version: str) -> None:
+        """SPEC-12 : affiche le diagnostic de calibration quand ce lot de
+        résolutions vient de franchir MIN_ROWS_FOR_CALIBRATION ou un
+        multiple ultérieur d'AUTO_CALIBRATION_CHECK_INTERVAL.
+
+        Isolé dans son propre try/except : un échec ici ne doit jamais faire
+        perdre le resolved_count déjà acquis (les outcomes sont déjà commit
+        en base à ce stade), ni interrompre l'appelant.
+        """
+        try:
+            after_count = len(fetch_labeled_predictions(self.m.assistant.db, model_version))
+            if not calibration_notice.should_trigger(before_count, after_count):
+                return
+            summary = calibration_notice.format_summary(self.m.assistant.db, model_version)
+            if summary:
+                print("\n" + summary)
+        except Exception as e:
+            if getattr(self.m, "verbose", False):
+                print(f"[WARNING] Échec du diagnostic de calibration automatique: {e}")

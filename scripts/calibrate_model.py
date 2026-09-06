@@ -1,8 +1,9 @@
 """Calibration diagnostic for the log-odds scoring model (SPEC-05 B7).
 
-Reads the `predictions` table (rows with a known `outcome`, logged via the
-draft coach's manual "outcome win"/"outcome loss" command -- see
-src/draft_monitor.py) and reports:
+Reads the `predictions` table (rows with a known `outcome`, logged
+automatically since SPEC-08 via the LCU match history, or manually via the
+draft coach's "outcome win"/"outcome loss" command -- see
+src/draft/outcome_tracker.py and src/draft_monitor.py) and reports:
 
     1. A calibration curve by decile: among drafts predicted at ~60%, do we
        actually win ~60% of them?
@@ -17,6 +18,10 @@ This is a read-only diagnostic script: it never writes back to the database
 or to config_constants.py. Applying a suggested k_m/k_s is a manual decision
 (and must come with a MODEL_VERSION bump, see config_constants.py).
 
+The core math lives in src/analysis/calibration.py (SPEC-12), shared with
+the live Draft Coach's own auto-triggered summary
+(src/draft/calibration_notice.py) -- this script is a thin CLI wrapper.
+
 USAGE:
     python scripts/calibrate_model.py
     python scripts/calibrate_model.py --db-path data/db.db
@@ -24,95 +29,21 @@ USAGE:
 """
 
 import argparse
-import math
 import sys
 from pathlib import Path
-from typing import List, Tuple
 
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+from src.analysis.calibration import (
+    brier_score,
+    calibration_curve,
+    fetch_labeled_predictions,
+    suggest_scale,
+)
 from src.config import config
 from src.config_constants import analysis_config
 from src.db import Database
-
-Row = Tuple[float, int]  # (predicted_probability, outcome)
-
-
-def _fetch_labeled_predictions(db: Database, model_version: str = None) -> List[Row]:
-    """Rows with a known outcome, optionally restricted to one model_version
-    (SPEC-05 §7: mixing model versions makes calibration meaningless)."""
-    cursor = db.connection.cursor()
-    if model_version:
-        cursor.execute(
-            "SELECT predicted_probability, outcome FROM predictions "
-            "WHERE outcome IS NOT NULL AND model_version = ?",
-            (model_version,),
-        )
-    else:
-        cursor.execute(
-            "SELECT predicted_probability, outcome FROM predictions WHERE outcome IS NOT NULL"
-        )
-    return cursor.fetchall()
-
-
-def _calibration_curve(rows: List[Row]) -> str:
-    """Bucket predictions into 10 decile buckets, predicted vs observed win rate."""
-    buckets: List[List[Row]] = [[] for _ in range(10)]
-    for predicted, outcome in rows:
-        idx = min(int(predicted * 10), 9)
-        buckets[idx].append((predicted, outcome))
-
-    lines = []
-    for i, bucket in enumerate(buckets):
-        lo, hi = i * 10, (i + 1) * 10
-        if not bucket:
-            lines.append(f"  [{lo:3d}-{hi:3d}%[  n=0")
-            continue
-        mean_predicted = sum(p for p, _ in bucket) / len(bucket)
-        observed = sum(o for _, o in bucket) / len(bucket)
-        lines.append(
-            f"  [{lo:3d}-{hi:3d}%[  n={len(bucket):4d}  "
-            f"predicted={mean_predicted * 100:5.1f}%  observed={observed * 100:5.1f}%"
-        )
-    return "\n".join(lines)
-
-
-def _brier_score(rows: List[Row]) -> float:
-    """Mean((predicted_probability - outcome)^2). 0 = perfect, 0.25 = always predicting 50%."""
-    return sum((p - o) ** 2 for p, o in rows) / len(rows)
-
-
-def _logit(p: float) -> float:
-    p = min(max(p, 1e-6), 1 - 1e-6)
-    return math.log(p / (1 - p))
-
-
-def _sigmoid(x: float) -> float:
-    return 1.0 / (1.0 + math.exp(-x))
-
-
-def _suggest_scale(rows: List[Row], learning_rate: float = 0.1, iterations: int = 500) -> float:
-    """Hand-rolled 1-parameter logistic recalibration (Platt scaling, no
-    intercept -- our model is already centered at logit=0 for an even draft):
-    finds the scale `s` maximizing the log-likelihood of the observed
-    outcomes under `P = sigmoid(s * logit(predicted_probability))`.
-
-    Plain gradient ascent in pure Python -- no numpy/scipy/sklearn, per
-    SPEC-05 section 8 ("la régression logistique de calibration se fait sur
-    2 paramètres, à la main ... aucune dépendance nouvelle"). `s < 1` means
-    the model is currently too confident (predictions too far from 50%);
-    `s > 1` means it's too timid.
-    """
-    logits = [_logit(p) for p, _ in rows]
-    outcomes = [o for _, o in rows]
-    n = len(rows)
-
-    scale = 1.0
-    for _ in range(iterations):
-        gradient = sum((y - _sigmoid(scale * x)) * x for x, y in zip(logits, outcomes)) / n
-        scale += learning_rate * gradient
-    return scale
 
 
 def _parse_args() -> argparse.Namespace:
@@ -140,7 +71,7 @@ def main() -> None:
     db.connect()
     try:
         model_version = None if args.all_versions else analysis_config.MODEL_VERSION
-        rows = _fetch_labeled_predictions(db, model_version)
+        rows = fetch_labeled_predictions(db, model_version)
     finally:
         db.close()
 
@@ -151,19 +82,20 @@ def main() -> None:
         print(
             f"[CALIBRATE] Not enough data yet "
             f"({len(rows)} < {analysis_config.MIN_ROWS_FOR_CALIBRATION}). "
-            "Play more games and log outcomes with 'outcome win'/'outcome loss' during "
-            "the draft coach session before trusting anything below -- this is a "
-            "diagnostic script, not a source of truth on a handful of games."
+            "Play more games before trusting anything below -- outcomes are now logged "
+            "automatically (SPEC-08), or manually with 'outcome win'/'outcome loss' during "
+            "the draft coach session; this is a diagnostic script, not a source of truth "
+            "on a handful of games."
         )
         return
 
     print("\n[CALIBRATE] Calibration curve (predicted vs observed win rate, by decile):")
-    print(_calibration_curve(rows))
+    print(calibration_curve(rows))
 
-    brier = _brier_score(rows)
+    brier = brier_score(rows)
     print(f"\n[CALIBRATE] Brier score: {brier:.4f} (0 = perfect, 0.25 = always predicting 50%)")
 
-    scale = _suggest_scale(rows)
+    scale = suggest_scale(rows)
     print(f"\n[CALIBRATE] Suggested log-odds scale factor: {scale:.3f}")
     if abs(scale - 1.0) < 0.05:
         print("[CALIBRATE] Close to 1.0 -- current k_m/k_s look reasonably calibrated.")

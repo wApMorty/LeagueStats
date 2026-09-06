@@ -161,6 +161,48 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Ajouts
 
+- **SPEC-12 — diagnostic de calibration auto-déclenché dans le Draft Coach**
+  (@pj35, 2026-09-06) — le résultat de partie est automatique depuis SPEC-08,
+  mais rien n'appelait `scripts/calibrate_model.py` : soit le joueur y pense
+  lui-même, soit personne. Une exécution à horaire fixe (Task Scheduler)
+  aurait tourné à vide des semaines avant les 30 premières parties puis
+  répété un rappel identique après chaque partie une fois le seuil franchi —
+  le mauvais mécanisme pour un diagnostic dont la valeur dépend du volume de
+  données, pas du calendrier. `OutcomeTracker` connaît déjà, à chaque
+  résolution, le nombre de prédictions labellisées : c'est le point de
+  déclenchement naturel.
+  - `src/analysis/calibration.py` (nouveau) : extraction des fonctions pures
+    de `scripts/calibrate_model.py` (courbe de calibration par décile, score
+    de Brier, facteur d'échelle suggéré par régression de Platt à un
+    paramètre) — plus aucune duplication entre le script CLI et le Draft
+    Coach. Comportement du CLI inchangé (vérifié bout en bout sur une base
+    seedée), toujours en anglais et toujours en lecture seule.
+  - `src/draft/calibration_notice.py` (nouveau) : `should_trigger(before,
+    after)` détecte un franchissement de `MIN_ROWS_FOR_CALIBRATION` ou d'un
+    multiple ultérieur de la nouvelle constante
+    `AUTO_CALIBRATION_CHECK_INTERVAL` (20) — un seul déclenchement même si un
+    rattrapage au démarrage résout plusieurs parties d'un coup et saute
+    plusieurs seuils. `format_summary()` compose la même math en français,
+    au format `[CALIBRATE]` de la console du Live Coach (distinct du script
+    CLI, resté en anglais — pas d'i18n partagée pour deux publics
+    différents).
+  - `OutcomeTracker._maybe_notify_calibration()` (`src/draft/
+    outcome_tracker.py`) : appelé uniquement quand au moins une prédiction a
+    été résolue dans le lot, dans son propre `try/except` — un échec ici ne
+    doit jamais faire perdre le `resolved_count` déjà acquis (les outcomes
+    sont déjà commit en base à ce stade) ni interrompre le Draft Coach.
+  - Diagnostic en lecture seule comme le script CLI : aucun poids
+    (`K_MATCHUP`/`K_SYNERGY`/`SAME_LANE_WEIGHT`) n'est modifié
+    automatiquement — appliquer un ajustement suggéré reste une décision
+    manuelle avec bump de `MODEL_VERSION`, choix délibéré (cf. SPEC-08,
+    « une correction confiante peut être une correction fausse » sous ~30
+    parties).
+  - 30 tests ajoutés (`tests/test_analysis_calibration.py`,
+    `tests/test_calibration_notice.py`,
+    `tests/test_outcome_tracker_calibration.py`), hermétiques (fixture `db`
+    réelle sur `temp_db`, jamais `data/db.db`). 1236 tests passent au total
+    (était 1206).
+
 - **SPEC-09 (E5) — volume de games affiché hors Live Coach** — le Live Coach
   affiche le volume derrière chaque recommandation (`· 91 696 games`,
   `recommendations.py`) ; les autres écrans n'affichaient aucun indicateur
