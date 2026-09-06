@@ -1,6 +1,6 @@
 """Scoring algorithms for champion matchups and team compositions."""
 
-from typing import Dict, List, Optional, Union
+from typing import List, Optional, Union
 import math
 
 from ..db import Database
@@ -272,24 +272,9 @@ class ChampionScorer(lane_restante.ScoringGateMixin):
                 available_matchups = [
                     m for m in remaining_matchups if m.enemy_name.lower() not in banned_lower
                 ]
-            if self._is_lane_restante_enabled():
-                # SPEC-11 : un des slots encore ouverts deviendra, en fin de
-                # draft, l'adversaire de notre lane -- estimé par une
-                # moyenne conditionnée sur la plausibilité de chaque
-                # candidat pour cette lane plutôt que dilué dans la moyenne
-                # neutre des autres slots inconnus.
-                delta2_contribution, weight_contribution = lane_restante.blind_pick_contribution(
-                    self,
-                    available_matchups,
-                    blind_picks,
-                    player_lane,
-                    set(enemy_lanes.values()) if enemy_lanes else set(),
-                    self._get_lane_distributions_by_name(),
-                )
-            else:
-                avg_delta2_val = self.avg_delta2(available_matchups)
-                delta2_contribution = blind_picks * avg_delta2_val
-                weight_contribution = float(blind_picks)
+            delta2_contribution, weight_contribution = self._blind_slots_contribution(
+                available_matchups, blind_picks, player_lane, enemy_lanes
+            )
             total_delta2 += delta2_contribution
             matchup_count += weight_contribution
 

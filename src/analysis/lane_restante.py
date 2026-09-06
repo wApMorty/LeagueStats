@@ -30,6 +30,7 @@ from typing import Dict, List, Optional, Set, Tuple
 
 from ..config_constants import analysis_config, role_inference_config
 from ..models import Matchup
+from . import one_ply_lookahead
 from .probability import confidence
 
 
@@ -78,6 +79,38 @@ class ScoringGateMixin:
         if self._is_lane_restante_enabled():
             return f"{base}+lane-restante"
         return base
+
+    def _blind_slots_contribution(
+        self,
+        available_matchups: List[Matchup],
+        blind_picks: int,
+        player_lane: Optional[str],
+        enemy_lanes: Optional[dict],
+    ) -> Tuple[float, float]:
+        """(delta2, poids) pour les `blind_picks` slots ennemis encore
+        inconnus, appelé depuis ChampionScorer.score_against_team().
+
+        Sous le garde-fou : comportement pré-SPEC-11 inchangé (moyenne
+        neutre, poids 1.0/slot). Au-dessus : étage a (blind_pick_
+        contribution, ci-dessous) plus étage b (one_ply_lookahead.
+        worst_case_term, additif et strictement monotone -- jamais une
+        dégradation du score en pire cas ne peut l'améliorer)."""
+        if not self._is_lane_restante_enabled():
+            avg_delta2_val = self.avg_delta2(available_matchups)
+            return blind_picks * avg_delta2_val, float(blind_picks)
+
+        total_delta2, total_weight = blind_pick_contribution(
+            self,
+            available_matchups,
+            blind_picks,
+            player_lane,
+            set(enemy_lanes.values()) if enemy_lanes else set(),
+            self._get_lane_distributions_by_name(),
+        )
+        worst_delta2, worst_weight = one_ply_lookahead.worst_case_term(
+            self, available_matchups, analysis_config.LOOKAHEAD_TOP_K
+        )
+        return total_delta2 + worst_delta2 * worst_weight, total_weight + worst_weight
 
 
 def blind_pick_contribution(
