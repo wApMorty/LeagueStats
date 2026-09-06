@@ -41,6 +41,45 @@ def is_enabled(db) -> bool:
     return db.count_labelled_predictions() >= analysis_config.MIN_ROWS_FOR_CALIBRATION
 
 
+class ScoringGateMixin:
+    """Mixin pour ChampionScorer : le garde-fou SPEC-11 et son cache, plus
+    l'étiquetage MODEL_VERSION qu'il pilote.
+
+    Extrait de src/analysis/scoring.py (dette de code, ce fichier a franchi
+    les 500 lignes avec l'ajout de SPEC-11) — concern autonome, aucune autre
+    méthode de ChampionScorer ne touche directement ces attributs.
+    """
+
+    def _init_lane_restante_cache(self) -> None:
+        # Calculés au premier besoin puis mémorisés pour la durée de vie de
+        # l'instance (une par session Draft Coach / par appel Team Builder,
+        # cf. Assistant._init_components) -- évite une requête de comptage
+        # par candidat scoré et garantit qu'une draft ne change pas de
+        # régime de scoring en cours de route.
+        self._lane_restante_enabled: Optional[bool] = None
+        self._lane_distributions_by_name: Optional[Dict[str, Dict[str, float]]] = None
+
+    def _is_lane_restante_enabled(self) -> bool:
+        if self._lane_restante_enabled is None:
+            self._lane_restante_enabled = is_enabled(self.db)
+        return self._lane_restante_enabled
+
+    def _get_lane_distributions_by_name(self) -> Dict[str, Dict[str, float]]:
+        if self._lane_distributions_by_name is None:
+            self._lane_distributions_by_name = self.db.get_lane_distributions_by_name()
+        return self._lane_distributions_by_name
+
+    def effective_model_version(self) -> str:
+        """SPEC-11 : suffixe analysis_config.MODEL_VERSION quand la
+        pondération par lane restante est active, pour que
+        scripts/calibrate_model.py ne mélange jamais les deux régimes de
+        scoring dans une même analyse de calibration."""
+        base = analysis_config.MODEL_VERSION
+        if self._is_lane_restante_enabled():
+            return f"{base}+lane-restante"
+        return base
+
+
 def blind_pick_contribution(
     scorer,
     available_matchups: List[Matchup],

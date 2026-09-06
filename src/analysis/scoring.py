@@ -29,7 +29,7 @@ def estimate_win_probability(individual_winrates: List[float]) -> float:
     return sigmoid(logit_sum)
 
 
-class ChampionScorer:
+class ChampionScorer(lane_restante.ScoringGateMixin):
     """Handles scoring calculations for champion matchups and team compositions."""
 
     def __init__(self, db: Database, verbose: bool = False):
@@ -42,13 +42,7 @@ class ChampionScorer:
         """
         self.db = db
         self.verbose = verbose
-        # SPEC-11 : calculés au premier besoin puis mémorisés pour la durée
-        # de vie de l'instance (une par session Draft Coach / par appel
-        # Team Builder, cf. Assistant._init_components) -- évite une requête
-        # de comptage par candidat scoré et garantit qu'une draft ne change
-        # pas de régime de scoring en cours de route.
-        self._lane_restante_enabled: Optional[bool] = None
-        self._lane_distributions_by_name: Optional[Dict[str, Dict[str, float]]] = None
+        self._init_lane_restante_cache()
 
     def filter_valid_matchups(self, matchups: List[Matchup]) -> List[Matchup]:
         """
@@ -147,26 +141,6 @@ class ChampionScorer:
             terms — see src/analysis/probability.py).
         """
         return winrate_points_to_logit(delta2 * analysis_config.K_MATCHUP)
-
-    def _is_lane_restante_enabled(self) -> bool:
-        if self._lane_restante_enabled is None:
-            self._lane_restante_enabled = lane_restante.is_enabled(self.db)
-        return self._lane_restante_enabled
-
-    def _get_lane_distributions_by_name(self) -> Dict[str, Dict[str, float]]:
-        if self._lane_distributions_by_name is None:
-            self._lane_distributions_by_name = self.db.get_lane_distributions_by_name()
-        return self._lane_distributions_by_name
-
-    def effective_model_version(self) -> str:
-        """SPEC-11 : suffixe analysis_config.MODEL_VERSION quand la
-        pondération par lane restante est active, pour que
-        scripts/calibrate_model.py ne mélange jamais les deux régimes de
-        scoring dans une même analyse de calibration."""
-        base = analysis_config.MODEL_VERSION
-        if self._is_lane_restante_enabled():
-            return f"{base}+lane-restante"
-        return base
 
     def _lane_weight(
         self, enemy_name: str, enemy_lanes: Optional[dict], player_lane: Optional[str]
