@@ -349,3 +349,21 @@ class ChampionsRepository:
                 }
 
         return distributions
+
+    def get_lane_distributions_by_name(self) -> Dict[str, Dict[str, float]]:
+        """Same data as get_all_champion_lane_distributions(), keyed by
+        lowercased champion name instead of id (SPEC-11).
+
+        src/analysis/lane_restante.py only has champion names available
+        (Matchup.enemy_name), not ids, and a live draft scores many candidate
+        champions per recommendation refresh — a per-matchup id lookup would
+        mean one extra query per candidate. Reuses the same bulk query and
+        matchups-volume fallback rather than duplicating that logic.
+        """
+        by_id = self.get_all_champion_lane_distributions()
+        names = self.get_all_champion_names()
+        return {
+            names[champion_id].lower(): distribution
+            for champion_id, distribution in by_id.items()
+            if champion_id in names
+        }
