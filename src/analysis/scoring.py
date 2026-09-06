@@ -1,29 +1,13 @@
 """Scoring algorithms for champion matchups and team compositions."""
 
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 import math
 
 from ..db import Database
 from ..config_constants import analysis_config, role_inference_config
 from ..models import Matchup
-from .probability import sigmoid, winrate_points_to_logit
-
-
-def confidence(games: int) -> float:
-    """Statistical confidence weight for a sample of `games` games (SPEC-05 B6).
-
-    Composes with `pickrate` (which predicts the opponent's pick, and stays
-    untouched) rather than replacing it: the product `pickrate * confidence(games)`
-    is the weight to use wherever matchups/synergies are averaged.
-
-    Args:
-        games: Number of games backing the sample.
-
-    Returns:
-        A value in [0, 1) that tends to 1 as games grows large and to 0 as
-        games tends to 0 (half-weight at games == CONFIDENCE_K).
-    """
-    return games / (games + analysis_config.CONFIDENCE_K)
+from . import lane_restante
+from .probability import confidence, sigmoid, winrate_points_to_logit
 
 
 def estimate_win_probability(individual_winrates: List[float]) -> float:
@@ -58,6 +42,13 @@ class ChampionScorer:
         """
         self.db = db
         self.verbose = verbose
+        # SPEC-11 : calculés au premier besoin puis mémorisés pour la durée
+        # de vie de l'instance (une par session Draft Coach / par appel
+        # Team Builder, cf. Assistant._init_components) -- évite une requête
+        # de comptage par candidat scoré et garantit qu'une draft ne change
+        # pas de régime de scoring en cours de route.
+        self._lane_restante_enabled: Optional[bool] = None
+        self._lane_distributions_by_name: Optional[Dict[str, Dict[str, float]]] = None
 
     def filter_valid_matchups(self, matchups: List[Matchup]) -> List[Matchup]:
         """
@@ -156,6 +147,26 @@ class ChampionScorer:
             terms — see src/analysis/probability.py).
         """
         return winrate_points_to_logit(delta2 * analysis_config.K_MATCHUP)
+
+    def _is_lane_restante_enabled(self) -> bool:
+        if self._lane_restante_enabled is None:
+            self._lane_restante_enabled = lane_restante.is_enabled(self.db)
+        return self._lane_restante_enabled
+
+    def _get_lane_distributions_by_name(self) -> Dict[str, Dict[str, float]]:
+        if self._lane_distributions_by_name is None:
+            self._lane_distributions_by_name = self.db.get_lane_distributions_by_name()
+        return self._lane_distributions_by_name
+
+    def effective_model_version(self) -> str:
+        """SPEC-11 : suffixe analysis_config.MODEL_VERSION quand la
+        pondération par lane restante est active, pour que
+        scripts/calibrate_model.py ne mélange jamais les deux régimes de
+        scoring dans une même analyse de calibration."""
+        base = analysis_config.MODEL_VERSION
+        if self._is_lane_restante_enabled():
+            return f"{base}+lane-restante"
+        return base
 
     def _lane_weight(
         self, enemy_name: str, enemy_lanes: Optional[dict], player_lane: Optional[str]
@@ -287,9 +298,26 @@ class ChampionScorer:
                 available_matchups = [
                     m for m in remaining_matchups if m.enemy_name.lower() not in banned_lower
                 ]
-            avg_delta2_val = self.avg_delta2(available_matchups)
-            total_delta2 += blind_picks * avg_delta2_val
-            matchup_count += blind_picks
+            if self._is_lane_restante_enabled():
+                # SPEC-11 : un des slots encore ouverts deviendra, en fin de
+                # draft, l'adversaire de notre lane -- estimé par une
+                # moyenne conditionnée sur la plausibilité de chaque
+                # candidat pour cette lane plutôt que dilué dans la moyenne
+                # neutre des autres slots inconnus.
+                delta2_contribution, weight_contribution = lane_restante.blind_pick_contribution(
+                    self,
+                    available_matchups,
+                    blind_picks,
+                    player_lane,
+                    set(enemy_lanes.values()) if enemy_lanes else set(),
+                    self._get_lane_distributions_by_name(),
+                )
+            else:
+                avg_delta2_val = self.avg_delta2(available_matchups)
+                delta2_contribution = blind_picks * avg_delta2_val
+                weight_contribution = float(blind_picks)
+            total_delta2 += delta2_contribution
+            matchup_count += weight_contribution
 
         # Convert average delta2 to advantage
         if matchup_count == 0:

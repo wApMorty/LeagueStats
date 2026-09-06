@@ -40,3 +40,26 @@ def winrate_points_to_logit(points: float) -> float:
     (`analysis_config.LOGIT_PER_WINRATE_POINT`).
     """
     return points * analysis_config.LOGIT_PER_WINRATE_POINT
+
+
+def confidence(games: int) -> float:
+    """Statistical confidence weight for a sample of `games` games (SPEC-05 B6).
+
+    Moved from src/analysis/scoring.py (SPEC-11): src/analysis/lane_restante.py
+    needs it too, and importing it from scoring.py there would create a
+    scoring<->lane_restante import cycle (scoring.py already imports
+    lane_restante at module level). Re-exported by scoring.py for its
+    existing callers (src/analysis/champion_scores.py, tests/).
+
+    Composes with `pickrate` (which predicts the opponent's pick, and stays
+    untouched) rather than replacing it: the product `pickrate * confidence(games)`
+    is the weight to use wherever matchups/synergies are averaged.
+
+    Args:
+        games: Number of games backing the sample.
+
+    Returns:
+        A value in [0, 1) that tends to 1 as games grows large and to 0 as
+        games tends to 0 (half-weight at games == CONFIDENCE_K).
+    """
+    return games / (games + analysis_config.CONFIDENCE_K)
