@@ -161,6 +161,43 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Ajouts
 
+- **SPEC-11 (étage b, "1 ply glouton") — robustesse face au pire pick
+  ennemi plausible** (@pj35, 2026-09-06) — `score_against_team()` note un
+  candidat contre le board *actuel* uniquement, jamais contre ce que
+  l'ennemi pourrait encore jouer. Trois portées proposées (1 pli glouton /
+  vrai minimax multi-plis / outil à la demande isolé du Live Coach) ; la
+  première a été retenue, protégée par le même interrupteur que l'étage a.
+  - **Un vrai bug de conception trouvé en écrivant les tests, avant tout
+    câblage** : la première implémentation simulait "l'ennemi ajoute son
+    pire pick à l'équipe" en rejouant `score_against_team()` avec ce
+    candidat ajouté à `team`. Empiriquement **non monotone** : retirer le
+    pire candidat du pool "aveugle" pour le rendre "connu" peut faire
+    remonter la moyenne de ce qu'il en reste, au point de rendre le score
+    final **meilleur** qu'avant l'ajout — l'inverse de ce qu'un pire cas
+    doit garantir.
+  - `src/analysis/one_ply_lookahead.py` (nouveau) : conception corrigée,
+    un terme **additif et strictement monotone**.
+    `worst_case_term()` moyenne les `LOOKAHEAD_TOP_K` (3) pires `delta2`
+    plausibles restants (`filter_valid_matchups`) et l'**ajoute** — jamais
+    ne le substitue — à la contribution des slots ennemis encore inconnus,
+    poids `LOOKAHEAD_WEIGHT` (1.0). min/moyenne d'un sous-ensemble ≤
+    moyenne de l'ensemble : ce terme ne peut par construction qu'égaler ou
+    dégrader le score, jamais l'améliorer (vérifié par test).
+  - Coût nul en requêtes DB supplémentaires (tout vient de
+    `available_matchups`, déjà chargé pour l'étage a) — contrairement à la
+    conception initiale, qui aurait rejoué `score_against_team()` (donc
+    `get_matchup_delta2`) plusieurs fois par candidat. S'applique partout
+    où `score_against_team()` est appelé (Live Coach, Team Builder,
+    Tournament Coach), pas seulement au Live Coach.
+  - `ScoringGateMixin._blind_slots_contribution()` (`src/analysis/
+    lane_restante.py`) centralise désormais l'appel aux étages a et b
+    depuis `score_against_team()`, qui repassait à 517 lignes (plafond
+    500) avec l'ajout inline de l'étage b — extraction dans le mixin
+    existant plutôt que nouveau fichier.
+  - 7 tests ajoutés (`tests/test_one_ply_lookahead.py`), dont un test de
+    bout en bout verrouillant la monotonie sur `score_against_team()`.
+    1258 tests passent au total (était 1251).
+
 - **SPEC-11 (étage a) — pondération par lane restante** (@pj35, 2026-09-06) —
   `ChampionScorer.score_against_team()` (`src/analysis/scoring.py`) diluait
   chaque pick ennemi encore inconnu ("blind pick") avec une moyenne neutre,
