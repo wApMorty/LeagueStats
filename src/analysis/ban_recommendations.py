@@ -4,7 +4,7 @@ Extracted from src/assistant.py (SPEC-07 E10, lot 2) : déplacement verbatim,
 aucun changement de comportement.
 """
 
-from typing import Dict, List, Optional
+from typing import Dict, Iterable, List, Optional
 
 from ..config_constants import analysis_config
 from ..db import Database
@@ -18,7 +18,11 @@ class BanRecommender:
         self.verbose = verbose
 
     def get_ban_recommendations(
-        self, champion_pool: List[str], num_bans: int = 5, lane: Optional[str] = None
+        self,
+        champion_pool: List[str],
+        num_bans: int = 5,
+        lane: Optional[str] = None,
+        exclude_champions: Optional[Iterable[str]] = None,
     ) -> List[tuple]:
         """
         Get ban recommendations against a specific champion pool using reverse lookup.
@@ -34,12 +38,21 @@ class BanRecommender:
                   pool mono-rôle (SPEC-04, pool_manager.pool_role_to_lane)
                   doit filtrer sur cette lane pour ne pas noyer le vrai
                   matchup de rôle dans les autres lanes du champion.
+            exclude_champions: Champions déjà indisponibles (bannis ou pickés,
+                  camp allié ou ennemi) à écarter des candidats — invariant de
+                  draft porté ici plutôt que par l'appelant (dette signalée
+                  SPEC-10). Comparaison insensible à la casse. None = pas de
+                  filtrage, comportement inchangé (ex. précalcul hors draft).
 
         Returns:
             List of tuples (enemy_name, threat_score, best_response_delta2,
                            best_response_champion, matchups_count)
             Sorted by threat_score (descending)
         """
+        excluded_lower = (
+            {name.lower() for name in exclude_champions} if exclude_champions else set()
+        )
+
         # Get all potential enemies from database
         all_potential_enemies = set()
         for our_champion in champion_pool:
@@ -49,6 +62,7 @@ class BanRecommender:
                     if (
                         m.pickrate >= analysis_config.MIN_PICKRATE
                         and m.games >= analysis_config.MIN_MATCHUP_GAMES
+                        and m.enemy_name.lower() not in excluded_lower
                     ):
                         all_potential_enemies.add(m.enemy_name)
             except Exception as e:

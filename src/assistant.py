@@ -5,7 +5,7 @@ This is the new modular version that delegates to specialized modules while
 maintaining backward compatibility with the original API.
 """
 
-from typing import Dict, List, Optional
+from typing import Dict, Iterable, List, Optional
 
 from .config import config
 from .config_constants import analysis_config, draft_config
@@ -346,7 +346,11 @@ class Assistant(_TrioFacadeMixin):
     # ==================== Ban Recommendations ====================
 
     def get_ban_recommendations(
-        self, champion_pool: List[str], num_bans: int = 5, lane: Optional[str] = None
+        self,
+        champion_pool: List[str],
+        num_bans: int = 5,
+        lane: Optional[str] = None,
+        exclude_champions: Optional[Iterable[str]] = None,
     ) -> List[tuple]:
         """
         Get ban recommendations against a specific champion pool using reverse lookup.
@@ -359,7 +363,9 @@ class Assistant(_TrioFacadeMixin):
                            best_response_champion, matchups_count)
             Sorted by threat_score (descending)
         """
-        return self.ban_recommender.get_ban_recommendations(champion_pool, num_bans, lane=lane)
+        return self.ban_recommender.get_ban_recommendations(
+            champion_pool, num_bans, lane=lane, exclude_champions=exclude_champions
+        )
 
     def precalculate_pool_bans(
         self, pool_name: str, champion_pool: List[str], lane: Optional[str] = None
