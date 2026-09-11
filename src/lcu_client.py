@@ -122,10 +122,14 @@ class LCUClient(_MatchHistoryMixin):
                             if "--app-port=" in arg:
                                 port = int(arg.split("=")[1])
                             elif "--remoting-auth-token=" in arg:
-                                password = arg.split("=")[1]
-                                # Handle truncated tokens in process list
-                                if password.endswith("..."):
-                                    continue  # Skip truncated, try lockfile instead
+                                token = arg.split("=")[1]
+                                # Windows tronque les lignes de commande trop longues :
+                                # un token qui finit par "..." est invalide, pas un vrai
+                                # mot de passe tronqué qu'on pourrait utiliser tel quel.
+                                if token.endswith("..."):
+                                    password = None
+                                    continue
+                                password = token
 
                         if port and password:
                             base_url = f"https://127.0.0.1:{port}"
