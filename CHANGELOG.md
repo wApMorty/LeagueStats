@@ -18,6 +18,15 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### 🐛 Fix
 
+- **Dette SPEC-10 — `LCUClient` renvoyait un token tronqué au lieu d'échouer
+  proprement** — `_find_credentials_process()` (`src/lcu_client.py`) détectait
+  bien un `--remoting-auth-token=` tronqué par la limite de longueur de ligne
+  de commande de l'OS (suffixe `...`), mais `password` n'était jamais
+  réinitialisé après coup : le token invalide était renvoyé tel quel comme
+  credentials au lieu de faire échouer la méthode proprement. Le test de
+  caractérisation qui figeait ce comportement (SPEC-10) est converti en test
+  de régression.
+
 - **SPEC-09 (E1) — champion sans données écarté silencieusement des
   recommandations** — `DraftRecommender.provide()` (`src/draft/recommendations.py`)
   n'avait pas de branche `else` quand un champion de la pool n'atteignait pas
