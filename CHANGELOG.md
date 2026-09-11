@@ -18,6 +18,19 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### 🐛 Fix
 
+- **Dette SPEC-10 — `BanRecommender` aveugle à l'état de la draft** —
+  `get_ban_recommendations()` (`src/analysis/ban_recommendations.py`) ne
+  savait pas quels champions étaient déjà bannis ou pickés (camp allié ou
+  ennemi) ; la seule protection réelle vivait dans `BanAdvisor.
+  handle_auto_ban_hover()` (`src/draft/ban_advice.py`), et seulement pour les
+  bans, pas les picks. Un nouveau paramètre `exclude_champions` porte
+  désormais l'invariant dans la classe qui produit la recommandation, relayé
+  par `Assistant.get_ban_recommendations()` et alimenté par `BanAdvisor`
+  partout où un `DraftState` est disponible (`handle_auto_ban_hover`,
+  `show_adaptive_ban_recommendations`). Effet de bord positif : si le top
+  candidat précalculé en base s'avère indisponible, le 2e/3e candidat prend
+  le relais au lieu de renoncer à toute recommandation.
+
 - **Dette SPEC-10 — `LCUClient` renvoyait un token tronqué au lieu d'échouer
   proprement** — `_find_credentials_process()` (`src/lcu_client.py`) détectait
   bien un `--remoting-auth-token=` tronqué par la limite de longueur de ligne

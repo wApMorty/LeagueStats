@@ -32,17 +32,16 @@ globale 65,5 % → 72,51 %, seuil CI relevé 45 % → 60 %.
 | 5 | **Évolution du modèle prédictif** (lane restante + robustesse au pire pick) | [SPEC-11](docs/specs/SPEC-11-lane-restante-et-recherche.md) 🟡 | ✅ **Étages a et b (portée réduite) mergés le 2026-09-06** — le vrai minimax multi-plis reste non actionable |
 | — | Autres features candidates | — | À rouvrir après la calibration, aucune n'est bloquante |
 
-### Dette signalée par SPEC-10, non corrigée (hors périmètre de la spec — à trier)
+### Dette signalée par SPEC-10 ✅ Soldée (2026-09-11)
 
-- `LCUClient._find_credentials_process()` (`src/lcu_client.py`) : sur un token tronqué par la
-  limite de longueur de ligne de commande de l'OS, le commentaire annonce un repli sur le
-  lockfile, mais `password` n'est jamais réinitialisé — le token tronqué (donc invalide) est
-  renvoyé tel quel. Edge case rare, mais latent.
-- `BanRecommender.get_ban_recommendations()` (`src/analysis/ban_recommendations.py`) est aveugle
-  à l'état de la draft (bans/picks) : la seule protection réelle contre la recommandation d'un
-  champion déjà banni vit dans `BanAdvisor.handle_auto_ban_hover()`, pas dans `BanRecommender`
-  lui-même. Fonctionne aujourd'hui parce que ce dernier est l'unique appelant côté Live Coach,
-  mais c'est un invariant qui devrait être porté par la classe qui produit la recommandation.
+- [x] `LCUClient._find_credentials_process()` (`src/lcu_client.py`) : token tronqué renvoyé tel
+      quel au lieu d'échouer proprement — `password` réinitialisé à None après détection.
+- [x] `BanRecommender.get_ban_recommendations()` (`src/analysis/ban_recommendations.py`) reçoit un
+      paramètre `exclude_champions` (bans + picks, camp allié et ennemi) — l'invariant vit
+      maintenant dans la classe qui produit la recommandation, relayé par
+      `Assistant.get_ban_recommendations()` et alimenté par `BanAdvisor`
+      (`handle_auto_ban_hover`, `show_adaptive_ban_recommendations`). Les bans précalculés en base
+      (qui ne peuvent pas connaître l'état live) restent filtrés a posteriori côté `BanAdvisor`.
 
 ### Actions manuelles restantes
 
