@@ -171,15 +171,12 @@ class TestFindCredentialsProcess:
         assert creds.port == 6543
         assert creds.password == "abc123"
 
-    def test_truncated_token_is_not_actually_reset(self):
-        """Characterization, not a spec: the inline comment says a truncated
-        token ('...'-suffixed, as truncated by the OS command-line length
-        limit) should be skipped in favor of the lockfile, but the `continue`
-        only skips the rest of that cmdline arg loop -- `password` was
-        already assigned the truncated value and is never reset to None, so
-        it is returned anyway. Documented here as a known discrepancy
-        (SPEC-10 report) rather than silently fixed, since production code
-        changes are out of this spec's scope."""
+    def test_truncated_token_is_rejected_not_returned(self):
+        """Regression (dette signalée SPEC-10) : un token '...'-suffixé, tel que
+        tronqué par la limite de longueur de ligne de commande de l'OS, est
+        invalide -- il ne doit jamais être renvoyé tel quel comme mot de passe.
+        `password` doit être réinitialisé à None pour que cette méthode échoue
+        proprement (None) plutôt que renvoyer des credentials invalides."""
         client = LCUClient()
         proc = Mock()
         proc.info = {
@@ -190,8 +187,7 @@ class TestFindCredentialsProcess:
         with patch("psutil.process_iter", return_value=iter([proc])):
             creds = client._find_credentials_process()
 
-        assert creds is not None
-        assert creds.password == "abc..."
+        assert creds is None
 
     def test_process_scan_error_returns_none(self):
         client = LCUClient()
