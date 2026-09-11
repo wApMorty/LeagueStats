@@ -47,10 +47,8 @@ globale 65,5 % → 72,51 %, seuil CI relevé 45 % → 60 %.
 ### Actions manuelles restantes
 
 - [x] Migration appliquée : `predictions.game_id` (2026-09-05, une fois `lol_coach.py` fermé)
-- [ ] Relancer un scrape complet au nouveau seuil de lane : `python scripts/update_all.py`
-      (~55 min désormais, ~343 combos (champion, lane) attendus contre 283)
-- [ ] Après ce scrape, envisager de relever `MIN_TOTAL_MATCHUPS` (`src/data_quality.py`, laissé à
-      20 000 : plancher toujours valide mais désormais large sous un volume attendu de ~30 k)
+- [x] Scrape complet relancé au nouveau seuil de lane (@pj35, semaine du 2026-09-07) —
+      `MIN_TOTAL_MATCHUPS` laissé tel quel, pas de besoin d'ajustement constaté
 
 ---
 
