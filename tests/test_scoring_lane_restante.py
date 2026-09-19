@@ -8,6 +8,7 @@ version() reflect that, and is the decision cached per ChampionScorer
 instance rather than re-queried on every call.
 """
 
+from src.analysis.lane_restante import effective_model_version
 from src.analysis.scoring import ChampionScorer
 from src.config_constants import analysis_config
 
@@ -119,3 +120,22 @@ class TestGateIsCachedPerInstance:
             ChampionScorer(db, verbose=False).effective_model_version()
             == f"{analysis_config.MODEL_VERSION}+lane-restante"
         )
+
+
+class TestModuleLevelEffectiveModelVersion:
+    """lane_restante.effective_model_version(db) -- used by
+    scripts/calibrate_model.py, which has no ChampionScorer instance to call
+    the method on. Must agree with ScoringGateMixin.effective_model_version()
+    so the script calibrates whatever regime the live scoring path is
+    actually using, without the caller needing to know about the suffix."""
+
+    def test_matches_scorer_below_threshold(self, db, scorer):
+        _label_n_predictions(db, analysis_config.MIN_ROWS_FOR_CALIBRATION - 1)
+
+        assert effective_model_version(db) == scorer.effective_model_version()
+        assert effective_model_version(db) == analysis_config.MODEL_VERSION
+
+    def test_matches_scorer_at_threshold(self, db):
+        _label_n_predictions(db, analysis_config.MIN_ROWS_FOR_CALIBRATION)
+
+        assert effective_model_version(db) == f"{analysis_config.MODEL_VERSION}+lane-restante"

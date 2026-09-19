@@ -41,6 +41,7 @@ from src.analysis.calibration import (
     fetch_labeled_predictions,
     suggest_scale,
 )
+from src.analysis.lane_restante import effective_model_version
 from src.config import config
 from src.config_constants import analysis_config
 from src.db import Database
@@ -58,8 +59,10 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--all-versions",
         action="store_true",
-        help="Don't filter by the current MODEL_VERSION (mixes predictions from "
-        "different model iterations -- only useful to eyeball total row count)",
+        help="Don't filter by the currently active model_version (SPEC-11: this can be "
+        "MODEL_VERSION suffixed with '+lane-restante', not always the raw config value) "
+        "-- mixes predictions from different model iterations, only useful to eyeball "
+        "total row count",
     )
     return parser.parse_args()
 
@@ -70,7 +73,12 @@ def main() -> None:
     db = Database(args.db_path)
     db.connect()
     try:
-        model_version = None if args.all_versions else analysis_config.MODEL_VERSION
+        # SPEC-11 : le régime réellement journalisé peut être suffixé
+        # ("+lane-restante") sans que analysis_config.MODEL_VERSION bouge --
+        # se caler sur la même règle que le jeu (effective_model_version)
+        # plutôt que sur la constante brute, pour calibrer ce qui tourne
+        # vraiment sans avoir à connaître ce détail.
+        model_version = None if args.all_versions else effective_model_version(db)
         rows = fetch_labeled_predictions(db, model_version)
     finally:
         db.close()

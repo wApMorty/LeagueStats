@@ -18,6 +18,17 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### 🐛 Fix
 
+- **`scripts/calibrate_model.py` calibrait le mauvais régime de scoring** —
+  le script filtrait par défaut sur `analysis_config.MODEL_VERSION` (la
+  constante brute), alors que SPEC-11 suffixe la version réellement
+  journalisée en base (`+lane-restante`) dès que le garde-fou s'active. Une
+  fois ce seuil franchi en jeu, le script ignorait silencieusement toutes les
+  prédictions du régime actif et ne rapportait que celles de l'ancien
+  régime. Nouvelle fonction `lane_restante.effective_model_version(db)`
+  (utilisée à la fois par le script et, via `ScoringGateMixin`, par le jeu)
+  pour qu'ils appliquent toujours la même règle sans que l'appelant ait à
+  connaître les suffixes de `model_version`.
+
 - **Dette SPEC-10 — `BanRecommender` aveugle à l'état de la draft** —
   `get_ban_recommendations()` (`src/analysis/ban_recommendations.py`) ne
   savait pas quels champions étaient déjà bannis ou pickés (camp allié ou

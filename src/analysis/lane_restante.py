@@ -42,6 +42,16 @@ def is_enabled(db) -> bool:
     return db.count_labelled_predictions() >= analysis_config.MIN_ROWS_FOR_CALIBRATION
 
 
+def effective_model_version(db) -> str:
+    """analysis_config.MODEL_VERSION, suffixé par la même règle que
+    ScoringGateMixin.effective_model_version() ci-dessous, mais sans passer
+    par une instance de ChampionScorer -- pour que scripts/calibrate_model.py
+    calibre le régime réellement actif sans avoir à connaître les suffixes de
+    model_version."""
+    base = analysis_config.MODEL_VERSION
+    return f"{base}+lane-restante" if is_enabled(db) else base
+
+
 class ScoringGateMixin:
     """Mixin pour ChampionScorer : le garde-fou SPEC-11 et son cache, plus
     l'étiquetage MODEL_VERSION qu'il pilote.
