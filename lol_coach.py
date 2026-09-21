@@ -140,7 +140,6 @@ def main():
                         f"accept={'oui' if saved_prefs.auto_accept_queue else 'non'}, "
                         f"ban-hover={'oui' if saved_prefs.auto_ban_hover else 'non'}, "
                         f"onetricks={'oui' if saved_prefs.open_onetricks else 'non'}, "
-                        f"synergie={saved_prefs.synergy_weight}, "
                         f"pool={saved_prefs.pool_name or 'aucune'}"
                     )
                     resume_choice = (
@@ -153,7 +152,6 @@ def main():
                     auto_accept_queue = saved_prefs.auto_accept_queue
                     auto_ban_hover = saved_prefs.auto_ban_hover
                     open_onetricks = saved_prefs.open_onetricks
-                    synergy_weight = saved_prefs.synergy_weight
                     pool_name = saved_prefs.pool_name
                 else:
                     # Ask about auto-features
@@ -184,7 +182,6 @@ def main():
                         .lower()
                     )
                     open_onetricks = onetricks_choice != "n"  # Oui par défaut sauf 'n' explicite
-                    synergy_weight = None  # redemandé par run_draft_coach
                     pool_name = None  # sélection interactive par run_draft_coach
 
                 run_draft_coach(
@@ -193,7 +190,6 @@ def main():
                     auto_accept_queue=auto_accept_queue,
                     auto_ban_hover=auto_ban_hover,
                     open_onetricks=open_onetricks,
-                    synergy_weight=synergy_weight,
                     pool_name=pool_name,
                 )
 

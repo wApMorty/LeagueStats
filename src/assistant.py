@@ -89,12 +89,13 @@ class Assistant(_TrioFacadeMixin):
     def _init_components(self) -> None:
         """(Re)initialise les composants spécialisés à partir de self.db/self.verbose."""
         self.scorer = ChampionScorer(self._db, verbose=self.verbose)
-        # DraftScorer blends matchup + synergy the same way the Live Coach does
-        # (src/draft_monitor.py). display_name=None is safe here: name-based
-        # callers (calculate_synergy_score_by_names, final_score) never touch it —
-        # only the id-based calculate_synergy_score, unused outside the Live Coach.
+        # Mélange matchup + synergie pour le Team Builder et RecommendationEngine.
+        # Plus « la même chose que le Live Coach » : celui-ci évalue par
+        # game_eval + la recherche depuis SPEC-12, et son propre DraftScorer a
+        # été supprimé avec le curseur synergie/matchup. C'est donc désormais la
+        # seule instance, et DEFAULT_SYNERGY_WEIGHT la seule valeur employée.
         self.draft_scorer = DraftScorer(
-            self, None, draft_config.DEFAULT_SYNERGY_WEIGHT, verbose=self.verbose
+            self, draft_config.DEFAULT_SYNERGY_WEIGHT, verbose=self.verbose
         )
         self.tier_list_gen = TierListGenerator(self._db, self.scorer)
         self.recommender = RecommendationEngine(self._db, self.scorer, self.draft_scorer)

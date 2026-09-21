@@ -4,7 +4,82 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### 🔥 Removal
+
+- **Le curseur synergie/matchup du Live Coach est supprimé** — il était du code
+  mort depuis SPEC-12, sans rapport avec SPEC-13. La chaîne
+  `_prompt_synergy_weight()` → `DraftMonitor.synergy_weight` →
+  `DraftMonitor.scorer` aboutissait à trois façades (`_final_score`,
+  `_calculate_synergy_score`, `_calculate_score_against_team`) qui n'avaient
+  plus aucun appelant : SPEC-12 a routé recommandations et analyse finale vers
+  `GameEvaluator` + `DraftSearch`, qui ne reçoivent jamais `synergy_weight` et
+  utilisent la constante `K_SYNERGY`. L'utilisateur répondait donc à une
+  question à chaque lancement pour un nombre sans effet — y compris sur le
+  Team Builder, qui passe par une **seconde** instance `DraftScorer`
+  (`assistant.py`) construite avec `DEFAULT_SYNERGY_WEIGHT`, jamais avec la
+  valeur saisie.
+- Supprimés avec lui : le champ `synergy_weight` de `user_prefs` (les fichiers
+  existants se rechargent sans erreur, la clé inconnue étant ignorée puis
+  effacée à la sauvegarde suivante), et les deux méthodes de `DraftScorer` par
+  IDs de champion, dont le Live Coach était l'unique appelant — ce qui rend
+  inutile l'injection de `display_name`. `DraftScorer` passe de 155 à 83 lignes.
+- **Non supprimé** : `DEFAULT_SYNERGY_WEIGHT` et `DraftScorer.final_score`
+  restent, pour le seul chemin qui mélange encore les deux scores (Team
+  Builder, `RecommendationEngine`). À 0.5, `final_score` s'y réduit à une
+  addition — le reste de la formule n'existait que pour le curseur.
+
+### 🐛 Fix
+
+- **Le compteur de prédictions labellisées ignorait `model_version`** — juste
+  après le bump SPEC-13, le Live Coach annonçait « 54 labellisées / 30 requises »
+  en additionnant quatre générations de modèle (b7-v1 : 31, +lane-restante : 16,
+  spec12-v1 : 5, spec13-v1 : 2). Le message contredisait
+  `scripts/calibrate_model.py`, qui filtre et aurait refusé de calibrer — mais
+  surtout `lane_restante.is_enabled()` s'appuie sur le même compteur pour
+  activer la pondération SPEC-11 : le garde-fou s'ouvrait sur des parties jouées
+  sous un **autre** modèle, déclarant une éval éprouvée par l'expérience acquise
+  avec une autre. `model_version` est désormais un paramètre **obligatoire**
+  (`None` explicite pour le total) ; c'est l'absence de défaut qui empêche la
+  récidive. Conséquence assumée : la pondération par lane restante se désactive
+  jusqu'à 30 parties sous `spec13-v1`. Régression couverte.
+- **SPEC-13 retombait silencieusement sur `CONFIDENCE_K`** — sans K mesuré en
+  base (pipeline pas encore relancé), le Live Coach tournait sur l'ancien
+  modèle sans rien signaler ; une partie a été jouée dans cette situation en
+  croyant le nouveau shrink actif. `shrink_is_measured()` expose l'information
+  et `DraftMonitor` l'affiche au démarrage de session (SPEC-09, ignorance
+  visible). Le repli lui-même est conservé : il garde le modèle fonctionnel sur
+  une base non migrée.
+
 ### ✨ Feature
+
+- **SPEC-13 — Le shrink des tables de paires est mesuré au lieu d'être deviné** —
+  `CONFIDENCE_K = 500` était une valeur de convention (et sa justification en
+  commentaire, « la médiane de la base est ~1 300 parties », était fausse : la
+  médiane mesurée est 225). Le shrink bayésien optimal vaut
+  `n / (n + C/var_signal)` — exactement la forme de `confidence()` — où
+  `C = 10000·p(1−p)` est la variance binomiale d'un winrate, constante physique
+  mesurée entre 2284 et 2617 sur les cinq lanes indépendamment. Seul
+  `var_signal` dépend de la méta, donc il est ré-estimé sur les données à chaque
+  scrape et stocké dans `db_meta`, plutôt que figé dans une constante.
+  - `src/analysis/shrink.py` (nouveau) — MLE à 1 paramètre par bissection, en
+    Python pur (aucune dépendance nouvelle). La méthode des moments, plus
+    simple, donnait 0.91 à 3.17 selon la lane là où le MLE donne 1.14 à 1.37
+    avec des intervalles bootstrap qui se recouvrent : la variation par lane
+    était du bruit d'estimateur, d'où un K par **type** et non par lane.
+  - K mesurés : **1897** sur les matchups, **6460** sur les synergies (contre
+    500 pour les deux). Les synergies portent 3 à 10× moins de signal que les
+    matchups. À l'échantillon médian, un matchup pèse désormais 3× moins.
+  - `confidence(games, k=None)` — le défaut retombe sur `CONFIDENCE_K`, donc les
+    14 appelants d'avant SPEC-13 sont inchangés. Seul `game_eval.py` (chemin du
+    win chance) passe le K mesuré ; `scoring.py` et la tier list restent sur
+    l'ancien comportement, cf. SPEC-13 §6.
+  - `MODEL_VERSION` → `spec13-v1` : les 53 prédictions en `spec12-v1` ne sont
+    plus mélangeables avec les suivantes.
+  - **Écarté en chemin** : des embeddings de champions appris sur les tables
+    agrégées (l'option « inspirée des NN »). Testé en held-out, le modèle
+    mémorise intégralement le bruit d'échantillonnage — RMSE test 1.98 → 16.15
+    à k=16 sur top — et sous régularisation forte il converge vers « prédire
+    zéro ». L'hypothèse de rang faible est fausse sur cette donnée (SPEC-13 §1).
 
 - **SPEC-12 — Le Live Coach recommande par recherche minimax, plus par delta** —
   le classement des picks ne vient plus d'un score calculé sur la draft telle

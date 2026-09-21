@@ -198,10 +198,16 @@ class OutcomeTracker:
         )
 
     def _print_summary(self, resolved_count: int) -> None:
-        total_labelled = self.m.assistant.db.count_labelled_predictions()
+        # SPEC-13 : compté sous le modèle COURANT. Sans ce filtre, le message
+        # annonçait « 54 labellisées / 30 requises » juste après un bump de
+        # MODEL_VERSION, alors que 2 prédictions seulement relevaient du modèle
+        # en cours — et calibrate_model.py, qui filtre, aurait refusé de
+        # calibrer. Deux sources de vérité qui se contredisaient.
+        model_version = analysis_config.MODEL_VERSION
+        total_labelled = self.m.assistant.db.count_labelled_predictions(model_version)
         print(
             f"[OUTCOME] {resolved_count} prédiction(s) en attente rattrapée(s) "
-            f"· {total_labelled} labellisées au total "
+            f"· {total_labelled} labellisées sous {model_version} "
             f"({analysis_config.MIN_ROWS_FOR_CALIBRATION} requises pour calibrer)"
         )
 

@@ -63,11 +63,7 @@ def state_with_known_lane():
 def test_recommendations_fetch_matchups_scoped_to_player_lane(monitor, state_with_known_lane):
     """Every candidate's matchups must be fetched for the lane being played,
     not aggregated across all lanes (the bug: lane was never passed)."""
-    with (
-        patch.object(monitor, "_calculate_score_against_team", return_value=10.0),
-        patch.object(monitor, "_calculate_synergy_score", return_value=0.0),
-    ):
-        monitor._provide_recommendations(state_with_known_lane)
+    monitor._provide_recommendations(state_with_known_lane)
 
     monitor.assistant.get_matchups_for_draft.assert_called_with("Yasuo", lane="middle")
 
@@ -77,10 +73,6 @@ def test_recommendations_fall_back_to_all_lanes_when_unknown(monitor):
     all-lanes behavior, not a crash or an empty result."""
     state_unknown_lane = DraftState(phase="BAN_PICK", enemy_picks=[64], ally_picks=[])
 
-    with (
-        patch.object(monitor, "_calculate_score_against_team", return_value=10.0),
-        patch.object(monitor, "_calculate_synergy_score", return_value=0.0),
-    ):
-        monitor._provide_recommendations(state_unknown_lane)
+    monitor._provide_recommendations(state_unknown_lane)
 
     monitor.assistant.get_matchups_for_draft.assert_called_with("Yasuo", lane=None)

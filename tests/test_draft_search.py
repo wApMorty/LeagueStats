@@ -28,6 +28,12 @@ class FakeDB:
     def get_all_synergies_bulk(self, lane=None, with_games=False):
         return {}
 
+    def get_meta(self, key):
+        """SPEC-13 : lu par GameEvaluator pour le shrink mesuré. Vide ici, donc
+        repli sur CONFIDENCE_K — la recherche est testée sur son classement,
+        qu'un changement de shrink ne doit pas bouleverser."""
+        return None
+
     def get_all_champion_scores(self, lane="all"):
         # (name, avg_delta2, variance, coverage, peak_impact, volatility, ratio)
         return [

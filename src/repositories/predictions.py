@@ -163,12 +163,30 @@ class PredictionsRepository:
             )
         return pending
 
-    def count_labelled_predictions(self) -> int:
-        """Total number of predictions with a known outcome (SPEC-08 progress
-        counter towards analysis_config.MIN_ROWS_FOR_CALIBRATION)."""
+    def count_labelled_predictions(self, model_version: Optional[str]) -> int:
+        """Predictions with a known outcome under ``model_version`` (SPEC-08
+        progress counter towards analysis_config.MIN_ROWS_FOR_CALIBRATION).
+
+        ``model_version`` est **obligatoire** — passer explicitement None pour
+        compter toutes versions confondues. Ce paramètre n'a pas de défaut
+        justement parce que son absence était le bug : le compteur additionnait
+        les prédictions de quatre générations de modèle (b7-v1, +lane-restante,
+        spec12-v1, spec13-v1), affichait « 54 labellisées / 30 requises » juste
+        après un bump de MODEL_VERSION, et surtout ouvrait le garde-fou
+        ``lane_restante.is_enabled()`` sur des parties jouées sous un AUTRE
+        modèle. Même règle que ``calibration.fetch_labeled_predictions``
+        (SPEC-05 §7 : mélanger les versions rend la mesure vide de sens).
+        """
         try:
             cursor = self.db.connection.cursor()
-            cursor.execute("SELECT COUNT(*) FROM predictions WHERE outcome IS NOT NULL")
+            if model_version is None:
+                cursor.execute("SELECT COUNT(*) FROM predictions WHERE outcome IS NOT NULL")
+            else:
+                cursor.execute(
+                    "SELECT COUNT(*) FROM predictions "
+                    "WHERE outcome IS NOT NULL AND model_version = ?",
+                    (model_version,),
+                )
             row = cursor.fetchone()
             return row[0] if row else 0
         except Exception as e:

@@ -23,6 +23,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from .analysis.shrink import refresh_shrink_k
 from .config import config
 from .config_constants import data_quality_config, scraping_config
 from .constants import normalize_champion_name_for_url
@@ -335,6 +336,15 @@ def run_pipeline(
         # instead), so there was no user-visible impact yet — but the value
         # was wrong and would mislead the first screen that displays it.
         db.set_meta("last_recompute_utc", datetime.now(timezone.utc).isoformat())
+
+        # SPEC-13 : le shrink des tables de paires se mesure sur les données,
+        # pas dans config_constants.py — la variance du signal dépend de la
+        # méta, donc le K aussi. Recalculé ici pour rester synchrone avec la
+        # table qui vient d'être rafraîchie ; une table sans signal mesurable
+        # laisse sa clé inchangée plutôt que d'écrire une valeur inventée.
+        shrink_k = refresh_shrink_k(db)
+        for table, value in shrink_k.items():
+            logger.info("shrink K recalculé: %s -> %.0f", table, value)
 
         # ── 4b. Targeted repair for warning-only gaps (SPEC-01 A4) ──────────
         if completeness_report is not None and completeness_report.warnings:

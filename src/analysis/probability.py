@@ -8,6 +8,7 @@ the main source of bugs in this kind of refactor.
 """
 
 import math
+from typing import Optional
 
 from ..config_constants import analysis_config
 
@@ -42,7 +43,7 @@ def winrate_points_to_logit(points: float) -> float:
     return points * analysis_config.LOGIT_PER_WINRATE_POINT
 
 
-def confidence(games: int) -> float:
+def confidence(games: int, k: Optional[float] = None) -> float:
     """Statistical confidence weight for a sample of `games` games (SPEC-05 B6).
 
     Moved from src/analysis/scoring.py (SPEC-11): src/analysis/lane_restante.py
@@ -57,9 +58,16 @@ def confidence(games: int) -> float:
 
     Args:
         games: Number of games backing the sample.
+        k: Half-weight point. None (défaut) = analysis_config.CONFIDENCE_K,
+            ce qui préserve le comportement des appelants d'avant SPEC-13.
+            src/analysis/game_eval.py passe le K mesuré sur les données
+            (src/analysis/shrink.py) : même formule, mais un demi-poids placé
+            là où la variance du signal le justifie plutôt qu'à 500 par
+            convention.
 
     Returns:
         A value in [0, 1) that tends to 1 as games grows large and to 0 as
-        games tends to 0 (half-weight at games == CONFIDENCE_K).
+        games tends to 0 (half-weight at games == k).
     """
-    return games / (games + analysis_config.CONFIDENCE_K)
+    half_weight = analysis_config.CONFIDENCE_K if k is None else k
+    return games / (games + half_weight)

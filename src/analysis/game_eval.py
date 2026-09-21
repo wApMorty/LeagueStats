@@ -14,7 +14,8 @@ Forme retenue — une seule somme, sur les PAIRES et non sur les champions :
     δ(i,j) = (delta2(i→j) − delta2(j→i)) / 2        antisymétrique : δ(j,i) = −δ(i,j)
     s(a,b) = (syn(a→b) + syn(b→a)) / 2              symétrique
     w(i,j) = SAME_LANE_WEIGHT si même lane, sinon OTHER_LANE_WEIGHT
-    c(i,j) = confidence(games)                      shrink des faibles échantillons
+    c(i,j) = confidence(games, K)                   shrink des faibles échantillons,
+                                                    K mesuré par type (SPEC-13)
 
 Trois propriétés, dont dépend ``src/draft/search.py`` :
 
@@ -36,6 +37,7 @@ from typing import Dict, Iterable, Optional, Sequence, Tuple
 
 from ..config_constants import analysis_config, role_inference_config
 from .probability import confidence, sigmoid, winrate_points_to_logit
+from .shrink import read_shrink_k
 
 # (delta2 pondéré, games) par paire de noms en minuscules.
 PairTable = Dict[Tuple[str, str], Tuple[float, int]]
@@ -57,6 +59,16 @@ class GameEvaluator:
         self.verbose = verbose
         self._matchups: Dict[str, PairTable] = {}
         self._synergies: Dict[str, PairTable] = {}
+        # SPEC-13 : demi-poids mesuré sur les données au dernier scrape, lu une
+        # seule fois — la recherche fait des dizaines de milliers d'appels à
+        # confidence() et ne peut pas relire db_meta à chacun.
+        self._k_matchup = read_shrink_k(db, "matchups")
+        self._k_synergy = read_shrink_k(db, "synergies")
+        if verbose:
+            print(
+                f"[EVAL] Shrink mesuré : matchups K={self._k_matchup:.0f}, "
+                f"synergies K={self._k_synergy:.0f}"
+            )
 
     # ---------- chargement paresseux des tables ----------
 
@@ -123,7 +135,7 @@ class GameEvaluator:
         else:
             return 0.0
 
-        weight = self._lane_weight(lane, enemy_lane) * confidence(games)
+        weight = self._lane_weight(lane, enemy_lane) * confidence(games, self._k_matchup)
         return winrate_points_to_logit(delta2 * analysis_config.K_MATCHUP) * weight
 
     def synergy_logit(self, champion: Placed, ally: Placed) -> float:
@@ -147,7 +159,9 @@ class GameEvaluator:
         else:
             return 0.0
 
-        return winrate_points_to_logit(delta2 * analysis_config.K_SYNERGY) * confidence(games)
+        return winrate_points_to_logit(delta2 * analysis_config.K_SYNERGY) * confidence(
+            games, self._k_synergy
+        )
 
     # ---------- composition ----------
 

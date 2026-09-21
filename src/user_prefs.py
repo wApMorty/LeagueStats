@@ -23,7 +23,6 @@ class UserPrefs:
     auto_accept_queue: bool = False
     auto_ban_hover: bool = False
     open_onetricks: bool = True
-    synergy_weight: float = 0.5
     pool_name: Optional[str] = None
 
 
@@ -37,7 +36,12 @@ def load_user_prefs() -> Optional[UserPrefs]:
 
     Returns:
         None si le fichier est absent, illisible, corrompu, ou contient une
-        valeur hors bornes (ex : synergy_weight hors [0.0, 1.0]).
+        valeur invalide (ex : pool_name qui n'est pas une chaîne).
+
+    Les clés inconnues sont ignorées : un fichier écrit par une version
+    antérieure (qui contenait ``synergy_weight``, supprimé avec le curseur
+    synergie/matchup) se recharge donc sans erreur, et la clé disparaît d'elle-
+    même à la prochaine sauvegarde.
     """
     path = get_user_prefs_path()
     if not os.path.exists(path):
@@ -51,14 +55,11 @@ def load_user_prefs() -> Optional[UserPrefs]:
             auto_accept_queue=bool(data["auto_accept_queue"]),
             auto_ban_hover=bool(data["auto_ban_hover"]),
             open_onetricks=bool(data["open_onetricks"]),
-            synergy_weight=float(data["synergy_weight"]),
             pool_name=data.get("pool_name"),
         )
     except (OSError, ValueError, TypeError, KeyError, json.JSONDecodeError):
         return None
 
-    if not (0.0 <= prefs.synergy_weight <= 1.0):
-        return None
     if prefs.pool_name is not None and not isinstance(prefs.pool_name, str):
         return None
 

@@ -21,9 +21,10 @@ class FakeDB:
     PONDÉRATION (même lane ou non), pas la table consultée.
     """
 
-    def __init__(self, matchups=None, synergies=None):
+    def __init__(self, matchups=None, synergies=None, meta=None):
         self.matchups = matchups or {}
         self.synergies = synergies or {}
+        self.meta = meta or {}
         self.matchup_loads = 0
 
     def get_all_matchups_bulk(self, lane=None, with_games=False):
@@ -32,6 +33,12 @@ class FakeDB:
 
     def get_all_synergies_bulk(self, lane=None, with_games=False):
         return self.synergies
+
+    def get_meta(self, key):
+        """SPEC-13 : GameEvaluator lit le shrink mesuré dans db_meta. Vide par
+        défaut, donc repli sur CONFIDENCE_K — les attentes des tests d'avant
+        SPEC-13 restent valables telles quelles."""
+        return self.meta.get(key)
 
 
 @pytest.fixture
@@ -98,6 +105,35 @@ class TestPairTerms:
         assert abs(quiet.matchup_logit(("Jax", "top"), ("Garen", "top"))) < abs(
             loud.matchup_logit(("Jax", "top"), ("Garen", "top"))
         )
+
+    def test_measured_shrink_from_db_meta_is_honoured(self):
+        """SPEC-13 : le K mesuré au dernier scrape doit réellement atteindre le
+        logit, et un K plus grand doit peser moins. Sans ce test, une régression
+        du câblage db_meta -> GameEvaluator passerait inaperçue : le modèle
+        continuerait de tourner, simplement sur le mauvais shrink."""
+        pair = {("jax", "garen"): (6.0, 1_000)}
+        default = GameEvaluator(FakeDB(matchups=pair))
+        measured = GameEvaluator(FakeDB(matchups=pair, meta={"shrink_k_matchup": "1900"}))
+
+        assert abs(measured.matchup_logit(("Jax", "top"), ("Garen", "top"))) < abs(
+            default.matchup_logit(("Jax", "top"), ("Garen", "top"))
+        )
+
+    def test_synergy_and_matchup_shrinks_are_independent(self):
+        """Les deux types ont des K distincts (mesurés ~1900 et ~4000-20000) :
+        régler l'un ne doit pas déplacer l'autre."""
+        db = FakeDB(
+            matchups={("jax", "garen"): (6.0, 1_000)},
+            synergies={("jax", "lulu"): (6.0, 1_000)},
+            meta={"shrink_k_synergy": "20000"},
+        )
+        evaluator = GameEvaluator(db)
+        baseline = GameEvaluator(FakeDB(matchups={("jax", "garen"): (6.0, 1_000)}))
+
+        assert evaluator.matchup_logit(("Jax", "top"), ("Garen", "top")) == pytest.approx(
+            baseline.matchup_logit(("Jax", "top"), ("Garen", "top"))
+        )
+        assert abs(evaluator.synergy_logit(("Jax", "top"), ("Lulu", "support"))) < 0.01
 
     def test_unknown_pair_contributes_nothing(self, evaluator):
         assert evaluator.matchup_logit(("Inconnu", "top"), ("Autre", "top")) == 0.0

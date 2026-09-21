@@ -16,7 +16,6 @@ class TestSaveLoadRoundTrip:
             auto_accept_queue=False,
             auto_ban_hover=True,
             open_onetricks=True,
-            synergy_weight=0.7,
             pool_name="GRIND",
         )
 
@@ -60,24 +59,34 @@ class TestLoadEdgeCases:
         with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
             assert load_user_prefs() is None
 
-    def test_out_of_bounds_synergy_weight_returns_none(self, tmp_path):
+    def test_a_file_written_before_the_synergy_cursor_removal_still_loads(self, tmp_path):
+        """Le fichier de préférences des utilisateurs existants contient encore
+        `synergy_weight`, supprimé avec le curseur synergie/matchup. Une clé
+        inconnue doit être ignorée, pas faire échouer le chargement — sinon
+        chaque utilisateur se voit reposer toutes les questions après la mise
+        à jour."""
         prefs_file = tmp_path / "user_prefs.json"
         prefs_file.write_text(
             json.dumps(
                 {
-                    "auto_hover": False,
+                    "auto_hover": True,
                     "auto_accept_queue": False,
                     "auto_ban_hover": False,
                     "open_onetricks": True,
-                    "synergy_weight": 1.5,
-                    "pool_name": None,
+                    "synergy_weight": 0.7,
+                    "pool_name": "GRIND",
                 }
             ),
             encoding="utf-8",
         )
 
         with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
-            assert load_user_prefs() is None
+            loaded = load_user_prefs()
+
+        assert loaded is not None
+        assert loaded.auto_hover is True
+        assert loaded.pool_name == "GRIND"
+        assert not hasattr(loaded, "synergy_weight")
 
 
 class TestSaveErrorHandling:

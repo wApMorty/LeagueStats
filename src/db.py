@@ -409,5 +409,5 @@ class Database:
     def get_pending_predictions(self, limit: Optional[int] = None) -> List[Dict]:
         return self._predictions.get_pending_predictions(limit)
 
-    def count_labelled_predictions(self) -> int:
-        return self._predictions.count_labelled_predictions()
+    def count_labelled_predictions(self, model_version: Optional[str]) -> int:
+        return self._predictions.count_labelled_predictions(model_version)

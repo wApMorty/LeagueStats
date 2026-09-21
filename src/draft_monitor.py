@@ -10,13 +10,13 @@ from .assistant import Assistant
 from .utils.display import safe_print
 from .utils.console import clear_console
 from .constants import TOP_SOLOQ_POOL, CHAMPIONS_BY_ROLE
-from .config_constants import draft_config
+from .config_constants import analysis_config, draft_config
 from .draft.state import ChampionAction, DraftState
 from .draft import phases
 from .draft import display
 from .draft.memory_diagnostics import log_memory_usage
 from .analysis.game_eval import GameEvaluator
-from .draft.scoring import DraftScorer
+from .analysis.shrink import shrink_is_measured
 from .draft.search import CandidatePool, DraftSearch
 from .draft.state_parser import DraftStateParser
 from .draft.onetricks import OneTricksWindow
@@ -41,7 +41,6 @@ class DraftMonitor:
         auto_accept_queue: bool = False,
         auto_ban_hover: bool = False,
         open_onetricks: bool = None,
-        synergy_weight: float = None,
         preselected_pool_name: Optional[str] = None,
     ):
         self.lcu = LCUClient(verbose=verbose)
@@ -75,17 +74,24 @@ class DraftMonitor:
             if open_onetricks is not None
             else draft_config.OPEN_ONETRICKS_ON_DRAFT_END
         )
-        self.synergy_weight = (
-            synergy_weight if synergy_weight is not None else draft_config.DEFAULT_SYNERGY_WEIGHT
-        )
-        self.scorer = DraftScorer(
-            self.assistant, self._get_display_name, self.synergy_weight, verbose=verbose
-        )
-        # SPEC-12 : moteur du Live Coach. `scorer` reste en place pour les
-        # autres consommateurs du modèle par delta (tier lists, Tournament
-        # Coach, hover en blind pick) ; seules les recommandations de draft et
-        # l'analyse finale passent par la recherche.
+        # SPEC-12 : moteur du Live Coach. Depuis SPEC-12, c'est le SEUL modèle
+        # du Live Coach — le DraftScorer par delta qui vivait ici n'avait plus
+        # d'appelant (supprimé avec le curseur synergie/matchup). Les autres
+        # consommateurs du modèle par delta (tier lists, Tournament Coach)
+        # passent par Assistant.draft_scorer, qui leur est propre.
         self.evaluator = GameEvaluator(self.assistant.db, verbose=verbose)
+        # SPEC-13 : le shrink se mesure au passage du pipeline. Sans mesure en
+        # base, GameEvaluator retombe sur CONFIDENCE_K — un modèle qui tourne
+        # avec des poids connus pour faux. Le dire ici, une fois par session,
+        # plutôt que de laisser l'utilisateur croire à tort que la mesure est
+        # active (SPEC-09, ignorance visible).
+        if not shrink_is_measured(self.assistant.db):
+            print(
+                "[SHRINK] Poids de confiance non mesurés en base : le modèle tourne sur "
+                f"CONFIDENCE_K={analysis_config.CONFIDENCE_K}. "
+                "Lancez `python scripts/update_all.py --recompute-only` "
+                "depuis la racine du projet pour les calculer."
+            )
         self.search = DraftSearch(
             self.evaluator,
             CandidatePool(self.assistant.db, draft_config.SEARCH_TOP_N, verbose=verbose),
@@ -301,37 +307,6 @@ class DraftMonitor:
     def _get_display_name(self, champion_id: int) -> str:
         """Get display name for champion ID."""
         return self.champion_id_to_name.get(champion_id, f"Champion{champion_id}")
-
-    def _calculate_score_against_team(
-        self,
-        matchups: List[tuple],
-        enemy_team: List[int],
-        champion_name: str,
-        banned_champion_ids: List[int] = None,
-        lane: Optional[str] = None,
-        enemy_lanes: Optional[Dict[str, str]] = None,
-        player_lane: Optional[str] = None,
-    ) -> float:
-        """Calculate score against enemy team using Assistant's method."""
-        return self.scorer.calculate_score_against_team(
-            matchups,
-            enemy_team,
-            champion_name,
-            banned_champion_ids,
-            lane=lane,
-            enemy_lanes=enemy_lanes,
-            player_lane=player_lane,
-        )
-
-    def _calculate_synergy_score(
-        self, champion_name: str, ally_team: List[int], lane: Optional[str] = None
-    ) -> float:
-        """Calculate synergy score as sum of delta2 with allied champions."""
-        return self.scorer.calculate_synergy_score(champion_name, ally_team, lane=lane)
-
-    def _final_score(self, matchup_score: float, synergy_score: float) -> float:
-        """Blend matchup and synergy scores using the configurable synergy weight."""
-        return self.scorer.final_score(matchup_score, synergy_score)
 
     def _parse_draft_state(self, champ_select_data: Dict) -> DraftState:
         """Parse champion select data into DraftState."""

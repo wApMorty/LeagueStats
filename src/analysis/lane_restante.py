@@ -38,8 +38,21 @@ def is_enabled(db) -> bool:
     """True une fois analysis_config.MIN_ROWS_FOR_CALIBRATION prédictions
     labellisées en base -- même bar que scripts/calibrate_model.py, pour
     qu'un changement d'éval non éprouvé ne s'active pas sur un coup de tête
-    ni sur un jeu de données trop mince pour dire s'il aide ou nuit."""
-    return db.count_labelled_predictions() >= analysis_config.MIN_ROWS_FOR_CALIBRATION
+    ni sur un jeu de données trop mince pour dire s'il aide ou nuit.
+
+    Le comptage est filtré sur analysis_config.MODEL_VERSION **brut**, jamais
+    sur effective_model_version() : celle-ci appelle is_enabled(), ce qui
+    boucle. La constante brute est de toute façon la bonne clé depuis SPEC-12,
+    qui journalise MODEL_VERSION sans suffixe (src/draft/final_analysis.py) --
+    le comptage est donc exact ET stable, sans oscillation quand le garde-fou
+    bascule.
+
+    Avant SPEC-13 ce comptage ne filtrait pas du tout : des parties jouées sous
+    b7-v1 rouvraient le garde-fou pour spec13-v1, c'est-à-dire qu'un modèle
+    était déclaré éprouvé par l'expérience acquise sur un autre.
+    """
+    labelled = db.count_labelled_predictions(analysis_config.MODEL_VERSION)
+    return labelled >= analysis_config.MIN_ROWS_FOR_CALIBRATION
 
 
 def effective_model_version(db) -> str:

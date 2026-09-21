@@ -132,8 +132,29 @@ class AnalysisConfig:
     # Lissage de confiance : un matchup à CONFIDENCE_K parties reçoit la moitié
     # du poids d'un matchup infiniment observé. Les petits échantillons sont
     # ramenés vers le neutre plutôt que comptés au même titre que les gros.
-    # Valeur initiale 500 : la médiane de la base est ~1 300 parties.
+    #
+    # SPEC-13 : n'est plus la valeur utilisée par le Live Coach, seulement son
+    # REPLI. Le K réel est mesuré sur les données à chaque scrape par
+    # src/analysis/shrink.py et stocké dans db_meta, par type de table — il
+    # dépend de la méta, une constante ne peut pas le suivre. Mesuré à ~1900
+    # sur les matchups et ~4000-20000 sur les synergies : 500 sous-shrinkait
+    # d'un facteur 4 à 40. (La justification d'origine — « la médiane de la base
+    # est ~1 300 parties » — était fausse de surcroît : la médiane mesurée est
+    # de 225 parties.)
     CONFIDENCE_K: int = 500
+
+    # SPEC-13 : garde-fous sur le K estimé. Un scrape dégénéré (table tronquée,
+    # winrates aberrants) produirait un var_signal absurde ; ces bornes
+    # l'empêchent soit d'annuler le modèle (K énorme = tout shrinké à zéro),
+    # soit de le rendre crédule (K proche de 0 = plus aucun lissage). Larges
+    # exprès : elles attrapent l'accident, pas la dérive de méta.
+    SHRINK_K_MIN: int = 100
+    SHRINK_K_MAX: int = 50000
+
+    # Borne haute de la bissection du MLE, en points de winrate². Le signal
+    # mesuré vaut ~1.4 sur les matchups : 100 est deux ordres de grandeur
+    # au-dessus, donc jamais atteint sur des données saines.
+    SHRINK_MAX_SIGNAL_VARIANCE: float = 100.0
 
     # SPEC-05 B7 : pente du logit autour de p=0.5 (d(logit)/dp = 4 à p=0.5,
     # donc 1 point de winrate ~= 0.04 en log-odds). Remplace le delta2 * 1.0
@@ -155,7 +176,11 @@ class AnalysisConfig:
     # score_against_team par champion. Modèle différent, donc version
     # différente — les 12 prédictions "b7-v1+lane-restante" déjà en base
     # restent lisibles à part, jamais mélangées à celles-ci.
-    MODEL_VERSION: str = "spec12-v1"
+    # SPEC-13 : le shrink des tables de paires n'est plus CONFIDENCE_K=500 mais
+    # un K mesuré par type (cf. src/analysis/shrink.py). Les matchups pèsent ~2x
+    # moins et les synergies ~10x moins qu'en spec12-v1 : même formule, poids
+    # différents, donc prédictions non mélangeables avec les précédentes.
+    MODEL_VERSION: str = "spec13-v1"
 
     # SPEC-05 §4 B7 step 5 : en dessous de ce nombre de prédictions
     # labellisées, une courbe de calibration ou un k_m/k_s suggéré est du
@@ -245,12 +270,19 @@ class DraftConfig:
 
     # Matchup vs synergy blend for the final recommendation score
     DEFAULT_SYNERGY_WEIGHT: float = 0.5  # 0.0 = matchup only, 1.0 = synergy only
-    # Prompted interactively at draft coach startup (see draft_coach_ui.run_draft_coach).
-    # Formula (DraftMonitor._final_score):
+    # Formula (DraftScorer.final_score):
     #   final_score = matchup_score * min(1, 2 * (1 - synergy_weight))
     #               + synergy_score * min(1, 2 * synergy_weight)
     # At the default 0.5, both coefficients clamp to 1, so this is exactly
     # matchup_score + synergy_score (unchanged historical behavior).
+    #
+    # N'est PLUS demandé à l'utilisateur : le curseur interactif ne pilotait
+    # que DraftMonitor, dont le DraftScorer n'avait plus d'appelant depuis
+    # SPEC-12 (le Live Coach passe par game_eval + la recherche, qui utilisent
+    # analysis_config.K_SYNERGY). Reste un réglage développeur sur le seul
+    # chemin qui mélange encore les deux scores : Assistant.draft_scorer, servi
+    # au Team Builder et à RecommendationEngine. La valeur 0.5 y est la seule
+    # jamais utilisée, ce qui y réduit final_score à une addition.
 
     # ── SPEC-12 : recherche minimax sur les picks restants (src/draft/search.py) ──
 
