@@ -12,7 +12,12 @@ pour rester sous la limite de 500 lignes.
 from sqlite3 import Error
 from typing import Dict, List, Optional, Union
 
-from ..analysis.aggregation import aggregate_full_rows, aggregate_pairs, weighted_delta2
+from ..analysis.aggregation import (
+    aggregate_full_rows,
+    aggregate_pairs,
+    aggregate_pairs_with_games,
+    weighted_delta2,
+)
 from ..config_constants import analysis_config, scraping_config
 from ..models import Matchup
 
@@ -324,7 +329,7 @@ class MatchupsRepository:
             print(f"[ERROR] Database error getting matchup {champion_name} vs {enemy_name}: {e}")
             return None
 
-    def get_all_matchups_bulk(self, lane: Optional[str] = None) -> dict:
+    def get_all_matchups_bulk(self, lane: Optional[str] = None, with_games: bool = False) -> dict:
         """
         Load ALL valid matchups in a single SQL query for caching.
 
@@ -363,7 +368,10 @@ class MatchupsRepository:
             # Agrégation multi-lane, clés en minuscules : même politique et donc
             # mêmes valeurs que get_matchup_delta2(). Avant B1, la dernière ligne
             # SQL écrasait les précédentes (10 699 valeurs jetées en silence).
-            return aggregate_pairs(cursor.fetchall())
+            rows = cursor.fetchall()
+            if with_games:
+                return aggregate_pairs_with_games(rows)
+            return aggregate_pairs(rows)
 
         except Exception as e:
             print(f"[ERROR] Failed to load bulk matchups: {e}")

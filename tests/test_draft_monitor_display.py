@@ -7,9 +7,12 @@ from unittest.mock import Mock, patch
 import pytest
 
 from src.config_constants import role_inference_config
+from src.draft.search import PickTurn
 from src.draft_monitor import DraftMonitor, DraftState
 from src.lcu_client import LCUClient
 from src.models import Matchup
+
+OUR_TURN = PickTurn(is_ally=True, is_local_player=True)
 
 CHAMPION_IDS = {2350: "Ornn", 412: "Thresh", 84: "Akali"}
 
@@ -102,6 +105,12 @@ class TestRecommendationLaneAndVolumeTags:
                 games=1234,
             )
         ]
+        # SPEC-12 : tables de paires réelles (vides) pour l'évaluateur, et
+        # aucun candidat adverse -- ces tests portent sur les étiquettes de
+        # lane et le volume affichés, pas sur le classement.
+        assistant.db.get_all_matchups_bulk.return_value = {}
+        assistant.db.get_all_synergies_bulk.return_value = {}
+        assistant.db.get_all_champion_scores.return_value = []
 
         with patch("src.draft_monitor.LCUClient", return_value=Mock()):
             with patch("src.draft_monitor.Assistant", return_value=assistant):
@@ -113,14 +122,16 @@ class TestRecommendationLaneAndVolumeTags:
 
     def test_lane_and_direct_counter_and_volume_shown(self, scoring_monitor, capsys):
         state = DraftState(
-            phase="BAN_PICK", enemy_picks=[412], ally_picks=[], local_player_cell_id=0
+            phase="BAN_PICK",
+            enemy_picks=[412],
+            ally_picks=[],
+            local_player_cell_id=0,
+            remaining_picks=[OUR_TURN],
         )
         state.ally_positions = {0: "top"}
         state.inferred_roles = {412: "support"}
 
-        with patch.object(scoring_monitor, "_calculate_score_against_team", return_value=10.0):
-            with patch.object(scoring_monitor, "_calculate_synergy_score", return_value=0.0):
-                scoring_monitor._provide_recommendations(state)
+        scoring_monitor._provide_recommendations(state)
 
         output = capsys.readouterr().out
         assert "Ornn (top)" in output
@@ -128,26 +139,30 @@ class TestRecommendationLaneAndVolumeTags:
 
     def test_direct_counter_shown_when_enemy_shares_our_lane(self, scoring_monitor, capsys):
         state = DraftState(
-            phase="BAN_PICK", enemy_picks=[412], ally_picks=[], local_player_cell_id=0
+            phase="BAN_PICK",
+            enemy_picks=[412],
+            ally_picks=[],
+            local_player_cell_id=0,
+            remaining_picks=[OUR_TURN],
         )
         state.ally_positions = {0: "support"}
         state.inferred_roles = {412: "support"}
 
-        with patch.object(scoring_monitor, "_calculate_score_against_team", return_value=10.0):
-            with patch.object(scoring_monitor, "_calculate_synergy_score", return_value=0.0):
-                scoring_monitor._provide_recommendations(state)
+        scoring_monitor._provide_recommendations(state)
 
         output = capsys.readouterr().out
         assert "(support vs Thresh)" in output
 
     def test_no_lane_tag_without_player_lane(self, scoring_monitor, capsys):
         state = DraftState(
-            phase="BAN_PICK", enemy_picks=[412], ally_picks=[], local_player_cell_id=0
+            phase="BAN_PICK",
+            enemy_picks=[412],
+            ally_picks=[],
+            local_player_cell_id=0,
+            remaining_picks=[OUR_TURN],
         )
 
-        with patch.object(scoring_monitor, "_calculate_score_against_team", return_value=10.0):
-            with patch.object(scoring_monitor, "_calculate_synergy_score", return_value=0.0):
-                scoring_monitor._provide_recommendations(state)
+        scoring_monitor._provide_recommendations(state)
 
         output = capsys.readouterr().out
         assert "Ornn (" not in output

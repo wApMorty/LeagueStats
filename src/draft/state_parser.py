@@ -7,6 +7,7 @@ verbatim, aucun changement de comportement.
 from typing import Callable, Dict, Optional, Tuple
 
 from ..role_inference import infer_team_roles
+from .search import PickTurn
 from .state import DraftState
 
 
@@ -93,6 +94,23 @@ class DraftStateParser:
                         else:
                             if champion_id not in state.enemy_bans:
                                 state.enemy_bans.append(champion_id)
+
+        # SPEC-12: picks encore à venir, dans l'ordre, pour la recherche
+        # minimax. L'ordre des action_set est celui de la draft (LCU), et une
+        # action non complétée est un pick qui reste à jouer — y compris celui
+        # en cours.
+        ally_cell_ids = {player.get("cellId") for player in my_team}
+        for action_set in actions:
+            for action in action_set:
+                if action.get("type") != "pick" or action.get("completed", False):
+                    continue
+                actor_cell_id = action.get("actorCellId")
+                state.remaining_picks.append(
+                    PickTurn(
+                        is_ally=actor_cell_id in ally_cell_ids,
+                        is_local_player=actor_cell_id == state.local_player_cell_id,
+                    )
+                )
 
         # Find current actor (who's supposed to pick/ban now) and track player's champion
         # Reuse actions[] already fetched above

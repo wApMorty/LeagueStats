@@ -13,6 +13,7 @@ from unittest.mock import Mock
 
 import pytest
 
+from src.config_constants import analysis_config
 from src.draft.outcome_tracker import OutcomeTracker
 
 ALLY = [1, 2, 3, 4, 5]
@@ -30,8 +31,17 @@ def _insert_prediction(db, ally=ALLY, enemy=ENEMY, created_utc=PRED_CREATED, pro
     cursor.execute(
         "INSERT INTO predictions "
         "(created_utc, ally_champions, enemy_champions, predicted_probability, model_version) "
-        "VALUES (?, ?, ?, ?, 'b7-v1')",
-        (created_utc, ",".join(map(str, ally)), ",".join(map(str, enemy)), probability),
+        "VALUES (?, ?, ?, ?, ?)",
+        (
+            created_utc,
+            ",".join(map(str, ally)),
+            ",".join(map(str, enemy)),
+            probability,
+            # Le modèle COURANT : la notice de calibration ne compte que les
+            # prédictions de la version en cours, un littéral figé ici ferait
+            # diverger le test au prochain changement de modèle.
+            analysis_config.MODEL_VERSION,
+        ),
     )
     db.connection.commit()
     return cursor.lastrowid

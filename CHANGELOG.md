@@ -6,6 +6,34 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Feature
 
+- **SPEC-12 — Le Live Coach recommande par recherche minimax, plus par delta** —
+  le classement des picks ne vient plus d'un score calculé sur la draft telle
+  qu'elle est, mais du déroulé de la fin de la draft en supposant que les deux
+  camps jouent leur meilleur coup. Trois briques :
+  - `src/analysis/game_eval.py` (nouveau) — probabilité de victoire d'une game
+    complète, décomposée en termes de **paires** et non plus par champion :
+    `logit(P) = Σ w·c·K_MATCHUP·δ(i,j) + K_SYNERGY·(Σ paires alliées − Σ paires
+    ennemies)`, avec `δ(i,j) = (delta2(i→j) − delta2(j→i))/2`. L'antisymétrie
+    supprime le double comptage de chaque matchup (compté une fois par camp
+    dans `score_against_team`) et rend inutile la normalisation
+    `allié / (allié + ennemi)` de l'analyse finale, qui n'était pas une
+    probabilité. Le pick d'un allié fait désormais bouger le score via la
+    synergie des **autres** alliés avec lui, ce que le modèle par champion ne
+    voyait pas.
+  - `src/draft/search.py` (nouveau) — minimax alpha-bêta, approfondissement
+    itératif sous budget temps (`SEARCH_BUDGET_SECONDS`, 2 s), coups candidats
+    limités à notre pool de notre côté et aux `SEARCH_TOP_N` (8) meilleurs
+    champions de chaque lane libre en face. Mesuré sur la vraie base :
+    profondeur 3 et ~79 000 nœuds en 2 s pour un pool de 46 champions.
+  - affichage — chaque recommandation est donnée en probabilité de victoire,
+    avec la **suite attendue** (la réponse adverse anticipée) et la profondeur
+    atteinte.
+- `DraftState.remaining_picks` porte les picks encore à venir, lus depuis les
+  actions non complétées du payload LCU.
+- `analysis_config.MODEL_VERSION` passe à `spec12-v1` : les prédictions de la
+  recherche ne doivent jamais être mélangées à celles du modèle par delta par
+  `scripts/calibrate_model.py`.
+
 - **URL OneTricks.gg filtrée par lane** — `OneTricksWindow.open_champion_page()`
   (`src/draft/onetricks.py`) ouvrait toujours la page « toutes lanes » du
   champion (`/champions/builds/<Champion>`), alors que la lane jouée est déjà

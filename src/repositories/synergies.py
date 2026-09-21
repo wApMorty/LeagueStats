@@ -9,7 +9,12 @@ par ``self.db.<method>`` pour ne pas dupliquer la logique.
 from sqlite3 import Error
 from typing import List, Optional, Tuple, Union
 
-from ..analysis.aggregation import aggregate_full_rows, aggregate_pairs, weighted_delta2
+from ..analysis.aggregation import (
+    aggregate_full_rows,
+    aggregate_pairs,
+    aggregate_pairs_with_games,
+    weighted_delta2,
+)
 from ..config_constants import scraping_config, synergy_config
 from ..models import Synergy
 
@@ -288,7 +293,7 @@ class SynergiesRepository:
             print(f"[ERROR] Database error getting synergy {champion_name} with {ally_name}: {e}")
             return None
 
-    def get_all_synergies_bulk(self, lane: Optional[str] = None) -> dict:
+    def get_all_synergies_bulk(self, lane: Optional[str] = None, with_games: bool = False) -> dict:
         """Load ALL valid synergies in a single SQL query for caching.
 
         Returns dict mapping (champion_name, ally_name) -> delta2 value.
@@ -324,7 +329,10 @@ class SynergiesRepository:
 
             # Agrégation multi-lane, clés en minuscules : mêmes valeurs que
             # get_synergy_delta2().
-            return aggregate_pairs(cursor.fetchall())
+            rows = cursor.fetchall()
+            if with_games:
+                return aggregate_pairs_with_games(rows)
+            return aggregate_pairs(rows)
 
         except Exception as e:
             print(f"[ERROR] Failed to load bulk synergies: {e}")

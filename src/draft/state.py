@@ -8,6 +8,8 @@ src/draft_monitor.py pour préserver ``from src.draft_monitor import DraftState`
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
+from .search import PickTurn
+
 
 @dataclass
 class ChampionAction:
@@ -39,6 +41,11 @@ class DraftState:
     role_confidence: Dict[int, float] = field(default_factory=dict)  # championId -> [0,1]
     # SPEC-04 B5: championId -> "lcu" | "inferred" | "user" (manual correction).
     role_source: Dict[int, str] = field(default_factory=dict)
+    # SPEC-12: les picks encore à venir, dans l'ordre de la draft, pour la
+    # recherche minimax. Vide hors phase de pick (ou si le payload LCU ne
+    # contient aucune action non complétée), ce qui ramène le coach au
+    # classement à profondeur 1.
+    remaining_picks: List[PickTurn] = field(default_factory=list)
 
     def get_all_picks(self) -> List[str]:
         """Get all picked champions."""

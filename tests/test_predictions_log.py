@@ -105,7 +105,10 @@ class TestDraftMonitorBestEffortLogging:
         monitor.assistant.get_matchups_for_draft.return_value = [matchup]
         monitor.assistant.score_against_team.return_value = 2.0
         monitor.assistant.db.get_synergy_delta2.return_value = None
-        monitor.assistant._calculate_team_winrate.return_value = {"team_winrate": 55.0}
+        # SPEC-12 : l'évaluateur indexe ces tables, un Mock nu ferait échouer
+        # les lookups de paires avant même l'enregistrement de la prédiction.
+        monitor.assistant.db.get_all_matchups_bulk.return_value = {}
+        monitor.assistant.db.get_all_synergies_bulk.return_value = {}
         return ally_ids, enemy_ids
 
     def test_insert_prediction_failure_is_silent(self, monitor, capsys):

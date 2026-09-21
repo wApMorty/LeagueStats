@@ -149,7 +149,13 @@ class AnalysisConfig:
     # Doit changer à chaque modification de LOGIT_PER_WINRATE_POINT/K_MATCHUP/
     # K_SYNERGY/CONFIDENCE_K, sinon scripts/calibrate_model.py mélange des
     # prédictions issues de modèles différents.
-    MODEL_VERSION: str = "b7-v1"
+    #
+    # SPEC-12 : le Live Coach prédit maintenant via src/analysis/game_eval.py
+    # (somme sur les PAIRES, antisymétrique) et non plus via la somme des
+    # score_against_team par champion. Modèle différent, donc version
+    # différente — les 12 prédictions "b7-v1+lane-restante" déjà en base
+    # restent lisibles à part, jamais mélangées à celles-ci.
+    MODEL_VERSION: str = "spec12-v1"
 
     # SPEC-05 §4 B7 step 5 : en dessous de ce nombre de prédictions
     # labellisées, une courbe de calibration ou un k_m/k_s suggéré est du
@@ -245,6 +251,24 @@ class DraftConfig:
     #               + synergy_score * min(1, 2 * synergy_weight)
     # At the default 0.5, both coefficients clamp to 1, so this is exactly
     # matchup_score + synergy_score (unchanged historical behavior).
+
+    # ── SPEC-12 : recherche minimax sur les picks restants (src/draft/search.py) ──
+
+    # Budget temps d'une recherche, en secondes. L'approfondissement itératif
+    # rend le meilleur coup de la dernière profondeur TERMINÉE, donc ce budget
+    # borne la latence sans jamais borner la qualité par le haut. 2 s laisse le
+    # coach réactif pendant que la draft bouge (le chrono de pick fait ~30 s).
+    SEARCH_BUDGET_SECONDS: float = 2.0
+
+    # Profondeur maximale, en nombre de picks déroulés. 10 = draft entière ;
+    # la borne sert de garde-fou, le budget temps coupe bien avant en pratique.
+    SEARCH_MAX_DEPTH: int = 10
+
+    # Coups candidats retenus par lane libre pour les picks qui ne sont pas les
+    # nôtres (tier list champion_scores). Au-delà, le facteur de branchement
+    # coûte de la profondeur pour des champions que personne ne joue ; en deçà,
+    # on rate des contre-picks réels.
+    SEARCH_TOP_N: int = 8
 
     # ── SPEC-08 : boucle de mesure (résultat de partie automatique via LCU) ──
 

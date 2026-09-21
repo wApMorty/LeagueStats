@@ -82,6 +82,27 @@ def aggregate_pairs(rows: Iterable[Sequence]) -> Dict[Tuple[str, str], float]:
     return {key: weighted_delta2(group) for key, group in grouped.items()}
 
 
+def aggregate_pairs_with_games(
+    rows: Iterable[Sequence],
+) -> Dict[Tuple[str, str], Tuple[float, int]]:
+    """Comme ``aggregate_pairs``, mais conserve le volume total de la paire.
+
+    Retour : ``{(name_a.lower(), name_b.lower()): (delta2 pondéré, games)}``.
+
+    Utilisé par ``src/analysis/game_eval.py``, qui shrink chaque terme vers 0
+    selon ``confidence(games)`` : une recherche qui maximise (SPEC-12) va
+    chercher les valeurs extrêmes, et les extrêmes sont précisément les paires
+    au plus faible échantillon. Sans le volume, l'argmax remonterait du bruit.
+    """
+    grouped: Dict[Tuple[str, str], List[Sequence]] = {}
+    for name_a, name_b, delta2, games in rows:
+        grouped.setdefault((name_a.lower(), name_b.lower()), []).append((delta2, games))
+    return {
+        key: (weighted_delta2(group), sum(int(row[1]) for row in group))
+        for key, group in grouped.items()
+    }
+
+
 def _aggregate(rows: Iterable[Sequence], full: bool) -> Dict[str, AggregatedRow]:
     grouped: Dict[str, List[Sequence]] = {}
     display_names: Dict[str, str] = {}

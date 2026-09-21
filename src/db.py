@@ -271,8 +271,8 @@ class Database:
     ) -> Optional[float]:
         return self._matchups.get_matchup_delta2(champion_name, enemy_name, lane=lane)
 
-    def get_all_matchups_bulk(self, lane: Optional[str] = None) -> dict:
-        return self._matchups.get_all_matchups_bulk(lane=lane)
+    def get_all_matchups_bulk(self, lane: Optional[str] = None, with_games: bool = False) -> dict:
+        return self._matchups.get_all_matchups_bulk(lane=lane, with_games=with_games)
 
     # ========== Synergies ==========
 
@@ -313,8 +313,8 @@ class Database:
     ) -> Optional[float]:
         return self._synergies.get_synergy_delta2(champion_name, ally_name, lane=lane)
 
-    def get_all_synergies_bulk(self, lane: Optional[str] = None) -> dict:
-        return self._synergies.get_all_synergies_bulk(lane=lane)
+    def get_all_synergies_bulk(self, lane: Optional[str] = None, with_games: bool = False) -> dict:
+        return self._synergies.get_all_synergies_bulk(lane=lane, with_games=with_games)
 
     # ========== db_meta (fraîcheur) ==========
 

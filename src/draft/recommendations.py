@@ -1,23 +1,28 @@
 """Champion recommendations during pick/ban phases.
 
-Extracted from src/draft_monitor.py (SPEC-07 E10, lot 11) : déplacement
-verbatim, aucun changement de comportement.
+SPEC-12 : le classement ne vient plus d'un score par delta calculé sur la
+draft telle qu'elle est, mais de ``src/draft/search.py`` — on déroule la fin de
+la draft en supposant que les deux camps jouent au mieux, et on affiche la
+probabilité de victoire de la position obtenue. Un pick qui ouvre un
+contre-pick évident n'est donc plus recommandé en aveugle.
 
 Back-reference to the monitor: touches ~9 different domains (verbose,
-current_pool, champion_id_to_name, assistant, auto_hover, auto_ban_hover,
-last_recommendation — written, last_draft_state) and calls back through the
-monitor's own facades (_is_ban_phase, _show_adaptive_ban_recommendations,
-_get_display_name, _calculate_score_against_team, _calculate_synergy_score,
-_final_score, _is_player_turn, _enemy_picks_changed, _auto_hover_champion,
-_handle_auto_ban_hover) because tests/test_draft_monitor_recommendations.py
-patches two of these directly on the monitor instance and counts calls —
-they must be invoked via self.m.<method>, not sibling methods here.
+current_pool, champion_id_to_name, assistant, search, auto_hover,
+auto_ban_hover, last_recommendation — written, last_draft_state) and calls back
+through the monitor's own facades (_is_ban_phase,
+_show_adaptive_ban_recommendations, _get_display_name, _is_player_turn,
+_enemy_picks_changed, _auto_hover_champion, _handle_auto_ban_hover) because
+tests/test_draft_monitor_recommendations.py patches some of these directly on
+the monitor instance and counts calls — they must be invoked via
+self.m.<method>, not sibling methods here.
 """
 
-from typing import List, Tuple
+from typing import List, Optional, Sequence, Tuple
 
+from ..analysis.game_eval import Placed
 from ..config_constants import draft_config, ui_config
 from ..utils.display import format_games_count
+from .search import PickTurn, SearchResult
 from .state import DraftState
 
 
@@ -27,6 +32,108 @@ class DraftRecommender:
     def __init__(self, monitor) -> None:
         self.m = monitor
 
+    # ---------- préparation de la position ----------
+
+    def _placed(self, champion_ids: Sequence[int], state: DraftState) -> List[Placed]:
+        """championIds -> (nom, lane inférée) pour l'évaluateur."""
+        return [
+            (self.m._get_display_name(champ_id), state.inferred_roles.get(champ_id))
+            for champ_id in champion_ids
+        ]
+
+    def _turns_from_our_next_pick(self, state: DraftState) -> List[PickTurn]:
+        """Les tours à partir du nôtre, notre tour en tête.
+
+        ponytail: les tours qui PRÉCÈDENT le nôtre (un allié ou un ennemi qui
+        pick avant nous) sont simplement retirés, et leurs slots comptent pour
+        0 comme tout slot non atteint. Exact quand c'est effectivement notre
+        tour — le seul moment où l'on agit sur la recommandation ; approximatif
+        quand le coach affiche un classement par anticipation. Les intégrer
+        demanderait de chaîner la racine sur un nœud adverse, donc de perdre la
+        valeur exacte par candidat qu'on affiche.
+        """
+        for index, turn in enumerate(state.remaining_picks):
+            if turn.is_local_player:
+                return list(state.remaining_picks[index:])
+        return []
+
+    def _split_pool(
+        self, state: DraftState, player_lane: Optional[str]
+    ) -> Tuple[List[str], List[Tuple[str, int]], dict]:
+        """Sépare le pool en champions exploitables et champions sans données.
+
+        SPEC-09 E1 : un champion sans données pour cette lane n'est pas « un
+        mauvais pick », il est inconnu — la recherche le noterait à 50 % comme
+        un matchup réellement neutre. Il est donc écarté du classement et
+        affiché à part.
+        """
+        playable: List[str] = []
+        skipped: List[Tuple[str, int]] = []
+        games_by_champion: dict = {}
+
+        for champion_name in self.m.current_pool:
+            matchups = self.m.assistant.get_matchups_for_draft(champion_name, lane=player_lane)
+            total_games = sum(m.games for m in matchups) if matchups else 0
+            if matchups and total_games >= draft_config.MIN_CHAMPION_GAMES:
+                playable.append(champion_name)
+                games_by_champion[champion_name] = total_games
+            else:
+                skipped.append((champion_name, total_games))
+
+        return playable, skipped, games_by_champion
+
+    # ---------- affichage ----------
+
+    @staticmethod
+    def _format_variation(result: SearchResult) -> str:
+        """La suite supposée optimale, façon variante principale d'un moteur."""
+        if not result.principal_variation:
+            return ""
+        moves = ", ".join(
+            f"{name}{f' ({lane})' if lane else ''}" for name, lane in result.principal_variation
+        )
+        return f" → suite attendue : {moves}"
+
+    def _print_results(
+        self,
+        results: Sequence[SearchResult],
+        games_by_champion: dict,
+        player_lane: Optional[str],
+        direct_counter_name: Optional[str],
+    ) -> Optional[str]:
+        """Affiche le classement, renvoie le nom du meilleur pick."""
+        top_recommendation = None
+        display_count = min(ui_config.MAX_RECOMMENDATIONS, len(results))
+
+        for i in range(display_count):
+            result = results[i]
+            rank = "[1st]" if i == 0 else "[2nd]" if i == 1 else "[3rd]"
+
+            lane_tag = ""
+            if player_lane:
+                lane_tag = f" ({player_lane}"
+                if direct_counter_name:
+                    lane_tag += f" vs {direct_counter_name}"
+                lane_tag += ")"
+
+            games = games_by_champion.get(result.champion)
+            volume_tag = f" · {format_games_count(games)} games" if games else ""
+
+            print(
+                f"  {rank} {result.champion}{lane_tag} "
+                f"{result.win_probability * 100:.2f}% de victoire"
+                f"{volume_tag}{self._format_variation(result)}"
+            )
+
+            if i == 0:
+                top_recommendation = result.champion
+
+        if results:
+            print(f"  [SEARCH] Profondeur atteinte : {results[0].depth} pick(s) anticipé(s)")
+        return top_recommendation
+
+    # ---------- entrée principale ----------
+
     def provide(self, state: DraftState) -> None:
         """Provide coaching recommendations based on current draft."""
         try:
@@ -35,7 +142,8 @@ class DraftRecommender:
 
             if self.m.verbose:
                 print(
-                    f"[DEBUG] _provide_recommendations called: Phase='{state.phase}', Enemies={len(enemy_picks)}, Allies={len(ally_picks)}"
+                    f"[DEBUG] _provide_recommendations called: Phase='{state.phase}', "
+                    f"Enemies={len(enemy_picks)}, Allies={len(ally_picks)}"
                 )
 
             # Skip recommendations if draft hasn't started yet (bans already shown in initial hover)
@@ -44,7 +152,6 @@ class DraftRecommender:
                     print(f"[DEBUG] Waiting for picks to start (bans already shown at start)")
                 return
 
-            # Use existing coach logic
             if enemy_picks:
                 print(f"\n[PICKS] RECOMMANDATIONS DE COUNTERPICK :")
                 print("-" * 50)
@@ -53,143 +160,41 @@ class DraftRecommender:
                 if self.m._is_ban_phase(state) and len(enemy_picks) >= 1:
                     self.m._show_adaptive_ban_recommendations(state)
 
-                # Get champion IDs from current pool only
-                name_to_id = {
-                    name: champ_id for champ_id, name in self.m.champion_id_to_name.items()
-                }
-                pool_champion_ids = []
-                for champ_name in self.m.current_pool:
-                    if champ_name in name_to_id:
-                        pool_champion_ids.append(name_to_id[champ_name])
-                    else:
-                        if self.m.verbose:
-                            print(
-                                f"[DEBUG] Champion '{champ_name}' from current pool not found in database"
-                            )
-
-                scores = []
-                # SPEC-09 E1: champions with no exploitable data for this lane
-                # must be shown as "ignored", never silently dropped from the
-                # pool — see module-level principle in SPEC-09.
-                skipped: List[Tuple[str, int]] = []
-
-                # Collect all banned champion IDs for score calculation
-                all_banned_ids = state.ally_bans + state.enemy_bans
-
-                # SPEC-04 B4 §4.3: our own lane (from the LCU, when the queue
-                # assigns one) and the enemy team's inferred lanes, for the
-                # same-lane weighting in _calculate_score_against_team.
+                # SPEC-04 B4 §4.3 : notre lane (LCU) et celles inférées côté
+                # ennemi, qui pondèrent les paires dans l'évaluateur.
                 player_lane = state.ally_positions.get(state.local_player_cell_id)
-                enemy_lanes = {
-                    self.m._get_display_name(enemy_id): state.inferred_roles[enemy_id]
-                    for enemy_id in enemy_picks
-                    if enemy_id in state.inferred_roles
-                }
-                # SPEC-04 B5: the enemy sharing our lane, shown as "vs X" next
-                # to each recommendation.
+                allies = self._placed(ally_picks, state)
+                enemies = self._placed(enemy_picks, state)
+                banned = [
+                    self.m._get_display_name(ban_id)
+                    for ban_id in state.ally_bans + state.enemy_bans
+                ]
+
+                # SPEC-04 B5 : l'ennemi qui partage notre lane, affiché « vs X ».
                 direct_counter_name = next(
-                    (name for name, lane in enemy_lanes.items() if lane == player_lane), None
+                    (name for name, lane in enemies if lane and lane == player_lane), None
                 )
 
-                # Debug: show current bans
-                if self.m.verbose:
-                    if state.ally_bans or state.enemy_bans:
-                        ally_ban_names = [self.m._get_display_name(bid) for bid in state.ally_bans]
-                        enemy_ban_names = [
-                            self.m._get_display_name(bid) for bid in state.enemy_bans
-                        ]
-                        print(f"[DEBUG] Ally bans: {ally_ban_names}")
-                        print(f"[DEBUG] Enemy bans: {enemy_ban_names}")
+                if self.m.verbose and banned:
+                    print(f"[DEBUG] Bans: {banned}")
 
-                for champion_id in pool_champion_ids:
-                    # Skip if already picked/banned
-                    if champion_id in enemy_picks or champion_id in ally_picks:
-                        continue
-                    if champion_id in state.ally_bans or champion_id in state.enemy_bans:
-                        if self.m.verbose:
-                            banned_name = self.m._get_display_name(champion_id)
-                            print(f"[DEBUG] Skipping banned champion: {banned_name}")
-                        continue
+                playable, skipped, games_by_champion = self._split_pool(state, player_lane)
+                turns = self._turns_from_our_next_pick(state)
 
-                    # Get champion name and matchups (cached for performance).
-                    # Lane-filtered when known (SPEC-04 B5): an unfiltered,
-                    # all-lanes fetch mixes a multi-lane champion's off-role
-                    # sample into the score/volume shown for the lane actually
-                    # being played.
-                    champion_name = self.m._get_display_name(champion_id)
-                    matchups = self.m.assistant.get_matchups_for_draft(
-                        champion_name, lane=player_lane
+                results: List[SearchResult] = []
+                if playable and turns:
+                    results = self.m.search.rank(
+                        allies=allies,
+                        enemies=enemies,
+                        pool=playable,
+                        remaining_turns=turns,
+                        banned=banned,
+                        player_lane=player_lane,
                     )
-                    total_games = sum(m.games for m in matchups) if matchups else 0
-                    if matchups and total_games >= draft_config.MIN_CHAMPION_GAMES:
-                        # Calculate matchup score against enemy team
-                        matchup_score = self.m._calculate_score_against_team(
-                            matchups,
-                            enemy_picks,
-                            champion_name,
-                            all_banned_ids,
-                            lane=player_lane,
-                            enemy_lanes=enemy_lanes,
-                            player_lane=player_lane,
-                        )
 
-                        # Calculate synergy score with allied champions
-                        synergy_score = self.m._calculate_synergy_score(
-                            champion_name, ally_picks, lane=player_lane
-                        )
-
-                        # Final score = configurable blend of matchup and synergy (see _final_score)
-                        final_score = self.m._final_score(matchup_score, synergy_score)
-
-                        if self.m.verbose:
-                            print(
-                                f"[DEBUG] {champion_name}: Matchup={matchup_score:.2f}, "
-                                f"Synergy={synergy_score:+.2f}, Final={final_score:.2f}"
-                            )
-
-                        # Le détail est conservé pour l'affichage : le recalculer
-                        # coûtait un second passage et pouvait diverger du classement
-                        scores.append(
-                            (champion_id, final_score, matchup_score, synergy_score, total_games)
-                        )
-                    else:
-                        # SPEC-09 E1: no exploitable data for this champion in
-                        # this lane — not "a bad pick", just unknown. Recorded
-                        # for display, never merged into the ranking below.
-                        skipped.append((champion_name, total_games))
-
-                scores.sort(key=lambda x: -x[1])
-
-                # Show top recommendations
-                display_count = min(ui_config.MAX_RECOMMENDATIONS, len(scores))
-                top_recommendation = None
-
-                for i in range(display_count):
-                    champion_id, final_score, matchup_score, synergy_score, games = scores[i]
-                    display_name = self.m._get_display_name(champion_id)
-                    rank = "[1st]" if i == 0 else "[2nd]" if i == 1 else "[3rd]"
-
-                    # Format score as win rate advantage with breakdown
-                    score_text = (
-                        f"+{final_score:.2f}%" if final_score > 0 else f"{final_score:.2f}%"
-                    )
-                    breakdown = f"(Matchup: {matchup_score:+.2f}%, Synergy: {synergy_score:+.2f}%)"
-
-                    # SPEC-04 B5: show our lane, the direct-lane counter (if
-                    # any) and the games volume behind the score.
-                    lane_tag = ""
-                    if player_lane:
-                        lane_tag = f" ({player_lane}"
-                        if direct_counter_name:
-                            lane_tag += f" vs {direct_counter_name}"
-                        lane_tag += ")"
-                    volume_tag = f" · {format_games_count(games)} games"
-
-                    print(f"  {rank} {display_name}{lane_tag} {score_text} {breakdown}{volume_tag}")
-
-                    # Store top recommendation for auto-hover
-                    if i == 0:
-                        top_recommendation = display_name
+                top_recommendation = self._print_results(
+                    results, games_by_champion, player_lane, direct_counter_name
+                )
 
                 # Auto-hover top recommendation if enabled
                 if (
@@ -197,7 +202,6 @@ class DraftRecommender:
                     and top_recommendation
                     and top_recommendation != self.m.last_recommendation
                 ):
-                    # Check if we should update hover (either it's our turn or enemy picked)
                     is_our_turn = self.m._is_player_turn(state)
                     enemy_changed = self.m._enemy_picks_changed(state)
 
@@ -208,7 +212,11 @@ class DraftRecommender:
                         self.m._auto_hover_champion(top_recommendation, reason)
                         self.m.last_recommendation = top_recommendation
 
-                if not scores and not skipped:
+                # « Plus de tour » passe avant « pas de données » : c'est
+                # l'explication la plus spécifique de la liste vide.
+                if not results and not turns:
+                    print("  [DATA] Plus aucun pick à jouer de votre côté")
+                elif not results and not skipped:
                     print("  [DATA] Aucune donnée disponible pour les matchups actuels")
 
                 # SPEC-09 E1: écartés affichés à part, jamais mêlés au

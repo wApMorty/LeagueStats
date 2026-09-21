@@ -144,7 +144,11 @@ class TestRoleInferenceInParseDraftState:
 
 class TestLaneWiringIntoScoring:
     """SPEC-04 B4 §4.3 : _provide_recommendations transmet notre lane et les
-    lanes inférées des ennemis au scoring (matchup et synergie)."""
+    lanes inférées des ennemis au scoring.
+
+    SPEC-12 : la destination a changé (la recherche minimax, qui les repasse à
+    l'évaluateur de paires), l'exigence non — sans ces lanes, la pondération
+    « adversaire de notre lane » ne s'applique jamais."""
 
     @pytest.fixture
     def scoring_monitor(self):
@@ -163,6 +167,10 @@ class TestLaneWiringIntoScoring:
             )
         ]
 
+        assistant.db.get_all_matchups_bulk.return_value = {}
+        assistant.db.get_all_synergies_bulk.return_value = {}
+        assistant.db.get_all_champion_scores.return_value = []
+
         with patch("src.draft_monitor.LCUClient", return_value=Mock()):
             with patch("src.draft_monitor.Assistant", return_value=assistant):
                 monitor = DraftMonitor(verbose=False, auto_hover=False)
@@ -172,42 +180,41 @@ class TestLaneWiringIntoScoring:
         return monitor
 
     def test_player_lane_and_enemy_lanes_reach_scoring(self, scoring_monitor):
+        from src.draft.search import PickTurn
         from src.draft_monitor import DraftState
 
         state = DraftState(
-            phase="BAN_PICK", enemy_picks=[412], ally_picks=[], local_player_cell_id=0
+            phase="BAN_PICK",
+            enemy_picks=[412],
+            ally_picks=[],
+            local_player_cell_id=0,
+            remaining_picks=[PickTurn(is_ally=True, is_local_player=True)],
         )
         state.ally_positions = {0: "top"}
         state.inferred_roles = {412: "support"}
 
-        with (
-            patch.object(
-                scoring_monitor, "_calculate_score_against_team", return_value=10.0
-            ) as mock_matchup,
-            patch.object(
-                scoring_monitor, "_calculate_synergy_score", return_value=0.0
-            ) as mock_synergy,
-        ):
+        with patch.object(scoring_monitor.search, "rank", return_value=[]) as mock_rank:
             scoring_monitor._provide_recommendations(state)
 
-        assert mock_matchup.call_args.kwargs["player_lane"] == "top"
-        assert mock_matchup.call_args.kwargs["enemy_lanes"] == {"Thresh": "support"}
-        assert mock_synergy.call_args.kwargs["lane"] == "top"
+        assert mock_rank.call_args.kwargs["player_lane"] == "top"
+        # La lane inférée voyage attachée au champion ennemi lui-même.
+        assert mock_rank.call_args.kwargs["enemies"] == [("Thresh", "support")]
 
     def test_no_assigned_position_means_no_player_lane(self, scoring_monitor):
         """File sans sélection de rôle -> pas de lane à transmettre (None), pas de crash."""
+        from src.draft.search import PickTurn
         from src.draft_monitor import DraftState
 
         state = DraftState(
-            phase="BAN_PICK", enemy_picks=[412], ally_picks=[], local_player_cell_id=0
+            phase="BAN_PICK",
+            enemy_picks=[412],
+            ally_picks=[],
+            local_player_cell_id=0,
+            remaining_picks=[PickTurn(is_ally=True, is_local_player=True)],
         )
 
-        with (
-            patch.object(
-                scoring_monitor, "_calculate_score_against_team", return_value=10.0
-            ) as mock_matchup,
-            patch.object(scoring_monitor, "_calculate_synergy_score", return_value=0.0),
-        ):
+        with patch.object(scoring_monitor.search, "rank", return_value=[]) as mock_rank:
             scoring_monitor._provide_recommendations(state)
 
-        assert mock_matchup.call_args.kwargs["player_lane"] is None
+        assert mock_rank.call_args.kwargs["player_lane"] is None
+        assert mock_rank.call_args.kwargs["enemies"] == [("Thresh", None)]

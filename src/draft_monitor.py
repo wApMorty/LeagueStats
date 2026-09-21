@@ -15,7 +15,9 @@ from .draft.state import ChampionAction, DraftState
 from .draft import phases
 from .draft import display
 from .draft.memory_diagnostics import log_memory_usage
+from .analysis.game_eval import GameEvaluator
 from .draft.scoring import DraftScorer
+from .draft.search import CandidatePool, DraftSearch
 from .draft.state_parser import DraftStateParser
 from .draft.onetricks import OneTricksWindow
 from .draft.automation import HoverAutomation
@@ -78,6 +80,16 @@ class DraftMonitor:
         )
         self.scorer = DraftScorer(
             self.assistant, self._get_display_name, self.synergy_weight, verbose=verbose
+        )
+        # SPEC-12 : moteur du Live Coach. `scorer` reste en place pour les
+        # autres consommateurs du modèle par delta (tier lists, Tournament
+        # Coach, hover en blind pick) ; seules les recommandations de draft et
+        # l'analyse finale passent par la recherche.
+        self.evaluator = GameEvaluator(self.assistant.db, verbose=verbose)
+        self.search = DraftSearch(
+            self.evaluator,
+            CandidatePool(self.assistant.db, draft_config.SEARCH_TOP_N, verbose=verbose),
+            verbose=verbose,
         )
         self.state_parser = DraftStateParser(self.lcu, self._get_display_name, verbose=verbose)
         self.onetricks = OneTricksWindow(self)
