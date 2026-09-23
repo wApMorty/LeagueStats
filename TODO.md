@@ -48,7 +48,7 @@ plus = à redécouper avant de démarrer).
 | # | Tâche | Spec | Pts | Dépend de | État |
 |---|---|---|---|---|---|
 | 1 | Spike Coachless : endpoints, authentification et durée de vie du jeton, granularité du WPA (par composant ? erreur-type ?), historique, CGU sur l'accès scripté | SPEC-15 §2.1 | 3 | @pj35 | ⬜ |
-| 2 | Spike OneTricks : débit toléré (429), filtre par adversaire, historique ; décider OneTricks ou repli LoLalytics | SPEC-15 §2.2 | 2 | — | ⬜ |
+| 2 | Spike OneTricks : débit toléré (429), filtre par adversaire, historique ; décider OneTricks ou repli LoLalytics | SPEC-15 §2.2 | 2 | — | ✅ spike fait (§2.2.1) — repli LoLalytics recommandé, décision @pj35 |
 | 3 | Consigner les résultats du spike dans SPEC-15 et **ajuster SPEC-15 et SPEC-16** (colonnes de `build_snapshots`, faisabilité de A) | SPEC-15 §2.3 | 1 | 1, 2 | ⬜ |
 | 4 | Migration Alembic `build_snapshots`, testée en upgrade et en downgrade | SPEC-15 §3.6 | 2 | 3 | ⬜ |
 | 5 | `src/build_snapshots.py` : collecte par source, idempotente, débit limité, et étape best-effort dans `pipeline.py` | SPEC-15 §3.6 | 5 | 4 | ⬜ |

@@ -62,6 +62,69 @@ navigateur et relever dans l'onglet réseau :
 **Repli** si OneTricks reste inaccessible : LoLalytics, déjà scrapé, fournit popularité et winrate
 par matchup.
 
+### 2.2.1 Résultats du spike OneTricks (2026-09-23)
+
+**Accès.** Le site tourne sur Next.js et Vercel. La page HTML
+`/champions/builds/{Champion}?role={role}&matchup={Adversaire}` embarque toutes ses données dans
+le JSON `<script id="__NEXT_DATA__">` (~450 Ko) : il n'y a pas d'API à rétro-ingénierer.
+
+- Avec l'User-Agent par défaut de `curl` ou de `requests`, on reçoit un **429 « Vercel Security
+  Checkpoint »** : c'est un challenge anti-bot, qui explique les 429 constatés avec WebFetch.
+- Avec un User-Agent de navigateur, la page répond **200** (10 requêtes espacées de 3 s, entre 0,1
+  et 2,3 s chacune).
+- La route JSON de Next.js (`/_next/data/{buildId}/...json`) est **toujours** derrière le
+  checkpoint.
+- Après ~17 requêtes en ~5 minutes, le checkpoint s'est déclenché **au niveau de l'IP**, même avec
+  l'User-Agent de navigateur (y compris sur `/terms` et `robots.txt`). Le blocage
+  était levé 10 minutes plus tard : c'est un plafond de débit, pas un bannissement.
+
+**Contenu de `pageProps`** (exemple tronqué, Jinx bot) :
+
+```json
+{
+  "filters": {"region": "", "role": "bot", "matchup": "", "twitch": ""},
+  "patchList": ["all", "16", "16.19", "16.18"],
+  "patchStats": {"16": 500, "all": 500, "16.19": 9, "16.18": 491},
+  "firstItemStats": {"16": {"all": {
+    "popKeystone": [["8008", 0.990], ["8992", 0.005]],
+    "popRunes": {"8008": [[[8008, 8009, 8017, 8313, 8321, 9103], 0.302, [8000, 8300, 8008]], "..."]},
+    "popStat": [5005, 5008, 5011],
+    "popCore": [[[2523, 3085], 0.567], [[3032, 3031], 0.108], "..."],
+    "sSpells": [[["21", "4"], 0.740], [["6", "4"], 0.149]],
+    "startingItems": [[["1086", "2003", "2003", "3340"], 0.630]]
+  }}},
+  "matchHistory": [{"tier": "Master", "p": "16.19",
+    "details": {"playerData": {"stats": {"item0": 3032, "perk0": 8008, "perkSubStyle": 8300, "win": true},
+                               "spell1Id": 4, "spell2Id": 21}},
+    "timeline": {"orderedItems": [3032, 3031, 3036, 3085, 1038, 1053]},
+    "gameRoles": {"enemyChampion": 15, "playerRole": "bot", "gd15": 1316}}]
+}
+```
+
+**Réponses aux trois questions de §2.2 :**
+
+1. **Builds et popularité** : oui. Pages de runes complètes, core d'items, chemins d'items, sorts
+   et items de départ, **identifiants Riot** directement utilisables par le LCU. Mais les agrégats
+   ne portent qu'une **fraction de popularité**, sans winrate ni nombre de parties par build.
+   L'échantillon total est donné par `patchStats` : les **500 dernières parties** de one-tricks
+   (Master+). Un winrate par composant ne peut être recalculé que depuis `matchHistory`, qui
+   n'expose que **100** de ces parties.
+2. **Filtre par adversaire** : oui (`?matchup=Draven`), avec les mêmes agrégats restreints au duel.
+   L'échantillon est mince : 40 parties Jinx contre Draven, sur 16.17 et 16.18.
+3. **Historique** : **non**. `?patch=16.10` est ignoré ; seule la fenêtre glissante des 500
+   dernières parties est servie (2 patchs ici). SPEC-16 A+ garde donc son délai de ~4 mois.
+
+**Recommandation : repli LoLalytics pour les candidats de SPEC-16.** Une collecte couvre 283
+combos (champion, lane), alors que le checkpoint coupe au bout de ~17 pages. Pour tenir, il
+faudrait **contourner** une protection anti-bot mise en place volontairement (User-Agent usurpé,
+voire un navigateur automatisé), ce qui dépasse l'usage sobre accepté pour Coachless dans ADR-001.
+De plus, OneTricks n'apporte ni winrate ni échantillon par build, ce dont le shrinkage de SPEC-16
+a besoin. LoLalytics est déjà scrapé (Selenium, tier Master+) : `src/parser.py` charge déjà les
+pages `/build/` par (champion, lane), mais n'en extrait que les matchups. L'extraction des builds
+(popularité, winrate, nombre de parties par composant) reste à écrire, avec des XPath à relever.
+OneTricks reste ouvert dans le navigateur en fin de draft
+(`src/draft/onetricks.py`) : ce spike ne change rien à cet usage manuel.
+
 ### 2.3 Livrable
 
 Une section « Résultats du spike » ajoutée à cette spec, avec un exemple de réponse JSON tronqué
