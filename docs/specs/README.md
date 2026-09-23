@@ -49,6 +49,16 @@ SPEC-11  Lane restante + recherche Stockfish  ───  🔵 recherche, APRÈS 
 
 ---
 
+## Lot suivant — notes de features (@pj35, à partir du 2026-09-23)
+
+Specs issues de notes de features au fil de l'eau, chacune indépendante sauf mention contraire.
+
+| Spec | Objet | Fichiers principaux touchés | Effort |
+|---|---|---|---|
+| [SPEC-14](SPEC-14-draft-finale-head-to-head.md) | Draft finale en tableau face-à-face ordonné par lane, avec flèche et valeur du duel direct | `src/draft/final_analysis.py`, `src/analysis/game_eval.py`, `src/config_constants.py` | ~0,5 jour |
+
+---
+
 ## Règles communes à toutes les specs
 
 Reprises de `CLAUDE.md` et de l'état réel du projet. Elles s'appliquent à **toute** implémentation issue de ces specs.
