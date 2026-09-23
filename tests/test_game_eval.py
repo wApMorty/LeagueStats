@@ -139,6 +139,12 @@ class TestPairTerms:
         assert evaluator.matchup_logit(("Inconnu", "top"), ("Autre", "top")) == 0.0
         assert evaluator.synergy_logit(("Inconnu", "top"), ("Autre", "top")) == 0.0
 
+    def test_has_matchup_data_tells_measured_from_missing(self, evaluator):
+        """SPEC-14 : 0.0 ne distingue pas « égalité mesurée » de « rien de mesuré »."""
+        assert evaluator.has_matchup_data(("Jax", "top"), ("Garen", "top"))
+        assert evaluator.has_matchup_data(("Garen", "top"), ("Nautilus", "support"))  # sens inverse
+        assert not evaluator.has_matchup_data(("Inconnu", "top"), ("Autre", "top"))
+
 
 class TestComposition:
     def test_swapping_teams_flips_the_logit(self, evaluator):

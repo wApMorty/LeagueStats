@@ -138,6 +138,20 @@ class GameEvaluator:
         weight = self._lane_weight(lane, enemy_lane) * confidence(games, self._k_matchup)
         return winrate_points_to_logit(delta2 * analysis_config.K_MATCHUP) * weight
 
+    def has_matchup_data(self, champion: Placed, enemy: Placed) -> bool:
+        """Vrai si au moins un des deux points de vue de la paire est mesuré.
+
+        ``matchup_logit`` renvoie 0.0 aussi bien pour une égalité mesurée que
+        pour une absence de mesure : l'affichage a besoin de les distinguer
+        (SPEC-14 §2.2).
+        """
+        name, lane = champion
+        enemy_name, enemy_lane = enemy
+        return (name.lower(), enemy_name.lower()) in self._matchup_table(lane) or (
+            enemy_name.lower(),
+            name.lower(),
+        ) in self._matchup_table(enemy_lane)
+
     def synergy_logit(self, champion: Placed, ally: Placed) -> float:
         """Log-odds apporté à l'équipe qui possède les deux champions.
 
