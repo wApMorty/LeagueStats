@@ -37,18 +37,20 @@ plus = à redécouper avant de démarrer).
 | 7 | `GameEvaluator.has_matchup_data()` + tests | SPEC-14 §2.2 | 1 | ✅ |
 | 8 | Tableau miroir ordonné par lane, colonne DUEL | SPEC-14 | 3 | ✅ |
 
-### Sprint 2 — Import OneTricks dans le client (~15 pts)
+### Sprint 2 — Import OneTricks dans le client (~18 pts)
 
 **Objectif** : au lock-in, les runes, les items et les sorts les plus joués par les one-tricks
-sont dans le client, puis affinés au duel dès que l'adversaire direct est locké, sans jamais
+sont dans le client, puis affinés dès que l'adversaire direct est locké (seuls les composants
+que le duel change significativement sont substitués), sans jamais
 toucher aux pages ni aux sets du joueur.
 
 | # | Tâche | Spec | Pts | Dépend de | État |
 |---|---|---|---|---|---|
-| 10 | `loadout.fetch_page()` + `pick_build()` : page OneTricks, `__NEXT_DATA__`, User-Agent navigateur, timeout, cache (champion, lane, adversaire), fixture enregistrée | SPEC-15 §3.1 | 3 | — | ⬜ |
+| 10 | `loadout.fetch_page()` + `pick_build()` : page OneTricks, `__NEXT_DATA__`, User-Agent navigateur, timeout, cache (champion, lane, adversaire), fixture enregistrée | SPEC-15 §3.1 | 3 | — | ✅ |
+| 10b | `loadout.adapt_to_matchup()` : substitutions significatives du duel (test binomial, α dans `config_constants.py`), noms lisibles pour la console | SPEC-15 §3.2.1 | 3 | 10 | ⬜ |
 | 11 | `loadout.apply_build()` : page de runes `LS`, set d'items préservant ceux du joueur, sorts avec Flash sur sa touche habituelle | SPEC-15 §3.3 | 5 | 10 | ⬜ |
-| 12 | Déclenchement sur `completed: True` (et non sur `player_champion`), affinage au lock de l'adversaire direct avec seuil `LOADOUT_MIN_MATCHUP_GAMES`, relance sur trade, flag `AUTO_IMPORT_LOADOUT` | SPEC-15 §3.2 | 3 | 11 | ⬜ |
-| 13 | Tests §3.5 (10 critères) | SPEC-15 §3.5 | 3 | 12 | ⬜ |
+| 12 | Déclenchement sur `completed: True` (et non sur `player_champion`), affinage au lock de l'adversaire direct via `adapt_to_matchup`, relance sur trade, flag `AUTO_IMPORT_LOADOUT` | SPEC-15 §3.2 | 3 | 10b, 11 | ⬜ |
+| 13 | Tests §3.5 (11 critères) | SPEC-15 §3.5 | 3 | 12 | ⬜ |
 | 14 | Recette en partie réelle : vérifier les corps de requête LCU contre le client (non documentés par Riot) | SPEC-15 §3.3 | 1 | 12 | ⬜ |
 
 ### Reporté — non planifié

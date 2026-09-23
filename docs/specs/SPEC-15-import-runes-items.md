@@ -130,9 +130,11 @@ par source. Fait pour OneTricks (§2.2.1) ; celle de Coachless viendra avec SPEC
 
 ## 3. Phase 1 — Import de la build OneTricks au lock-in, affinée au duel
 
-Ce qu'on importe, c'est **la build la plus jouée par les one-tricks** : d'abord sur (champion,
-lane), puis, dès que l'adversaire direct est connu, sur (champion, lane, adversaire). C'est la
-recherche que @pj35 fait aujourd'hui à la main, automatisée.
+Ce qu'on importe, c'est **la build la plus jouée par les one-tricks** sur (champion, lane). Dès
+que l'adversaire direct est connu, on la **compare** à la page du duel, et on n'y substitue que
+les composants que le duel sur-représente de façon significative (§3.2.1). Ce n'est pas la build
+la plus jouée du duel qu'on copie : sur 40 parties, elle diffère surtout par le bruit
+(décision @pj35 du 2026-09-24).
 
 ### 3.1 Module
 
@@ -143,9 +145,9 @@ recherche que @pj35 fait aujourd'hui à la main, automatisée.
   User-Agent de navigateur et un timeout court (tous deux dans `config_constants.py`), puis
   extraction du JSON `<script id="__NEXT_DATA__">` → `props.pageProps`. Les noms passent par
   `normalize_champion_name_for_onetricks` et les lanes par `_LANE_TO_ONETRICKS_ROLE`
-  (`src/draft/onetricks.py`), les mêmes que pour la fenêtre de fin de draft. Cache mémoire par
-  (champion, lane, adversaire) pour la session. Renvoie `None` en cas d'échec (réseau, 429,
-  JSON absent), sans lever d'exception.
+  (`src/draft/onetricks.py`), les mêmes que pour la fenêtre de fin de draft. Renvoie `None` en
+  cas d'échec (réseau, 429, JSON absent), sans lever d'exception. Le cache mémoire par
+  (champion, lane, adversaire) vit dans `get_build`, et ne retient que les succès.
 - **`pick_build(page_props) -> Optional[Build]`** : lit l'agrégat
   `firstItemStats["all"]["all"]`, c'est-à-dire la fenêtre glissante des 500 dernières parties de
   one-tricks, tous premiers items confondus :
@@ -156,6 +158,10 @@ recherche que @pj35 fait aujourd'hui à la main, automatisée.
   - **sorts** : `sSpells[0]`.
 
   Tout champ manquant donne `None`, car la structure n'est pas documentée et peut changer.
+- **`adapt_to_matchup(general_page, duel_page) -> Optional[(Build, List[Substitution])]`** : la
+  build générale, avec les substitutions significatives du duel (§3.2.1). Chaque `Substitution`
+  garde sa catégorie, l'ancienne et la nouvelle option, les deux popularités et le nombre de
+  parties, pour la console.
 - **`apply_build(lcu, build) -> None`** : les trois écritures LCU (§3.3), chacune indépendante et
   best-effort. L'échec de l'une n'empêche pas les autres.
 
@@ -170,10 +176,10 @@ précédent).
 ### 3.2 Déclenchement
 
 - **Au lock-in** : l'action `pick` du joueur local est `completed: True`. Tester `completed`
-  explicitement, sans passer par `player_champion` (cf. §1). On importe la build du duel si
-  l'adversaire direct est déjà connu, et la build générale sinon.
+  explicitement, sans passer par `player_champion` (cf. §1). On importe la build générale, puis
+  l'affinage suit immédiatement si l'adversaire direct est déjà connu.
 - **Affinage** : dès qu'un ennemi **locké** a pour lane inférée celle du joueur, on télécharge la
-  page du duel. Si elle compte au moins `draft_config.LOADOUT_MIN_MATCHUP_GAMES` parties, on
+  page du duel et on applique `adapt_to_matchup`. S'il y a au moins une substitution, on
   réimporte (la page de runes `"LS "` et le set sont remplacés) ; sinon, on conserve la build
   générale, avec un `[INFO]`.
 - **Une fois par (champion, lane, adversaire) et par draft** : un échange de champion (trade),
@@ -187,6 +193,36 @@ précédent).
 - Appel synchrone dans la boucle de draft : la page répond entre 0,1 et 2,3 s. Le timeout borne
   le pire cas. À signaler `ponytail:`, avec un thread comme voie de sortie si la latence gêne en
   pratique.
+
+#### 3.2.1 Règle de substitution
+
+Catégories comparées, chacune comme une unité : **keystone** (avec la première page de runes du
+duel pour cette keystone), **items de départ**, **core**, **bottes** et **paire de sorts**. Pour
+chaque catégorie, avec `n` le nombre de parties du duel (`patchStats["all"]`) :
+
+1. Pour chaque option `o` de la page du duel, autre que le choix de la build générale, on calcule
+   `k = round(popularité_duel(o) × n)` et `p0 = popularité_générale(o)`. Si `o` est absente de la
+   page générale, qui ne publie que ses options les plus jouées, `p0` prend
+   `min(plus petite popularité publiée, 1 − somme des popularités publiées)` de la catégorie.
+   Les deux bornes sont des majorants valides : sur les fixtures, la somme par catégorie reste
+   ≤ 1, donc le dénominateur est commun. La règle reste prudente. La plus petite popularité
+   publiée ne suffit pas seule : les items de départ n'en publient qu'une, à 94 %.
+2. `o` est **significative** si `P(Binomiale(n, p0) ≥ k) < draft_config.LOADOUT_MATCHUP_ALPHA`
+   (0,05). Le test se calcule en stdlib (`math.comb`).
+3. Si plusieurs options sont significatives, on retient la plus jouée dans le duel. Elle remplace
+   le choix général, même si ce dernier reste majoritaire dans le duel : ce qu'on cherche, c'est
+   ce que le duel **change**, pas ce qu'il reproduit.
+
+Exemple sur les fixtures, Jinx contre Draven (40 parties) :
+
+| Option du duel | Duel | Général (p0) | p | Substituée |
+|---|---|---|---|---|
+| Fatigue + Flash | 12,2 % | < 3,7 % (masse restante) | 0,015 | **oui** |
+| Lame de Doran au départ | 12,2 % | < 6,2 % (masse restante) | 0,098 | non |
+| Core Kraken + Phantom | 12,9 % | < 8,4 % (plus petite publiée) | 0,239 | non |
+| Bottes Berserker (3008) | 10,7 % | 15,5 % | 0,886 | non |
+
+La build affinée ne change donc que les sorts. α se règle dans `config_constants.py`.
 
 ### 3.3 Écritures LCU
 
@@ -202,9 +238,16 @@ Les identifiants OneTricks sont ceux de Riot (§2.2.1) : aucun mapping n'est né
 
 ### 3.4 Sortie console
 
-Une ligne, en ASCII : `[OK] Build importée : Ahri mid (500 parties one-tricks)`, puis au duel
-`[OK] Build affinée : Ahri vs Syndra (40 parties)`, ou bien `[INFO] Build non importée :
-<raison>`. Rien de plus en mode normal ; le détail n'apparaît qu'en verbose.
+```
+[OK] Build importée : Jinx bot (500 parties one-tricks)
+[OK] Build affinée vs Draven (40 parties) :
+  Sorts  Heal+Flash -> Fatigue+Flash  (12% vs <4% en général)
+```
+
+ou `[INFO] Duel vs Draven (40 parties) : aucun écart significatif, build générale conservée`,
+ou encore `[INFO] Build non importée : <raison>`. Les noms d'items, de runes et de sorts viennent
+de `itemData`, de `runes` et de `summonerSpells`, déjà présents dans `pageProps`. Le détail des
+tests n'apparaît qu'en verbose.
 
 ### 3.5 Critères d'acceptation (tests)
 
@@ -213,9 +256,13 @@ enregistrée et tronquée comme fixture, sans aucun appel réseau réel.
 
 1. Un survol (`completed: False`) **ne déclenche pas** d'import ; le lock-in en déclenche un seul.
    Un deuxième passage dans la boucle avec le même état n'en déclenche pas de second.
-2. **Affinage** : le lock de l'adversaire direct déclenche un seul import du duel ; un ennemi
-   d'une autre lane n'en déclenche aucun. Sous `LOADOUT_MIN_MATCHUP_GAMES`, la build générale est
-   conservée et aucune écriture LCU n'a lieu.
+2. **Affinage** : le lock de l'adversaire direct déclenche une seule comparaison ; un ennemi
+   d'une autre lane n'en déclenche aucune. Sans substitution, aucune écriture LCU n'a lieu.
+11. **Substitutions** (`adapt_to_matchup`) : sur les fixtures Jinx contre Draven, seuls les
+    sorts sont remplacés (Heal+Flash → Fatigue+Flash). Une option absente de la page générale est
+    testée contre `min(plus petite publiée, 1 − somme publiée)`. Avec deux options
+    significatives, la plus jouée l'emporte. Un changement de keystone emporte la page de runes
+    du duel pour cette keystone.
 3. Un trade de champion après le lock-in relance l'import.
 4. **Runes** : une page `"LS …"` existante est supprimée puis recréée. Les pages sans préfixe ne
    subissent jamais de `DELETE`. Sans emplacement libre, pas d'écriture et un `[INFO]`.
@@ -241,5 +288,5 @@ LCU.
 |---|---|
 | `src/draft/loadout.py` (nouveau) | Fetch OneTricks, choix de la build, cache, écritures LCU |
 | `src/draft/lifecycle.py` | Déclenchement au lock-in et à l'affinage, réinitialisation |
-| `src/config_constants.py` | `AUTO_IMPORT_LOADOUT`, `LOADOUT_MIN_MATCHUP_GAMES`, timeout, User-Agent, préfixe `"LS "` |
+| `src/config_constants.py` | `AUTO_IMPORT_LOADOUT`, `LOADOUT_MATCHUP_ALPHA`, timeout, User-Agent, préfixe `"LS "` |
 | `tests/test_loadout.py`, `tests/fixtures/onetricks_*.json` (nouveaux) | §3.5 |
