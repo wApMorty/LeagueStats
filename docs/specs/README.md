@@ -56,6 +56,7 @@ Specs issues de notes de features au fil de l'eau, chacune indépendante sauf me
 | Spec | Objet | Fichiers principaux touchés | Effort |
 |---|---|---|---|
 | [SPEC-14](SPEC-14-draft-finale-head-to-head.md) | Draft finale en tableau face-à-face ordonné par lane, avec flèche et valeur du duel direct | `src/draft/final_analysis.py`, `src/analysis/game_eval.py`, `src/config_constants.py` | ~0,5 jour |
+| [SPEC-15](SPEC-15-import-runes-items.md) | Runes, items et sorts poussés dans le client au lock-in, source Coachless ([ADR-001](../adr/ADR-001-source-builds-coachless.md)), puis optimisation maison | `src/draft/loadout.py` (nouveau), `src/draft/lifecycle.py`, `src/config_constants.py` | spike 1 j + 1,5 j (dont collecte par patch) |
 
 ---
 
