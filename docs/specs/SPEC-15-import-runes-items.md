@@ -219,8 +219,8 @@ Exemple sur les fixtures, Jinx contre Draven (40 parties) :
 |---|---|---|---|---|
 | Fatigue + Flash | 12,2 % | < 3,7 % (masse restante) | 0,015 | **oui** |
 | Lame de Doran au départ | 12,2 % | < 6,2 % (masse restante) | 0,098 | non |
-| Core Kraken + Phantom | 12,9 % | < 8,4 % (plus petite publiée) | 0,239 | non |
-| Bottes Berserker (3008) | 10,7 % | 15,5 % | 0,886 | non |
+| Core Hexoptics C44 + Infinity Edge | 12,9 % | < 8,4 % (plus petite publiée) | 0,239 | non |
+| Gluttonous Greaves (3008) | 10,7 % | 15,5 % | 0,886 | non |
 
 La build affinée ne change donc que les sorts. α se règle dans `config_constants.py`.
 
@@ -241,7 +241,7 @@ Les identifiants OneTricks sont ceux de Riot (§2.2.1) : aucun mapping n'est né
 ```
 [OK] Build importée : Jinx bot (500 parties one-tricks)
 [OK] Build affinée vs Draven (40 parties) :
-  Sorts  Heal+Flash -> Fatigue+Flash  (12% vs <4% en général)
+  Sorts  Barrier+Flash -> Exhaust+Flash  (12% vs <4% en général)
 ```
 
 ou `[INFO] Duel vs Draven (40 parties) : aucun écart significatif, build générale conservée`,
@@ -259,7 +259,7 @@ enregistrée et tronquée comme fixture, sans aucun appel réseau réel.
 2. **Affinage** : le lock de l'adversaire direct déclenche une seule comparaison ; un ennemi
    d'une autre lane n'en déclenche aucune. Sans substitution, aucune écriture LCU n'a lieu.
 11. **Substitutions** (`adapt_to_matchup`) : sur les fixtures Jinx contre Draven, seuls les
-    sorts sont remplacés (Heal+Flash → Fatigue+Flash). Une option absente de la page générale est
+    sorts sont remplacés (Barrière+Flash → Fatigue+Flash). Une option absente de la page générale est
     testée contre `min(plus petite publiée, 1 − somme publiée)`. Avec deux options
     significatives, la plus jouée l'emporte. Un changement de keystone emporte la page de runes
     du duel pour cette keystone.
