@@ -270,6 +270,16 @@ class DraftConfig:
     # premiers reprennent les paliers des anciens marqueurs [+]/[++].
     DUEL_ARROW_THRESHOLDS: tuple = (1.0, 2.0, 3.0)
 
+    # SPEC-15 / ADR-003 : build OneTricks importée au lock-in. Le User-Agent de
+    # navigateur fait passer le checkpoint anti-bot Vercel, acceptable tant que
+    # le volume reste celui d'une consultation manuelle (2 pages par draft).
+    # La page répond en 0,1-2,3 s : le timeout borne le pire cas dans la boucle.
+    LOADOUT_TIMEOUT_SECONDS: float = 5.0
+    LOADOUT_USER_AGENT: str = (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/128.0 Safari/537.36"
+    )
+
     # Draft phase detection
     READY_CHECK_COOLDOWN: float = 2.0  # Seconds after accepting queue
 
