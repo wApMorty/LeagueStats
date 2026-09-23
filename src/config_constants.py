@@ -265,6 +265,11 @@ class DraftConfig:
     # AnalysisConfig.MIN_GAMES_THRESHOLD.
     MIN_CHAMPION_GAMES: int = 200
 
+    # SPEC-14 : paliers (en points de winrate) des chevrons de la colonne DUEL
+    # de l'analyse finale — 1 chevron à partir de 1.0, 2 à 2.0, 3 à 3.0. Les deux
+    # premiers reprennent les paliers des anciens marqueurs [+]/[++].
+    DUEL_ARROW_THRESHOLDS: tuple = (1.0, 2.0, 3.0)
+
     # Draft phase detection
     READY_CHECK_COOLDOWN: float = 2.0  # Seconds after accepting queue
 

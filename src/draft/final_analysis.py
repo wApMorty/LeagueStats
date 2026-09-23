@@ -17,16 +17,28 @@ through _get_display_name, and writes _last_prediction_id (consumed by the
 "outcome win/loss" command).
 """
 
+from itertools import zip_longest
 from typing import Dict, List, Optional, Sequence, Tuple
 
 from ..analysis.game_eval import Placed
 from ..analysis.probability import sigmoid
-from ..config_constants import analysis_config, draft_config
+from ..config_constants import analysis_config, draft_config, scraping_config
 from ..utils.console import clear_console
 
 # (nom, matchup, synergie, total) — matchup/total à None quand les données du
 # champion sont trop minces pour être affichées.
 ScoreRow = Tuple[str, Optional[float], float, float]
+
+# Une ligne du tableau face-à-face : (allié, ennemi) sous forme d'indices dans
+# leur équipe, None pour un côté vide, et True si les deux se font face dans
+# la même lane (sinon aucun duel n'est affiché).
+FaceOff = Tuple[Optional[int], Optional[int], bool]
+
+NAME_WIDTH = 14
+STATS_WIDTH = 17  # trois colonnes « +5.1f » séparées par un espace
+DUEL_WIDTH = 12
+# « Données insuffisantes » (SPEC-06 E7) ne tient pas dans STATS_WIDTH.
+INSUFFICIENT = "peu de données"
 
 
 def _to_points(logit: float) -> float:
@@ -34,9 +46,72 @@ def _to_points(logit: float) -> float:
 
     Même échelle que l'ancien affichage par delta (``sigmoid(x) - 0.5`` vaut
     ``x/4`` près de 0), pour que les seuils de lecture du joueur — et les
-    marqueurs [++]/[+]/[~] — gardent leur sens.
+    paliers des chevrons de DUEL — gardent leur sens.
     """
     return (sigmoid(logit) - 0.5) * 100.0
+
+
+def duel_cell(points: Optional[float]) -> str:
+    """Flèche vers le gagnant du duel direct, suivie de sa valeur (SPEC-14 §2.2).
+
+    ``<`` = avantage allié, ``>`` = avantage ennemi, un chevron par palier
+    franchi ; ``=`` sous le premier palier ; ``?`` sans valeur quand rien n'est
+    mesuré.
+    """
+    if points is None:
+        return "?"
+    level = sum(abs(points) >= step for step in draft_config.DUEL_ARROW_THRESHOLDS)
+    arrow = ("<" if points > 0 else ">") * level if level else "="
+    return f"{arrow:<3} {points:+5.1f}"
+
+
+def face_offs(allies: Sequence[Placed], enemies: Sequence[Placed]) -> List[FaceOff]:
+    """Apparie les deux équipes lane par lane, dans l'ordre de ``LANES``.
+
+    Un champion sans lane, ou qui partage sa lane avec un coéquipier, n'est
+    apparié à personne : il va en fin de tableau (SPEC-14 §2.1). Mieux vaut un
+    appariement absent qu'un appariement faux.
+    """
+
+    def by_lane(team: Sequence[Placed]) -> Dict[str, int]:
+        lanes = [lane for _, lane in team]
+        return {
+            lane: index
+            for index, lane in enumerate(lanes)
+            if lane in scraping_config.LANES and lanes.count(lane) == 1
+        }
+
+    ally_lanes, enemy_lanes = by_lane(allies), by_lane(enemies)
+    rows: List[FaceOff] = []
+    for lane in scraping_config.LANES:
+        ally, enemy = ally_lanes.get(lane), enemy_lanes.get(lane)
+        if ally is not None or enemy is not None:
+            rows.append((ally, enemy, ally is not None and enemy is not None))
+
+    lone_allies = [i for i in range(len(allies)) if i not in ally_lanes.values()]
+    lone_enemies = [i for i in range(len(enemies)) if i not in enemy_lanes.values()]
+    rows.extend((ally, enemy, False) for ally, enemy in zip_longest(lone_allies, lone_enemies))
+    return rows
+
+
+def _stats(row: Optional[ScoreRow], mirrored: bool) -> str:
+    """Mat Syn Tot (Tot Syn Mat côté ennemi, en miroir) sur STATS_WIDTH."""
+    if row is None:
+        return ""
+    _, matchup, synergy, total = row
+    if matchup is None:
+        return INSUFFICIENT
+    values = (total, synergy, matchup) if mirrored else (matchup, synergy, total)
+    return " ".join(f"{value:+5.1f}" for value in values)
+
+
+def _line(ally_stats: str, ally: str, duel: str, enemy: str, enemy_stats: str) -> str:
+    """Une ligne du tableau miroir, 80 colonnes au plus (SPEC-14 §2)."""
+    return (
+        f"{ally_stats:>{STATS_WIDTH}}  {ally[:NAME_WIDTH]:<{NAME_WIDTH}} "
+        f"{duel:^{DUEL_WIDTH}} {enemy[:NAME_WIDTH]:<{NAME_WIDTH}}  "
+        f"{enemy_stats:<{STATS_WIDTH}}"
+    ).rstrip()
 
 
 class FinalDraftAnalyzer:
@@ -62,7 +137,7 @@ class FinalDraftAnalyzer:
         return True
 
     def _score_team(self, team: Sequence[Placed], opposing: Sequence[Placed]) -> List[ScoreRow]:
-        """Une ligne de tableau par champion.
+        """Une ligne de tableau par champion, dans l'ordre de ``team``.
 
         La colonne « Synergy » compte les paires du point de vue DE CE
         CHAMPION : la somme de la colonne compte donc chaque paire deux fois et
@@ -87,38 +162,43 @@ class FinalDraftAnalyzer:
             except Exception:
                 rows.append((name, None, 0.0, 0.0))  # Mark error
 
-        rows.sort(key=lambda row: row[3] if row[1] is not None else -999, reverse=True)
         return rows
 
     # ---------- affichage ----------
 
-    @staticmethod
-    def _marker(score: float) -> str:
-        """ASCII strength marker for a score."""
-        if score >= 2.0:
-            return "[++]"
-        elif score >= 1.0:
-            return "[+]"
-        elif score >= -1.0:
-            return "[~]"
-        elif score >= -2.0:
-            return "[-]"
-        else:
-            return "[--]"
+    def _duel(self, ally: Placed, enemy: Placed) -> Optional[float]:
+        """Matchup direct en points, None s'il n'est pas mesuré."""
+        try:
+            if not self.m.evaluator.has_matchup_data(ally, enemy):
+                return None
+            return _to_points(self.m.evaluator.matchup_logit(ally, enemy))
+        except Exception:
+            return None
 
-    def _print_table(self, title: str, rows: Sequence[ScoreRow]) -> None:
-        print(f"\n{title}")
-        print(f"  {'Champion':<15} | Matchup | Synergy | Total")
-        print(f"  {'-'*15}-+---------+---------+-------")
-        for champion_name, matchup_score, synergy_score, total_score in rows:
-            if matchup_score is None:
-                print(f"  {champion_name:<15} | Données insuffisantes")
-            else:
-                print(
-                    f"  {champion_name:<15} | {self._marker(matchup_score)} {matchup_score:+5.1f} | "
-                    f"{self._marker(synergy_score)} {synergy_score:+5.1f} | "
-                    f"{self._marker(total_score)} {total_score:+5.1f}"
+    def _print_face_off(self, allies: Sequence[Placed], enemies: Sequence[Placed]) -> None:
+        """Tableau miroir, une ligne par lane (SPEC-14)."""
+        ally_rows = self._score_team(allies, enemies)
+        enemy_rows = self._score_team(enemies, allies)
+
+        print("\nFACE-À-FACE PAR LANE :\n")
+        print(_line("  Mat   Syn   Tot", "Allié", "DUEL", "Ennemi", "  Tot   Syn   Mat"))
+        dashes = " ".join(["-" * 5] * 3)
+        print(_line(dashes, "-" * NAME_WIDTH, "-" * DUEL_WIDTH, "-" * NAME_WIDTH, dashes))
+        for ally, enemy, paired in face_offs(allies, enemies):
+            ally_row = ally_rows[ally] if ally is not None else None
+            enemy_row = enemy_rows[enemy] if enemy is not None else None
+            duel = self._duel(allies[ally], enemies[enemy]) if paired else None
+            print(
+                _line(
+                    _stats(ally_row, mirrored=False),
+                    ally_row[0] if ally_row else "",
+                    duel_cell(duel),
+                    enemy_row[0] if enemy_row else "",
+                    _stats(enemy_row, mirrored=True),
                 )
+            )
+        print("\n  DUEL : matchup direct en points de winrate, + = avantage pour vous")
+        print("  ?    : pas de donnée sur ce duel, ou lane incertaine")
 
     # ---------- entrée principale ----------
 
@@ -157,15 +237,7 @@ class FinalDraftAnalyzer:
             (self.m._get_display_name(champ_id), role_map.get(champ_id)) for champ_id in enemy_picks
         ]
 
-        print(f"\n[TEAMS] COMPOSITION FINALE :")
-        print(f"  Équipe alliée :  {' | '.join(name for name, _ in allies)}")
-        print(f"  Équipe ennemie : {' | '.join(name for name, _ in enemies)}")
-
-        print(f"\nANALYSE DE PERFORMANCE D'ÉQUIPE :")
-        print("-" * 60)
-
-        self._print_table("VOTRE ÉQUIPE :", self._score_team(allies, enemies))
-        self._print_table("ÉQUIPE ENNEMIE :", self._score_team(enemies, allies))
+        self._print_face_off(allies, enemies)
 
         # Team summary comparison
         print(f"\nCOMPARAISON DU DRAFT :")

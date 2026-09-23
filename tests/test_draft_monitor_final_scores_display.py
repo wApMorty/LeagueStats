@@ -2,8 +2,8 @@
 ``DraftMonitor._calculate_final_scores`` (SPEC TODO E10 safety net, SPEC-12).
 
 ``tests/test_predictions_log.py`` already covers the prediction-logging side
-effect of this method. This file complements it by pinning the rendered team
-tables, the sorting, the strength markers and the draft verdict — i.e. what
+effect of this method. This file complements it by pinning the rendered
+face-off table (SPEC-14) and the draft verdict — i.e. what
 the user actually sees at the end of a draft.
 
 Le 5v5 ci-dessous est entièrement déterministe et les attendus sont calculés à
@@ -108,26 +108,12 @@ def output(monitor, capsys):
     return capsys.readouterr().out
 
 
-def row(name: str, matchup_logit: float, synergy_logit: float) -> str:
-    """Reconstruit la ligne attendue, marqueurs compris."""
-
-    def marker(score: float) -> str:
-        if score >= 2.0:
-            return "[++]"
-        if score >= 1.0:
-            return "[+]"
-        if score >= -1.0:
-            return "[~]"
-        if score >= -2.0:
-            return "[-]"
-        return "[--]"
-
-    matchup, synergy = points(matchup_logit), points(synergy_logit)
-    total = points(matchup_logit + synergy_logit)
-    return (
-        f"  {name:<15} | {marker(matchup)} {matchup:+5.1f} | "
-        f"{marker(synergy)} {synergy:+5.1f} | {marker(total)} {total:+5.1f}"
-    )
+def stats(matchup_logit: float, synergy_logit: float, mirrored: bool = False) -> str:
+    """Reconstruit les trois colonnes attendues (SPEC-14 : miroir côté ennemi)."""
+    values = [points(matchup_logit), points(synergy_logit), points(matchup_logit + synergy_logit)]
+    if mirrored:
+        values.reverse()
+    return " ".join(f"{value:+5.1f}" for value in values)
 
 
 class TestFinalScoresHeader:
@@ -135,46 +121,28 @@ class TestFinalScoresHeader:
         assert "ANALYSE FINALE DU DRAFT - Scores individuels des champions" in output
         assert "=" * 80 in output
 
-    def test_final_composition(self, output):
-        assert "[TEAMS] COMPOSITION FINALE :" in output
-        assert "  Équipe alliée :  Ally1 | Ally2 | Ally3 | Ally4 | Ally5" in output
-        assert "  Équipe ennemie : Enemy6 | Enemy7 | Enemy8 | Enemy9 | Enemy10" in output
-
-    def test_performance_section_title(self, output):
-        assert "ANALYSE DE PERFORMANCE D'ÉQUIPE :" in output
-
-
-class TestFinalScoresAllyTable:
-    """The ally table: header, rows, sorting and strength markers."""
-
-    def test_table_header(self, output):
-        assert "VOTRE ÉQUIPE :" in output
-        assert "  Champion        | Matchup | Synergy | Total" in output
-        assert "  ----------------+---------+---------+-------" in output
-
-    @pytest.mark.parametrize("name", list(ALLY_DELTA2_VS_ENEMY6))
-    def test_rows_are_rendered_with_markers(self, output, name):
-        assert row(name, ALLY_MATCHUP_LOGIT[name], SYNERGY_LOGIT) in output
-
-    def test_rows_are_sorted_by_total_descending(self, output):
-        positions = [output.index(f"  Ally{i}           |") for i in range(1, 6)]
-        assert positions == sorted(positions)
+    def test_single_face_off_table_replaces_the_two_tables(self, output):
+        """SPEC-14 : un seul tableau miroir, plus de COMPOSITION FINALE."""
+        assert "FACE-À-FACE PAR LANE :" in output
+        assert "COMPOSITION FINALE" not in output
+        assert "VOTRE ÉQUIPE :" not in output
+        assert "ÉQUIPE ENNEMIE :" not in output
 
 
-class TestFinalScoresEnemyTable:
-    """The enemy table mirrors the ally one."""
+class TestFinalScoresFaceOff:
+    """Sans lanes connues, rien n'est apparié : les champions restent dans
+    l'ordre des picks, côte à côte, avec ``?`` en DUEL."""
 
-    def test_table_header(self, output):
-        assert "ÉQUIPE ENNEMIE :" in output
+    @pytest.mark.parametrize("index", range(5))
+    def test_rows_keep_pick_order_and_mirror_the_columns(self, output, index):
+        ally, enemy = NAMES[ALLY_IDS[index]], NAMES[ENEMY_IDS[index]]
+        ally_stats = stats(ALLY_MATCHUP_LOGIT[ally], SYNERGY_LOGIT)
+        enemy_stats = stats(ENEMY_MATCHUP_LOGIT[enemy], SYNERGY_LOGIT, mirrored=True)
+        expected = f"{ally_stats}  {ally:<14} {'?':^12} {enemy:<14}  {enemy_stats}"
+        assert expected in output
 
-    @pytest.mark.parametrize("name", list(ENEMY_MATCHUP_LOGIT))
-    def test_rows_are_rendered_with_markers(self, output, name):
-        assert row(name, ENEMY_MATCHUP_LOGIT[name], SYNERGY_LOGIT) in output
-
-    def test_the_punished_enemy_ranks_last(self, output):
-        """Enemy6 est le seul à subir des matchups : il ferme la marche."""
-        enemy_block = output.split("ÉQUIPE ENNEMIE :")[1]
-        positions = [enemy_block.index(f"  Enemy{i}") for i in (7, 8, 9, 10, 6)]
+    def test_rows_are_no_longer_sorted_by_score(self, output):
+        positions = [output.index(f"  Ally{i} ") for i in range(1, 6)]
         assert positions == sorted(positions)
 
 
