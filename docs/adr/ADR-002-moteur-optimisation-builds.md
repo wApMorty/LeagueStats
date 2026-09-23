@@ -1,7 +1,9 @@
 # ADR-002 — Moteur d'optimisation des builds : shrinkage mesuré, puis correction par les patchs
 
 **Date** : 2026-09-23
-**Statut** : Accepté (@pj35)
+**Statut** : Suspendu le 2026-09-24 ([ADR-003](ADR-003-onetricks-temps-reel.md)) — phase A+
+abandonnée (pas de collecte par patch, donc pas d'historique) ; phase A reportée avec le spike
+Coachless.
 **Spec liée** : [SPEC-16](../specs/SPEC-16-moteur-optimisation-builds.md)
 
 ## Contexte

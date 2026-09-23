@@ -1,15 +1,16 @@
 # SPEC-15 — Runes, items et sorts poussés dans le client au lock-in
 
-**Statut** : 🟡 Phase 0 **à faire** · Phase 1 **bloquée par la phase 0** · Phase 2 → déplacée
-dans [SPEC-16](SPEC-16-moteur-optimisation-builds.md).
+**Statut** : 🟡 Phase 1 **à implémenter** (source OneTricks, [ADR-003](../adr/ADR-003-onetricks-temps-reel.md)).
+Spike OneTricks fait (§2.2.1). Spike Coachless (§2.1) **reporté** avec
+[SPEC-16](SPEC-16-moteur-optimisation-builds.md).
 
 **Origine** : @pj35, 2026-09-23 — « une optimisation et import de runes/items dans le client ».
-Arbitrages du 2026-09-23 : source **Coachless** ([ADR-001](../adr/ADR-001-source-builds-coachless.md)),
-optimisation **maison** ([ADR-002](../adr/ADR-002-moteur-optimisation-builds.md)), import
-**automatique au lock-in**.
+Arbitrages du 2026-09-23 : optimisation **maison** ([ADR-002](../adr/ADR-002-moteur-optimisation-builds.md)),
+import **automatique au lock-in**. Révisé le 2026-09-24 après le spike : la source de l'import
+devient **OneTricks en temps réel** (2 pages par draft, comme la recherche manuelle de @pj35),
+Coachless est reporté, et la collecte de photographies par patch est **abandonnée**.
 
-**Effort** : phase 0 ~1 jour (deux sources) · phase 1 ~1,5 jour (dont la collecte des
-photographies).
+**Effort** : phase 1 ~1,5 jour.
 
 ---
 
@@ -24,9 +25,9 @@ photographies).
   (`src/draft/state_parser.py:120-125` ne teste pas `action["completed"]`). Le déclencheur de
   cette spec ne doit pas s'y fier tel quel.
 
-## 2. Phase 0 — Spike des sources (bloquant)
+## 2. Phase 0 — Spike des sources
 
-### 2.1 Coachless
+### 2.1 Coachless (🔵 reporté avec SPEC-16)
 
 Coachless est une SPA. Avant toute ligne de production, ouvrir une page de build dans un
 navigateur et relever dans l'onglet réseau :
@@ -49,7 +50,7 @@ navigateur et relever dans l'onglet réseau :
 5. **Le comportement face à un client scripté** : `requests` avec un User-Agent navigateur
    passe-t-il, ou y a-t-il un 429 ou un challenge comme sur OneTricks ?
 
-### 2.2 OneTricks (source des candidats de SPEC-16)
+### 2.2 OneTricks (source de l'import depuis ADR-003)
 
 1. **Les endpoints** qui donnent les builds jouées par les one-tricks sur (champion, lane), avec
    leur nombre de parties (la popularité), et le **filtre par adversaire**, avec son winrate et
@@ -114,61 +115,78 @@ le JSON `<script id="__NEXT_DATA__">` (~450 Ko) : il n'y a pas d'API à rétro-i
 3. **Historique** : **non**. `?patch=16.10` est ignoré ; seule la fenêtre glissante des 500
    dernières parties est servie (2 patchs ici). SPEC-16 A+ garde donc son délai de ~4 mois.
 
-**Recommandation : repli LoLalytics pour les candidats de SPEC-16.** Une collecte couvre 283
-combos (champion, lane), alors que le checkpoint coupe au bout de ~17 pages. Pour tenir, il
-faudrait **contourner** une protection anti-bot mise en place volontairement (User-Agent usurpé,
-voire un navigateur automatisé), ce qui dépasse l'usage sobre accepté pour Coachless dans ADR-001.
-De plus, OneTricks n'apporte ni winrate ni échantillon par build, ce dont le shrinkage de SPEC-16
-a besoin. LoLalytics est déjà scrapé (Selenium, tier Master+) : `src/parser.py` charge déjà les
-pages `/build/` par (champion, lane), mais n'en extrait que les matchups. L'extraction des builds
-(popularité, winrate, nombre de parties par composant) reste à écrire, avec des XPath à relever.
-OneTricks reste ouvert dans le navigateur en fin de draft
-(`src/draft/onetricks.py`) : ce spike ne change rien à cet usage manuel.
+**Décision (@pj35, 2026-09-24) : OneTricks en temps réel, sans collecte.** La recommandation
+initiale du spike (repli LoLalytics) supposait la collecte des 283 combos par patch prévue par
+l'ancien §3.6. @pj35 a fait remarquer que sa recherche manuelle se limite à **deux pages** : son
+champion sur sa lane, puis le duel contre son adversaire direct. Ni l'historique ni les autres
+champions de la draft ne servent. Deux requêtes par draft restent très en dessous du seuil du
+checkpoint (10 requêtes espacées de 3 s sont passées sans blocage) et correspondent au volume
+d'une consultation manuelle. Voir [ADR-003](../adr/ADR-003-onetricks-temps-reel.md).
 
 ### 2.3 Livrable
 
 Une section « Résultats du spike » ajoutée à cette spec, avec un exemple de réponse JSON tronqué
-par source. **Si Coachless échoue** (API inexploitable ou bloquée) : on s'arrête et on rouvre
-ADR-001 avec LoLalytics comme repli.
+par source. Fait pour OneTricks (§2.2.1) ; celle de Coachless viendra avec SPEC-16.
 
-## 3. Phase 1 — Import de la build Coachless au lock-in
+## 3. Phase 1 — Import de la build OneTricks au lock-in, affinée au duel
 
-Ce qu'on importe, c'est **la build recommandée par Coachless** pour (champion, lane).
-L'optimisation maison viendra avec SPEC-16. La phase 1 livre toute la tuyauterie, dont SPEC-16
-aura besoin quoi qu'il arrive, **et commence la collecte des photographies par patch** (§3.6).
+Ce qu'on importe, c'est **la build la plus jouée par les one-tricks** : d'abord sur (champion,
+lane), puis, dès que l'adversaire direct est connu, sur (champion, lane, adversaire). C'est la
+recherche que @pj35 fait aujourd'hui à la main, automatisée.
 
 ### 3.1 Module
 
-`src/draft/loadout.py` (nouveau) contient deux responsabilités, séparées en fonctions :
+`src/draft/loadout.py` (nouveau) contient trois responsabilités, séparées en fonctions :
 
-- **`fetch_build(champion, lane) -> Optional[Build]`** : appel Coachless avec un timeout court
-  (valeur dans `config_constants.py`) et un cache mémoire par (champion, lane, patch). Renvoie
-  `None` en cas d'échec, sans lever d'exception.
+- **`fetch_page(champion, lane, opponent=None) -> Optional[dict]`** : `GET
+  https://www.onetricks.gg/champions/builds/{Nom}?role={role}[&matchup={Adversaire}]`, avec un
+  User-Agent de navigateur et un timeout court (tous deux dans `config_constants.py`), puis
+  extraction du JSON `<script id="__NEXT_DATA__">` → `props.pageProps`. Les noms passent par
+  `normalize_champion_name_for_onetricks` et les lanes par `_LANE_TO_ONETRICKS_ROLE`
+  (`src/draft/onetricks.py`), les mêmes que pour la fenêtre de fin de draft. Cache mémoire par
+  (champion, lane, adversaire) pour la session. Renvoie `None` en cas d'échec (réseau, 429,
+  JSON absent), sans lever d'exception.
+- **`pick_build(page_props) -> Optional[Build]`** : lit l'agrégat
+  `firstItemStats["all"]["all"]`, c'est-à-dire la fenêtre glissante des 500 dernières parties de
+  one-tricks, tous premiers items confondus :
+  - **runes** : `popKeystone[0]`, puis la première page de `popRunes[keystone]` (6 perks et
+    `[style principal, style secondaire, keystone]`), et les fragments `popStat` ;
+  - **items** : blocs `startingItems[0]`, `popCore[0]`, `boots[0]`, puis le premier choix de
+    chaque emplacement de `popPath` ;
+  - **sorts** : `sSpells[0]`.
+
+  Tout champ manquant donne `None`, car la structure n'est pas documentée et peut changer.
 - **`apply_build(lcu, build) -> None`** : les trois écritures LCU (§3.3), chacune indépendante et
   best-effort. L'échec de l'une n'empêche pas les autres.
 
-**Identifiants Coachless** : jamais dans le dépôt ni dans les logs. Ils sont lus depuis une
-variable d'environnement (`COACHLESS_TOKEN`, ou ce que le spike aura désigné). Si elle est absente
-ou si le jeton a expiré (401/403) : `[INFO] Build non importée : session Coachless absente ou
-expirée`, sans aucune nouvelle tentative en boucle.
+`Build` est un simple dataclass : perks, styles, fragments, blocs d'items, deux sorts, plus le
+nombre de parties de la page (`patchStats["all"]`) pour la sortie console.
 
-`Build` est un simple dataclass : perks principaux et secondaires, styles, fragments, blocs
-d'items, deux sorts.
-
-Si le code Coachless dépasse une cinquantaine de lignes, il sort dans `src/coachless_client.py`.
-Sinon, tout reste dans `loadout.py`.
+**Fenêtre temporelle.** « Le patch actuel » est approché par la fenêtre des 500 dernières parties,
+et non par la clé du dernier patch. Juste après une sortie de patch, la clé de ce patch ne
+contient qu'une poignée de parties (9 pour Jinx le 2026-09-23, contre 491 pour le patch
+précédent).
 
 ### 3.2 Déclenchement
 
 - **Au lock-in** : l'action `pick` du joueur local est `completed: True`. Tester `completed`
-  explicitement, sans passer par `player_champion` (cf. §1).
-- **Une fois par (champion, lane) et par draft** : un échange de champion (trade) ou une
-  correction de lane via la commande existante relance l'import. Tout le reste est ignoré.
+  explicitement, sans passer par `player_champion` (cf. §1). On importe la build du duel si
+  l'adversaire direct est déjà connu, et la build générale sinon.
+- **Affinage** : dès qu'un ennemi **locké** a pour lane inférée celle du joueur, on télécharge la
+  page du duel. Si elle compte au moins `draft_config.LOADOUT_MIN_MATCHUP_GAMES` parties, on
+  réimporte (la page de runes `"LS "` et le set sont remplacés) ; sinon, on conserve la build
+  générale, avec un `[INFO]`.
+- **Une fois par (champion, lane, adversaire) et par draft** : un échange de champion (trade),
+  une correction de lane via la commande existante ou une réinférence de l'adversaire relance
+  l'import. Tout le reste est ignoré. En pratique, cela fait **deux requêtes par draft**.
 - Lane : `self.hover._resolve_player_lane()`, la même résolution que pour l'ouverture de
-  OneTricks.
+  OneTricks. Lane de l'adversaire : `state.inferred_roles`.
 - Flag `draft_config.AUTO_IMPORT_LOADOUT` (par défaut `True`) pour désactiver la fonction.
 - Réinitialisé avec le reste de l'état de draft dans `lifecycle.py` (à côté de
-  `player_champion = None`, l.216).
+  `player_champion = None`).
+- Appel synchrone dans la boucle de draft : la page répond entre 0,1 et 2,3 s. Le timeout borne
+  le pire cas. À signaler `ponytail:`, avec un thread comme voie de sortie si la latence gêne en
+  pratique.
 
 ### 3.3 Écritures LCU
 
@@ -180,74 +198,48 @@ Sinon, tout reste dans `loadout.py`.
 
 Les formats exacts des corps de requête sont à confirmer contre le client réel pendant
 l'implémentation : les champs ci-dessus sont ceux documentés par la communauté, pas par Riot.
+Les identifiants OneTricks sont ceux de Riot (§2.2.1) : aucun mapping n'est nécessaire.
 
 ### 3.4 Sortie console
 
-Une ligne, en ASCII : `[OK] Build importée : Électrocution / Ahri mid (runes, items, sorts)`, ou
-bien `[INFO] Build non importée : <raison>`. Rien de plus en mode normal ; le détail n'apparaît
-qu'en verbose.
+Une ligne, en ASCII : `[OK] Build importée : Ahri mid (500 parties one-tricks)`, puis au duel
+`[OK] Build affinée : Ahri vs Syndra (40 parties)`, ou bien `[INFO] Build non importée :
+<raison>`. Rien de plus en mode normal ; le détail n'apparaît qu'en verbose.
 
 ### 3.5 Critères d'acceptation (tests)
 
-Hermétiques : LCU et HTTP Coachless simulés (`monkeypatch` / `unittest.mock`), sans aucun appel
-réseau réel.
+Hermétiques : LCU et HTTP simulés (`monkeypatch` / `unittest.mock`), avec une page OneTricks
+enregistrée et tronquée comme fixture, sans aucun appel réseau réel.
 
 1. Un survol (`completed: False`) **ne déclenche pas** d'import ; le lock-in en déclenche un seul.
    Un deuxième passage dans la boucle avec le même état n'en déclenche pas de second.
-2. Un trade de champion après le lock-in relance l'import.
-3. **Runes** : une page `"LS …"` existante est supprimée puis recréée. Les pages sans préfixe ne
+2. **Affinage** : le lock de l'adversaire direct déclenche un seul import du duel ; un ennemi
+   d'une autre lane n'en déclenche aucun. Sous `LOADOUT_MIN_MATCHUP_GAMES`, la build générale est
+   conservée et aucune écriture LCU n'a lieu.
+3. Un trade de champion après le lock-in relance l'import.
+4. **Runes** : une page `"LS …"` existante est supprimée puis recréée. Les pages sans préfixe ne
    subissent jamais de `DELETE`. Sans emplacement libre, pas d'écriture et un `[INFO]`.
-4. **Items** : le PUT contient les sets du joueur à l'identique, plus un seul set `"LS …"`.
-5. **Sorts** : Flash reste sur la touche où le joueur l'avait.
-6. **Best-effort** : un jeton absent ou expiré (401/403), un timeout Coachless, un 500 du LCU ou
-   un JSON inattendu ne lèvent aucune exception hors de `loadout.py`, et la boucle de draft
-   continue.
-7. Le flag `AUTO_IMPORT_LOADOUT = False` désactive tout appel.
-8. Cache : deux lock-ins sur le même (champion, lane, patch) ne font qu'un seul appel Coachless.
-
-### 3.6 Photographies par patch (collecte pour SPEC-16)
-
-Pourquoi dès la phase 1, sans consommateur : SPEC-16 A+ a besoin de ~8 transitions de patch
-d'historique (ADR-002). Un patch non photographié est **perdu définitivement**, et la collecte ne
-coûte presque rien.
-
-- **Table `build_snapshots`**, avec une migration Alembic. Granularité par **composant** (rune,
-  item, sort), car c'est ce que SPEC-16 consomme : `source`, `patch`, `champion`, `lane`,
-  `opponent` (NULL = toutes lanes adverses confondues), `component_type`, `component_id`, `games`,
-  `winrate`, `wpa` (NULL hors Coachless), `popularity`, `collected_at`. Clé d'unicité
-  `(source, patch, champion, lane, opponent, component_type, component_id)` : une seconde collecte
-  sur le même patch met à jour la ligne au lieu de la dupliquer. Les colonnes exactes sont à
-  ajuster aux résultats du spike.
-- **Patch** : la première entrée de `https://ddragon.leagueoflegends.com/api/versions.json`,
-  tronquée à `majeur.mineur`.
-- **Déclenchement** : une étape best-effort de `src/pipeline.py`, après le scrape. Elle couvre
-  les 283 combos (champion, lane) connus, pour Coachless et pour OneTricks (ou son repli), avec un
-  débit limité (constante dans `config_constants.py`, calée sur le spike). Un échec est journalisé
-  et **n'échoue pas le pipeline**.
-- **Alerte d'oubli** : le pipeline est lancé manuellement. Si le patch courant n'a aucune
-  photographie, `data_freshness.py` affiche un `[ALERTE]` au démarrage, pour ne pas laisser passer
-  un patch en silence.
-- Le module de collecte vit à part : `src/build_snapshots.py`, pas dans `loadout.py`, parce que
-  l'un sert le temps réel et l'autre le pipeline.
-
-**Tests** : idempotence (deux collectes sur le même patch = mêmes lignes) ; un échec de source ne
-fait pas échouer le pipeline ; l'alerte se déclenche quand le patch courant n'a pas de
-photographie ; la migration est testée en upgrade et en downgrade.
+5. **Items** : le PUT contient les sets du joueur à l'identique, plus un seul set `"LS …"`.
+6. **Sorts** : Flash reste sur la touche où le joueur l'avait.
+7. **Best-effort** : un 429 (checkpoint Vercel), un timeout, une page sans `__NEXT_DATA__`, un
+   champ manquant dans `pageProps` ou un 500 du LCU ne lèvent aucune exception hors de
+   `loadout.py`, et la boucle de draft continue.
+8. Le flag `AUTO_IMPORT_LOADOUT = False` désactive tout appel.
+9. **Cache et débit** : deux lock-ins sur le même (champion, lane, adversaire) ne font qu'un seul
+   appel HTTP. Une draft complète en fait au plus deux.
+10. `pick_build` sur la fixture renvoie la page de runes, les blocs d'items et les sorts attendus.
 
 ## 4. Optimisation maison
 
-Déplacée dans [SPEC-16](SPEC-16-moteur-optimisation-builds.md) (méthode : ADR-002). Quand le moteur
-sera prêt, `fetch_build` sera remplacé par un appel au moteur, sans toucher aux écritures LCU.
+Reportée avec [SPEC-16](SPEC-16-moteur-optimisation-builds.md) (méthode : ADR-002). Quand le
+moteur sera prêt, `pick_build` sera remplacé par un appel au moteur, sans toucher aux écritures
+LCU.
 
 ## 5. Fichiers touchés (phase 1)
 
 | Fichier | Changement |
 |---|---|
-| `src/draft/loadout.py` (nouveau) | Fetch Coachless, cache, écritures LCU |
-| `src/build_snapshots.py` (nouveau) | Collecte par patch, toutes sources |
-| `src/draft/lifecycle.py` | Déclenchement au lock-in, réinitialisation |
-| `src/pipeline.py` | Étape de collecte, best-effort |
-| `src/data_freshness.py` | `[ALERTE]` si le patch courant n'a aucune photographie |
-| `src/config_constants.py` | `AUTO_IMPORT_LOADOUT`, timeout, préfixe `"LS "`, débit de collecte |
-| `alembic/versions/` | Table `build_snapshots` |
-| `tests/test_loadout.py`, `tests/test_build_snapshots.py` (nouveaux) | §3.5 et §3.6 |
+| `src/draft/loadout.py` (nouveau) | Fetch OneTricks, choix de la build, cache, écritures LCU |
+| `src/draft/lifecycle.py` | Déclenchement au lock-in et à l'affinage, réinitialisation |
+| `src/config_constants.py` | `AUTO_IMPORT_LOADOUT`, `LOADOUT_MIN_MATCHUP_GAMES`, timeout, User-Agent, préfixe `"LS "` |
+| `tests/test_loadout.py`, `tests/fixtures/onetricks_*.json` (nouveaux) | §3.5 |

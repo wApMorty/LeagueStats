@@ -1,7 +1,8 @@
 # ADR-001 — Coachless comme source des runes, items et sorts
 
 **Date** : 2026-09-23
-**Statut** : Accepté (@pj35)
+**Statut** : Suspendu le 2026-09-24 par [ADR-003](ADR-003-onetricks-temps-reel.md) — l'import
+de SPEC-15 passe par OneTricks. Coachless reste la source envisagée pour SPEC-16 A, reportée.
 **Spec liée** : [SPEC-15](../specs/SPEC-15-import-runes-items.md)
 
 ## Contexte

@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-09-23 (planning du lot SPEC-14 → SPEC-16 — voir §Priorités)
+**Mis à jour** : 2026-09-24 (replanification après le spike OneTricks — voir §Priorités)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -17,83 +17,49 @@ Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique com
 
 ---
 
-## Priorités actuelles — lot SPEC-14 → SPEC-16 (planifié le 2026-09-23)
+## Priorités actuelles — lot SPEC-14 → SPEC-16 (replanifié le 2026-09-24)
 
 Besoin affiné avec @pj35 le 2026-09-23 : [SPEC-14](docs/specs/SPEC-14-draft-finale-head-to-head.md),
-[SPEC-15](docs/specs/SPEC-15-import-runes-items.md), [SPEC-16](docs/specs/SPEC-16-moteur-optimisation-builds.md),
-décisions dans [ADR-001](docs/adr/ADR-001-source-builds-coachless.md) et
-[ADR-002](docs/adr/ADR-002-moteur-optimisation-builds.md).
+[SPEC-15](docs/specs/SPEC-15-import-runes-items.md), [SPEC-16](docs/specs/SPEC-16-moteur-optimisation-builds.md).
+**Replanifié le 2026-09-24** après le spike OneTricks ([ADR-003](docs/adr/ADR-003-onetricks-temps-reel.md)) :
+l'import prend la build OneTricks en temps réel (2 pages par draft, comme la recherche manuelle
+de @pj35). La collecte par patch (`build_snapshots`) et SPEC-16 A+ sont **abandonnées**, tandis que
+le spike Coachless et SPEC-16 A sont **reportés**.
 
 **Estimation** en points Fibonacci (1 ≈ une heure, 3 ≈ une demi-journée, 5 ≈ une journée, 8 ou
 plus = à redécouper avant de démarrer).
 
-### Logique de priorisation
-
-1. **Le spike d'abord.** Il débloque toute la chaîne des builds, et c'est la seule tâche qui
-   peut invalider une décision (ADR-001). Il demande @pj35, avec son compte Coachless connecté
-   dans le navigateur.
-2. **La collecte des photographies juste après.** C'est la seule valeur **irrattrapable** du lot :
-   chaque patch non photographié est perdu pour SPEC-16 A+, qui a besoin de ~8 transitions. Elle
-   passe donc **avant** l'import LCU, pourtant plus visible.
-3. **SPEC-14 en quick win**, indépendante : elle peut s'intercaler à tout moment, par exemple
-   pendant qu'on attend @pj35 pour le spike.
-4. **L'import LCU** (valeur visible) ensuite, puis le **moteur A** qui le remplace.
-5. **A+** attend l'historique : pas avant ~4 mois de collecte, sauf si le spike révèle un
-   historique consultable.
-
-### Sprint 1 — Débloquer et lancer l'horloge (~19 pts)
-
-**Objectif** : spike conclu, collecte par patch en production, draft finale en face-à-face.
-
-| # | Tâche | Spec | Pts | Dépend de | État |
-|---|---|---|---|---|---|
-| 1 | Spike Coachless : endpoints, authentification et durée de vie du jeton, granularité du WPA (par composant ? erreur-type ?), historique, CGU sur l'accès scripté | SPEC-15 §2.1 | 3 | @pj35 | ⬜ |
-| 2 | Spike OneTricks : débit toléré (429), filtre par adversaire, historique ; décider OneTricks ou repli LoLalytics | SPEC-15 §2.2 | 2 | — | ✅ spike fait (§2.2.1) — repli LoLalytics recommandé, décision @pj35 |
-| 3 | Consigner les résultats du spike dans SPEC-15 et **ajuster SPEC-15 et SPEC-16** (colonnes de `build_snapshots`, faisabilité de A) | SPEC-15 §2.3 | 1 | 1, 2 | ⬜ |
-| 4 | Migration Alembic `build_snapshots`, testée en upgrade et en downgrade | SPEC-15 §3.6 | 2 | 3 | ⬜ |
-| 5 | `src/build_snapshots.py` : collecte par source, idempotente, débit limité, et étape best-effort dans `pipeline.py` | SPEC-15 §3.6 | 5 | 4 | ⬜ |
-| 6 | `[ALERTE]` dans `data_freshness.py` si le patch courant n'a aucune photographie | SPEC-15 §3.6 | 1 | 5 | ⬜ |
-| 7 | `GameEvaluator.has_matchup_data()` + tests | SPEC-14 §2.2 | 1 | — | ✅ |
-| 8 | Tableau miroir ordonné par lane, colonne DUEL (flèche + valeur), seuils dans `config_constants.py`, critères §5 | SPEC-14 | 3 | 7 | ✅ |
-| 9 | Première collecte réelle lancée sur le patch courant (action manuelle, menu 3) | SPEC-15 §3.6 | 1 | 5 | ⬜ |
-
-**Point de sortie** : si le spike Coachless échoue (tâche 1), on arrête les tâches 4 à 6 et on
-rouvre ADR-001 avec LoLalytics comme repli, avant de replanifier.
-
-### Sprint 2 — Import dans le client (~15 pts)
-
-**Objectif** : au lock-in, les runes, les items et les sorts de la build Coachless sont dans le
-client, sans jamais toucher aux pages ni aux sets du joueur.
-
-| # | Tâche | Spec | Pts | Dépend de | État |
-|---|---|---|---|---|---|
-| 10 | `loadout.fetch_build()` : client Coachless, jeton en variable d'environnement, timeout, cache (champion, lane, patch) | SPEC-15 §3.1 | 3 | 3 | ⬜ |
-| 11 | `loadout.apply_build()` : page de runes `LS`, set d'items préservant ceux du joueur, sorts avec Flash sur sa touche habituelle | SPEC-15 §3.3 | 5 | 10 | ⬜ |
-| 12 | Déclenchement sur `completed: True` (et non sur `player_champion`), une fois par (champion, lane), relance sur trade, flag `AUTO_IMPORT_LOADOUT` | SPEC-15 §3.2 | 3 | 11 | ⬜ |
-| 13 | Tests §3.5 (8 critères) | SPEC-15 §3.5 | 3 | 12 | ⬜ |
-| 14 | Recette en partie réelle : vérifier les corps de requête LCU contre le client (non documentés par Riot) | SPEC-15 §3.3 | 1 | 12 | ⬜ |
-
-### Sprint 3 — Moteur d'optimisation, phase A (~15 pts)
-
-**Démarrable après le sprint 2, et seulement si** la tâche 3 a confirmé un WPA par composant avec
-échantillons. Sinon, SPEC-16 est réorientée avant d'engager quoi que ce soit.
-
-| # | Tâche | Spec | Pts | Dépend de | État |
-|---|---|---|---|---|---|
-| 15 | Mesurer le `C` du WPA (erreur-type publiée, ou régression de `mean(d²)` sur `1/n`) et les `K_wpa` et `K_diff` ; extension de `shrink.py`, K stockés dans `db_meta` | SPEC-16 §2.3 | 5 | 5, 3 | ⬜ |
-| 16 | `src/analysis/build_engine.py` : candidats populaires, note `wpa_shrunk + diff_shrunk`, classement ; additivité signalée `ponytail:` | SPEC-16 §2.1-2.2 | 5 | 15 | ⬜ |
-| 17 | `scripts/validate_build_engine.py` : stabilité sur les témoins et cohérence de signe | SPEC-16 §2.4 | 3 | 16 | ⬜ |
-| 18 | Brancher `loadout` sur le moteur à la place de la build Coachless brute | SPEC-16 §5 | 2 | 16, 12 | ⬜ |
-
-### Plus tard — Phase A+ (🔵 bloquée)
-
-**Débloquée à** ~8 transitions de patch dans `build_snapshots`, soit environ 4 mois après la
-tâche 9 (horizon indicatif : début 2027), sauf si le spike révèle un historique consultable.
+### Sprint 1 — Quick win et spike ✅ (2026-09-24)
 
 | # | Tâche | Spec | Pts | État |
 |---|---|---|---|---|
-| 19 | `src/analysis/patch_diff.py` : diff Data Dragon (items, runes, champions), classement modifié ou inchangé | SPEC-16 §3.1 | 3 | 🔵 |
-| 20 | Les trois mesures (bruit des témoins, différence de différences, biais de sélection) et la repondération des sources : **à redécouper** au déblocage | SPEC-16 §3.2 | 13 | 🔵 |
+| 2 | Spike OneTricks : débit toléré, filtre par adversaire, historique | SPEC-15 §2.2.1 | 2 | ✅ OneTricks retenu en temps réel (ADR-003) |
+| 7 | `GameEvaluator.has_matchup_data()` + tests | SPEC-14 §2.2 | 1 | ✅ |
+| 8 | Tableau miroir ordonné par lane, colonne DUEL | SPEC-14 | 3 | ✅ |
+
+### Sprint 2 — Import OneTricks dans le client (~15 pts)
+
+**Objectif** : au lock-in, les runes, les items et les sorts les plus joués par les one-tricks
+sont dans le client, puis affinés au duel dès que l'adversaire direct est locké, sans jamais
+toucher aux pages ni aux sets du joueur.
+
+| # | Tâche | Spec | Pts | Dépend de | État |
+|---|---|---|---|---|---|
+| 10 | `loadout.fetch_page()` + `pick_build()` : page OneTricks, `__NEXT_DATA__`, User-Agent navigateur, timeout, cache (champion, lane, adversaire), fixture enregistrée | SPEC-15 §3.1 | 3 | — | ⬜ |
+| 11 | `loadout.apply_build()` : page de runes `LS`, set d'items préservant ceux du joueur, sorts avec Flash sur sa touche habituelle | SPEC-15 §3.3 | 5 | 10 | ⬜ |
+| 12 | Déclenchement sur `completed: True` (et non sur `player_champion`), affinage au lock de l'adversaire direct avec seuil `LOADOUT_MIN_MATCHUP_GAMES`, relance sur trade, flag `AUTO_IMPORT_LOADOUT` | SPEC-15 §3.2 | 3 | 11 | ⬜ |
+| 13 | Tests §3.5 (10 critères) | SPEC-15 §3.5 | 3 | 12 | ⬜ |
+| 14 | Recette en partie réelle : vérifier les corps de requête LCU contre le client (non documentés par Riot) | SPEC-15 §3.3 | 1 | 12 | ⬜ |
+
+### Reporté — non planifié
+
+| Tâche | Spec | Rouvrir quand |
+|---|---|---|
+| Spike Coachless (endpoints, authentification, granularité du WPA, CGU) | SPEC-15 §2.1 | La build des one-tricks se révèle insuffisante à l'usage |
+| Moteur d'optimisation, phase A (shrinkage mesuré du WPA) | SPEC-16 §2 | Après le spike Coachless, s'il confirme un WPA par composant avec échantillons |
+
+**Abandonné** (ADR-003) : la table `build_snapshots`, l'étape de collecte du pipeline, l'alerte
+`data_freshness.py` (anciennes tâches 3 à 6 et 9), et SPEC-16 A+ (anciennes tâches 19-20).
 
 ---
 

@@ -1,8 +1,9 @@
 # SPEC-16 — Moteur d'optimisation des builds
 
-**Statut** : 🔵 **Note de cadrage**. Actionable seulement après la phase 0 de SPEC-15 (spike).
-Phase A actionable dès que le spike a confirmé les données ; phase A+ **bloquée** tant qu'il n'y a
-pas ~8 transitions de patch photographiées.
+**Statut** : ⏸️ **Reportée, non planifiée** (2026-09-24, [ADR-003](../adr/ADR-003-onetricks-temps-reel.md)).
+L'import de SPEC-15 prend la build la plus jouée sur OneTricks, sans moteur. Phase A : à rouvrir
+avec le spike Coachless si la build des one-tricks se révèle insuffisante à l'usage. Phase A+ :
+**abandonnée**, faute de collecte par patch (la table `build_snapshots` n'est plus prévue).
 
 **Origine** : @pj35, 2026-09-23. Méthode arrêtée en discussion, cf.
 [ADR-002](../adr/ADR-002-moteur-optimisation-builds.md). Remplace la phase 2 de

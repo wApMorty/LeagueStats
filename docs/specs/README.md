@@ -55,9 +55,9 @@ Specs issues de notes de features au fil de l'eau, chacune indépendante sauf me
 
 | Spec | Objet | Fichiers principaux touchés | Effort |
 |---|---|---|---|
-| [SPEC-14](SPEC-14-draft-finale-head-to-head.md) | Draft finale en tableau face-à-face ordonné par lane, avec flèche et valeur du duel direct | `src/draft/final_analysis.py`, `src/analysis/game_eval.py`, `src/config_constants.py` | ~0,5 jour |
-| [SPEC-15](SPEC-15-import-runes-items.md) | Runes, items et sorts poussés dans le client au lock-in, source Coachless ([ADR-001](../adr/ADR-001-source-builds-coachless.md)), puis optimisation maison | `src/draft/loadout.py` (nouveau), `src/draft/lifecycle.py`, `src/config_constants.py` | spike 1 j + 1,5 j (dont collecte par patch) |
-| [SPEC-16](SPEC-16-moteur-optimisation-builds.md) 🔵 | Moteur d'optimisation des builds : shrinkage mesuré (A), puis correction par les patchs (A+) ([ADR-002](../adr/ADR-002-moteur-optimisation-builds.md)) | `src/analysis/build_engine.py`, `src/analysis/patch_diff.py` (nouveaux) | A ~3 j après le spike de SPEC-15 ; A+ bloquée (~8 patchs d'historique) |
+| [SPEC-14](SPEC-14-draft-finale-head-to-head.md) ✅ | Draft finale en tableau face-à-face ordonné par lane, avec flèche et valeur du duel direct | `src/draft/final_analysis.py`, `src/analysis/game_eval.py`, `src/config_constants.py` | ~0,5 jour |
+| [SPEC-15](SPEC-15-import-runes-items.md) | Runes, items et sorts poussés dans le client au lock-in, build OneTricks générale puis affinée au duel ([ADR-003](../adr/ADR-003-onetricks-temps-reel.md)) | `src/draft/loadout.py` (nouveau), `src/draft/lifecycle.py`, `src/config_constants.py` | ~1,5 j |
+| [SPEC-16](SPEC-16-moteur-optimisation-builds.md) ⏸️ | Moteur d'optimisation des builds : shrinkage mesuré (A), puis correction par les patchs (A+) ([ADR-002](../adr/ADR-002-moteur-optimisation-builds.md)) | `src/analysis/build_engine.py`, `src/analysis/patch_diff.py` (nouveaux) | Reportée : A avec le spike Coachless, A+ abandonnée (ADR-003) |
 
 ---
 
