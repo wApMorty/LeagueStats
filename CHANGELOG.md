@@ -4,6 +4,23 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### ✨ Feature
+
+- **SPEC-14 : la draft finale se lit en face-à-face, lane par lane** — un seul
+  tableau miroir remplace la ligne `COMPOSITION FINALE` et les deux tableaux
+  triés par score. Une ligne par lane (Top > Jungle > Mid > ADC > Support),
+  l'allié à gauche (`Mat Syn Tot`), l'ennemi à droite (`Tot Syn Mat`), et au
+  centre la colonne **DUEL** : matchup direct en points, avec une flèche vers
+  le gagnant (`<`/`>`, un à trois chevrons aux paliers 1, 2 et 3 de
+  `draft_config.DUEL_ARROW_THRESHOLDS`, `=` en dessous).
+- `?` sans valeur quand le duel n'a aucune donnée (nouvelle méthode
+  `GameEvaluator.has_matchup_data()`, puisque `matchup_logit` renvoie 0.0 dans
+  les deux cas) ou quand la lane est incertaine : un champion sans lane ou qui
+  partage sa lane avec un coéquipier va en fin de tableau, sans appariement.
+- Purement visuel : scores, probabilité et prédiction journalisée pour la
+  calibration sont inchangés. Le tableau tient en 80 colonnes ; « Données
+  insuffisantes » devient « peu de données » pour y tenir.
+
 ### 🔥 Removal
 
 - **Le curseur synergie/matchup du Live Coach est supprimé** — il était du code

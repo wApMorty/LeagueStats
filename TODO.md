@@ -53,8 +53,8 @@ plus = à redécouper avant de démarrer).
 | 4 | Migration Alembic `build_snapshots`, testée en upgrade et en downgrade | SPEC-15 §3.6 | 2 | 3 | ⬜ |
 | 5 | `src/build_snapshots.py` : collecte par source, idempotente, débit limité, et étape best-effort dans `pipeline.py` | SPEC-15 §3.6 | 5 | 4 | ⬜ |
 | 6 | `[ALERTE]` dans `data_freshness.py` si le patch courant n'a aucune photographie | SPEC-15 §3.6 | 1 | 5 | ⬜ |
-| 7 | `GameEvaluator.has_matchup_data()` + tests | SPEC-14 §2.2 | 1 | — | ⬜ |
-| 8 | Tableau miroir ordonné par lane, colonne DUEL (flèche + valeur), seuils dans `config_constants.py`, critères §5 | SPEC-14 | 3 | 7 | ⬜ |
+| 7 | `GameEvaluator.has_matchup_data()` + tests | SPEC-14 §2.2 | 1 | — | ✅ |
+| 8 | Tableau miroir ordonné par lane, colonne DUEL (flèche + valeur), seuils dans `config_constants.py`, critères §5 | SPEC-14 | 3 | 7 | ✅ |
 | 9 | Première collecte réelle lancée sur le patch courant (action manuelle, menu 3) | SPEC-15 §3.6 | 1 | 5 | ⬜ |
 
 **Point de sortie** : si le spike Coachless échoue (tâche 1), on arrête les tâches 4 à 6 et on

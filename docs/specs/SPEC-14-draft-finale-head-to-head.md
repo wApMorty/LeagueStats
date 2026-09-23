@@ -1,6 +1,8 @@
 # SPEC-14 — La draft finale se lit en face-à-face, lane par lane
 
-**Statut** : 🟡 **À implémenter** — format validé par @pj35 le 2026-09-23.
+**Statut** : ✅ **Implémentée** le 2026-09-23 — format validé par @pj35 le 2026-09-23.
+Écart assumé : « Données insuffisantes » s'affiche « peu de données » (21 caractères ne tiennent
+pas dans les 17 des trois colonnes, critère §5.6).
 
 **Origine** : @pj35 — « J'aimerais que le coach m'affiche la draft finale dans le bon ordre des
 lanes (Top > Jungle > Mid > ADC > Supp) », puis : un tableau head-to-head, une flèche qui indique
