@@ -87,13 +87,15 @@ class TestCounterpickTrioFinderLaneIsolation:
     Assistant facade) -- the classic blind-pick + counterpick-duo search."""
 
     def test_optimal_trio_from_pool_forwards_lane_to_matchup_lookups(self):
+        """SPEC-18 §4 : la recherche lit winrates et matchups en bloc, par lane."""
         mock_db = Mock()
-        mock_db.get_all_champion_names.return_value = {1: "Zed"}
-        mock_db.get_champion_matchups_by_name.return_value = [
-            Matchup(
-                enemy_name="Zed", winrate=50.0, delta1=0.0, delta2=1.0, pickrate=5.0, games=1000
-            )
-        ]
+        mock_db.get_lane_winrates.return_value = {
+            "Aatrox": (52.0, 5000),
+            "Darius": (50.0, 5000),
+            "Garen": (49.0, 5000),
+        }
+        mock_db.get_all_matchups_bulk.return_value = {}
+        mock_db.get_meta.return_value = None
         tactics = Mock()
         finder = CounterpickTrioFinder(mock_db, tactics, verbose=False)
 
@@ -101,8 +103,9 @@ class TestCounterpickTrioFinderLaneIsolation:
             ["Aatrox", "Darius", "Garen"], validate_pool=_dummy_validate_pool, lane="top"
         )
 
-        assert mock_db.get_champion_matchups_by_name.call_count > 0
-        for call in mock_db.get_champion_matchups_by_name.call_args_list:
+        for call in mock_db.get_lane_winrates.call_args_list:
+            assert call.args == ("top",)
+        for call in mock_db.get_all_matchups_bulk.call_args_list:
             assert call.kwargs.get("lane") == "top"
         tactics.analyze.assert_called_once()
         assert tactics.analyze.call_args.kwargs.get("lane") == "top"

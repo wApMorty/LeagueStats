@@ -128,7 +128,14 @@ class GameEvaluator:
         return value
 
     def _matchup_logit(self, champion: Placed, enemy: Placed) -> float:
-        """Calcul non mémorisé de ``matchup_logit``.
+        """Calcul non mémorisé de ``matchup_logit``."""
+        weight = self._lane_weight(champion[1], enemy[1])
+        points = self.duel_points(champion, enemy) * analysis_config.K_MATCHUP
+        return winrate_points_to_logit(points) * weight
+
+    def duel_points(self, champion: Placed, enemy: Placed) -> float:
+        """Avantage de ``champion`` sur ``enemy``, en points de winrate rétrécis
+        (SPEC-13), sans pondération de lane : la valeur d'un duel seul (SPEC-18).
 
         δ antisymétrique : la valeur est la demi-différence des deux points de
         vue quand les deux existent. Quand un seul côté a des données, on le
@@ -150,9 +157,7 @@ class GameEvaluator:
             delta2, games = -reverse[0], reverse[1]
         else:
             return 0.0
-
-        weight = self._lane_weight(lane, enemy_lane) * confidence(games, self._k_matchup)
-        return winrate_points_to_logit(delta2 * analysis_config.K_MATCHUP) * weight
+        return delta2 * confidence(games, self._k_matchup)
 
     def has_matchup_data(self, champion: Placed, enemy: Placed) -> bool:
         """Vrai si au moins un des deux points de vue de la paire est mesuré.

@@ -85,10 +85,11 @@ class TestOptimalTrioFromPool:
     def test_nominal_returns_blind_pick_duo_and_score(self, trio_assistant):
         """Nominal run over a 4-champion pool of the fixture universe.
 
-        Pinned values follow directly from DELTAS:
-        - best blind pick = highest avg delta2 = Teemo (+1.50)
-        - best counterpick duo from the rest = (Darius, Garen), duo score 16.5
-        - total = blind avg delta2 (1.5) + duo score (16.5) = 18.0
+        SPEC-18 §4 :
+        - blind pick = meilleur winrate de lane rétréci = Teemo (51,5 % brut) ;
+        - duo = celui qui maximise la valeur de contre-pick du trio. La
+          faiblesse de Teemo est Garen : Aatrox (+3 contre Garen) la couvre un
+          peu mieux que Darius (+2,5), Garen couvrant le miroir de Teemo.
         """
         # Arrange
         pool = ["Aatrox", "Darius", "Garen", "Teemo"]
@@ -97,19 +98,19 @@ class TestOptimalTrioFromPool:
         result = trio_assistant.optimal_trio_from_pool(pool)
 
         # Assert
-        assert result == ("Teemo", "Darius", "Garen", pytest.approx(18.0))
+        assert result == ("Teemo", "Aatrox", "Garen", pytest.approx(2.047, abs=1e-3))
 
     def test_nominal_prints_blind_pick_ranking(self, trio_assistant, capsys):
-        """The blind-pick ranking block is printed, sorted by avg delta2."""
+        """The blind-pick ranking block is printed, sorted by lane winrate."""
         # Act
         trio_assistant.optimal_trio_from_pool(["Aatrox", "Darius", "Garen", "Teemo"])
         out = capsys.readouterr().out
 
         # Assert
         assert "BLIND PICK RANKINGS:" in out
-        assert "[OK] Selected blind pick: Teemo (avg delta2: 1.50)" in out
+        assert "[OK] Selected blind pick: Teemo" in out
         assert "TOP DUO RANKINGS:" in out
-        assert "[OK] Optimal trio: Teemo (blind) + Darius + Garen (counterpicks)" in out
+        assert "[OK] Optimal trio: Teemo (blind) + Aatrox + Garen (counterpicks)" in out
 
     def test_pool_smaller_than_three_raises(self, trio_assistant):
         """Fewer than 3 champions is rejected before any DB access."""
@@ -153,18 +154,15 @@ class TestOptimalDuoForChampion:
         # The two companions come from the pool, minus the fixed champion.
         assert set(result[1:3]).issubset(set(CHAMPIONS) - {"Aatrox"})
 
-    def test_nominal_total_score_is_fixed_avg_delta2_plus_duo_score(self, trio_assistant, capsys):
-        """total_score = avg delta2 of the fixed champion + duo score.
-
-        Aatrox avg delta2 over the fixture universe is +0.60, and the printed
-        duo total score is the second term.
-        """
+    def test_nominal_total_score_is_the_trio_counter_value(self, trio_assistant, capsys):
+        """total_score = valeur de contre-pick du trio (SPEC-18 §4)."""
         # Act
         result = trio_assistant.optimal_duo_for_champion("Aatrox", CHAMPIONS)
         out = capsys.readouterr().out
 
         # Assert
-        assert "[OK] Fixed champion validated: 5 matchups, 5000 total games, 0.60 avg delta2" in out
+        assert "[OK] Fixed champion validated: 5 matchups, 5000 total games" in out
+        assert result[3] == pytest.approx(2.047, abs=1e-3)
         assert f"[OK] Optimal trio: Aatrox + {result[1]} + {result[2]}" in out
 
     def test_fixed_champion_without_data_raises(self, trio_assistant, capsys):
@@ -195,38 +193,21 @@ class TestFindOptimalCounterpickDuo:
     """Characterization of ``_find_optimal_counterpick_duo()``."""
 
     def test_nominal_returns_best_duo_and_score(self, trio_assistant):
-        """Best duo alongside blind pick Teemo is (Darius, Garen) at 16.5.
-
-        Score = for each of the 6 known enemies, the best delta2 available in
-        the trio {Teemo, Darius, Garen} (see DELTAS).
-        """
+        """Best duo alongside blind pick Teemo is (Aatrox, Garen), see
+        TestOptimalTrioFromPool for the reasoning."""
         # Act
         duo, score = trio_assistant._find_optimal_counterpick_duo(
             ["Aatrox", "Darius", "Garen"], "Teemo"
         )
 
         # Assert
-        assert duo == ("Darius", "Garen")
-        assert score == pytest.approx(16.5)
+        assert duo == ("Aatrox", "Garen")
+        assert score == pytest.approx(2.047, abs=1e-3)
 
     def test_remaining_pool_smaller_than_two_raises(self, trio_assistant):
         """Fewer than 2 candidates cannot form a duo."""
         with pytest.raises(ValueError, match="Need at least 2 champions in pool, got 1"):
             trio_assistant._find_optimal_counterpick_duo(["Aatrox"], "Teemo")
-
-    def test_all_duos_filtered_by_coverage_raises(self, trio_assistant):
-        """A duo covering < 10% of the champion roster is discarded.
-
-        Simulating a 100-champion roster while the fixture only knows 6 makes
-        every duo fall to 6% coverage, so none survives the filter.
-        """
-        # Arrange: pretend the DB knows 100 champions
-        fake_roster = {i: f"Fake{i}" for i in range(100)}
-
-        with patch.object(trio_assistant.db, "get_all_champion_names", return_value=fake_roster):
-            # Act / Assert
-            with pytest.raises(ValueError, match="No valid duo combinations could be evaluated"):
-                trio_assistant._find_optimal_counterpick_duo(["Aatrox", "Darius", "Garen"], "Teemo")
 
     def test_show_ranking_prints_top_duos(self, trio_assistant, capsys):
         """``show_ranking=True`` adds the TOP DUO RANKINGS block."""
@@ -238,8 +219,8 @@ class TestFindOptimalCounterpickDuo:
 
         # Assert
         assert "TOP DUO RANKINGS:" in out
-        assert "1. Darius + Garen" in out
-        assert "Evaluated 3 valid combinations" in out
+        assert "1. Aatrox + Garen" in out
+        assert "Evaluated 3 duos" in out
 
     def test_without_show_ranking_omits_top_duo_rankings(self, trio_assistant, capsys):
         """Default (``show_ranking=False``) prints no ranking block."""
@@ -249,7 +230,7 @@ class TestFindOptimalCounterpickDuo:
 
         # Assert
         assert "TOP DUO RANKINGS:" not in out
-        assert "[OK] Evaluation complete: 3/3 tested, 3 viable" in out
+        assert "Evaluated 3 duos" in out
 
 
 class TestAnalyzeTrioTactics:

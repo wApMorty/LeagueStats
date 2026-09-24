@@ -22,12 +22,6 @@ class _TrioFacadeMixin:
     # ==================== Optimal Trio Analysis ====================
     # These methods find optimal champion compositions for draft phases
 
-    def _display_live_podium(
-        self, top_duos: List[dict], tested: int, total: int, viable: int
-    ) -> None:
-        """Display live podium of top 3 duos during evaluation."""
-        self.trio_counterpick._display_live_podium(top_duos, tested, total, viable)
-
     def _find_optimal_counterpick_duo(
         self, remaining_pool: List[str], blind_champion: str, show_ranking: bool = False
     ) -> tuple:

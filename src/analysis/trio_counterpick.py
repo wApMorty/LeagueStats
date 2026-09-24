@@ -1,15 +1,18 @@
 """Classic (blind-pick + counterpick-duo) trio/duo search.
 
-Extracted from src/assistant.py (SPEC-07 E10, lot 4) : déplacement verbatim,
-aucun changement de comportement. Distinct de trio_holistic.py, qui évalue
+Extracted from src/assistant.py (SPEC-07 E10, lot 4). Scoring revu par
+SPEC-18 §4 (``pool_value.PoolEvaluator``) : blind au winrate de lane rétréci,
+duo à la valeur de contre-pick du trio. Distinct de trio_holistic.py, qui évalue
 les trios comme des unités plutôt que blind pick + duo de contre-picks.
 """
 
+from itertools import combinations
 from typing import Callable, List, Optional, Tuple
 
 from ..constants import CHAMPION_POOL
 from ..db import Database
 from ..utils.display import safe_print
+from .pool_value import PoolEvaluator
 from .trio_tactics import TrioTacticsReporter
 
 
@@ -21,186 +24,55 @@ class CounterpickTrioFinder:
         self.tactics = tactics
         self.verbose = verbose
 
-    def _display_live_podium(
-        self, top_duos: List[dict], tested: int, total: int, viable: int
-    ) -> None:
-        """Display live podium of top 3 duos during evaluation."""
-        import sys
-
-        # Clear previous lines (move cursor up 6 lines and clear)
-        if tested > 50:  # Don't clear on first display
-            sys.stdout.write("\033[6A")  # Move up 6 lines
-            sys.stdout.write("\033[J")  # Clear from cursor to end of screen
-
-        progress_pct = (tested / total) * 100
-        bar_width = 30
-        filled = int(bar_width * tested / total)
-        bar = "█" * filled + "░" * (bar_width - filled)
-
-        print(f"Progress: [{bar}] {progress_pct:.1f}% ({tested}/{total}) | Viable: {viable}")
-        print("─" * 80)
-
-        if not top_duos:
-            print("Searching for optimal duos...")
-            print()
-            return
-
-        medals = ["1.", "2.", "3."]
-        for i, duo_info in enumerate(top_duos):
-            duo = duo_info["duo"]
-            score = duo_info["total_score"]
-            coverage = duo_info["coverage"]
-
-            medal = medals[i] if i < len(medals) else f"{i+1}."
-            print(f"{medal} {duo[0]} + {duo[1]} | Score: {score:.1f} | Coverage: {coverage:.1%}")
-
-        # Add empty lines to keep spacing consistent
-        for _ in range(3 - len(top_duos)):
-            print()
-
-        sys.stdout.flush()
-
     def _find_optimal_counterpick_duo(
         self,
         remaining_pool: List[str],
         blind_champion: str,
         show_ranking: bool = False,
         lane: Optional[str] = None,
+        evaluator: Optional[PoolEvaluator] = None,
     ) -> tuple:
-        """Find the best duo of counterpicks to maximize coverage against all champions.
+        """Duo qui maximise la valeur de contre-pick du trio (SPEC-18 §4).
+
+        Score : gain moyen en points de winrate quand, face à chaque ennemi
+        pondéré par sa popularité sur la lane, on joue le meilleur du trio
+        (``PoolEvaluator.counter_value``).
 
         Args:
-            lane: Lane optionnelle transmise aux requêtes matchups internes.
-                  None = agrégation toutes lanes, comportement inchangé.
+            lane: Lane des matchups et de la popularité. None = toutes lanes.
+            evaluator: Évaluateur déjà construit pour ``lane`` (évite de
+                recharger les tables quand l'appelant en a un).
         """
-        from itertools import combinations
-
         if len(remaining_pool) < 2:
             raise ValueError(f"Need at least 2 champions in pool, got {len(remaining_pool)}")
+        evaluator = evaluator or PoolEvaluator(self.db, lane)
 
-        duo_rankings = []  # Store all viable duos with their scores
-        evaluated_combinations = 0
-        filtered_by_coverage = 0
-        duos_tested = 0
-
-        # Get all champions from database (dynamic, includes new champions like Zaahen)
-        all_champions = list(self.db.get_all_champion_names().values())
-        total_enemies = len(all_champions)
-
-        total_combinations = len(list(combinations(remaining_pool, 2)))
-        print(f"\nEvaluating {total_combinations} possible duos...\n")
-
-        # Try all possible pairs from remaining pool
-        for duo in combinations(remaining_pool, 2):
-            duos_tested += 1
-
-            try:
-                total_score = 0
-                trio = [blind_champion] + list(duo)
-                valid_matchups_found = 0
-
-                # For each enemy champion, find the best counter from our trio
-                for enemy_champion in all_champions:
-                    best_counter_score = -float("inf")
-
-                    for our_champion in trio:
-                        try:
-                            matchups = self.db.get_champion_matchups_by_name(
-                                our_champion, lane=lane
-                            )
-                            if not matchups:
-                                continue
-
-                            # Find the specific matchup against this enemy
-                            for matchup in matchups:
-                                if matchup.enemy_name.lower() == enemy_champion.lower():
-                                    if matchup.delta2 > best_counter_score:
-                                        best_counter_score = matchup.delta2
-                                    break
-                        except Exception as e:
-                            continue  # Skip silently for cleaner output
-
-                    # If we found a matchup, add it to total score
-                    if best_counter_score != -float("inf"):
-                        total_score += best_counter_score
-                        valid_matchups_found += 1
-
-                # Calculate coverage metrics
-                coverage_ratio = valid_matchups_found / total_enemies
-                avg_score_per_matchup = (
-                    total_score / valid_matchups_found if valid_matchups_found > 0 else 0
-                )
-
-                # Only consider this duo if it has reasonable coverage
-                if coverage_ratio < 0.10:  # Less than 10% coverage
-                    filtered_by_coverage += 1
-                    continue
-
-                evaluated_combinations += 1
-
-                # Store duo info for ranking
-                duo_rankings.append(
-                    {
-                        "duo": duo,
-                        "total_score": total_score,
-                        "coverage": coverage_ratio,
-                        "avg_score": avg_score_per_matchup,
-                        "matchups_covered": valid_matchups_found,
-                    }
-                )
-
-                # Sort to keep top 3 and display real-time podium
-                duo_rankings.sort(key=lambda x: x["total_score"], reverse=True)
-
-                # Display live podium every 50 duos (or if in top 3)
-                if duos_tested % 50 == 0 or len(duo_rankings) <= 3:
-                    self._display_live_podium(
-                        duo_rankings[:3], duos_tested, total_combinations, evaluated_combinations
-                    )
-
-            except Exception as e:
-                continue  # Skip silently for cleaner output
-
-        # Final podium
-        print("\n" + "=" * 80)
-        print(
-            f"[OK] Evaluation complete: {duos_tested}/{total_combinations} tested, {evaluated_combinations} viable"
+        rankings = sorted(
+            (
+                {
+                    "duo": duo,
+                    "total_score": evaluator.counter_value([blind_champion, *duo]),
+                    "coverage": evaluator.coverage([blind_champion, *duo]),
+                }
+                for duo in combinations(remaining_pool, 2)
+            ),
+            key=lambda info: info["total_score"],
+            reverse=True,
         )
 
-        if evaluated_combinations == 0:
-            raise ValueError(
-                f"No valid duo combinations could be evaluated (filtered {filtered_by_coverage} duos with <10% coverage)"
-            )
-
-        # Sort by total score (descending)
-        duo_rankings.sort(key=lambda x: x["total_score"], reverse=True)
-
-        if not duo_rankings:
-            raise ValueError("No viable duo found after evaluation")
-
-        # Display rankings if requested
-        if show_ranking and len(duo_rankings) > 1:
-            safe_print(f"\nTOP DUO RANKINGS:")
+        if show_ranking:
+            safe_print("\nTOP DUO RANKINGS:")
             safe_print("─" * 80)
-            display_count = min(5, len(duo_rankings))  # Show top 5
-
-            for i, info in enumerate(duo_rankings[:display_count]):
-                duo = info["duo"]
-                score = info["total_score"]
-                coverage = info["coverage"]
-                avg_score = info["avg_score"]
-
-                rank_symbol = "1." if i == 0 else "2." if i == 1 else "3." if i == 2 else f"{i+1}."
-
-                safe_print(f"{rank_symbol} {duo[0]} + {duo[1]}")
+            for i, info in enumerate(rankings[:5], 1):
+                safe_print(f"{i}. {info['duo'][0]} + {info['duo'][1]}")
                 print(
-                    f"    Total Score: {score:.1f} | Coverage: {coverage:.1%} | Avg/Match: {avg_score:.2f}"
+                    f"    Gain en contre-pick : {info['total_score']:+.2f} pts | "
+                    f"Couverture : {info['coverage']:.0%} des games"
                 )
+        print(f"Evaluated {len(rankings)} duos")
 
-        print(f"Evaluated {evaluated_combinations} valid combinations")
-
-        best_info = duo_rankings[0]
-        return best_info["duo"], best_info["total_score"]
+        best = rankings[0]
+        return best["duo"], best["total_score"]
 
     def optimal_trio_from_pool(
         self,
@@ -213,8 +85,8 @@ class CounterpickTrioFinder:
 
         Algorithm:
         1. Validate champion pool data availability
-        2. Find champion with best average delta2 as blind pick
-        3. From remaining champions, find duo that maximizes counterpick coverage
+        2. Blind pick = best shrunk lane winrate (SPEC-18)
+        3. From remaining champions, find duo that maximizes counterpick value
 
         Args:
             champion_pool: List of champion names to choose from
@@ -250,50 +122,25 @@ class CounterpickTrioFinder:
                 f"\n[ALERTE] Using {len(viable_champions)} viable champions out of {len(champion_pool)} requested"
             )
 
-        # Step 1: Find best blind pick (highest average delta2) from viable champions
-        blind_candidates = []
+        # Step 1: blind pick = meilleur winrate de lane rétréci (SPEC-18).
+        # avg_delta2 est nul par construction, trier dessus revenait au hasard.
+        evaluator = PoolEvaluator(self.db, lane)
+        blind_candidates = sorted(
+            viable_champions,
+            key=lambda champ: evaluator.strength.get(champ.lower(), 0.0),
+            reverse=True,
+        )
 
-        print(f"\nAnalyzing blind pick candidates from viable champions...")
-        for champion in viable_champions:
-            score = validation_report[champion]["avg_delta2"]
-            games = validation_report[champion]["total_games"]
-            matchups = validation_report[champion]["matchups"]
-
-            blind_candidates.append(
-                {
-                    "champion": champion,
-                    "avg_delta2": score,
-                    "total_games": games,
-                    "matchups": matchups,
-                }
-            )
-
-        # Sort by avg_delta2 (descending)
-        blind_candidates.sort(key=lambda x: x["avg_delta2"], reverse=True)
-
-        if not blind_candidates:
-            raise ValueError("No viable blind pick champion found")
-
-        # Display blind pick rankings
-        safe_print(f"\nBLIND PICK RANKINGS:")
+        safe_print("\nBLIND PICK RANKINGS:")
         safe_print("─" * 60)
-        display_count = min(len(viable_champions), 5)  # Show all viable or max 5
+        for i, champ in enumerate(blind_candidates[:5], 1):
+            games = validation_report[champ]["total_games"]
+            force = evaluator.strength.get(champ.lower(), 0.0)
+            safe_print(f"{i}. {champ}")
+            print(f"    Winrate vs moyenne de la lane : {force:+.2f} pts | Games: {games:,}")
 
-        for i, candidate in enumerate(blind_candidates[:display_count]):
-            champ = candidate["champion"]
-            score = candidate["avg_delta2"]
-            games = candidate["total_games"]
-            matchups = candidate["matchups"]
-
-            rank_symbol = "1." if i == 0 else "2." if i == 1 else "3." if i == 2 else f"{i+1}."
-
-            safe_print(f"{rank_symbol} {champ}")
-            print(f"    Avg Delta2: {score:.2f} | Games: {games:,} | Matchups: {matchups}")
-
-        best_blind = blind_candidates[0]["champion"]
-        best_blind_score = blind_candidates[0]["avg_delta2"]
-
-        safe_print(f"\n[OK] Selected blind pick: {best_blind} (avg delta2: {best_blind_score:.2f})")
+        best_blind = blind_candidates[0]
+        safe_print(f"\n[OK] Selected blind pick: {best_blind}")
 
         # Step 2: Find best counterpick duo from remaining viable champions
         remaining_pool = [champ for champ in viable_champions if champ != best_blind]
@@ -304,8 +151,8 @@ class CounterpickTrioFinder:
             )
 
         try:
-            best_duo, duo_score = self._find_optimal_counterpick_duo(
-                remaining_pool, best_blind, show_ranking=True, lane=lane
+            best_duo, total_score = self._find_optimal_counterpick_duo(
+                remaining_pool, best_blind, show_ranking=True, lane=lane, evaluator=evaluator
             )
         except Exception as e:
             print(f"Error finding optimal duo: {e}")
@@ -314,10 +161,8 @@ class CounterpickTrioFinder:
         if best_duo is None:
             raise ValueError("No viable counterpick duo found")
 
-        total_score = best_blind_score + duo_score
-
         print(f"Best counterpick duo: {best_duo}")
-        print(f"Total coverage score: {total_score:.2f}")
+        print(f"Gain en contre-pick du trio : {total_score:+.2f} pts")
         safe_print(
             f"\n[OK] Optimal trio: {best_blind} (blind) + {best_duo[0]} + {best_duo[1]} (counterpicks)"
         )
@@ -362,16 +207,14 @@ class CounterpickTrioFinder:
         print(f"Finding optimal duo to pair with: {fixed_champion}")
 
         # Step 0: Validate fixed champion has data
-        has_data, matchups, games, delta2 = validate_champion(fixed_champion)
+        has_data, matchups, games, _ = validate_champion(fixed_champion)
 
         if not has_data:
             safe_print(f"\n[ERREUR] Fixed champion '{fixed_champion}' has insufficient data")
             print(f"  Matchups: {matchups}, Games: {games}")
             raise ValueError(f"Fixed champion '{fixed_champion}' has insufficient data in database")
 
-        safe_print(
-            f"[OK] Fixed champion validated: {matchups} matchups, {games} total games, {delta2:.2f} avg delta2"
-        )
+        safe_print(f"[OK] Fixed champion validated: {matchups} matchups, {games} total games")
 
         # Remove the fixed champion from the pool if it's there
         available_pool = [
@@ -404,7 +247,7 @@ class CounterpickTrioFinder:
 
         # Step 2: Find best duo from viable companions
         try:
-            best_duo, duo_score = self._find_optimal_counterpick_duo(
+            best_duo, total_score = self._find_optimal_counterpick_duo(
                 viable_companions, fixed_champion, show_ranking=True, lane=lane
             )
         except Exception as e:
@@ -414,10 +257,8 @@ class CounterpickTrioFinder:
         if best_duo is None:
             raise ValueError("No viable companion duo found")
 
-        total_score = delta2 + duo_score
-
         print(f"\nBest companions: {best_duo}")
-        print(f"Total coverage score: {total_score:.2f}")
+        print(f"Gain en contre-pick du trio : {total_score:+.2f} pts")
         safe_print(f"\n[OK] Optimal trio: {fixed_champion} + {best_duo[0]} + {best_duo[1]}")
 
         # Add tactical analysis
