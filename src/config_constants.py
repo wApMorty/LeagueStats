@@ -325,7 +325,11 @@ class DraftConfig:
     # Coups candidats retenus par lane libre pour les picks qui ne sont pas les
     # nôtres : les N champions les plus joués de la lane (SPEC-17 §4.1). Au-delà,
     # le facteur de branchement coûte de la profondeur ; en deçà, on rate des
-    # contre-picks réels. Calibrage au bench : SPEC-17 tâche 25.
+    # contre-picks réels. Calibré au bench (scripts/bench_search.py, 2 s,
+    # 2026-09-24) : 8 est le plus grand N qui atteint la fin de draft en B2
+    # (N=10 : B2 6/7 ; N=12 : B2 6/7, B1 4). Les 8 plus joués couvrent 27 %
+    # des games en top, 37 % en jungle, 34 % en mid, 56 % en bot, 42 % en
+    # support.
     SEARCH_TOP_N: int = 8
 
     # ── SPEC-08 : boucle de mesure (résultat de partie automatique via LCU) ──
