@@ -206,7 +206,9 @@ chaque catégorie, avec `n` le nombre de parties du duel (`patchStats["all"]`) :
    `min(plus petite popularité publiée, 1 − somme des popularités publiées)` de la catégorie.
    Les deux bornes sont des majorants valides : sur les fixtures, la somme par catégorie reste
    ≤ 1, donc le dénominateur est commun. La règle reste prudente. La plus petite popularité
-   publiée ne suffit pas seule : les items de départ n'en publient qu'une, à 94 %.
+   publiée ne suffit pas seule : les items de départ n'en publient qu'une, à 94 %. Le
+   majorant ne descend jamais sous `1 / parties générales` (1/500) : quand la somme publiée
+   atteint 100 %, la masse restante vaut 0, et une seule partie de duel suffirait sinon.
 2. `o` est **significative** si `P(Binomiale(n, p0) ≥ k) < draft_config.LOADOUT_MATCHUP_ALPHA`
    (0,05). Le test se calcule en stdlib (`math.comb`).
 3. Si plusieurs options sont significatives, on retient la plus jouée dans le duel. Elle remplace
