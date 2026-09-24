@@ -3,7 +3,7 @@
 **Projet**: LeagueStats Coach
 **Version**: 1.3.0
 **Mainteneur**: @pj35
-**Dernière mise à jour**: 2026-09-04
+**Dernière mise à jour**: 2026-09-24
 
 ---
 
@@ -41,17 +41,9 @@ LeagueStats Coach est un outil d'analyse et de coaching pour League of Legends q
 
 ### 1. Avant de Commencer une Tâche
 
-```bash
-# TOUJOURS créer feature branch DEPUIS MASTER
-git checkout -b feature/task-name origin/master
-
-# ❌ MAUVAIS - Créer depuis autre branche
-git checkout feature/old-task
-git checkout -b feature/new-task  # ❌ Contient commits de old-task!
-
-# ✅ BON - Toujours depuis master
-git checkout -b feature/new-task origin/master  # ✅ Propre!
-```
+Travail direct sur `master`, à jour (`git pull origin master`). Une branche
+(`feature/…` ou `fix/…`, créée depuis `origin/master`) reste possible pour un
+chantier long ou expérimental, mais n'est plus obligatoire (@pj35, 2026-09-24).
 
 ### 2. Pendant le Développement
 
@@ -60,7 +52,7 @@ git checkout -b feature/new-task origin/master  # ✅ Propre!
 - ✅ Messages de commit descriptifs et explicites
 - ✅ Ne jamais regrouper plusieurs changements non liés
 
-### 3. Avant de Créer la PR (Checklist Obligatoire)
+### 3. Avant de Pousser sur master (Checklist Obligatoire)
 
 **A. Tests pour les nouvelles fonctionnalités**:
 ```bash
@@ -88,13 +80,13 @@ python -m black --check --diff src/ tests/ scripts/
 
 ### 4. Code Review Process
 
-**IMPORTANT**: Toujours demander validation avant de merge
+**IMPORTANT**: Toujours demander validation avant de pousser sur master
 
 **Étapes**:
-1. ✅ **Checklist "Avant de Créer la PR" complétée**
+1. ✅ **Checklist "Avant de Pousser sur master" complétée**
 2. ✅ Créer un résumé des changements pour l'utilisateur
 3. ✅ **ATTENDRE VALIDATION** de l'utilisateur
-4. ✅ Merger uniquement après approbation
+4. ✅ Pousser uniquement après approbation
 
 ---
 
@@ -224,7 +216,8 @@ git commit -m "🗃️ Database: Add Alembic migration for role column"
 
 ### Workflow Pull Request
 
-**IMPORTANT**: Utiliser les Pull Requests GitHub pour toutes les code reviews
+**Optionnel** : seulement pour un chantier mené sur une branche. Par défaut, la
+revue se fait en conversation, puis push direct sur master (§ Code Review Process).
 
 **Commandes**:
 ```bash
@@ -317,31 +310,29 @@ python -m alembic revision -m "Description"
 
 ### TOUJOURS
 
-1. ✅ **Feature branch DEPUIS MASTER** (`git checkout -b feature/name origin/master`)
-2. ✅ **Commits atomiques** et fréquents
-3. ✅ **Tests pour nouvelles fonctionnalités**
-4. ✅ **Test de régression** pour chaque bug corrigé (OBLIGATOIRE)
-5. ✅ **Tous les tests passent** avant PR (`pytest tests/ -v`)
-6. ✅ **Formatage Black appliqué** avant PR (`python -m black src/ tests/`)
-7. ✅ **Code review** AVANT tout merge
-8. ✅ **Validation utilisateur** explicite requise avant merge
-9. ✅ **Requêtes SQL paramétrées** (sécurité)
-10. ✅ **config_constants.py** pour valeurs hardcodées
-11. ✅ **Proposer 2-3 approches** pour toute décision architecturale non triviale
+1. ✅ **Commits atomiques** et fréquents
+2. ✅ **Tests pour nouvelles fonctionnalités**
+3. ✅ **Test de régression** pour chaque bug corrigé (OBLIGATOIRE)
+4. ✅ **Tous les tests passent** avant push (`pytest tests/ -v`)
+5. ✅ **Formatage Black appliqué** avant push (`python -m black src/ tests/`)
+6. ✅ **Code review** AVANT tout push sur master
+7. ✅ **Validation utilisateur** explicite requise avant push sur master
+8. ✅ **Requêtes SQL paramétrées** (sécurité)
+9. ✅ **config_constants.py** pour valeurs hardcodées
+10. ✅ **Proposer 2-3 approches** pour toute décision architecturale non triviale
 
 ### JAMAIS
 
-1. ❌ Merger sans validation utilisateur
-2. ❌ Commits directs sur branche principale
-3. ❌ Valeurs hardcodées dans le code
-4. ❌ Interpolation string dans SQL
-5. ❌ Fichiers >500 lignes
-6. ❌ Code non testé en production
-7. ❌ Breaking changes sans migration
-8. ❌ Commit en Co-Author. Tu n'es qu'un outil, je suis pleinement responsable du code.
+1. ❌ Pousser sur master sans validation utilisateur
+2. ❌ Valeurs hardcodées dans le code
+3. ❌ Interpolation string dans SQL
+4. ❌ Fichiers >500 lignes
+5. ❌ Code non testé en production
+6. ❌ Breaking changes sans migration
+7. ❌ Commit en Co-Author. Tu n'es qu'un outil, je suis pleinement responsable du code.
 
 ---
 
-**Dernière mise à jour**: 2026-09-04
+**Dernière mise à jour**: 2026-09-24
 **Maintenu par**: Claude Code (Sonnet 5)
 **Pour**: @pj35 - LeagueStats Coach v1.3.0
