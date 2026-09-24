@@ -305,6 +305,7 @@ class TestResetForNextGame:
         monitor.player_champion = "Aatrox"
         monitor.forced_roles = {266: "top"}
         monitor._last_prediction_id = 42
+        monitor.loadout._last_key = (222, "bottom", "Draven")  # SPEC-15
 
     def test_every_attribute_returns_to_its_initial_value(self, monitor):
         # Arrange
@@ -325,6 +326,7 @@ class TestResetForNextGame:
         assert monitor.player_champion is None
         assert monitor.forced_roles == {}
         assert monitor._last_prediction_id is None
+        assert monitor.loadout._last_key is None  # SPEC-15 : la draft suivante réimporte
 
     def test_console_is_cleared(self, monitor):
         with patch("src.draft.lifecycle.clear_console") as clear:
@@ -510,3 +512,20 @@ class TestOutcomeResolutionTrigger:
             monitor._monitor_loop()  # must not raise
 
         resolve.assert_not_called()
+
+
+class TestLoadoutWiring:
+    """SPEC-15 : chaque tick de champ select passe par l'import de build."""
+
+    def test_champ_select_tick_feeds_the_importer(self, monitor):
+        session = {"localPlayerCellId": 1, "myTeam": [], "theirTeam": [], "actions": []}
+        monitor.lcu.is_in_ready_check.return_value = False
+        monitor.lcu.is_in_champion_select.return_value = True
+        monitor.lcu.get_champion_select_session.return_value = session
+        monitor.lcu.get_assigned_positions.return_value = {}
+        monitor.loadout = Mock()
+
+        monitor._monitor_loop()
+
+        monitor.loadout.on_tick.assert_called_once()
+        assert monitor.loadout.on_tick.call_args.args[0] is session

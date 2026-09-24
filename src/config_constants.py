@@ -284,6 +284,9 @@ class DraftConfig:
     # plus de bruit : sur 40 parties de duel, 0.05 ne laisse passer que des
     # écarts francs (Fatigue contre Draven : 12 % contre < 4 %).
     LOADOUT_MATCHUP_ALPHA: float = 0.05
+    # Import automatique de la build au lock-in (SPEC-15). False = aucun appel
+    # à OneTricks ni écriture dans le client.
+    AUTO_IMPORT_LOADOUT: bool = True
     # Préfixe de la page de runes et du set d'items écrits par le coach : seuls
     # les éléments portant ce préfixe sont jamais supprimés ou remplacés.
     LOADOUT_PREFIX: str = "LS "

@@ -27,6 +27,7 @@ from .draft.commands import CommandListener
 from .draft.recommendations import DraftRecommender
 from .draft.final_analysis import FinalDraftAnalyzer
 from .draft.lifecycle import MonitorLifecycle
+from .draft.loadout_import import LoadoutImporter
 from .draft.outcome_tracker import OutcomeTracker
 
 
@@ -107,6 +108,7 @@ class DraftMonitor:
         self.final_analyzer = FinalDraftAnalyzer(self)
         self.lifecycle = MonitorLifecycle(self)
         self.outcome_tracker = OutcomeTracker(self)
+        self.loadout = LoadoutImporter(self)  # SPEC-15
         self.last_recommendation = None  # Track last recommendation to avoid spam
         self.last_ban_recommendation = None  # Track last ban recommendation to avoid spam
         self.has_done_initial_hover = False  # Track if we've done the initial hover

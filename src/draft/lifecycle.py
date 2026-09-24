@@ -105,6 +105,9 @@ class MonitorLifecycle:
                     self.m._handle_draft_change(current_state)
                 self.m.last_draft_state = current_state
 
+            # SPEC-15: runes/items/sorts pushed at lock-in, refined at the duel.
+            self.m.loadout.on_tick(champ_select_data, current_state)
+
             # Check if draft is complete and analyze if needed
             if self.m._is_draft_complete(current_state) and not self.m.has_analyzed_final_draft:
                 self.m._analyze_complete_draft(current_state)
@@ -217,6 +220,7 @@ class MonitorLifecycle:
         self.m.forced_roles = {}  # SPEC-04 B5: corrections don't carry to the next game
         self.m._last_prediction_id = None  # SPEC-05 B7: predictions don't carry to the next game
         self.m._last_outcome_trigger_phase = None  # SPEC-08: re-arm the transition detector
+        self.m.loadout.reset()  # SPEC-15: a new draft imports again
 
         # Reset ready message flag
         if hasattr(self.m, "_shown_ready_message"):

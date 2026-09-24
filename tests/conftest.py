@@ -7,6 +7,7 @@ import sqlite3
 
 from src import pipeline as pipeline_module
 from src.config import config
+from src.config_constants import draft_config
 from src.db import Database
 from src.analysis.scoring import ChampionScorer
 from src.models import Matchup
@@ -44,6 +45,14 @@ def _guard_production_untouched():
 def _isolate_logs(monkeypatch, tmp_path):
     """Redirect src.pipeline's log directory so no test writes to logs/update_all.log."""
     monkeypatch.setattr(pipeline_module, "DEFAULT_LOG_DIR", tmp_path / "logs")
+
+
+@pytest.fixture(autouse=True)
+def _no_loadout_import(monkeypatch):
+    """SPEC-15 : l'import de build télécharge des pages OneTricks. Coupé par
+    défaut pour qu'aucun test de la boucle de draft ne sorte sur le réseau ;
+    les tests de l'import le réactivent explicitement."""
+    monkeypatch.setattr(draft_config, "AUTO_IMPORT_LOADOUT", False)
 
 
 @pytest.fixture(autouse=True)
