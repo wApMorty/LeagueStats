@@ -376,3 +376,23 @@ class MatchupsRepository:
         except Exception as e:
             print(f"[ERROR] Failed to load bulk matchups: {e}")
             return {}
+
+    def get_lane_popularity(self, lane: str) -> List[str]:
+        """Champions joués sur ``lane``, du plus joué au moins joué (SPEC-17 §4.1).
+
+        Popularité = somme de ``matchups.games`` du champion sur la lane : ce
+        qu'un adversaire joue réellement, indépendamment de sa force.
+        """
+        try:
+            cursor = self.db.connection.cursor()
+            cursor.execute(
+                """
+                SELECT c.name FROM matchups m JOIN champions c ON c.id = m.champion
+                WHERE m.lane = ? GROUP BY m.champion ORDER BY SUM(m.games) DESC
+                """,
+                (lane,),
+            )
+            return [row[0] for row in cursor.fetchall()]
+        except Exception as e:
+            print(f"[ERROR] Failed to load lane popularity for {lane}: {e}")
+            return []

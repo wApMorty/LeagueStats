@@ -274,6 +274,9 @@ class Database:
     def get_all_matchups_bulk(self, lane: Optional[str] = None, with_games: bool = False) -> dict:
         return self._matchups.get_all_matchups_bulk(lane=lane, with_games=with_games)
 
+    def get_lane_popularity(self, lane: str) -> List[str]:
+        return self._matchups.get_lane_popularity(lane)
+
     # ========== Synergies ==========
 
     def init_synergies_table(self) -> None:

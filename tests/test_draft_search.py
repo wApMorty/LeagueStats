@@ -16,11 +16,11 @@ GAMES = 10_000
 
 
 class FakeDB:
-    """Tables de paires et tier list, sans SQL."""
+    """Tables de paires et popularité par lane, sans SQL."""
 
-    def __init__(self, matchups, scores_by_lane):
+    def __init__(self, matchups, popularity_by_lane):
         self.matchups = matchups
-        self.scores_by_lane = scores_by_lane
+        self.popularity_by_lane = popularity_by_lane
 
     def get_all_matchups_bulk(self, lane=None, with_games=False):
         return self.matchups
@@ -34,12 +34,9 @@ class FakeDB:
         qu'un changement de shrink ne doit pas bouleverser."""
         return None
 
-    def get_all_champion_scores(self, lane="all"):
-        # (name, avg_delta2, variance, coverage, peak_impact, volatility, ratio)
-        return [
-            (name, delta2, 0.0, 0.0, 0.0, 0.0, 0.0)
-            for name, delta2 in self.scores_by_lane.get(lane, [])
-        ]
+    def get_lane_popularity(self, lane):
+        """Du plus joué au moins joué, comme MatchupsRepository."""
+        return self.popularity_by_lane.get(lane, [])
 
 
 # Greedy écrase le jungler ennemi déjà pické, mais Punisher (encore
@@ -53,8 +50,8 @@ TRAP_MATCHUPS = {
     ("filler", "safe"): (0.0, GAMES),
 }
 
-TRAP_SCORES = {
-    "top": [("Punisher", 3.0), ("Filler", 1.0)],
+TRAP_POPULARITY = {
+    "top": ["Punisher", "Filler"],
     "jungle": [],
     "middle": [],
     "bottom": [],
@@ -64,7 +61,7 @@ TRAP_SCORES = {
 
 @pytest.fixture
 def search():
-    db = FakeDB(TRAP_MATCHUPS, TRAP_SCORES)
+    db = FakeDB(TRAP_MATCHUPS, TRAP_POPULARITY)
     return DraftSearch(GameEvaluator(db), CandidatePool(db, top_n=8))
 
 
@@ -146,7 +143,7 @@ class TestMoveGeneration:
         db = FakeDB(
             {("mirror", "jungler"): (5.0, GAMES)},
             {
-                "top": [("Mirror", 9.0), ("Filler", 1.0)],
+                "top": ["Mirror", "Filler"],
                 "jungle": [],
                 "middle": [],
                 "bottom": [],
@@ -222,3 +219,33 @@ class TestBudget:
         )
         assert len(results) == len(POOL)
         assert results == sorted(results, key=lambda r: -r.win_probability)
+
+
+class TestCandidatePool:
+    """SPEC-17 §4.1 : les candidats sont les champions joués, pas les plus forts."""
+
+    def test_candidates_follow_popularity_order(self):
+        db = FakeDB({}, {"top": ["Popular", "Common", "Rare"]})
+        assert CandidatePool(db, top_n=2).best("top", set()) == ["Popular", "Common"]
+
+    def test_taken_champions_let_the_next_most_played_in(self):
+        db = FakeDB({}, {"top": ["Popular", "Common", "Rare"]})
+        assert CandidatePool(db, top_n=2).best("top", {"popular"}) == ["Common", "Rare"]
+
+    def test_strong_but_unplayed_champion_is_never_examined(self):
+        """Le cas Kassadin top : écrasant sur le papier, mais hors du top-N joué,
+        il ne doit pas devenir la « meilleure réponse adverse »."""
+        db = FakeDB(
+            {("kassadin", "safe"): (40.0, GAMES), ("common", "safe"): (1.0, GAMES)},
+            {"top": ["Common", "Kassadin"]},
+        )
+        engine = DraftSearch(GameEvaluator(db), CandidatePool(db, top_n=1))
+
+        results = engine.rank(
+            allies=[],
+            enemies=[],
+            pool=["Safe"],
+            remaining_turns=[OUR_TURN, THEIR_TURN],
+            player_lane="top",
+        )
+        assert results[0].principal_variation[0][0] == "Common"

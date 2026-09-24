@@ -323,9 +323,9 @@ class DraftConfig:
     SEARCH_MAX_DEPTH: int = 10
 
     # Coups candidats retenus par lane libre pour les picks qui ne sont pas les
-    # nôtres (tier list champion_scores). Au-delà, le facteur de branchement
-    # coûte de la profondeur pour des champions que personne ne joue ; en deçà,
-    # on rate des contre-picks réels.
+    # nôtres : les N champions les plus joués de la lane (SPEC-17 §4.1). Au-delà,
+    # le facteur de branchement coûte de la profondeur ; en deçà, on rate des
+    # contre-picks réels. Calibrage au bench : SPEC-17 tâche 25.
     SEARCH_TOP_N: int = 8
 
     # ── SPEC-08 : boucle de mesure (résultat de partie automatique via LCU) ──

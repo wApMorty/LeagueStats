@@ -16,8 +16,10 @@ Trois mécaniques, empruntées aux moteurs d'échecs :
 - **Élagage alpha-bêta.** Exact, jamais une approximation : il ne coupe que les
   branches qui ne peuvent plus changer la valeur de la racine.
 - **Coups candidats.** Nos picks viennent de notre pool, ceux des autres des
-  ``SEARCH_TOP_N`` meilleurs champions de chaque lane libre. Le reste est
-  écarté comme un moteur d'échecs écarte les coups faibles.
+  ``SEARCH_TOP_N`` champions les plus joués de chaque lane libre (SPEC-17
+  §4.1). Le générateur répond à « que pourrait jouer l'adversaire ? », le
+  minimax à « quel est son meilleur coup ? » : trier les candidats par force
+  mélangerait les deux, et sur des échantillons minuscules.
 
 Convention de signe : tous les logits manipulés ici sont DU POINT DE VUE ALLIÉ.
 L'équipe alliée maximise, l'ennemie minimise.
@@ -58,8 +60,10 @@ class SearchResult:
 class CandidatePool:
     """Les champions qu'un adversaire (ou un allié hors pool) jouerait vraiment.
 
-    Classés par ``avg_delta2`` de la table ``champion_scores``, déjà calculée
-    par le pipeline : la tier list du projet sert de générateur de coups.
+    Classés par popularité sur la lane (somme des games, SPEC-17 §4.1), pas par
+    la tier list : le haut de ``champion_scores.avg_delta2`` est occupé par des
+    picks hors rôle à très faible échantillon (Kassadin top), qui couvraient 1
+    à 12 % des parties réelles.
     """
 
     def __init__(self, db, top_n: int, verbose: bool = False) -> None:
@@ -70,15 +74,13 @@ class CandidatePool:
 
     def _ranked(self, lane: str) -> List[str]:
         if lane not in self._by_lane:
-            rows = self.db.get_all_champion_scores(lane=lane) or []
-            # rows : (name, avg_delta2, variance, coverage, peak_impact, ...)
-            self._by_lane[lane] = [row[0] for row in sorted(rows, key=lambda r: -r[1])]
+            self._by_lane[lane] = list(self.db.get_lane_popularity(lane) or [])
             if self.verbose:
                 print(f"[SEARCH] Candidats lane={lane} : {len(self._by_lane[lane])} champions")
         return self._by_lane[lane]
 
     def best(self, lane: str, taken: Set[str]) -> List[str]:
-        """Les ``top_n`` meilleurs champions encore disponibles sur ``lane``."""
+        """Les ``top_n`` champions les plus joués encore disponibles sur ``lane``."""
         available = []
         for name in self._ranked(lane):
             if name.lower() in taken:
