@@ -48,7 +48,7 @@ toucher aux pages ni aux sets du joueur.
 |---|---|---|---|---|---|
 | 10 | `loadout.fetch_page()` + `pick_build()` : page OneTricks, `__NEXT_DATA__`, User-Agent navigateur, timeout, cache (champion, lane, adversaire), fixture enregistrée | SPEC-15 §3.1 | 3 | — | ✅ |
 | 10b | `loadout.adapt_to_matchup()` : substitutions significatives du duel (test binomial, α dans `config_constants.py`), noms lisibles pour la console | SPEC-15 §3.2.1 | 3 | 10 | ✅ |
-| 11 | `loadout.apply_build()` : page de runes `LS`, set d'items préservant ceux du joueur, sorts avec Flash sur sa touche habituelle | SPEC-15 §3.3 | 5 | 10 | ⬜ |
+| 11 | `loadout.apply_build()` : page de runes `LS`, set d'items préservant ceux du joueur, sorts avec Flash sur sa touche habituelle | SPEC-15 §3.3 | 5 | 10 | ✅ |
 | 12 | Déclenchement sur `completed: True` (et non sur `player_champion`), affinage au lock de l'adversaire direct via `adapt_to_matchup`, relance sur trade, flag `AUTO_IMPORT_LOADOUT` | SPEC-15 §3.2 | 3 | 10b, 11 | ⬜ |
 | 13 | Tests §3.5 (11 critères) | SPEC-15 §3.5 | 3 | 12 | ⬜ |
 | 14 | Recette en partie réelle : vérifier les corps de requête LCU contre le client (non documentés par Riot) | SPEC-15 §3.3 | 1 | 12 | ⬜ |

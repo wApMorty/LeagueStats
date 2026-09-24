@@ -6,6 +6,20 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Feature
 
+- **SPEC-15 (en cours) : la build OneTricks, prête à être poussée dans le client**
+  — `src/draft/loadout.py`. Pas encore branché sur le Live Coach (tâche 12).
+  - Lecture de la page OneTricks (JSON `__NEXT_DATA__`, onglet ALL, User-Agent
+    de navigateur, cache par session) et choix de la build la plus jouée.
+  - Affinage au duel : un composant de la build générale n'est remplacé que si
+    la page du duel le sur-représente significativement (test binomial,
+    `LOADOUT_MATCHUP_ALPHA`). Jinx contre Draven : Barrière+Flash devient
+    Fatigue+Flash, rien d'autre.
+  - `apply_build` : page de runes « LS » (runes rangées par emplacement d'après
+    `/lol-perks/v1/styles`), set d'items « LS » ajouté aux sets du joueur, sorts
+    avec Flash sur la touche habituelle. Les pages et sets du joueur ne sont
+    jamais supprimés ; chaque écriture échoue seule, sans exception.
+  - `LCUClient._make_request` accepte `DELETE`.
+
 - **SPEC-14 : la draft finale se lit en face-à-face, lane par lane** — un seul
   tableau miroir remplace la ligne `COMPOSITION FINALE` et les deux tableaux
   triés par score. Une ligne par lane (Top > Jungle > Mid > ADC > Support),
