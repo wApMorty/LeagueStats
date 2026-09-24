@@ -7,6 +7,8 @@ profondeur atteinte, les nœuds par seconde, le top 3 et la variante principale.
 - **B1** : premier pick, board vide, 10 tours restants.
 - **B2** : Jinx bot alliée, Garen top et Lee Sin jungle ennemis, 7 tours restants.
 
+Les alliés à venir ont leur lane assignée, comme en file classée (SPEC-17 §4.2).
+
 Pool : les 20 champions les plus joués sur notre lane (``middle``). Dans la
 variante principale, ``*`` marque un champion hors des ``--top-n`` plus joués
 de sa lane (critère SPEC-17 §6.2).
@@ -41,11 +43,17 @@ POOL_SIZE = 20
 # Ordre de draft SoloQ : B1 R1 R2 B2 B3 R3 R4 B4 B5 R5 (nous sommes côté bleu).
 DRAFT_ORDER = "BRRBBRRBBR"
 SCENARIOS = {
-    "B1": {"allies": [], "enemies": [], "first_turn": 0},
+    "B1": {
+        "allies": [],
+        "enemies": [],
+        "first_turn": 0,
+        "ally_lanes": ["bottom", "top", "jungle", "support"],
+    },
     "B2": {
         "allies": [("Jinx", "bottom")],
         "enemies": [("Garen", "top"), ("LeeSin", "jungle")],
         "first_turn": 3,
+        "ally_lanes": ["top", "jungle", "support"],
     },
 }
 
@@ -68,11 +76,16 @@ def _lane_popularity(connection: sqlite3.Connection, lane: str) -> List[str]:
     return [row[0] for row in rows]
 
 
-def _turns(first_turn: int) -> List[PickTurn]:
-    return [
-        PickTurn(is_ally=side == "B", is_local_player=index == first_turn)
-        for index, side in enumerate(DRAFT_ORDER)
-    ][first_turn:]
+def _turns(first_turn: int, ally_lanes: List[str]) -> List[PickTurn]:
+    """Tours restants à partir du nôtre ; les alliés suivants prennent
+    ``ally_lanes`` dans l'ordre."""
+    lanes = iter(ally_lanes)
+    turns = [PickTurn(is_ally=True, is_local_player=True)]
+    for side in DRAFT_ORDER[first_turn + 1 :]:
+        turns.append(
+            PickTurn(is_ally=True, lane=next(lanes)) if side == "B" else PickTurn(is_ally=False)
+        )
+    return turns
 
 
 def _format_line(line: Sequence[Placed], popular: Dict[str, set]) -> str:
@@ -105,7 +118,7 @@ def main() -> None:
 
             print(f"Budget {args.budget:g} s, top-n {args.top_n}, pool {POOL_SIZE} {PLAYER_LANE}")
             for label, scenario in SCENARIOS.items():
-                turns = _turns(scenario["first_turn"])
+                turns = _turns(scenario["first_turn"], scenario["ally_lanes"])
                 start = time.monotonic()
                 results = search.rank(
                     scenario["allies"],

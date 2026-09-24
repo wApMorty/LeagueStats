@@ -61,6 +61,33 @@ def test_ally_positions_empty_when_queue_does_not_assign_roles(monitor):
     assert state.ally_positions == {}
 
 
+def test_remaining_picks_carry_ally_lanes_only(monitor):
+    """SPEC-17 §4.2 : les tours alliés portent leur assignedPosition, les tours
+    ennemis None (le client la masque)."""
+    champ_select_data = {
+        "timer": {"phase": "BAN_PICK"},
+        "localPlayerCellId": 0,
+        "myTeam": [
+            {"cellId": 0, "championId": 0, "assignedPosition": "middle"},
+            {"cellId": 1, "championId": 0, "assignedPosition": "utility"},
+        ],
+        "theirTeam": [{"cellId": 5, "championId": 0}],
+        "actions": [
+            [{"actorCellId": 0, "type": "pick", "completed": False}],
+            [{"actorCellId": 5, "type": "pick", "completed": False}],
+            [{"actorCellId": 1, "type": "pick", "completed": False}],
+        ],
+    }
+
+    state = monitor._parse_draft_state(champ_select_data)
+
+    assert [(t.is_ally, t.lane) for t in state.remaining_picks] == [
+        (True, "middle"),
+        (False, None),
+        (True, "support"),
+    ]
+
+
 def test_draft_state_defaults_are_empty_dicts():
     """Les nouveaux champs de DraftState (B3/B4) ont des defaults vides, pas None."""
     from src.draft_monitor import DraftState

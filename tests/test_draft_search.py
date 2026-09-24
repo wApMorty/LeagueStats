@@ -249,3 +249,36 @@ class TestCandidatePool:
             player_lane="top",
         )
         assert results[0].principal_variation[0][0] == "Common"
+
+
+class TestAllyLane:
+    """SPEC-17 §4.2 : un allié à la lane connue ne joue que sur cette lane."""
+
+    LANES_DB = FakeDB(
+        {},
+        {
+            "top": ["Garen", "Darius"],
+            "jungle": ["LeeSin"],
+            "middle": ["Ahri"],
+            "bottom": ["Jinx"],
+            "support": ["Thresh", "Nautilus"],
+        },
+    )
+
+    def _moves(self, turn, team=()):
+        engine = DraftSearch(GameEvaluator(self.LANES_DB), CandidatePool(self.LANES_DB, top_n=8))
+        return engine._moves(turn, list(team), set(), [], None)
+
+    def test_known_lane_restricts_moves_to_it(self):
+        moves = self._moves(PickTurn(is_ally=True, lane="support"))
+        assert moves == [("Thresh", "support"), ("Nautilus", "support")]
+
+    def test_unknown_lane_keeps_every_free_lane(self):
+        lanes = {lane for _, lane in self._moves(PickTurn(is_ally=True))}
+        assert lanes == {"top", "jungle", "middle", "bottom", "support"}
+
+    def test_lane_already_taken_falls_back_to_free_lanes(self):
+        """Échange de rôles : la lane assignée est déjà occupée dans l'équipe."""
+        moves = self._moves(PickTurn(is_ally=True, lane="support"), [("Thresh", "support")])
+        lanes = {lane for _, lane in moves}
+        assert lanes == {"top", "jungle", "middle", "bottom"}

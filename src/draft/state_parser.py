@@ -109,6 +109,8 @@ class DraftStateParser:
                     PickTurn(
                         is_ally=actor_cell_id in ally_cell_ids,
                         is_local_player=actor_cell_id == state.local_player_cell_id,
+                        # SPEC-17 §4.2 : ally_positions ne connaît que nos alliés.
+                        lane=state.ally_positions.get(actor_cell_id),
                     )
                 )
 

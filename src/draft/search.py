@@ -43,6 +43,9 @@ class PickTurn:
 
     is_ally: bool
     is_local_player: bool = False
+    # Lane assignée par la file (alliés seulement, SPEC-17 §4.2). None côté
+    # ennemi, dont l'assignedPosition est masquée, et en normal blind.
+    lane: Optional[str] = None
 
 
 @dataclass
@@ -127,8 +130,14 @@ class DraftSearch:
             lane = lanes[0] if lanes else None
             return [(name, lane) for name in pool if name.lower() not in taken]
 
+        free_lanes = self._free_lanes(team)
+        if turn.lane in free_lanes:
+            # Allié à la lane connue : il la jouera. Si un échange de rôles l'a
+            # déjà occupée, on retombe sur toutes les lanes libres.
+            return [(name, turn.lane) for name in self.candidates.best(turn.lane, taken)]
+
         moves: List[Placed] = []
-        for lane in self._free_lanes(team):
+        for lane in free_lanes:
             moves.extend((name, lane) for name in self.candidates.best(lane, taken))
         return moves
 
