@@ -6,6 +6,15 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Feature
 
+- **SPEC-18 §4 : Team Builder et tier list contre-pick sur la valeur de
+  contre-pick** — `src/analysis/pool_value.py` : un pool vaut, face à chaque
+  ennemi pondéré par sa popularité sur la lane, le meilleur de ses champions
+  (force de lane + duel rétréci). Le Team Builder (options 1 et 2) choisit son
+  blind sur le winrate de lane et son duo sur cette valeur, au lieu d'`avg_delta2`
+  et du meilleur `delta2` brut. La tier list contre-pick note le gain moyen d'un
+  champion joué là où il bat la moyenne ; pic d'impact, volatilité et cibles
+  (bruit pur, mesuré) sont retirés.
+
 - **SPEC-18 : la tier list et le blind pick classés au winrate de lane** — la
   composante performance de la tier list blind pick et le survol du « meilleur
   blind pick » triaient sur `avg_delta2`, dont la dispersion entre champions est

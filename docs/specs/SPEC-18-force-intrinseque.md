@@ -1,6 +1,6 @@
 # SPEC-18 — La force d'un champion, c'est son winrate de lane, pas `avg_delta2`
 
-**Statut** : 🟢 Phase A **implémentée le 2026-09-24**. Phase B **reportée**, à rouvrir sur mesure
+**Statut** : 🟢 Phases A et A2 (§4) **implémentées le 2026-09-24**. Phase B **reportée**, à rouvrir sur mesure
 (approche C, choisie par @pj35 le 2026-09-24).
 
 **Origine** : la tâche reportée « shrink de `avg_delta2` dans la tier list » (SPEC-17 §7,
@@ -81,3 +81,32 @@ d'AUC avec un intervalle bootstrap à 90 %. On rouvre quand la borne basse dépa
 État au 2026-09-24, 72 parties : AUC 0,560 → 0,579, gain +0,019, IC 90 % [−0,053 ; +0,090].
 Les données ne tranchent pas. Détecter un gain de cet ordre demandera plusieurs centaines de
 parties.
+
+## 4. Phase A2 — construire un pool : un blind et deux contre-picks (implémentée)
+
+**Besoin** (@pj35, 2026-09-24) : les tier lists servent à former un pool efficace dans la méta,
+avec un bon blind pick et deux bons contre-picks. Le Live Coach prend le relais en draft.
+
+**Constat** : stabilité et couverture (tier list blind), pic d'impact, volatilité et cibles
+(tier list contre-pick) ont, entre champions, la dispersion d'un tirage de bruit pur de même
+échantillon (simulation sur top, mid et support). Le Team Builder choisissait son blind sur
+`avg_delta2` et son duo sur le meilleur `delta2` brut contre chaque ennemi, ce qui favorise les
+petits échantillons.
+
+**Modèle** (`src/analysis/pool_value.py`) : `value(c, e) = force(c) + duel(c, e)` en points de
+winrate, avec la force de §2 et le duel rétréci de `GameEvaluator.duel_points` (extrait de
+`_matchup_logit`, même calcul). Un pool vaut `Σ_e popularité(e) · max_c value(c, e)`.
+
+- **Team Builder, options 1 et 2** : blind = meilleure force ; duo = celui qui maximise la valeur
+  du trio. Le filtre « couverture < 10 % » et le podium en direct disparaissent (45 duos se
+  calculent instantanément).
+- **Tier list contre-pick** : score = valeur du champion seul avec un repli à la moyenne
+  (`floor=0`), c'est-à-dire son gain moyen s'il n'est joué que là où il bat la moyenne.
+  Constantes `COUNTER_*_WEIGHT` supprimées.
+
+**Constat à l'usage** : la tier list contre-pick ressemble à la tier list blind (Zilean, Quinn,
+Azir en tête en top). C'est ce que disent les données : la force d'un champion (~1,7 à 2,1 pp)
+pèse plus que ses écarts par matchup une fois rétrécis (~1,1 pp).
+
+**Hors périmètre** : l'option 3 du Team Builder (évaluation holistique, profils) et les
+composantes stabilité et couverture de la tier list blind restent inchangées.
