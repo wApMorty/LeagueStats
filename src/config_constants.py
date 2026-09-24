@@ -279,6 +279,11 @@ class DraftConfig:
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
         "(KHTML, like Gecko) Chrome/128.0 Safari/537.36"
     )
+    # Risque du test binomial qui décide si le duel change un composant de la
+    # build générale (SPEC-15 §3.2.1). Plus haut = plus de substitutions, et
+    # plus de bruit : sur 40 parties de duel, 0.05 ne laisse passer que des
+    # écarts francs (Fatigue contre Draven : 12 % contre < 4 %).
+    LOADOUT_MATCHUP_ALPHA: float = 0.05
 
     # Draft phase detection
     READY_CHECK_COOLDOWN: float = 2.0  # Seconds after accepting queue

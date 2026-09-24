@@ -351,5 +351,145 @@
     ]
    }
   }
+ },
+ "itemData": {
+  "1086": {
+   "name": "Doran's Bow"
+  },
+  "2003": {
+   "name": "Health Potion"
+  },
+  "2523": {
+   "name": "Hexoptics C44"
+  },
+  "3006": {
+   "name": "Berserker's Greaves"
+  },
+  "3008": {
+   "name": "Gluttonous Greaves"
+  },
+  "3026": {
+   "name": "Guardian Angel"
+  },
+  "3031": {
+   "name": "Infinity Edge"
+  },
+  "3032": {
+   "name": "Yun Tal Wildarrows"
+  },
+  "3033": {
+   "name": "Mortal Reminder"
+  },
+  "3036": {
+   "name": "Lord Dominik's Regards"
+  },
+  "3046": {
+   "name": "Phantom Dancer"
+  },
+  "3047": {
+   "name": "Plated Steelcaps"
+  },
+  "3072": {
+   "name": "Bloodthirster"
+  },
+  "3085": {
+   "name": "Runaan's Hurricane"
+  },
+  "3139": {
+   "name": "Mercurial Scimitar"
+  },
+  "3340": {
+   "name": "Stealth Ward"
+  }
+ },
+ "summonerSpells": {
+  "1": {
+   "name": "Cleanse"
+  },
+  "3": {
+   "name": "Exhaust"
+  },
+  "4": {
+   "name": "Flash"
+  },
+  "6": {
+   "name": "Ghost"
+  },
+  "7": {
+   "name": "Heal"
+  },
+  "11": {
+   "name": "Smite"
+  },
+  "12": {
+   "name": "Teleport"
+  },
+  "13": {
+   "name": "Clarity"
+  },
+  "14": {
+   "name": "Ignite"
+  },
+  "21": {
+   "name": "Barrier"
+  },
+  "32": {
+   "name": "Mark"
+  }
+ },
+ "runes": {
+  "keystone": {
+   "8005": {
+    "name": "Press the Attack"
+   },
+   "8008": {
+    "name": "Lethal Tempo"
+   },
+   "8010": {
+    "name": "Conqueror"
+   },
+   "8021": {
+    "name": "Fleet Footwork"
+   },
+   "8112": {
+    "name": "Electrocute"
+   },
+   "8128": {
+    "name": "Dark Harvest"
+   },
+   "8214": {
+    "name": "Summon Aery"
+   },
+   "8229": {
+    "name": "Arcane Comet"
+   },
+   "8230": {
+    "name": "Stormraider's Surge"
+   },
+   "8351": {
+    "name": "Glacial Augment"
+   },
+   "8360": {
+    "name": "Unsealed Spellbook"
+   },
+   "8369": {
+    "name": "First Strike"
+   },
+   "8437": {
+    "name": "Grasp of the Undying"
+   },
+   "8439": {
+    "name": "Aftershock"
+   },
+   "8465": {
+    "name": "Guardian"
+   },
+   "8992": {
+    "name": "Deathfire Touch"
+   },
+   "9923": {
+    "name": "Hail of Blades"
+   }
+  }
  }
 }
