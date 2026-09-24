@@ -47,6 +47,23 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### 🐛 Fix
 
+- **Le scraper ne lisait que les ~18 premiers adversaires de chaque lane** —
+  signalé par @pj35 : le duel Sion top contre Jax top s'affichait `?` en fin de
+  draft, car la base n'avait aucune ligne top pour cette paire. Le carrousel de
+  counters de LoLalytics est virtualisé (~19 cellules rendues à la fois), et
+  l'élément qui défile est le **parent** de la rangée : le scraper faisait
+  défiler la rangée elle-même, sans effet. Chaque (champion, lane) plafonnait
+  donc à 5 rangées × ~18 = ~90 matchups ; Sion top en donne désormais 242 (172
+  adversaires distincts), dont Jax, Teemo, Kayle et Heimerdinger. Les synergies,
+  lues par la même fonction, en profitent aussi. Le plafond avait été consigné
+  comme normal en juin (`DataQualityConfig`) ; la note est corrigée.
+- **Un adversaire présent dans plusieurs rangées écrasait le duel direct** —
+  la base garde une ligne par (champion, adversaire, lane), et la dernière
+  rangée lue l'emportait (Yone en top **et** en mid contre Sion top). La
+  rangée de la lane directe est maintenant lue à part et prioritaire ; entre
+  rangées indirectes, la ligne la plus jouée l'emporte.
+- **Action requise** : relancer un scrape complet pour que la base en profite.
+
 - **Le compteur de prédictions labellisées ignorait `model_version`** — juste
   après le bump SPEC-13, le Live Coach annonçait « 54 labellisées / 30 requises »
   en additionnant quatre générations de modèle (b7-v1 : 31, +lane-restante : 16,
