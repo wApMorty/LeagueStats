@@ -284,6 +284,9 @@ class DraftConfig:
     # plus de bruit : sur 40 parties de duel, 0.05 ne laisse passer que des
     # écarts francs (Fatigue contre Draven : 12 % contre < 4 %).
     LOADOUT_MATCHUP_ALPHA: float = 0.05
+    # Préfixe de la page de runes et du set d'items écrits par le coach : seuls
+    # les éléments portant ce préfixe sont jamais supprimés ou remplacés.
+    LOADOUT_PREFIX: str = "LS "
 
     # Draft phase detection
     READY_CHECK_COOLDOWN: float = 2.0  # Seconds after accepting queue
