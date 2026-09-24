@@ -6,6 +6,25 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Feature
 
+- **SPEC-17 : la recherche du Live Coach regarde les picks réellement joués, et
+  plus loin** — à budget constant (2 s, mono-thread), la recherche atteint la fin
+  de la draft dès B2 (5/7 → 7/7) et une profondeur de 5 en premier pick (3 → 5),
+  mesurées par le nouveau `scripts/bench_search.py` (copie temporaire de la base,
+  `--budget`, `--top-n`). L'évaluation ne change pas (pas de bump de
+  `MODEL_VERSION`).
+  - Candidats adverses par popularité sur la lane
+    (`MatchupsRepository.get_lane_popularity()`, somme des games) au lieu de la
+    tier list `avg_delta2`, dont le haut était occupé par des picks hors rôle à
+    faible échantillon (Kassadin top, Nidalee support). Les variantes
+    principales n'en contiennent plus aucun.
+  - Les alliés jouent leur lane assignée (`PickTurn.lane`, lue dans
+    `ally_positions`) : 8 coups par tour allié au lieu de 40. Repli sur toutes
+    les lanes libres en normal blind ou après un échange de rôles.
+  - Cache des paires dans `GameEvaluator` (`matchup_logit`/`synergy_logit`) :
+    ~40 k → 200-350 k nœuds/s.
+  - `SEARCH_TOP_N` calibré au bench : 8 reste le plus grand N qui atteint la
+    fin de draft en B2.
+
 - **SPEC-15 : la build OneTricks importée dans le client au lock-in** —
   `src/draft/loadout.py` et `src/draft/loadout_import.py`. Au lock-in (action
   `pick` complétée, jamais au survol), la build générale est importée ; dès que

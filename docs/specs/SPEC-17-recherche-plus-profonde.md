@@ -1,7 +1,9 @@
 # SPEC-17 — Une recherche qui regarde les bons picks, et plus loin
 
-**Statut** : 🟢 **Validée par @pj35 le 2026-09-24, approche A** (§3). Rien n'est implémenté.
-Découpage : `TODO.md`, sprint 3 (tâches 21 à 26).
+**Statut** : ✅ **Phase 1 implémentée le 2026-09-24** (approche A, validée par @pj35 le même
+jour). Bench 2 s sur le poste de @pj35 : B2 7/7, B1 5, aucune variante hors du top-8 joué,
+`SEARCH_TOP_N` = 8 retenu (N = 10 et 12 retombent à 6/7 en B2). Phase 2 (§5) non ouverte : sa
+condition (B1 < 5) n'est pas remplie. Découpage : `TODO.md`, sprint 3 (tâches 21 à 26).
 
 **Origine** : @pj35 — « Notre moteur Stockfish n'est pas assez performant : soit il regarde trop de
 picks improbables, soit il a besoin de plus de puissance (peut-être ajouter du multi-threading pour

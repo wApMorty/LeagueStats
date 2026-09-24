@@ -53,7 +53,7 @@ toucher aux pages ni aux sets du joueur.
 | 13 | Tests §3.5 (11 critères) | SPEC-15 §3.5 | 3 | 12 | ✅ |
 | 14 | Recette en partie réelle : vérifier les corps de requête LCU contre le client (non documentés par Riot) | SPEC-15 §3.3 | 1 | 12 | ⬜ |
 
-### Sprint 3 — Recherche minimax plus pertinente et plus profonde (~12 pts)
+### Sprint 3 — Recherche minimax plus pertinente et plus profonde (~12 pts) ✅ (2026-09-24)
 
 **Objectif** ([SPEC-17](docs/specs/SPEC-17-recherche-plus-profonde.md), validée par @pj35 le
 2026-09-24) : à budget constant (2 s, mono-thread), la recherche n'examine que des picks
@@ -66,12 +66,12 @@ les trois leviers, parallélisables entre eux, du moins risqué au plus structur
 
 | # | Tâche | Spec | Pts | Dépend de | État |
 |---|---|---|---|---|---|
-| 21 | `scripts/bench_search.py` : scénarios B1/B2, copie temporaire de la base, `--budget`/`--top-n`, profondeur, nœuds/s, top 3, variante principale. Relever la base de référence avant tout changement | SPEC-17 §4.4 | 2 | — | ⬜ |
-| 22 | Cache des paires dans `GameEvaluator` (`matchup_logit`/`synergy_logit`, `dict` d'instance, invariant de durée de vie documenté) + tests | SPEC-17 §4.3, §4.5.4 | 2 | 21 | ⬜ |
-| 23 | Générateur par popularité : `MatchupsRepository.get_lane_popularity()` + délégué `db.py`, `CandidatePool._ranked()` basculé, docstrings et commentaire `SEARCH_TOP_N` + tests | SPEC-17 §4.1, §4.5.1 | 3 | 21 | ⬜ |
-| 24 | Lane des alliés : `PickTurn.lane`, renseignée par `DraftStateParser` depuis `ally_positions`, `_moves()` restreint à cette lane si libre (repli sinon) + tests | SPEC-17 §4.2, §4.5.2-3 | 3 | 21 | ⬜ |
-| 25 | Calibrer `SEARCH_TOP_N` (8 / 10 / 12) au bench, retenir le plus grand qui tient §2.2, consigner la couverture de games dans le commentaire | SPEC-17 §4.1 | 1 | 22, 23, 24 | ⬜ |
-| 26 | Critères d'acceptation §6 (bench B2 7/7, B1 ≥ 5, aucune variante hors top-N), `CHANGELOG.md`, statut de la spec | SPEC-17 §6 | 1 | 25 | ⬜ |
+| 21 | `scripts/bench_search.py` : scénarios B1/B2, copie temporaire de la base, `--budget`/`--top-n`, profondeur, nœuds/s, top 3, variante principale. Relever la base de référence avant tout changement | SPEC-17 §4.4 | 2 | — | ✅ Base : B1 3/10, B2 5/7, ~40 k nœuds/s |
+| 22 | Cache des paires dans `GameEvaluator` (`matchup_logit`/`synergy_logit`, `dict` d'instance, invariant de durée de vie documenté) + tests | SPEC-17 §4.3, §4.5.4 | 2 | 21 | ✅ B1 4, B2 6 |
+| 23 | Générateur par popularité : `MatchupsRepository.get_lane_popularity()` + délégué `db.py`, `CandidatePool._ranked()` basculé, docstrings et commentaire `SEARCH_TOP_N` + tests | SPEC-17 §4.1, §4.5.1 | 3 | 21 | ✅ |
+| 24 | Lane des alliés : `PickTurn.lane`, renseignée par `DraftStateParser` depuis `ally_positions`, `_moves()` restreint à cette lane si libre (repli sinon) + tests | SPEC-17 §4.2, §4.5.2-3 | 3 | 21 | ✅ B1 5, B2 7/7 |
+| 25 | Calibrer `SEARCH_TOP_N` (8 / 10 / 12) au bench, retenir le plus grand qui tient §2.2, consigner la couverture de games dans le commentaire | SPEC-17 §4.1 | 1 | 22, 23, 24 | ✅ N = 8 (10 et 12 : B2 6/7) |
+| 26 | Critères d'acceptation §6 (bench B2 7/7, B1 ≥ 5, aucune variante hors top-N), `CHANGELOG.md`, statut de la spec | SPEC-17 §6 | 1 | 25 | ✅ |
 
 ### Reporté — non planifié
 
