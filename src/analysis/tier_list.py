@@ -12,6 +12,7 @@ from ..constants import (
 )
 from ..config_constants import analysis_config
 from .scoring import ChampionScorer
+from .pool_value import PoolEvaluator
 from .shrink import shrunk_lane_winrates
 from ..models import Matchup
 
@@ -155,9 +156,6 @@ class TierListGenerator:
             "lane_winrate": [],
             "variance": [],
             "coverage": [],
-            "peak_impact": [],
-            "volatility": [],
-            "target_ratio": [],
         }
 
         for row in all_scores_data:
@@ -166,9 +164,6 @@ class TierListGenerator:
                 all_metrics["lane_winrate"].append(lane_winrates[row[0]])
             all_metrics["variance"].append(row[2])
             all_metrics["coverage"].append(row[3])
-            all_metrics["peak_impact"].append(row[4])
-            all_metrics["volatility"].append(row[5])
-            all_metrics["target_ratio"].append(row[6])
 
         # Calculate global ranges
         min_winrate_global = min(all_metrics["lane_winrate"], default=0.0)
@@ -177,10 +172,6 @@ class TierListGenerator:
         max_variance_global = max(all_metrics["variance"])
         min_coverage_global = min(all_metrics["coverage"])
         max_coverage_global = max(all_metrics["coverage"])
-        min_peak_impact_global = min(all_metrics["peak_impact"])
-        max_peak_impact_global = max(all_metrics["peak_impact"])
-        min_target_ratio_global = min(all_metrics["target_ratio"])
-        max_target_ratio_global = max(all_metrics["target_ratio"])
 
         # Avoid division by zero
         if max_winrate_global == min_winrate_global:
@@ -192,12 +183,6 @@ class TierListGenerator:
         if max_coverage_global == min_coverage_global:
             min_coverage_global -= 0.05
             max_coverage_global += 0.05
-        if max_peak_impact_global == min_peak_impact_global:
-            min_peak_impact_global -= 0.5
-            max_peak_impact_global += 0.5
-        if max_target_ratio_global == min_target_ratio_global:
-            min_target_ratio_global -= 0.05
-            max_target_ratio_global += 0.05
 
         if verbose:
             print(f"[INFO] Global normalization ranges:")
@@ -205,13 +190,21 @@ class TierListGenerator:
             print(f"  Variance: {min_variance_global:.2f} to {max_variance_global:.2f}")
             if analysis_type == "blind_pick":
                 print(f"  Coverage: {min_coverage_global:.3f} to {max_coverage_global:.3f}")
-            elif analysis_type == "counter_pick":
-                print(
-                    f"  Peak Impact: {min_peak_impact_global:.3f} to {max_peak_impact_global:.3f}"
-                )
-                print(
-                    f"  Target Ratio: {min_target_ratio_global:.3f} to {max_target_ratio_global:.3f}"
-                )
+
+        # SPEC-18 §4 : un contre-pick se note au gain moyen quand on ne le joue
+        # que contre les ennemis où il bat la moyenne de la lane, pondérés par
+        # leur popularité. Pic d'impact, volatilité et cibles (dérivés de delta2)
+        # avaient la dispersion du bruit pur.
+        counter_gains = {}
+        if analysis_type == "counter_pick":
+            evaluator = PoolEvaluator(self.db, lane)
+            counter_gains = {
+                row[0]: evaluator.counter_value([row[0]], floor=0.0) for row in all_scores_data
+            }
+            min_gain = min(counter_gains.values())
+            max_gain = max(counter_gains.values())
+            if max_gain == min_gain:
+                min_gain, max_gain = min_gain - 0.05, max_gain + 0.05
 
         # Step 2: Get scores from database and calculate normalized scores
         results = []
@@ -270,40 +263,11 @@ class TierListGenerator:
                 }
 
             elif analysis_type == "counter_pick":
-                # Normalize components
-                peak_impact_norm = (scores["peak_impact"] - min_peak_impact_global) / (
-                    max_peak_impact_global - min_peak_impact_global
-                )
-                peak_impact_norm = max(0.0, min(1.0, peak_impact_norm))
-
-                volatility_norm = (scores["volatility"] - min_variance_global) / (
-                    max_variance_global - min_variance_global
-                )
-                volatility_norm = max(0.0, min(1.0, volatility_norm))
-
-                target_ratio_norm = (scores["target_ratio"] - min_target_ratio_global) / (
-                    max_target_ratio_global - min_target_ratio_global
-                )
-                target_ratio_norm = max(0.0, min(1.0, target_ratio_norm))
-
-                # Calculate final score
-                normalized_score = (
-                    peak_impact_norm * analysis_config.COUNTER_PEAK_WEIGHT
-                    + volatility_norm * analysis_config.COUNTER_VOLATILITY_WEIGHT
-                    + target_ratio_norm * analysis_config.COUNTER_TARGETS_WEIGHT
-                )
-                final_score = normalized_score * 100
-
-                # Build metrics dict for display
-                metrics = {
-                    "final_score": final_score,
-                    "peak_impact_norm": peak_impact_norm,
-                    "peak_impact_raw": scores["peak_impact"],
-                    "volatility_norm": volatility_norm,
-                    "variance": scores["volatility"],
-                    "target_ratio_norm": target_ratio_norm,
-                    "target_ratio_raw": scores["target_ratio"],
-                }
+                gain = counter_gains.get(champion)
+                if gain is None:
+                    continue
+                final_score = max(0.0, min(1.0, (gain - min_gain) / (max_gain - min_gain))) * 100
+                metrics = {"final_score": final_score, "counter_gain": gain}
 
             else:
                 raise ValueError(f"Unknown analysis type: {analysis_type}")

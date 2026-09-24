@@ -194,15 +194,9 @@ def _display_tier_list(
                 safe_print(f"     Couverture :     {coverage:>5.1%}  (Matchups corrects)")
 
             elif analysis_type == "counter_pick":
-                peak_impact = metrics["peak_impact_raw"]
-                variance = metrics["variance"]
-                target_ratio = metrics["target_ratio_raw"]
                 safe_print(
-                    f"     Pic d'impact :   {peak_impact:>5.2f}  (Matchups favorables pondérés)"
-                )
-                safe_print(f"     Volatilité :     {variance:>5.2f}  (Élevé = situationnel)")
-                safe_print(
-                    f"     Cibles :         {target_ratio:>5.1%}  (% de contre-picks viables)"
+                    f"     Gain en contre-pick : {metrics['counter_gain']:>+5.2f} pts  "
+                    "(joué contre les ennemis où il bat la moyenne)"
                 )
 
             print()
@@ -217,11 +211,7 @@ def _display_tier_list(
             f"Couverture {analysis_config.BLIND_COVERAGE_WEIGHT:.0%}"
         )
     else:
-        safe_print(
-            f"   • Pondérations : Pic d'impact {analysis_config.COUNTER_PEAK_WEIGHT:.0%}, "
-            f"Volatilité {analysis_config.COUNTER_VOLATILITY_WEIGHT:.0%}, "
-            f"Cibles {analysis_config.COUNTER_TARGETS_WEIGHT:.0%}"
-        )
+        safe_print("   • Score : gain moyen en contre-pick, pondéré par la popularité des ennemis")
     safe_print(
         f"   • Seuils : S≥{analysis_config.TIER_THRESHOLDS["S"]:.0f}, "
         f"A≥{analysis_config.TIER_THRESHOLDS["A"]:.0f}, "

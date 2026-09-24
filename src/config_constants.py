@@ -229,11 +229,6 @@ class AnalysisConfig:
     BLIND_STABILITY_WEIGHT: float = 0.3  # Low variance
     BLIND_COVERAGE_WEIGHT: float = 0.2  # Coverage of decent matchups
 
-    # Counter Pick scoring weights (must sum to 1.0)
-    COUNTER_PEAK_WEIGHT: float = 0.5  # Peak impact in good matchups
-    COUNTER_VOLATILITY_WEIGHT: float = 0.3  # High variance (volatility)
-    COUNTER_TARGETS_WEIGHT: float = 0.2  # Proportion of viable targets
-
     # Matchup quality thresholds
     DECENT_MATCHUP_THRESHOLD: float = 0.0  # delta2 > 0
     GOOD_MATCHUP_THRESHOLD: float = 1.0  # Good matchup

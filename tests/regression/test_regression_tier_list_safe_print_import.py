@@ -19,9 +19,7 @@ def test_display_tier_list_does_not_raise_import_error():
             "score": 90.0,
             "tier": "S",
             "metrics": {
-                "peak_impact_raw": 1.5,
-                "variance": 0.4,
-                "target_ratio_raw": 0.6,
+                "counter_gain": 1.5,
             },
         },
     ]

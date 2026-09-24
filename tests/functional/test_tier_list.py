@@ -69,9 +69,7 @@ class TestTierListGeneration:
 
             # Validate counter pick specific metrics
             metrics = entry["metrics"]
-            assert "peak_impact_norm" in metrics
-            assert "volatility_norm" in metrics
-            assert "target_ratio_norm" in metrics
+            assert "counter_gain" in metrics
 
     def test_tier_list_sorted_descending(self, assistant, sample_champions):
         """Test that tier list is sorted by score (descending)."""
