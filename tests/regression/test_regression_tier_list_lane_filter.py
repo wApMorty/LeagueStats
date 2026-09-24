@@ -85,12 +85,13 @@ class TestTierListGeneratorLaneParameter:
         mid_result = tier_gen.generate_tier_list(["Yasuo"], lane="middle")
 
         assert top_result and mid_result
-        top_delta2 = top_result[0]["metrics"]["avg_delta2_raw"]
-        mid_delta2 = mid_result[0]["metrics"]["avg_delta2_raw"]
+        # SPEC-18 : la performance est le winrate de lane. Yasuo est seul sur
+        # chaque lane, son winrate rétréci vaut donc la moyenne de la lane.
+        top_winrate = top_result[0]["metrics"]["lane_winrate"]
+        mid_winrate = mid_result[0]["metrics"]["lane_winrate"]
 
-        assert top_delta2 == pytest.approx(-2.0)
-        assert mid_delta2 == pytest.approx(2.6)
-        assert top_delta2 != mid_delta2
+        assert top_winrate == pytest.approx(40.0)
+        assert mid_winrate == pytest.approx(60.0)
 
     def test_generate_tier_list_defaults_to_all_lanes_aggregate(self, db, scorer, insert_matchup):
         """lane=None must keep the historical toutes-lanes behavior (used by
@@ -103,4 +104,4 @@ class TestTierListGeneratorLaneParameter:
         result = tier_gen.generate_tier_list(["Yasuo"])
 
         assert result
-        assert result[0]["metrics"]["avg_delta2_raw"] == pytest.approx((-2.0 + 2.6) / 2)
+        assert result[0]["metrics"]["lane_winrate"] == pytest.approx((40.0 + 60.0) / 2)

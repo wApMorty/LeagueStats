@@ -12,6 +12,7 @@ from ..constants import (
 )
 from ..config_constants import analysis_config
 from .scoring import ChampionScorer
+from .shrink import shrunk_lane_winrates
 from ..models import Matchup
 
 
@@ -145,9 +146,13 @@ class TierListGenerator:
             print(f"[ERROR] No champion scores found in database for lane={lane_key}")
             return []
 
+        # SPEC-18 : la performance en blind pick est le winrate de lane rétréci,
+        # pas avg_delta2 (nul par construction, sa dispersion est du bruit).
+        lane_winrates = shrunk_lane_winrates(self.db, lane)
+
         # Extract global ranges for normalization
         all_metrics = {
-            "avg_delta2": [],
+            "lane_winrate": [],
             "variance": [],
             "coverage": [],
             "peak_impact": [],
@@ -157,7 +162,8 @@ class TierListGenerator:
 
         for row in all_scores_data:
             # row = (name, avg_delta2, variance, coverage, peak_impact, volatility, target_ratio)
-            all_metrics["avg_delta2"].append(row[1])
+            if row[0] in lane_winrates:
+                all_metrics["lane_winrate"].append(lane_winrates[row[0]])
             all_metrics["variance"].append(row[2])
             all_metrics["coverage"].append(row[3])
             all_metrics["peak_impact"].append(row[4])
@@ -165,8 +171,8 @@ class TierListGenerator:
             all_metrics["target_ratio"].append(row[6])
 
         # Calculate global ranges
-        min_delta2_global = min(all_metrics["avg_delta2"])
-        max_delta2_global = max(all_metrics["avg_delta2"])
+        min_winrate_global = min(all_metrics["lane_winrate"], default=0.0)
+        max_winrate_global = max(all_metrics["lane_winrate"], default=0.0)
         min_variance_global = min(all_metrics["variance"])
         max_variance_global = max(all_metrics["variance"])
         min_coverage_global = min(all_metrics["coverage"])
@@ -177,9 +183,9 @@ class TierListGenerator:
         max_target_ratio_global = max(all_metrics["target_ratio"])
 
         # Avoid division by zero
-        if max_delta2_global == min_delta2_global:
-            min_delta2_global -= 0.05
-            max_delta2_global += 0.05
+        if max_winrate_global == min_winrate_global:
+            min_winrate_global -= 0.05
+            max_winrate_global += 0.05
         if max_variance_global == min_variance_global:
             min_variance_global -= 0.05
             max_variance_global += 0.05
@@ -195,7 +201,7 @@ class TierListGenerator:
 
         if verbose:
             print(f"[INFO] Global normalization ranges:")
-            print(f"  Delta2: {min_delta2_global:.2f} to {max_delta2_global:.2f}")
+            print(f"  Lane winrate: {min_winrate_global:.2f} to {max_winrate_global:.2f}")
             print(f"  Variance: {min_variance_global:.2f} to {max_variance_global:.2f}")
             if analysis_type == "blind_pick":
                 print(f"  Coverage: {min_coverage_global:.3f} to {max_coverage_global:.3f}")
@@ -221,9 +227,15 @@ class TierListGenerator:
 
             # Calculate normalized score based on analysis type
             if analysis_type == "blind_pick":
+                lane_winrate = lane_winrates.get(champion)
+                if lane_winrate is None:
+                    if verbose:
+                        print(f"  [SKIP] {champion}: No winrate in database for lane={lane_key}")
+                    continue
+
                 # Normalize components
-                avg_perf_norm = (scores["avg_delta2"] - min_delta2_global) / (
-                    max_delta2_global - min_delta2_global
+                avg_perf_norm = (lane_winrate - min_winrate_global) / (
+                    max_winrate_global - min_winrate_global
                 )
                 avg_perf_norm = max(0.0, min(1.0, avg_perf_norm))
 
@@ -250,7 +262,7 @@ class TierListGenerator:
                 metrics = {
                     "final_score": final_score,
                     "avg_performance_norm": avg_perf_norm,
-                    "avg_delta2_raw": scores["avg_delta2"],
+                    "lane_winrate": lane_winrate,
                     "stability": stability,
                     "variance": scores["variance"],
                     "coverage_norm": coverage_norm,

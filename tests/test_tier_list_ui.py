@@ -15,7 +15,7 @@ def _entry(champion, score=90.0, tier="S"):
         "score": score,
         "tier": tier,
         "metrics": {
-            "avg_delta2_raw": 1.5,
+            "lane_winrate": 52.5,
             "variance": 0.4,
             "coverage_raw": 0.6,
             "stability": 0.7,

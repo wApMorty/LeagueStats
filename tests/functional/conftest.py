@@ -42,6 +42,7 @@ def temp_db(tmp_path):
             delta2 REAL NOT NULL,
             pickrate REAL NOT NULL,
             games INTEGER NOT NULL,
+            lane TEXT,
             FOREIGN KEY (champion) REFERENCES champions(id) ON DELETE CASCADE,
             FOREIGN KEY (enemy) REFERENCES champions(id) ON DELETE CASCADE
         )

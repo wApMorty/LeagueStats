@@ -184,10 +184,10 @@ def _display_tier_list(
 
             # Afficher les métriques selon le type d'analyse
             if analysis_type == "blind_pick":
-                avg_delta2 = metrics["avg_delta2_raw"]
+                lane_winrate = metrics["lane_winrate"]
                 variance = metrics["variance"]
                 coverage = metrics["coverage_raw"]
-                safe_print(f"     Delta2 moyen :   {avg_delta2:>+5.2f}  (Performance)")
+                safe_print(f"     Winrate lissé :  {lane_winrate:>5.1f}%  (Performance)")
                 safe_print(
                     f"     Stabilité :      {metrics['stability']:>5.2f}  (Variance : {variance:.2f})"
                 )

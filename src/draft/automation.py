@@ -11,6 +11,7 @@ many cross-domain touches for plain composition.
 
 from typing import List, Optional, Tuple
 
+from ..analysis.shrink import shrunk_lane_winrates
 from ..config_constants import draft_config
 from ..utils.console import clear_console
 from ..utils.display import format_games_count
@@ -118,19 +119,30 @@ class HoverAutomation:
             player_lane = self._resolve_player_lane()
 
             # Calculate scores for pool champions (blind pick scenario)
-            scores = []
             # SPEC-09 E1: same rule as DraftRecommender.provide() - a
             # champion without exploitable data for this lane is reported,
             # never silently dropped from the pool.
+            eligible: List[Tuple[str, int]] = []
             skipped: List[Tuple[str, int]] = []
             for champion_id in champion_ids:
                 champion_name = self.m._get_display_name(champion_id)
                 matchups = self.m.assistant.get_matchups_for_draft(champion_name, lane=player_lane)
                 total_games = sum(m.games for m in matchups) if matchups else 0
                 if matchups and total_games >= draft_config.MIN_CHAMPION_GAMES:
-                    # Use blind pick scoring (empty enemy team)
-                    score = self.m.assistant.score_against_team(matchups, [], champion_name)
-                    scores.append((champion_name, score))
+                    eligible.append((champion_name, total_games))
+                else:
+                    skipped.append((champion_name, total_games))
+
+            # SPEC-18 : en blind pick, la force d'un champion est son winrate
+            # de lane rétréci. score_against_team() sans adversaire revenait à
+            # avg_delta2, nul par construction : le tri se faisait sur du bruit.
+            lane_winrates = (
+                shrunk_lane_winrates(self.m.assistant.db, player_lane) if eligible else {}
+            )
+            scores = []
+            for champion_name, total_games in eligible:
+                if champion_name in lane_winrates:
+                    scores.append((champion_name, lane_winrates[champion_name]))
                 else:
                     skipped.append((champion_name, total_games))
 
@@ -147,7 +159,7 @@ class HoverAutomation:
                 best_champion = scores[0][0]
                 if self.m.verbose:
                     print(
-                        f"  [OK] [INITIAL-HOVER] Meilleur de la pool : {best_champion} ({scores[0][1]:+.2f}% d'avantage)"
+                        f"  [OK] [INITIAL-HOVER] Meilleur de la pool : {best_champion} ({scores[0][1]:.1f}% de winrate lissé)"
                     )
                 return best_champion
             else:

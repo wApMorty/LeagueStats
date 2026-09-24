@@ -277,6 +277,9 @@ class Database:
     def get_lane_popularity(self, lane: str) -> List[str]:
         return self._matchups.get_lane_popularity(lane)
 
+    def get_lane_winrates(self, lane: Optional[str]) -> Dict[str, tuple]:
+        return self._matchups.get_lane_winrates(lane)
+
     # ========== Synergies ==========
 
     def init_synergies_table(self) -> None:

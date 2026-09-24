@@ -33,9 +33,10 @@ lane.
 """
 
 import math
-from typing import List, Optional, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 from ..config_constants import analysis_config
+from .probability import confidence
 
 # (delta2 en points de winrate, winrate en %, games)
 Sample = Tuple[float, float, int]
@@ -202,3 +203,34 @@ def shrink_is_measured(db) -> bool:
     pipeline n'avait pas été relancé, et aucune ligne ne le disait.
     """
     return all(_stored_k(db, table) is not None for table in _TABLES)
+
+
+def shrunk_lane_winrates(db, lane: Optional[str]) -> Dict[str, float]:
+    """Winrate de chaque champion sur ``lane``, rétréci vers la moyenne de la lane (SPEC-18).
+
+    C'est la force d'un champion en blind pick. ``avg_delta2`` ne l'est pas : le
+    delta2 de LoLalytics est un écart à la moyenne du champion, sa moyenne sur
+    les adversaires est nulle par construction, et sa dispersion entre
+    champions est du bruit pur (variance de signal nulle sur les 5 lanes).
+
+    Même modèle que les paires, au niveau du champion : l'écart à la moyenne
+    de la lane, et non à 50 %. Les winrates LoLalytics sont en moyenne à ~52,4 %
+    sur chaque lane, et centrer sur 50 gonflerait la variance mesurée. K est
+    estimé à chaque appel : quelques dizaines de champions, c'est instantané,
+    et ça évite une clé ``db_meta`` de plus à tenir à jour.
+
+    Returns:
+        {nom du champion: winrate rétréci en %} ; vide sans données.
+    """
+    raw = db.get_lane_winrates(lane)
+    total_games = sum(games for _, games in raw.values())
+    if not total_games:
+        return {}
+    mean = sum(winrate * games for winrate, games in raw.values()) / total_games
+    k = estimate_shrink_k([(wr - mean, wr, games) for wr, games in raw.values()])
+    if k is None:
+        k = float(analysis_config.CONFIDENCE_K)
+    return {
+        name: mean + (winrate - mean) * confidence(games, k)
+        for name, (winrate, games) in raw.items()
+    }

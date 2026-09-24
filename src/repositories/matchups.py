@@ -396,3 +396,28 @@ class MatchupsRepository:
         except Exception as e:
             print(f"[ERROR] Failed to load lane popularity for {lane}: {e}")
             return []
+
+    def get_lane_winrates(self, lane: Optional[str]) -> Dict[str, tuple]:
+        """Winrate de chaque champion sur ``lane`` (SPEC-18), pondéré par les games.
+
+        ``lane=None`` agrège toutes les lanes, comme ``get_champion_matchups_by_name``.
+
+        Returns:
+            {nom du champion: (winrate en %, games)} ; vide en cas d'erreur.
+        """
+        try:
+            cursor = self.db.connection.cursor()
+            # `? IS NULL` : une seule requête littérale pour les deux cas.
+            cursor.execute(
+                """
+                SELECT c.name, SUM(m.winrate * m.games) / SUM(m.games), SUM(m.games)
+                FROM matchups m JOIN champions c ON c.id = m.champion
+                WHERE (? IS NULL OR m.lane = ?)
+                GROUP BY m.champion HAVING SUM(m.games) > 0
+                """,
+                (lane, lane),
+            )
+            return {name: (winrate, games) for name, winrate, games in cursor.fetchall()}
+        except Exception as e:
+            print(f"[ERROR] Failed to load lane winrates for {lane}: {e}")
+            return {}

@@ -32,6 +32,17 @@ def monitor():
     return monitor
 
 
+@pytest.fixture
+def lane_winrates():
+    """Winrates de lane rétrécis servis au hover (SPEC-18), modifiables par test.
+
+    Garen en tête : le repli ``current_pool[0]`` (Aatrox) reste distinguable.
+    """
+    winrates = {"Aatrox": 50.0, "Darius": 51.0, "Garen": 55.0}
+    with patch("src.draft.automation.shrunk_lane_winrates", return_value=winrates) as mocked:
+        yield mocked.return_value
+
+
 def matchups(total_games):
     """One fake matchup carrying the whole game count."""
     return [Mock(games=total_games)]
@@ -131,22 +142,30 @@ class TestDoInitialHover:
 class TestGetBestChampionFromPool:
     """``_get_best_champion_from_pool()``."""
 
-    def test_returns_the_highest_scoring_champion(self, monitor):
+    def test_returns_the_highest_scoring_champion(self, monitor, lane_winrates):
         """Scores are sorted descending; Garen wins over the pool's first entry."""
         monitor.assistant.get_matchups_for_draft.return_value = matchups(1000)
-        monitor.assistant.score_against_team.side_effect = [1.0, 2.0, 5.0]
 
         assert monitor._get_best_champion_from_pool() == "Garen"
 
-    def test_scores_are_computed_as_blind_picks(self, monitor):
-        """Blind pick = scored against an EMPTY enemy team."""
+    def test_scores_are_lane_winrates_not_avg_delta2(self, monitor, lane_winrates):
+        """SPEC-18 : le blind pick se classe au winrate de lane rétréci.
+        L'ancien score (score_against_team sans adversaire = avg_delta2) triait
+        du bruit, il ne doit plus être appelé."""
         monitor.assistant.get_matchups_for_draft.return_value = matchups(1000)
-        monitor.assistant.score_against_team.return_value = 1.0
+        monitor.pool_lane = "top"
 
-        monitor._get_best_champion_from_pool()
+        with patch("src.draft.automation.shrunk_lane_winrates", return_value=lane_winrates) as m:
+            monitor._get_best_champion_from_pool()
 
-        for call in monitor.assistant.score_against_team.call_args_list:
-            assert call.args[1] == []
+        m.assert_called_once_with(monitor.assistant.db, "top")
+        monitor.assistant.score_against_team.assert_not_called()
+
+    def test_champion_without_lane_winrate_is_skipped(self, monitor, lane_winrates):
+        monitor.assistant.get_matchups_for_draft.return_value = matchups(1000)
+        del lane_winrates["Garen"]
+
+        assert monitor._get_best_champion_from_pool() == "Darius"
 
     def test_unknown_champion_names_fall_back_to_first_of_pool(self, monitor):
         """No name matches the id mapping -> no id -> ``current_pool[0]``."""
@@ -155,10 +174,11 @@ class TestGetBestChampionFromPool:
         assert monitor._get_best_champion_from_pool() == "Aatrox"
         monitor.assistant.get_matchups_for_draft.assert_not_called()
 
-    def test_name_matching_is_case_insensitive(self, monitor):
+    def test_name_matching_is_case_insensitive(self, monitor, lane_winrates):
         monitor.champion_id_to_name = {1: "AATROX", 2: "darius", 3: "GaReN"}
         monitor.assistant.get_matchups_for_draft.return_value = matchups(1000)
-        monitor.assistant.score_against_team.side_effect = [1.0, 9.0, 2.0]
+        lane_winrates.clear()
+        lane_winrates.update({"AATROX": 50.0, "darius": 58.0, "GaReN": 52.0})
 
         assert monitor._get_best_champion_from_pool() == "darius"
 
@@ -168,17 +188,15 @@ class TestGetBestChampionFromPool:
         assert monitor._get_best_champion_from_pool() == "Aatrox"
         monitor.assistant.score_against_team.assert_not_called()
 
-    def test_champions_below_min_games_are_skipped(self, monitor, capsys):
+    def test_champions_below_min_games_are_skipped(self, monitor, lane_winrates, capsys):
         """Only champions with >= MIN_CHAMPION_GAMES total games get scored."""
         monitor.assistant.get_matchups_for_draft.side_effect = [
             matchups(draft_config.MIN_CHAMPION_GAMES - 1),  # Aatrox: too thin
             matchups(draft_config.MIN_CHAMPION_GAMES),  # Darius: exactly at the bar
             matchups(draft_config.MIN_CHAMPION_GAMES - 1),  # Garen: too thin
         ]
-        monitor.assistant.score_against_team.return_value = 0.5
 
         assert monitor._get_best_champion_from_pool() == "Darius"
-        assert monitor.assistant.score_against_team.call_count == 1
 
         # SPEC-09 E1: Aatrox/Garen must be reported as skipped, not silently
         # dropped from the pool.
@@ -199,19 +217,19 @@ class TestGetBestChampionFromPool:
 
     def test_scoring_exception_falls_back_to_first_of_pool(self, monitor):
         monitor.assistant.get_matchups_for_draft.return_value = matchups(1000)
-        monitor.assistant.score_against_team.side_effect = Exception("scorer down")
+        with patch(
+            "src.draft.automation.shrunk_lane_winrates", side_effect=Exception("scorer down")
+        ):
+            assert monitor._get_best_champion_from_pool() == "Aatrox"
 
-        assert monitor._get_best_champion_from_pool() == "Aatrox"
-
-    def test_verbose_reports_the_selected_champion(self, monitor, capsys):
+    def test_verbose_reports_the_selected_champion(self, monitor, lane_winrates, capsys):
         monitor.verbose = True
         monitor.assistant.get_matchups_for_draft.return_value = matchups(1000)
-        monitor.assistant.score_against_team.side_effect = [1.0, 2.0, 5.0]
 
         monitor._get_best_champion_from_pool()
 
         out = capsys.readouterr().out
-        assert "[OK] [INITIAL-HOVER] Meilleur de la pool : Garen (+5.00% d'avantage)" in out
+        assert "[OK] [INITIAL-HOVER] Meilleur de la pool : Garen (55.0% de winrate lissé)" in out
 
     def test_verbose_reports_the_failure(self, monitor, capsys):
         monitor.verbose = True
