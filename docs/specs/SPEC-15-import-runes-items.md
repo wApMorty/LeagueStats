@@ -1,6 +1,7 @@
 # SPEC-15 — Runes, items et sorts poussés dans le client au lock-in
 
-**Statut** : 🟡 Phase 1 **à implémenter** (source OneTricks, [ADR-003](../adr/ADR-003-onetricks-temps-reel.md)).
+**Statut** : 🟡 Phase 1 **implémentée le 2026-09-24**, recette en partie réelle à faire (tâche 14)
+(source OneTricks, [ADR-003](../adr/ADR-003-onetricks-temps-reel.md)).
 Spike OneTricks fait (§2.2.1). Spike Coachless (§2.1) **reporté** avec
 [SPEC-16](SPEC-16-moteur-optimisation-builds.md).
 

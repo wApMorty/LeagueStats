@@ -6,8 +6,14 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Feature
 
-- **SPEC-15 (en cours) : la build OneTricks, prête à être poussée dans le client**
-  — `src/draft/loadout.py`. Pas encore branché sur le Live Coach (tâche 12).
+- **SPEC-15 : la build OneTricks importée dans le client au lock-in** —
+  `src/draft/loadout.py` et `src/draft/loadout_import.py`. Au lock-in (action
+  `pick` complétée, jamais au survol), la build générale est importée ; dès que
+  l'adversaire direct est locké, elle est affinée au duel. Un trade, une
+  correction de lane ou un changement d'adversaire relancent l'import, qui n'écrit
+  dans le client que si la build cible change. Au plus deux pages OneTricks par
+  draft ; `AUTO_IMPORT_LOADOUT = False` coupe tout. Reste la recette en partie
+  réelle (tâche 14) : les formats LCU sont ceux documentés par la communauté.
   - Lecture de la page OneTricks (JSON `__NEXT_DATA__`, onglet ALL, User-Agent
     de navigateur, cache par session) et choix de la build la plus jouée.
   - Affinage au duel : un composant de la build générale n'est remplacé que si
