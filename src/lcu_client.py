@@ -207,6 +207,8 @@ class LCUClient(_MatchHistoryMixin):
                 response = self.session.patch(url, headers=headers, json=data, timeout=5)
             elif method == "PUT":
                 response = self.session.put(url, headers=headers, json=data, timeout=5)
+            elif method == "DELETE":
+                response = self.session.delete(url, headers=headers, timeout=5)
             else:
                 return None
 

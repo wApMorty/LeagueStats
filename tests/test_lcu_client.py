@@ -97,7 +97,15 @@ class TestMakeRequest:
 
     def test_unsupported_method_returns_none(self):
         client = _client_with_credentials()
-        assert client._make_request("/x", method="DELETE") is None
+        assert client._make_request("/x", method="OPTIONS") is None
+
+    def test_delete_is_dispatched(self):
+        """SPEC-15 : suppression de l'ancienne page de runes « LS »."""
+        client = _client_with_credentials()
+        response = Mock(status_code=204, content=b"")
+        with patch.object(client.session, "delete", return_value=response) as mock_delete:
+            assert client._make_request("/lol-perks/v1/pages/7", method="DELETE") == {}
+        mock_delete.assert_called_once()
 
     def test_post_and_put_are_dispatched(self):
         client = _client_with_credentials()
