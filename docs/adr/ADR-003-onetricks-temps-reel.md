@@ -26,7 +26,7 @@ n'a besoin ni d'historique ni de recherche sur ses alliés ou ses adversaires.
 | Option | Pour | Contre |
 |---|---|---|
 | **OneTricks en temps réel** (2 pages par draft) | Reproduit la méthode manuelle de @pj35 ; aucun compte ni jeton ; pas de collecte à planifier | Popularité seulement, pas de WPA ; structure `__NEXT_DATA__` non documentée ; User-Agent de navigateur requis |
-| Coachless (ADR-001) | WPA | Spike encore à faire, compte payant, jeton à gérer, CGU incertaines |
+| Coachless (ADR-001) | WPA | Compte payant, jeton à gérer. Spike fait ensuite (SPEC-15 §2.1.1) : CGU incompatibles avec un accès direct à l'API |
 | LoLalytics | Déjà scrapé | Extraction des builds à écrire ; winrate brut biaisé par la sélection (ADR-001) ; Selenium trop lent pour le temps réel |
 
 ## Décision

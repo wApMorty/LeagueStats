@@ -2,8 +2,9 @@
 
 **Statut** : 🟡 Phase 1 **implémentée le 2026-09-24**, recette en partie réelle à faire (tâche 14)
 (source OneTricks, [ADR-003](../adr/ADR-003-onetricks-temps-reel.md)).
-Spike OneTricks fait (§2.2.1). Spike Coachless (§2.1) **reporté** avec
-[SPEC-16](SPEC-16-moteur-optimisation-builds.md).
+Spike OneTricks fait (§2.2.1). Spike Coachless (§2.1.1) **fait le 2026-09-24** : faisable
+techniquement mais exclu par les CGU de Coachless, ce qui bloque aussi
+[SPEC-16](SPEC-16-moteur-optimisation-builds.md) A.
 
 **Origine** : @pj35, 2026-09-23 — « une optimisation et import de runes/items dans le client ».
 Arbitrages du 2026-09-23 : optimisation **maison** ([ADR-002](../adr/ADR-002-moteur-optimisation-builds.md)),
@@ -50,6 +51,42 @@ navigateur et relever dans l'onglet réseau :
    utilisables par le LCU), ou noms à mapper.
 5. **Le comportement face à un client scripté** : `requests` avec un User-Agent navigateur
    passe-t-il, ou y a-t-il un 429 ou un challenge comme sur OneTricks ?
+
+#### 2.1.1 Résultat du spike (2026-09-24) : faisable techniquement, exclu par les CGU
+
+Source : un HAR de la page d'accueil connectée (@pj35) et les chunks JS publics de la SPA, qui
+contiennent tous les services Angular. Aucun appel direct à l'API n'a été fait.
+
+1. **Endpoints** : `https://api.coachless.gg/api`, en `POST` JSON.
+   - Runes : `Rune/GetKeystoneData`, `GetMainTreePlaycount`, `GetSecondaryTreePlaycount`,
+     `GetRunesForKeystoneAndTree`, `GetShardsForKeystoneAndTree`.
+   - Items et sorts : `ChampionWinprob/GetGlobalItemStatistics`, `GetItemDetailed`,
+     `GetItemUsers`, `GetGlobalSummonerSpellStatistics`.
+   - Filtres communs : `{patch: {major, patch, patchAdditions}, championIds: [key],
+     matchupChampionIds: [key] | null, leagueTiers: [3..9], regions, role: 0..4}`.
+     Le filtre par adversaire est réservé aux abonnés.
+2. **Authentification** : JWT `Bearer`. Le jeton d'accès vit 24 h, le jeton de
+   rafraîchissement 30 jours et tourne à chaque `POST Auth/refresh {refreshToken}`.
+   L'outil pourrait se reconnecter seul s'il sert au moins une fois tous les 30 jours.
+3. **Granularité** : WPA **par rune et par item** (`wpaOverall`), **avec échantillon**
+   (`occurrence` en nombre de parties, `occurrenceRelative` en %), plus `winrateExpected` et
+   `winrateObserved`. Il y a aussi un WPA situationnel (`GetItemDetailed` : par groupe de
+   situation, par slot d'item, par elo). Aucune erreur-type n'est exposée : le `C` de
+   SPEC-16 §2.3 serait à dériver de `occurrence`.
+   - **Historique** : `GetPatches` liste 18 patchs (16.1 à 16.18, 5 à 11 M de parties
+     chacun), et `patchAdditions` agrège une plage. SPEC-16 A+ aurait démarré avec un historique.
+4. **Identifiants** : IDs Riot (clé numérique de champion Data Dragon, perks `8xxx`, items,
+   sorts), utilisables tels quels par le LCU.
+5. **Client scripté** : non testé, par choix (voir ci-dessous).
+
+**Bloquant** : les conditions d'utilisation (section 17, « Limited, Personal and
+Non-Transferable License ») interdisent d'accéder à « any Coachless database, source code or
+back-office service », sauf pour l'usage prévu du service. Elles interdisent aussi les copies
+non autorisées au-delà du cache. Un client qui interroge l'API directement, et à plus forte
+raison une collecte par patch, sort de cet usage. **Le spike est clos** : Coachless n'est pas
+une source possible sans **autorisation écrite** de Coachless, que les CGU prévoient pour les
+usages non personnels. SPEC-16 A reste reporté : sa matière existe, mais elle n'est pas
+accessible légitimement.
 
 ### 2.2 OneTricks (source de l'import depuis ADR-003)
 

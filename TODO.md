@@ -80,8 +80,7 @@ les trois leviers, parallélisables entre eux, du moins risqué au plus structur
 | Recherche parallèle à la racine (`multiprocessing`, phase 2) | SPEC-17 §5 | Après le sprint 3, si le bench montre une profondeur < 5 en premier pick, ou si le premier pick reste mal conseillé à l'usage |
 | Recherche en tâche de fond pendant le chrono de pick (« pondering ») | SPEC-17 §7 | Après le sprint 3, si la profondeur reste le facteur limitant ; chantier d'UI (sortir `rank()` de la boucle du monitor) |
 | Shrink de `avg_delta2` dans la tier list (Kassadin 1er en top sur un échantillon minuscule) | SPEC-17 §7 | Spec séparée à écrire ; le même bruit que SPEC-17 §1.1, dans un autre produit |
-| Spike Coachless (endpoints, authentification, granularité du WPA, CGU) | SPEC-15 §2.1 | La build des one-tricks se révèle insuffisante à l'usage |
-| Moteur d'optimisation, phase A (shrinkage mesuré du WPA) | SPEC-16 §2 | Après le spike Coachless, s'il confirme un WPA par composant avec échantillons |
+| Moteur d'optimisation, phase A (shrinkage mesuré du WPA) | SPEC-16 §2 | Coachless donne son autorisation écrite : le spike (SPEC-15 §2.1.1, 2026-09-24) confirme un WPA par composant avec échantillons, mais les CGU interdisent l'accès direct à l'API |
 
 **Abandonné** (ADR-003) : la table `build_snapshots`, l'étape de collecte du pipeline, l'alerte
 `data_freshness.py` (anciennes tâches 3 à 6 et 9), et SPEC-16 A+ (anciennes tâches 19-20).
