@@ -1,5 +1,5 @@
 from time import sleep
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, List, Optional, Sequence, Tuple
 import lxml.html
 import logging
 
@@ -19,6 +19,25 @@ from .config_constants import analysis_config, scraping_config, xpath_config
 from .parser_cookie_banner import _CookieBannerMixin
 
 logger = logging.getLogger(__name__)
+
+
+# Counters carousel: one row per ENEMY lane, always in this order (row 2 = top).
+_MATCHUP_ROW_BY_LANE = {lane: row for row, lane in enumerate(scraping_config.LANES, start=2)}
+
+
+def _one_per_opponent(direct: List[tuple], indirect: List[tuple]) -> List[tuple]:
+    """One row per opponent: the direct lane duel if any, else the most played.
+
+    The same champion shows up in several carousel rows (one per lane it is
+    played in), but the database keeps one row per (champion, enemy, lane):
+    without this, the last row read silently overwrote the others.
+    """
+    best = {}
+    for row in indirect:
+        if row[0] not in best or row[5] > best[row[0]][5]:
+            best[row[0]] = row
+    best.update({row[0]: row for row in direct})
+    return list(best.values())
 
 
 class Parser(_CookieBannerMixin):
@@ -158,7 +177,7 @@ class Parser(_CookieBannerMixin):
     def _extract_carousel_rows(
         self,
         champion: str,
-        row_range: range,
+        row_range: Sequence[int],
         label: str,
         name_from_href: Callable[[str], str],
     ) -> List[tuple]:
@@ -267,9 +286,13 @@ class Parser(_CookieBannerMixin):
                 if pickrate < analysis_config.MIN_PICKRATE or len(result) == prev_count:
                     break
 
-                # Scroll carousel right to reveal the next batch of items
+                # Scroll carousel right to reveal the next batch of items.
+                # The carousel is virtualized (~19 cells rendered at a time) and
+                # the element that scrolls is the PARENT of the row track
+                # (overflow-x-scroll): scrolling the track itself is a no-op,
+                # which silently capped every row at its first ~18 opponents.
                 self.webdriver.execute_script(
-                    "arguments[0].scrollLeft += arguments[1];",
+                    "arguments[0].parentElement.scrollLeft += arguments[1];",
                     container,
                     scraping_config.MATCHUP_CAROUSEL_SCROLL_X,
                 )
@@ -304,12 +327,20 @@ class Parser(_CookieBannerMixin):
         """
         self._load_champion_page(patch, champion, lane)
 
-        matchups = self._extract_carousel_rows(
-            champion,
-            range(2, 7),
-            "Matchup",
-            lambda href: href.split("vs/")[1].split("/build")[0],
-        )
+        def extract_matchups(rows: Sequence[int]) -> List[tuple]:
+            return self._extract_carousel_rows(
+                champion, rows, "Matchup", lambda href: href.split("vs/")[1].split("/build")[0]
+            )
+
+        # The direct lane row is read on its own so that its duel wins over an
+        # indirect row for the same opponent (e.g. Yone as enemy top AND mid).
+        direct_row = _MATCHUP_ROW_BY_LANE.get(lane)
+        if direct_row:
+            direct = extract_matchups([direct_row])
+            indirect = extract_matchups([row for row in range(2, 7) if row != direct_row])
+        else:
+            direct, indirect = [], extract_matchups(range(2, 7))
+        matchups = _one_per_opponent(direct, indirect)
         if not matchups or not include_synergies:
             return matchups, []
 
@@ -342,4 +373,4 @@ class Parser(_CookieBannerMixin):
             "Synergy",
             lambda href: href.split("/lol/")[1].split("/build")[0],
         )
-        return matchups, synergies
+        return matchups, _one_per_opponent([], synergies)

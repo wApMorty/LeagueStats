@@ -62,7 +62,8 @@ class TestParserKeepsMatchupsWhenSynergiesTabFails:
             patch.object(
                 parser,
                 "_extract_carousel_rows",
-                side_effect=[matchups, []],  # matchups ok, synergies section never renders
+                # direct lane row, indirect rows, then the synergies section never renders
+                side_effect=[matchups, [], []],
             ),
         ):
             result_matchups, result_synergies = parser.get_champion_page_data(

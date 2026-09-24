@@ -41,7 +41,7 @@ class TestGetChampionPageData:
         with (
             patch.object(parser, "_load_champion_page") as mock_load,
             patch.object(
-                parser, "_extract_carousel_rows", side_effect=[matchups, synergies]
+                parser, "_extract_carousel_rows", side_effect=[matchups, [], synergies]
             ) as mock_extract,
         ):
             result = parser.get_champion_page_data("14.23", "yasuo", "middle")
@@ -49,13 +49,15 @@ class TestGetChampionPageData:
         mock_load.assert_called_once_with("14.23", "yasuo", "middle")
         assert result == (matchups, synergies)
 
-        # First extraction is matchups (5 tiers), second is synergies (4 tiers)
-        assert mock_extract.call_count == 2
-        first_call, second_call = mock_extract.call_args_list
-        assert first_call.args[1] == range(2, 7)
-        assert first_call.args[2] == "Matchup"
-        assert second_call.args[1] == range(2, 6)
-        assert second_call.args[2] == "Synergy"
+        # Matchups: the direct lane row (middle = row 4) alone, then the four
+        # indirect rows; synergies: 4 tiers.
+        assert mock_extract.call_count == 3
+        direct_call, indirect_call, synergy_call = mock_extract.call_args_list
+        assert list(direct_call.args[1]) == [4]
+        assert list(indirect_call.args[1]) == [2, 3, 5, 6]
+        assert direct_call.args[2] == indirect_call.args[2] == "Matchup"
+        assert synergy_call.args[1] == range(2, 6)
+        assert synergy_call.args[2] == "Synergy"
 
         parser.webdriver.find_element.assert_called_once()
 

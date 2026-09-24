@@ -447,6 +447,11 @@ class DataQualityConfig:
     Calibration notes (2026-06-12):
     - A single LoLalytics lane page yields ~94 matchups above the 0.5%
       pickrate cutoff, so a champion playing 1 lane lands around ~90.
+      FAUX (2026-09-24) : ces ~90 étaient 5 rangées × ~18 cellules, le
+      carrousel virtualisé n'étant jamais défilé (bug corrigé dans
+      parser.py). Une page lue en entier donne ~170 adversaires distincts
+      (Sion top : 172). Les deux seuils ci-dessous restent des planchers
+      valides ; à relever après le premier scrape complet corrigé.
     - Mono-lane DB (the failure mode): 16 179 matchups / 12 943 synergies.
     - Multi-lane at the original >10% lane threshold measured ~25k matchups
       (283 (champion, lane) combos, base 2026-09-05).
