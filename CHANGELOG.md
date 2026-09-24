@@ -6,6 +6,18 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Feature
 
+- **SPEC-18 : la tier list et le blind pick classés au winrate de lane** — la
+  composante performance de la tier list blind pick et le survol du « meilleur
+  blind pick » triaient sur `avg_delta2`, dont la dispersion entre champions est
+  du bruit pur (le delta2 de LoLalytics est un écart à la moyenne du champion :
+  variance de signal nulle sur les 5 lanes). Ils utilisent désormais le winrate
+  de lane rétréci vers la moyenne de la lane (`shrink.shrunk_lane_winrates`, K
+  estimé à chaque appel, 584 à 909 games selon la lane). Kassadin top passe de
+  1er à 50e sur 82. Le modèle de prédiction ne change pas ;
+  `scripts/compare_intrinsic_strength.py` mesure sur les parties labellisées si
+  ajouter ce terme à `GameEvaluator` améliorerait la discrimination (pas encore :
+  +0,019 d'AUC, IC 90 % [−0,053 ; +0,090] sur 72 parties).
+
 - **SPEC-17 : la recherche du Live Coach regarde les picks réellement joués, et
   plus loin** — à budget constant (2 s, mono-thread), la recherche atteint la fin
   de la draft dès B2 (5/7 → 7/7) et une profondeur de 5 en premier pick (3 → 5),

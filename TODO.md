@@ -73,13 +73,20 @@ les trois leviers, parallélisables entre eux, du moins risqué au plus structur
 | 25 | Calibrer `SEARCH_TOP_N` (8 / 10 / 12) au bench, retenir le plus grand qui tient §2.2, consigner la couverture de games dans le commentaire | SPEC-17 §4.1 | 1 | 22, 23, 24 | ✅ N = 8 (10 et 12 : B2 6/7) |
 | 26 | Critères d'acceptation §6 (bench B2 7/7, B1 ≥ 5, aucune variante hors top-N), `CHANGELOG.md`, statut de la spec | SPEC-17 §6 | 1 | 25 | ✅ |
 
+### Hors sprint — SPEC-18 phase A ✅ (2026-09-24)
+
+[SPEC-18](docs/specs/SPEC-18-force-intrinseque.md) remplace l'ancienne tâche « shrink de
+`avg_delta2` » : mesuré, `avg_delta2` n'a aucun signal au niveau du champion (nul par
+construction). La tier list blind pick et le survol du blind pick sont classés au winrate de lane
+rétréci. Le modèle de prédiction ne change pas (approche C, @pj35).
+
 ### Reporté — non planifié
 
 | Tâche | Spec | Rouvrir quand |
 |---|---|---|
 | Recherche parallèle à la racine (`multiprocessing`, phase 2) | SPEC-17 §5 | Après le sprint 3, si le bench montre une profondeur < 5 en premier pick, ou si le premier pick reste mal conseillé à l'usage |
 | Recherche en tâche de fond pendant le chrono de pick (« pondering ») | SPEC-17 §7 | Après le sprint 3, si la profondeur reste le facteur limitant ; chantier d'UI (sortir `rank()` de la boucle du monitor) |
-| Shrink de `avg_delta2` dans la tier list (Kassadin 1er en top sur un échantillon minuscule) | SPEC-17 §7 | Spec séparée à écrire ; le même bruit que SPEC-17 §1.1, dans un autre produit |
+| Force intrinsèque dans `GameEvaluator` (SPEC-05 §3.3, jamais implémentée) | SPEC-18 §3 | `scripts/compare_intrinsic_strength.py` donne une borne basse d'IC > 0 (au 2026-09-24 : +0,019 d'AUC, IC [−0,053 ; +0,090] sur 72 parties) |
 | Moteur d'optimisation, phase A (shrinkage mesuré du WPA) | SPEC-16 §2 | Coachless donne son autorisation écrite : le spike (SPEC-15 §2.1.1, 2026-09-24) confirme un WPA par composant avec échantillons, mais les CGU interdisent l'accès direct à l'API |
 
 **Abandonné** (ADR-003) : la table `build_snapshots`, l'étape de collecte du pipeline, l'alerte
