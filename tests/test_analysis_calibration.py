@@ -9,9 +9,11 @@ predictions), via the real `db` fixture (temp_db, never data/db.db).
 import pytest
 
 from src.analysis.calibration import (
+    auc,
     brier_score,
     calibration_curve,
     fetch_labeled_predictions,
+    intrinsic_points,
     suggest_scale,
 )
 
@@ -89,3 +91,25 @@ class TestFetchLabeledPredictions:
     def test_no_labeled_rows_returns_empty_list(self, db):
         db.insert_prediction([1], [2], None, 0.5, "v1")  # never resolved
         assert fetch_labeled_predictions(db) == []
+
+
+# ---------- SPEC-18 : AUC et force intrinsèque ----------
+
+
+def test_auc_perfect_random_and_inverted():
+    assert auc([(0.9, 1), (0.8, 1), (0.2, 0), (0.1, 0)]) == 1.0
+    assert auc([(0.1, 1), (0.9, 0)]) == 0.0
+    assert auc([(0.5, 1), (0.5, 0)]) == 0.5
+
+
+def test_auc_without_both_outcomes_is_uninformative():
+    assert auc([(0.9, 1), (0.8, 1)]) == 0.5
+    assert auc([]) == 0.5
+
+
+def test_intrinsic_points_is_ally_minus_enemy_and_missing_counts_as_mean():
+    strength = {"top": {"Garen": 2.0, "Teemo": -1.0}, "middle": {"Ahri": 0.5}}
+    allies = [("Garen", "top"), ("Ahri", "middle"), ("Unknown", "jungle")]
+    enemies = [("Teemo", "top"), ("Zed", "middle"), ("Ahri", None)]
+
+    assert intrinsic_points(allies, enemies, strength) == 2.0 + 0.5 - (-1.0)

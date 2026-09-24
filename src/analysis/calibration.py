@@ -9,7 +9,7 @@ numpy/scipy/sklearn on a 2-parameter logistic regression).
 """
 
 import math
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 Row = Tuple[float, int]  # (predicted_probability, outcome)
 
@@ -88,3 +88,38 @@ def suggest_scale(rows: List[Row], learning_rate: float = 0.1, iterations: int =
         gradient = sum((y - _sigmoid(scale * x)) * x for x, y in zip(logits, outcomes)) / n
         scale += learning_rate * gradient
     return scale
+
+
+def auc(scored: Sequence[Tuple[float, int]]) -> float:
+    """Aire sous la courbe ROC de (score, outcome) : la probabilité qu'une
+    victoire tirée au hasard ait un score plus haut qu'une défaite (0,5 =
+    aucun pouvoir de discrimination). Insensible à l'échelle du score, ce qui
+    permet de comparer des modèles non calibrés entre eux (SPEC-18).
+    """
+    wins = [score for score, outcome in scored if outcome == 1]
+    losses = [score for score, outcome in scored if outcome == 0]
+    if not wins or not losses:
+        return 0.5
+    pairs = sum((w > l) + 0.5 * (w == l) for w in wins for l in losses)
+    return pairs / (len(wins) * len(losses))
+
+
+Placed = Tuple[str, Optional[str]]  # (champion, lane)
+
+
+def intrinsic_points(
+    allies: Sequence[Placed],
+    enemies: Sequence[Placed],
+    strength: Dict[Optional[str], Dict[str, float]],
+) -> float:
+    """Écart de force intrinsèque entre les deux camps, en points de winrate
+    (SPEC-18, terme de SPEC-05 §3.3 jamais implémenté).
+
+    ``strength[lane][champion]`` est l'écart du winrate de lane rétréci à la
+    moyenne de la lane. Un champion sans donnée sur sa lane vaut la moyenne (0).
+    """
+
+    def total(team: Sequence[Placed]) -> float:
+        return sum(strength.get(lane, {}).get(champion, 0.0) for champion, lane in team)
+
+    return total(allies) - total(enemies)
