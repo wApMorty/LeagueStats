@@ -52,6 +52,13 @@ class GameEvaluator:
     Les lanes sont facultatives partout : sans lane, la paire est cherchée dans
     la table toutes-lanes et pondérée par ``OTHER_LANE_WEIGHT``, ce qui redonne
     le comportement d'avant SPEC-04.
+
+    Les termes de paires sont mémorisés (SPEC-17 §4.3) : la recherche
+    recalcule les mêmes paires des centaines de milliers de fois. Le cache vit
+    aussi longtemps que l'évaluateur, comme les tables et les K de shrink qu'il
+    garde déjà : une mise à jour des données en cours de session n'est pas vue,
+    ni avant ni après ce cache. Pas d'éviction : au pire (173 × 5)² entrées,
+    quelques dizaines de milliers en pratique sur une draft.
     """
 
     def __init__(self, db, verbose: bool = False) -> None:
@@ -59,6 +66,8 @@ class GameEvaluator:
         self.verbose = verbose
         self._matchups: Dict[str, PairTable] = {}
         self._synergies: Dict[str, PairTable] = {}
+        self._matchup_cache: Dict[Tuple[Placed, Placed], float] = {}
+        self._synergy_cache: Dict[Tuple[Placed, Placed], float] = {}
         # SPEC-13 : demi-poids mesuré sur les données au dernier scrape, lu une
         # seule fois — la recherche fait des dizaines de milliers d'appels à
         # confidence() et ne peut pas relire db_meta à chacun.
@@ -112,7 +121,14 @@ class GameEvaluator:
         return role_inference_config.OTHER_LANE_WEIGHT
 
     def matchup_logit(self, champion: Placed, enemy: Placed) -> float:
-        """Log-odds apporté aux alliés par la paire (champion allié, ennemi).
+        """Log-odds apporté aux alliés par la paire (champion allié, ennemi)."""
+        value = self._matchup_cache.get((champion, enemy))
+        if value is None:
+            value = self._matchup_cache[(champion, enemy)] = self._matchup_logit(champion, enemy)
+        return value
+
+    def _matchup_logit(self, champion: Placed, enemy: Placed) -> float:
+        """Calcul non mémorisé de ``matchup_logit``.
 
         δ antisymétrique : la valeur est la demi-différence des deux points de
         vue quand les deux existent. Quand un seul côté a des données, on le
@@ -153,7 +169,14 @@ class GameEvaluator:
         ) in self._matchup_table(enemy_lane)
 
     def synergy_logit(self, champion: Placed, ally: Placed) -> float:
-        """Log-odds apporté à l'équipe qui possède les deux champions.
+        """Log-odds apporté à l'équipe qui possède les deux champions."""
+        value = self._synergy_cache.get((champion, ally))
+        if value is None:
+            value = self._synergy_cache[(champion, ally)] = self._synergy_logit(champion, ally)
+        return value
+
+    def _synergy_logit(self, champion: Placed, ally: Placed) -> float:
+        """Calcul non mémorisé de ``synergy_logit``.
 
         Symétrique : s(a,b) = s(b,a). Le signe est appliqué par l'appelant —
         positif pour une paire alliée, négatif pour une paire ennemie.

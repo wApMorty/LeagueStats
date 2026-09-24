@@ -211,3 +211,53 @@ class TestTableLoading:
 
         # Une seule lane touchée ("top") -> un seul chargement.
         assert evaluator.db.matchup_loads == 1
+
+
+class TestPairCache:
+    """SPEC-17 §4.3 : une paire déjà calculée ne relit plus la table."""
+
+    @staticmethod
+    def _count_lookups(evaluator, monkeypatch):
+        calls = {"matchups": 0, "synergies": 0}
+        matchup_table, synergy_table = evaluator._matchup_table, evaluator._synergy_table
+
+        def counted_matchups(lane):
+            calls["matchups"] += 1
+            return matchup_table(lane)
+
+        def counted_synergies(lane):
+            calls["synergies"] += 1
+            return synergy_table(lane)
+
+        monkeypatch.setattr(evaluator, "_matchup_table", counted_matchups)
+        monkeypatch.setattr(evaluator, "_synergy_table", counted_synergies)
+        return calls
+
+    def test_second_identical_call_skips_the_tables(self, evaluator, monkeypatch):
+        calls = self._count_lookups(evaluator, monkeypatch)
+
+        first = evaluator.matchup_logit(("Jax", "top"), ("Garen", "top"))
+        synergy = evaluator.synergy_logit(("Jax", "top"), ("Nautilus", "support"))
+        after_first = dict(calls)
+        assert evaluator.matchup_logit(("Jax", "top"), ("Garen", "top")) == first
+        assert evaluator.synergy_logit(("Jax", "top"), ("Nautilus", "support")) == synergy
+
+        assert calls == after_first
+
+    def test_unknown_pair_is_cached_too(self, evaluator, monkeypatch):
+        calls = self._count_lookups(evaluator, monkeypatch)
+
+        assert evaluator.matchup_logit(("Jax", "top"), ("Teemo", "top")) == 0.0
+        after_first = dict(calls)
+        assert evaluator.matchup_logit(("Jax", "top"), ("Teemo", "top")) == 0.0
+
+        assert calls == after_first
+
+    def test_cached_values_match_uncached_computation(self, evaluator):
+        pairs = [(("Jax", "top"), ("Garen", "top")), (("Garen", "top"), ("Jax", "top"))]
+        for champion, enemy in pairs:
+            evaluator.matchup_logit(champion, enemy)
+        for champion, enemy in pairs:
+            assert evaluator.matchup_logit(champion, enemy) == evaluator._matchup_logit(
+                champion, enemy
+            )
