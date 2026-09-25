@@ -205,7 +205,7 @@ la plus jouée du duel qu'on copie : sur 40 parties, elle diffère surtout par l
   build générale, avec les substitutions significatives du duel (§3.2.1). Chaque `Substitution`
   garde sa catégorie, l'ancienne et la nouvelle option, les deux popularités et le nombre de
   parties, pour la console.
-- **`apply_build(lcu, build) -> None`** : les trois écritures LCU (§3.3), chacune indépendante et
+- **`apply_build(lcu, build) -> None`** (dans `loadout_lcu.py`) : les trois écritures LCU (§3.3), chacune indépendante et
   best-effort. L'échec de l'une n'empêche pas les autres.
 
 `Build` est un simple dataclass : perks, styles, fragments, blocs d'items, deux sorts, plus le
@@ -331,7 +331,8 @@ LCU.
 
 | Fichier | Changement |
 |---|---|
-| `src/draft/loadout.py` (nouveau) | Fetch OneTricks, choix de la build, cache, écritures LCU |
+| `src/draft/loadout.py` (nouveau) | Fetch OneTricks, choix de la build, cache, affinage au duel |
+| `src/draft/loadout_lcu.py` (nouveau) | Écritures LCU (§3.3), extraites de `loadout.py` pour la limite de 500 lignes |
 | `src/draft/lifecycle.py` | Déclenchement au lock-in et à l'affinage, réinitialisation |
 | `src/config_constants.py` | `AUTO_IMPORT_LOADOUT`, `LOADOUT_MATCHUP_ALPHA`, timeout, User-Agent, préfixe `"LS "` |
 | `tests/test_loadout.py`, `tests/fixtures/onetricks_*.json` (nouveaux) | §3.5 |

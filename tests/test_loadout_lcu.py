@@ -8,7 +8,8 @@ recette en partie réelle (tâche 14) les confirmera contre le client.
 import pytest
 
 from src.config_constants import draft_config
-from src.draft.loadout import Build, apply_build
+from src.draft.loadout import Build
+from src.draft.loadout_lcu import apply_build
 
 PREFIX = draft_config.LOADOUT_PREFIX
 

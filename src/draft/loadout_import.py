@@ -13,7 +13,8 @@ Back-reference to the monitor, like the other draft components: it reads
 from typing import Dict, Optional, Tuple
 
 from ..config_constants import draft_config
-from .loadout import Build, adapt_to_matchup, apply_build, get_page, option_name, pick_build
+from .loadout import Build, adapt_to_matchup, get_page, option_name, pick_build
+from .loadout_lcu import apply_build
 from .state import DraftState
 
 # (championId, lane, adversaire) : ce qui détermine la build cible.
