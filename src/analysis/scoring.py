@@ -61,26 +61,6 @@ class ChampionScorer(lane_restante.ScoringGateMixin):
             and m.games >= analysis_config.MIN_MATCHUP_GAMES
         ]
 
-    def avg_delta1(self, matchups: List[Matchup]) -> float:
-        """
-        Calculate weighted average delta1 from valid matchups.
-
-        Args:
-            matchups: List of Matchup objects
-
-        Returns:
-            Weighted average delta1
-        """
-        valid_matchups = self.filter_valid_matchups(matchups)
-        if not valid_matchups:
-            return 0.0
-        total_weight = sum(m.pickrate * confidence(m.games) for m in valid_matchups)
-        if total_weight == 0:
-            return 0.0
-        return (
-            sum(m.delta1 * m.pickrate * confidence(m.games) for m in valid_matchups) / total_weight
-        )
-
     def avg_delta2(self, matchups: List[Matchup]) -> float:
         """
         Calculate weighted average delta2 from valid matchups.

@@ -34,7 +34,7 @@ class MatchupsDraftRepository:
 
         Columns NOT included (not used in draft):
         - winrate: Only used in avg_winrate() which is never called during draft
-        - delta1: Only used in legacy generate_by_delta1() tier list method
+        - delta1: not read by any analysis
 
         Args:
             champion_name: Name of the champion to get matchups for

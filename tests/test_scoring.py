@@ -57,45 +57,6 @@ class TestFilterValidMatchups:
         assert result == []
 
 
-class TestAvgDelta1:
-    """Tests for avg_delta1 weighted average calculation."""
-
-    def test_weighted_average_calculation(self, scorer):
-        """Test correct weighted average by pickrate."""
-        matchups = [
-            Matchup("Champ1", 50.0, 100.0, 0, 10.0, 1000),  # delta1=100, weight=10
-            Matchup("Champ2", 50.0, 200.0, 0, 20.0, 1000),  # delta1=200, weight=20
-        ]
-        # Expected: (100*10 + 200*20) / (10+20) = 5000 / 30 = 166.67
-
-        result = scorer.avg_delta1(matchups)
-
-        assert abs(result - 166.67) < 0.01
-
-    def test_single_matchup(self, scorer):
-        """Test average with single matchup."""
-        matchups = [Matchup("Champ1", 50.0, 150.0, 0, 10.0, 1000)]
-
-        result = scorer.avg_delta1(matchups)
-
-        assert result == 150.0
-
-    def test_empty_matchups_returns_zero(self, scorer):
-        """Test that empty matchup list returns 0."""
-        result = scorer.avg_delta1([])
-
-        assert result == 0.0
-
-    def test_zero_total_weight_returns_zero(self, scorer):
-        """Test that zero total weight returns 0."""
-        # All matchups below pickrate threshold
-        matchups = [Matchup("Champ1", 50.0, 100.0, 0, 0.1, 1000)]
-
-        result = scorer.avg_delta1(matchups)
-
-        assert result == 0.0
-
-
 class TestAvgDelta2:
     """Tests for avg_delta2 weighted average calculation."""
 

@@ -1,7 +1,7 @@
 """Tests for statistical confidence weighting (SPEC-05 B6).
 
 `confidence(games)` composes with `pickrate` (produit, pas remplacement) as
-the weight used by avg_delta1/avg_delta2/avg_winrate/calculate_synergy_bonus.
+the weight used by avg_delta2/avg_winrate/calculate_synergy_bonus.
 `pickrate` alone still predicts the opponent's pick and must stay active.
 """
 

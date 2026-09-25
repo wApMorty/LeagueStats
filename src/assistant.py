@@ -286,10 +286,6 @@ class Assistant(_TrioFacadeMixin):
     # ==================== Tier List Generation ====================
     # Delegated to analysis.tier_list.TierListGenerator
 
-    def tierlist_delta2(self, champion_list: List[str]) -> List[tuple]:
-        """Generate tier list ranked by average delta2."""
-        return self.tier_list_gen.generate_by_delta2(champion_list)
-
     def generate_tier_list(
         self, champion_pool: List[str], analysis_type: str = "blind_pick", lane: str = None
     ) -> List[dict]:
