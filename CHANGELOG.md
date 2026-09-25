@@ -4,6 +4,18 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### 🐛 Fix
+
+- **Bans du Live Coach sur la lane jouée** — un pool `custom` (ex. GRIND) n'a pas
+  de lane : ses bans agrégeaient toutes les lanes et un pool de tanks top se
+  voyait conseiller des ADC (Yunara, Kai'Sa, Jhin). La lane se résout désormais :
+  rôle du pool, poste assigné par le client, lane dominante des champions du
+  pool (`pool_value.dominant_lane`, aussi utilisée par le précalcul). Les bans
+  précalculés ne servent plus que pour un pool à rôle, lus sur 15 candidats
+  avant filtrage des indisponibles (3 seulement avant). Les « bans ciblés »,
+  jamais utiles en soloQ (bans simultanés et à l'aveugle) et qui affichaient la
+  même liste, sont supprimés.
+
 ### ✨ Feature
 
 - **SPEC-18 §4 : bans de pool sur la valeur de pool** — la menace d'un ennemi est
