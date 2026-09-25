@@ -36,6 +36,11 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Feature
 
+- **Page OneTricks du duel en fin de draft** — la fenêtre OneTricks ouverte
+  en fin de draft passe sur la page du matchup direct (`&matchup=`) dès qu'un
+  seul ennemi est inféré sur notre lane ; sinon, page du champion sur sa lane
+  comme avant. Même adversaire que l'affinage de l'import de build.
+
 - **SPEC-18 §4 : bans de pool sur la valeur de pool** — la menace d'un ennemi est
   le retard de la meilleure réponse lissée de la pool (force + duel rétréci),
   multiplié par sa popularité sur la lane (points de winrate sur 100 parties),
