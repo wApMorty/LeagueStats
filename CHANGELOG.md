@@ -4,6 +4,12 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-09-25
+
+Version mineure : l'import de build affine désormais les runes mineures au duel,
+et trois correctifs (statut du scrape après réparation, doublon de résultat de
+partie, items très joués absents des situationnels).
+
 ### ✨ Feature
 
 - **Import de build : runes mineures affinées au duel** — à keystone égale, la
