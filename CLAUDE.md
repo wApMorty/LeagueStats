@@ -88,6 +88,33 @@ python -m black --check --diff src/ tests/ scripts/
 3. ✅ **ATTENDRE VALIDATION** de l'utilisateur
 4. ✅ Pousser uniquement après approbation
 
+### 5. Releases régulières
+
+Objectif (@pj35, 2026-09-25) : un `[Unreleased]` court entre deux versions. La 2.0.0
+en a accumulé ~50 entrées sur 169 commits, parce qu'aucune règle ne déclenchait de
+release.
+
+**Quand proposer une release** (l'assistant la propose d'office, sans attendre la
+demande) :
+- à la fin de chaque spec ou sprint du `TODO.md` → **mineure** (`2.x.0`) ;
+- dès que `[Unreleased]` compte **8 entrées** ;
+- des correctifs seuls, déjà poussés et en attente depuis une semaine → **patch** (`2.0.x`).
+
+**Numéro (SemVer)** :
+- **majeure** : une fonctionnalité retirée, ou une action requise de l'utilisateur
+  (migration Alembic, scrape complet) ;
+- **mineure** : une nouvelle fonctionnalité, sans rien d'incompatible ;
+- **patch** : des corrections seulement.
+
+**Étapes** :
+1. Numéro de version dans `src/__init__.py`, `README.md` et `CLAUDE.md` (en-tête et pied).
+2. `CHANGELOG.md` : renommer `[Unreleased]` en `[X.Y.Z] - AAAA-MM-JJ`, avec un
+   résumé de 2-3 lignes en tête, puis ouvrir un nouveau `[Unreleased]` vide.
+3. Commit `🚀 Deploy: version X.Y.Z`, puis tag annoté `vX.Y.Z`.
+4. `python build_app.py`, puis lancer l'exe de `LeagueStatsCoach_Release/`
+   (`echo 7 | ./LeagueStatsCoach.exe`) pour vérifier qu'il démarre.
+5. **Après validation** : `git push origin master` et `git push origin vX.Y.Z`.
+
 ---
 
 ## 📝 Standards de Code
@@ -320,6 +347,7 @@ python -m alembic revision -m "Description"
 8. ✅ **Requêtes SQL paramétrées** (sécurité)
 9. ✅ **config_constants.py** pour valeurs hardcodées
 10. ✅ **Proposer 2-3 approches** pour toute décision architecturale non triviale
+11. ✅ **Proposer une release** à la fin d'une spec ou d'un sprint, ou quand `[Unreleased]` atteint 8 entrées (§ Releases régulières)
 
 ### JAMAIS
 
