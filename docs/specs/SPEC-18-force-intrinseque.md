@@ -108,5 +108,7 @@ winrate, avec la force de §2 et le duel rétréci de `GameEvaluator.duel_points
 Azir en tête en top). C'est ce que disent les données : la force d'un champion (~1,7 à 2,1 pp)
 pèse plus que ses écarts par matchup une fois rétrécis (~1,1 pp).
 
-**Hors périmètre** : l'option 3 du Team Builder (évaluation holistique, profils) et les
-composantes stabilité et couverture de la tier list blind restent inchangées.
+**Suite (2026-09-25)** : la tier list blind ne garde que le winrate de lane (stabilité et
+couverture retirées, avec `BLIND_*_WEIGHT`). L'option 3 du Team Builder classe tous les trios du
+pool par valeur de contre-pick, blind = champion le plus fort du trio ; `trio_metrics.py`,
+`trio_weights.py` et les profils (safe, meta, aggressive, balanced) sont supprimés.

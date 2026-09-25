@@ -6,6 +6,12 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Feature
 
+- **SPEC-18 §4 (suite) : plus aucun score de Team Builder ni de tier list sur du
+  bruit** — la tier list blind est notée au seul winrate de lane (stabilité et
+  couverture retirées). L'option 3 du Team Builder classe tous les trios du pool
+  par valeur de contre-pick, blind = champion le plus fort du trio ; les profils
+  de scoring, `trio_metrics.py` et `trio_weights.py` (~630 lignes) sont supprimés.
+
 - **SPEC-18 §4 : Team Builder et tier list contre-pick sur la valeur de
   contre-pick** — `src/analysis/pool_value.py` : un pool vaut, face à chaque
   ennemi pondéré par sa popularité sur la lane, le meilleur de ses champions

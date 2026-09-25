@@ -48,8 +48,8 @@ src/
 │   ├── probability.py               # logit/sigmoid (modèle log-odds, SPEC-05 B7)
 │   ├── pool_statistics.py            # Statistiques de pool
 │   ├── team_analysis.py               # TeamAnalyzer (code non appelé par un menu)
-│   └── trio_holistic.py, trio_counterpick.py, trio_metrics.py,
-│       trio_tactics.py, trio_weights.py  # Team Builder (menu 5)
+│   └── pool_value.py, trio_holistic.py, trio_counterpick.py,
+│       trio_tactics.py  # Team Builder (menu 5), valeur de pool SPEC-18
 │
 ├── draft/                   # Logique du Live Coach (extrait de draft_monitor.py, SPEC-07 E10)
 │   ├── state.py, state_parser.py     # DraftState, parsing des snapshots LCU
