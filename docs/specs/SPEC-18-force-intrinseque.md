@@ -112,3 +112,8 @@ pèse plus que ses écarts par matchup une fois rétrécis (~1,1 pp).
 couverture retirées, avec `BLIND_*_WEIGHT`). L'option 3 du Team Builder classe tous les trios du
 pool par valeur de contre-pick, blind = champion le plus fort du trio ; `trio_metrics.py`,
 `trio_weights.py` et les profils (safe, meta, aggressive, balanced) sont supprimés.
+
+**Bans (2026-09-25)** : `BanRecommender` classe les ennemis par `100 · popularité(e) ·
+(force(e) − max_c value(c, e))`, en points de winrate sur 100 parties. La popularité se lit
+désormais côté `enemy` (`MatchupsRepository.get_lane_enemy_games`), ce qui couvre aussi les
+adversaires sans lignes propres sur la lane.

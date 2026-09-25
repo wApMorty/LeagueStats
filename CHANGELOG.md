@@ -6,6 +6,15 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Feature
 
+- **SPEC-18 §4 : bans de pool sur la valeur de pool** — la menace d'un ennemi est
+  le retard de la meilleure réponse lissée de la pool (force + duel rétréci),
+  multiplié par sa popularité sur la lane (points de winrate sur 100 parties),
+  au lieu du meilleur `delta2` brut et de pondérations fixes. La popularité des
+  adversaires se lit côté `enemy` (`get_lane_enemy_games`). Les bans
+  précalculés se mettent à jour au prochain recalcul du pipeline. Nettoyage :
+  `tierlist_delta2`, `generate_by_delta1/2`, `generate_for_lane` et
+  `avg_delta1`, sans appelant, sont supprimés.
+
 - **SPEC-18 §4 (suite) : plus aucun score de Team Builder ni de tier list sur du
   bruit** — la tier list blind est notée au seul winrate de lane (stabilité et
   couverture retirées). L'option 3 du Team Builder classe tous les trios du pool
