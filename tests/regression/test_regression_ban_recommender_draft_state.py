@@ -20,9 +20,9 @@ from src.draft.state import DraftState
 class TestBanRecommenderExcludesUnavailableChampions:
     """L'invariant vit maintenant dans la classe qui produit la recommandation."""
 
-    def test_excluded_champion_never_returned_as_candidate(self, db, insert_matchup):
-        insert_matchup("Aatrox", "Darius", 48.5, -150, -2.5, 8.5, 1500)
-        insert_matchup("Aatrox", "Garen", 51.2, 120, 1.2, 6.5, 1200)
+    def test_excluded_champion_never_returned_as_candidate(self, db, insert_duel):
+        insert_duel("Aatrox", "Darius", 48.5, -150, -2.5, 8.5, 1500)
+        insert_duel("Aatrox", "Garen", 51.2, 120, 1.2, 6.5, 1200)
 
         recommender = BanRecommender(db, verbose=False)
         recs = recommender.get_ban_recommendations(
@@ -32,8 +32,8 @@ class TestBanRecommenderExcludesUnavailableChampions:
         assert all(name != "Darius" for name, *_ in recs)
         assert any(name == "Garen" for name, *_ in recs)
 
-    def test_exclusion_is_case_insensitive(self, db, insert_matchup):
-        insert_matchup("Aatrox", "Darius", 48.5, -150, -2.5, 8.5, 1500)
+    def test_exclusion_is_case_insensitive(self, db, insert_duel):
+        insert_duel("Aatrox", "Darius", 48.5, -150, -2.5, 8.5, 1500)
 
         recommender = BanRecommender(db, verbose=False)
         recs = recommender.get_ban_recommendations(
@@ -42,10 +42,10 @@ class TestBanRecommenderExcludesUnavailableChampions:
 
         assert all(name != "Darius" for name, *_ in recs)
 
-    def test_no_exclusion_preserves_prior_behaviour(self, db, insert_matchup):
+    def test_no_exclusion_preserves_prior_behaviour(self, db, insert_duel):
         """None (défaut) = comportement inchangé, notamment pour le précalcul
         hors contexte de draft (precalculate_pool_bans)."""
-        insert_matchup("Aatrox", "Darius", 48.5, -150, -2.5, 8.5, 1500)
+        insert_duel("Aatrox", "Darius", 48.5, -150, -2.5, 8.5, 1500)
 
         recommender = BanRecommender(db, verbose=False)
         recs = recommender.get_ban_recommendations(["Aatrox"], num_bans=5)

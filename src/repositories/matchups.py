@@ -421,25 +421,3 @@ class MatchupsRepository:
         except Exception as e:
             print(f"[ERROR] Failed to load lane winrates for {lane}: {e}")
             return {}
-
-    def get_lane_enemy_games(self, lane: Optional[str]) -> Dict[str, int]:
-        """Games joués contre chaque champion sur ``lane`` (SPEC-18 §4).
-
-        La popularité d'un adversaire, lue côté ``enemy`` : elle couvre aussi
-        les champions sans lignes propres sur la lane (hors rôle, non scrapés).
-        """
-        try:
-            cursor = self.db.connection.cursor()
-            cursor.execute(
-                """
-                SELECT c.name, SUM(m.games)
-                FROM matchups m JOIN champions c ON c.id = m.enemy
-                WHERE (? IS NULL OR m.lane = ?)
-                GROUP BY m.enemy HAVING SUM(m.games) > 0
-                """,
-                (lane, lane),
-            )
-            return dict(cursor.fetchall())
-        except Exception as e:
-            print(f"[ERROR] Failed to load lane enemy games for {lane}: {e}")
-            return {}

@@ -280,9 +280,6 @@ class Database:
     def get_lane_winrates(self, lane: Optional[str]) -> Dict[str, tuple]:
         return self._matchups.get_lane_winrates(lane)
 
-    def get_lane_enemy_games(self, lane: Optional[str]) -> Dict[str, int]:
-        return self._matchups.get_lane_enemy_games(lane)
-
     # ========== Synergies ==========
 
     def init_synergies_table(self) -> None:

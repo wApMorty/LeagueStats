@@ -14,7 +14,7 @@ lequel on choisit contre lui, on l'omet.
 
 Un pool se juge au contre-pick : face à chaque ennemi, on joue le meilleur de
 nos champions. D'où ``counter_value(pool) = Σ_e popularité(e) · max_c value(c, e)``,
-la popularité étant la part des games jouées contre l'ennemi sur la lane.
+la popularité étant la part des games de l'ennemi sur la lane.
 """
 
 from typing import Dict, List, Optional, Sequence
@@ -34,10 +34,12 @@ class PoolEvaluator:
         self.strength = {
             name.lower(): value - mean for name, value in shrunk_lane_winrates(db, lane).items()
         }
-        enemy_games = db.get_lane_enemy_games(lane)
-        faced = sum(enemy_games.values())
-        self.enemies: List[str] = list(enemy_games)
-        self.popularity = [enemy_games[name] / faced for name in self.enemies] if faced else []
+        # Adversaires = champions joués sur la lane, pondérés par leurs games.
+        # Pas les ennemis des lignes de matchups : LoLalytics y range les 5
+        # adversaires de la partie, ADC et supports compris (ex. Aatrox top :
+        # Kai'Sa est l'« ennemi » le plus fréquent, à 10 % de pickrate).
+        self.enemies: List[str] = list(raw)
+        self.popularity = [raw[name][1] / total for name in self.enemies] if total else []
         self._evaluator = GameEvaluator(db)
         self._values: Dict[str, List[float]] = {}
 

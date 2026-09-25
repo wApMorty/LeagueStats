@@ -263,3 +263,19 @@ def insert_matchup(db):
         db.connection.commit()
 
     return _insert
+
+
+@pytest.fixture
+def insert_duel(insert_matchup):
+    """``insert_matchup`` dans les deux sens (SPEC-18 §4).
+
+    Les adversaires d'une lane sont les champions qui y ont leurs propres
+    lignes : un ennemi présent seulement côté ``enemy`` n'y joue pas (LoLalytics
+    range les 5 adversaires de la partie dans les matchups d'un champion).
+    """
+
+    def _insert(champion, enemy, winrate, delta1, delta2, pickrate, games, lane=None):
+        insert_matchup(champion, enemy, winrate, delta1, delta2, pickrate, games, lane=lane)
+        insert_matchup(enemy, champion, 100.0 - winrate, -delta1, -delta2, pickrate, games, lane)
+
+    return _insert

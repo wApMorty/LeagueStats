@@ -170,13 +170,13 @@ class TestBanRecommendationsAssistant:
 
         assert result is False
 
-    def test_precalculate_pool_bans_with_valid_pool(self, db, insert_matchup):
+    def test_precalculate_pool_bans_with_valid_pool(self, db, insert_duel):
         """Test pre-calculating bans for valid champion pool."""
         # Setup test data
-        insert_matchup("Aatrox", "Darius", 48.5, -150, -2.5, 8.5, 1500)
-        insert_matchup("Aatrox", "Garen", 51.2, 120, 1.2, 6.5, 1200)
-        insert_matchup("Camille", "Darius", 49.0, -100, -1.5, 8.5, 1400)
-        insert_matchup("Camille", "Garen", 52.0, 200, 2.0, 6.5, 1100)
+        insert_duel("Aatrox", "Darius", 48.5, -150, -2.5, 8.5, 1500)
+        insert_duel("Aatrox", "Garen", 51.2, 120, 1.2, 6.5, 1200)
+        insert_duel("Camille", "Darius", 49.0, -100, -1.5, 8.5, 1400)
+        insert_duel("Camille", "Garen", 52.0, 200, 2.0, 6.5, 1100)
 
         db.init_pool_ban_recommendations_table()
 
@@ -205,11 +205,11 @@ class TestBanRecommendationsAssistant:
 
             assert results == {}
 
-    def test_precalculate_all_custom_pool_bans_with_custom_pools(self, db, insert_matchup):
+    def test_precalculate_all_custom_pool_bans_with_custom_pools(self, db, insert_duel):
         """Test pre-calculating bans for all custom pools."""
         # Setup test data
-        insert_matchup("Aatrox", "Darius", 48.5, -150, -2.5, 8.5, 1500)
-        insert_matchup("Camille", "Darius", 49.0, -100, -1.5, 8.5, 1400)
+        insert_duel("Aatrox", "Darius", 48.5, -150, -2.5, 8.5, 1500)
+        insert_duel("Camille", "Darius", 49.0, -100, -1.5, 8.5, 1400)
 
         db.init_pool_ban_recommendations_table()
 
@@ -263,13 +263,13 @@ class TestBanRecommendationsAssistant:
 class TestBanRecommendationsIntegration:
     """Integration tests for ban recommendations."""
 
-    def test_get_ban_recommendations_real_time(self, db, insert_matchup):
+    def test_get_ban_recommendations_real_time(self, db, insert_duel):
         """Test real-time ban recommendation calculation."""
         # Setup matchup data
-        insert_matchup("Aatrox", "Darius", 48.5, -150, -2.5, 8.5, 1500)
-        insert_matchup("Aatrox", "Garen", 51.2, 120, 1.2, 6.5, 1200)
-        insert_matchup("Camille", "Darius", 49.0, -100, -1.5, 8.5, 1400)
-        insert_matchup("Camille", "Garen", 52.0, 200, 2.0, 6.5, 1100)
+        insert_duel("Aatrox", "Darius", 48.5, -150, -2.5, 8.5, 1500)
+        insert_duel("Aatrox", "Garen", 51.2, 120, 1.2, 6.5, 1200)
+        insert_duel("Camille", "Darius", 49.0, -100, -1.5, 8.5, 1400)
+        insert_duel("Camille", "Garen", 52.0, 200, 2.0, 6.5, 1100)
 
         assistant = Assistant(verbose=False)
         assistant.db = db
@@ -281,11 +281,11 @@ class TestBanRecommendationsIntegration:
         assert len(recommendations) > 0
         assert recommendations[0][0] == "Darius"  # Champion with worst matchups
 
-    def test_ban_recommendations_with_pre_calculated_data(self, db, insert_matchup):
+    def test_ban_recommendations_with_pre_calculated_data(self, db, insert_duel):
         """Test using pre-calculated ban recommendations."""
         # Setup matchup data
-        insert_matchup("Aatrox", "Darius", 48.5, -150, -2.5, 8.5, 1500)
-        insert_matchup("Camille", "Darius", 49.0, -100, -1.5, 8.5, 1400)
+        insert_duel("Aatrox", "Darius", 48.5, -150, -2.5, 8.5, 1500)
+        insert_duel("Camille", "Darius", 49.0, -100, -1.5, 8.5, 1400)
 
         db.init_pool_ban_recommendations_table()
 
@@ -302,10 +302,10 @@ class TestBanRecommendationsIntegration:
         assert len(recommendations) > 0
         assert recommendations[0][0] == "Darius"
 
-    def test_ban_recommendations_format_compatibility(self, db, insert_matchup):
+    def test_ban_recommendations_format_compatibility(self, db, insert_duel):
         """Test that pre-calculated and real-time formats are compatible."""
         # Setup data
-        insert_matchup("Aatrox", "Darius", 48.5, -150, -2.5, 8.5, 1500)
+        insert_duel("Aatrox", "Darius", 48.5, -150, -2.5, 8.5, 1500)
 
         db.init_pool_ban_recommendations_table()
 
@@ -332,9 +332,9 @@ class TestBanRecommendationsLaneAware:
     the Live Coach / Tournament Coach / tier list lane fixes of the same
     day, never applied to bans."""
 
-    def test_get_ban_recommendations_is_filtered_by_lane(self, db, insert_matchup):
-        insert_matchup("Aatrox", "Darius", 40.0, -300, -5.0, 8.5, 1500, lane="top")
-        insert_matchup("Aatrox", "Darius", 60.0, 300, 5.0, 8.5, 1500, lane="jungle")
+    def test_get_ban_recommendations_is_filtered_by_lane(self, db, insert_duel):
+        insert_duel("Aatrox", "Darius", 40.0, -300, -5.0, 8.5, 1500, lane="top")
+        insert_duel("Aatrox", "Darius", 60.0, 300, 5.0, 8.5, 1500, lane="jungle")
 
         assistant = Assistant(verbose=False)
         assistant.db = db
@@ -343,26 +343,26 @@ class TestBanRecommendationsLaneAware:
         jungle_recs = assistant.get_ban_recommendations(["Aatrox"], num_bans=1, lane="jungle")
 
         assert top_recs[0][2] == pytest.approx(
-            -3.75
-        )  # meilleure réponse : delta2 rétréci, 1500/(1500+500)
-        assert jungle_recs[0][2] == pytest.approx(3.75)
+            -13.125
+        )  # force (40 % vs 50 %, K plancher 100) + duel rétréci
+        assert jungle_recs[0][2] == pytest.approx(13.125)
         # Pire réponse -> menace plus haute (SPEC-18 §4).
         assert top_recs[0][1] > jungle_recs[0][1]
 
-    def test_get_ban_recommendations_without_lane_is_unfiltered(self, db, insert_matchup):
+    def test_get_ban_recommendations_without_lane_is_unfiltered(self, db, insert_duel):
         """None (default) preserves the pre-fix all-lanes behaviour."""
-        insert_matchup("Aatrox", "Darius", 40.0, -300, -5.0, 8.5, 1500, lane="top")
+        insert_duel("Aatrox", "Darius", 40.0, -300, -5.0, 8.5, 1500, lane="top")
 
         assistant = Assistant(verbose=False)
         assistant.db = db
 
         recs = assistant.get_ban_recommendations(["Aatrox"], num_bans=1)
 
-        assert recs[0][2] == pytest.approx(-3.75)
+        assert recs[0][2] == pytest.approx(-13.125)
 
-    def test_precalculate_pool_bans_is_filtered_by_lane(self, db, insert_matchup):
-        insert_matchup("Aatrox", "Darius", 40.0, -300, -5.0, 8.5, 1500, lane="top")
-        insert_matchup("Aatrox", "Darius", 60.0, 300, 5.0, 8.5, 1500, lane="jungle")
+    def test_precalculate_pool_bans_is_filtered_by_lane(self, db, insert_duel):
+        insert_duel("Aatrox", "Darius", 40.0, -300, -5.0, 8.5, 1500, lane="top")
+        insert_duel("Aatrox", "Darius", 60.0, 300, 5.0, 8.5, 1500, lane="jungle")
         db.init_pool_ban_recommendations_table()
 
         assistant = Assistant(verbose=False)
@@ -374,16 +374,16 @@ class TestBanRecommendationsLaneAware:
         top_saved = db.get_pool_ban_recommendations("TopPool", limit=1)[0]
         jungle_saved = db.get_pool_ban_recommendations("JunglePool", limit=1)[0]
 
-        assert top_saved[2] == pytest.approx(-3.75)
-        assert jungle_saved[2] == pytest.approx(3.75)
+        assert top_saved[2] == pytest.approx(-13.125)
+        assert jungle_saved[2] == pytest.approx(13.125)
 
-    def test_precalculate_all_custom_pool_bans_resolves_pool_role_to_lane(self, db, insert_matchup):
+    def test_precalculate_all_custom_pool_bans_resolves_pool_role_to_lane(self, db, insert_duel):
         """precalculate_all_custom_pool_bans must pass each pool's own lane
         (pool_manager.pool_role_to_lane(pool.role)) down to
         precalculate_pool_bans, not blend every lane the champion has ever
         played."""
-        insert_matchup("Aatrox", "Darius", 40.0, -300, -5.0, 8.5, 1500, lane="top")
-        insert_matchup("Aatrox", "Darius", 60.0, 300, 5.0, 8.5, 1500, lane="jungle")
+        insert_duel("Aatrox", "Darius", 40.0, -300, -5.0, 8.5, 1500, lane="top")
+        insert_duel("Aatrox", "Darius", 60.0, 300, 5.0, 8.5, 1500, lane="jungle")
         db.init_pool_ban_recommendations_table()
 
         assistant = Assistant(verbose=False)
@@ -402,12 +402,12 @@ class TestBanRecommendationsLaneAware:
             assistant.precalculate_all_custom_pool_bans()
 
         saved = db.get_pool_ban_recommendations("TopPool", limit=1)[0]
-        assert saved[2] == pytest.approx(-3.75)  # the top-lane row, not the jungle one
+        assert saved[2] == pytest.approx(-13.125)  # the top-lane row, not the jungle one
 
-    def test_precalculate_all_custom_pool_bans_custom_role_is_unfiltered(self, db, insert_matchup):
+    def test_precalculate_all_custom_pool_bans_custom_role_is_unfiltered(self, db, insert_duel):
         """role="custom" (multi-lane pool) has no single lane ->
         pool_role_to_lane returns None -> all-lanes behaviour preserved."""
-        insert_matchup("Aatrox", "Darius", 40.0, -300, -5.0, 8.5, 1500, lane="top")
+        insert_duel("Aatrox", "Darius", 40.0, -300, -5.0, 8.5, 1500, lane="top")
         db.init_pool_ban_recommendations_table()
 
         assistant = Assistant(verbose=False)
@@ -426,7 +426,7 @@ class TestBanRecommendationsLaneAware:
             assistant.precalculate_all_custom_pool_bans()
 
         saved = db.get_pool_ban_recommendations("CustomPool", limit=1)[0]
-        assert saved[2] == pytest.approx(-3.75)
+        assert saved[2] == pytest.approx(-13.125)
 
 
 class TestBanRecommendationsEdgeCases:

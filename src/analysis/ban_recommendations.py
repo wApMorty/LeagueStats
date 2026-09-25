@@ -26,11 +26,18 @@ class BanRecommender:
     ) -> List[tuple]:
         """Toutes les menaces de la lane contre ``champion_pool``, la pire d'abord.
 
-        Face à un ennemi ``e``, la pool joue sa meilleure réponse. Le retard
-        qu'elle garde est ``force(e) − max_c value(c, e)`` en points de
-        winrate ; bannir ``e`` l'évite dans une partie sur ``popularité(e)``.
-        Menace = popularité × retard × 100 : les points de winrate gagnés sur
-        100 parties en bannissant ``e``. Négative quand la pool domine ``e``.
+        En soloQ, le ban se fait à l'aveugle et l'adversaire de lane pick
+        souvent après nous : le cas à couvrir est celui où l'on a déjà pické
+        un champion de la pool et où ``e`` arrive en face. Le retard moyen est
+        ``force(e) − moyenne_c value(c, e)`` en points de winrate ; bannir
+        ``e`` l'évite dans une partie sur ``popularité(e)``. Menace =
+        popularité × retard × 100 : les points de winrate gagnés sur 100
+        parties en bannissant ``e``. Négative quand la pool domine ``e``.
+
+        Pas la meilleure réponse de la pool (``max_c``) : quand on contre-pick,
+        on a déjà une réponse, et le ban ne sert à rien. Avec ``max_c``, les
+        menaces restantes étaient des picks rares à fort winrate de
+        spécialistes (Zilean, Azir top), jamais croisés.
 
         L'ancienne menace (meilleur ``delta2`` brut, pickrate et couverture en
         pondérations fixes) favorisait les matchups à petit échantillon.
@@ -52,7 +59,8 @@ class BanRecommender:
                 continue
             best_champion = max(champion_pool, key=lambda c: values[c][i])
             best = values[best_champion][i]
-            margin = evaluator.strength.get(enemy.lower(), 0.0) - best
+            average = sum(values[c][i] for c in champion_pool) / len(champion_pool)
+            margin = evaluator.strength.get(enemy.lower(), 0.0) - average
             threats.append((enemy, 100 * weight * margin, best, best_champion, measured))
 
         threats.sort(key=lambda row: row[1], reverse=True)

@@ -128,11 +128,11 @@ class TestBanRecommenderThreatMonotonicity:
     (pickrate, coverage) held equal -- the ordering that pool bans exist to
     get right."""
 
-    def test_worse_matchup_is_ranked_at_least_as_threatening(self, db, insert_matchup):
+    def test_worse_matchup_is_ranked_at_least_as_threatening(self, db, insert_duel):
         # Aatrox vs Darius: our best (only) response is a bad matchup (-5.0).
-        insert_matchup("Aatrox", "Darius", 30.0, -500, -5.0, 10.0, 1000)
+        insert_duel("Aatrox", "Darius", 30.0, -500, -5.0, 10.0, 1000)
         # Aatrox vs Garen: our best (only) response is a mild matchup (-2.0).
-        insert_matchup("Aatrox", "Garen", 45.0, -200, -2.0, 10.0, 1000)
+        insert_duel("Aatrox", "Garen", 45.0, -200, -2.0, 10.0, 1000)
 
         recommender = BanRecommender(db, verbose=False)
         recs = recommender.get_ban_recommendations(["Aatrox"], num_bans=5)
@@ -141,12 +141,12 @@ class TestBanRecommenderThreatMonotonicity:
         assert by_enemy["Darius"] > by_enemy["Garen"]
         assert recs[0][0] == "Darius"  # sorted descending by threat
 
-    def test_equal_matchups_produce_equal_threat(self, db, insert_matchup):
+    def test_equal_matchups_produce_equal_threat(self, db, insert_duel):
         """Sanity check on the fixture itself: with identical delta2,
         pickrate and coverage, threat scores must tie (not be swayed by
         insertion order or champion name)."""
-        insert_matchup("Aatrox", "Darius", 40.0, -300, -3.0, 10.0, 1000)
-        insert_matchup("Aatrox", "Garen", 40.0, -300, -3.0, 10.0, 1000)
+        insert_duel("Aatrox", "Darius", 40.0, -300, -3.0, 10.0, 1000)
+        insert_duel("Aatrox", "Garen", 40.0, -300, -3.0, 10.0, 1000)
 
         recommender = BanRecommender(db, verbose=False)
         recs = recommender.get_ban_recommendations(["Aatrox"], num_bans=5)

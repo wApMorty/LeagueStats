@@ -16,18 +16,18 @@ from src.assistant import Assistant
 
 
 @pytest.fixture
-def temp_db_with_data(db, insert_matchup):
+def temp_db_with_data(db, insert_duel):
     """Create a database with test matchup data."""
     # Insert matchups using the insert_matchup helper
     # TestChampion1 has bad matchup vs EnemyChampion1 (countered)
-    insert_matchup("TestChampion1", "EnemyChampion1", 45.0, -150.0, -200.0, 10.0, 1000)
+    insert_duel("TestChampion1", "EnemyChampion1", 45.0, -150.0, -200.0, 10.0, 1000)
     # TestChampion1 has good matchup vs EnemyChampion2
-    insert_matchup("TestChampion1", "EnemyChampion2", 52.0, 100.0, 180.0, 8.0, 1000)
+    insert_duel("TestChampion1", "EnemyChampion2", 52.0, 100.0, 180.0, 8.0, 1000)
 
     # TestChampion2 has bad matchup vs EnemyChampion1 (countered)
-    insert_matchup("TestChampion2", "EnemyChampion1", 46.0, -140.0, -160.0, 10.0, 1000)
+    insert_duel("TestChampion2", "EnemyChampion1", 46.0, -140.0, -160.0, 10.0, 1000)
     # TestChampion2 has neutral matchup vs EnemyChampion2
-    insert_matchup("TestChampion2", "EnemyChampion2", 50.0, 0.0, 0.0, 8.0, 1000)
+    insert_duel("TestChampion2", "EnemyChampion2", 50.0, 0.0, 0.0, 8.0, 1000)
 
     return db
 
