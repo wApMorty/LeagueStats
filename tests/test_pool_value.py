@@ -93,3 +93,16 @@ def test_holistic_ranks_trios_by_counter_value_blind_first(db, lane):
         assert r["blind_strength"] == max(lane.strength[c.lower()] for c in r["trio"])
         assert lane.strength[blind.lower()] == r["blind_strength"]
         assert r["total_score"] == pytest.approx(lane.counter_value(r["trio"]))
+
+
+def test_ban_threat_is_the_pools_measured_weakness(db, lane):
+    """SPEC-18 §4 : la menace d'un ban est le retard de la meilleure réponse
+    de la pool, pondéré par la popularité. Garen perd contre Teemo sur 20 000
+    parties : c'est lui qu'il faut bannir, pas un matchup rare."""
+    from src.analysis.ban_recommendations import BanRecommender
+
+    recs = BanRecommender(db).get_ban_recommendations(["Garen"], num_bans=3, lane="top")
+
+    assert recs[0][0] == "Teemo"
+    assert recs[0][3] == "Garen"
+    assert all(enemy != "Garen" for enemy, *_ in recs)

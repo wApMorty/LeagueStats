@@ -342,9 +342,11 @@ class TestBanRecommendationsLaneAware:
         top_recs = assistant.get_ban_recommendations(["Aatrox"], num_bans=1, lane="top")
         jungle_recs = assistant.get_ban_recommendations(["Aatrox"], num_bans=1, lane="jungle")
 
-        assert top_recs[0][2] == pytest.approx(-5.0)  # best_response_delta2
-        assert jungle_recs[0][2] == pytest.approx(5.0)
-        # base_threat = -best_response_delta2: worse matchup -> higher threat.
+        assert top_recs[0][2] == pytest.approx(
+            -3.75
+        )  # meilleure réponse : delta2 rétréci, 1500/(1500+500)
+        assert jungle_recs[0][2] == pytest.approx(3.75)
+        # Pire réponse -> menace plus haute (SPEC-18 §4).
         assert top_recs[0][1] > jungle_recs[0][1]
 
     def test_get_ban_recommendations_without_lane_is_unfiltered(self, db, insert_matchup):
@@ -356,7 +358,7 @@ class TestBanRecommendationsLaneAware:
 
         recs = assistant.get_ban_recommendations(["Aatrox"], num_bans=1)
 
-        assert recs[0][2] == pytest.approx(-5.0)
+        assert recs[0][2] == pytest.approx(-3.75)
 
     def test_precalculate_pool_bans_is_filtered_by_lane(self, db, insert_matchup):
         insert_matchup("Aatrox", "Darius", 40.0, -300, -5.0, 8.5, 1500, lane="top")
@@ -372,8 +374,8 @@ class TestBanRecommendationsLaneAware:
         top_saved = db.get_pool_ban_recommendations("TopPool", limit=1)[0]
         jungle_saved = db.get_pool_ban_recommendations("JunglePool", limit=1)[0]
 
-        assert top_saved[2] == pytest.approx(-5.0)
-        assert jungle_saved[2] == pytest.approx(5.0)
+        assert top_saved[2] == pytest.approx(-3.75)
+        assert jungle_saved[2] == pytest.approx(3.75)
 
     def test_precalculate_all_custom_pool_bans_resolves_pool_role_to_lane(self, db, insert_matchup):
         """precalculate_all_custom_pool_bans must pass each pool's own lane
@@ -400,7 +402,7 @@ class TestBanRecommendationsLaneAware:
             assistant.precalculate_all_custom_pool_bans()
 
         saved = db.get_pool_ban_recommendations("TopPool", limit=1)[0]
-        assert saved[2] == pytest.approx(-5.0)  # the top-lane row, not the jungle one
+        assert saved[2] == pytest.approx(-3.75)  # the top-lane row, not the jungle one
 
     def test_precalculate_all_custom_pool_bans_custom_role_is_unfiltered(self, db, insert_matchup):
         """role="custom" (multi-lane pool) has no single lane ->
@@ -424,7 +426,7 @@ class TestBanRecommendationsLaneAware:
             assistant.precalculate_all_custom_pool_bans()
 
         saved = db.get_pool_ban_recommendations("CustomPool", limit=1)[0]
-        assert saved[2] == pytest.approx(-5.0)
+        assert saved[2] == pytest.approx(-3.75)
 
 
 class TestBanRecommendationsEdgeCases:

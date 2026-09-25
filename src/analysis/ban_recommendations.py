@@ -1,13 +1,14 @@
 """Ban recommendations against a champion pool (live + pre-calculated).
 
-Extracted from src/assistant.py (SPEC-07 E10, lot 2) : déplacement verbatim,
-aucun changement de comportement.
+Extracted from src/assistant.py (SPEC-07 E10, lot 2). Menace revue par
+SPEC-18 §4 : elle se lit sur la valeur de pool (``pool_value.PoolEvaluator``),
+et non plus sur le meilleur ``delta2`` brut de la pool.
 """
 
 from typing import Dict, Iterable, List, Optional
 
-from ..config_constants import analysis_config
 from ..db import Database
+from .pool_value import PoolEvaluator
 
 
 class BanRecommender:
@@ -17,6 +18,46 @@ class BanRecommender:
         self.db = db
         self.verbose = verbose
 
+    def _rank_threats(
+        self,
+        champion_pool: List[str],
+        lane: Optional[str],
+        exclude_champions: Optional[Iterable[str]] = None,
+    ) -> List[tuple]:
+        """Toutes les menaces de la lane contre ``champion_pool``, la pire d'abord.
+
+        Face à un ennemi ``e``, la pool joue sa meilleure réponse. Le retard
+        qu'elle garde est ``force(e) − max_c value(c, e)`` en points de
+        winrate ; bannir ``e`` l'évite dans une partie sur ``popularité(e)``.
+        Menace = popularité × retard × 100 : les points de winrate gagnés sur
+        100 parties en bannissant ``e``. Négative quand la pool domine ``e``.
+
+        L'ancienne menace (meilleur ``delta2`` brut, pickrate et couverture en
+        pondérations fixes) favorisait les matchups à petit échantillon.
+        """
+        if not champion_pool:
+            return []
+        excluded = {name.lower() for name in exclude_champions or ()}
+        excluded |= {name.lower() for name in champion_pool}
+
+        evaluator = PoolEvaluator(self.db, lane)
+        values = {champion: evaluator.values(champion) for champion in champion_pool}
+
+        threats = []
+        for i, (enemy, weight) in enumerate(zip(evaluator.enemies, evaluator.popularity)):
+            if enemy.lower() in excluded:
+                continue
+            measured = sum(evaluator.measured(c, enemy) for c in champion_pool)
+            if not measured:
+                continue
+            best_champion = max(champion_pool, key=lambda c: values[c][i])
+            best = values[best_champion][i]
+            margin = evaluator.strength.get(enemy.lower(), 0.0) - best
+            threats.append((enemy, 100 * weight * margin, best, best_champion, measured))
+
+        threats.sort(key=lambda row: row[1], reverse=True)
+        return threats
+
     def get_ban_recommendations(
         self,
         champion_pool: List[str],
@@ -25,145 +66,26 @@ class BanRecommender:
         exclude_champions: Optional[Iterable[str]] = None,
     ) -> List[tuple]:
         """
-        Get ban recommendations against a specific champion pool using reverse lookup.
-
-        For each potential enemy pick, finds your BEST response from your pool.
-        Prioritizes banning enemies where even your best response is insufficient.
+        Get ban recommendations against a specific champion pool.
 
         Args:
             champion_pool: List of champion names in your pool
             num_bans: Number of ban recommendations to return
-            lane: Lane optionnelle transmise aux requêtes matchups internes.
-                  None = agrégation toutes lanes, comportement inchangé. Une
-                  pool mono-rôle (SPEC-04, pool_manager.pool_role_to_lane)
-                  doit filtrer sur cette lane pour ne pas noyer le vrai
-                  matchup de rôle dans les autres lanes du champion.
+            lane: Lane des matchups et de la popularité. None = toutes lanes.
+                  Une pool mono-rôle (SPEC-04, pool_manager.pool_role_to_lane)
+                  doit filtrer sur cette lane.
             exclude_champions: Champions déjà indisponibles (bannis ou pickés,
                   camp allié ou ennemi) à écarter des candidats — invariant de
                   draft porté ici plutôt que par l'appelant (dette signalée
-                  SPEC-10). Comparaison insensible à la casse. None = pas de
-                  filtrage, comportement inchangé (ex. précalcul hors draft).
+                  SPEC-10). Comparaison insensible à la casse.
 
         Returns:
-            List of tuples (enemy_name, threat_score, best_response_delta2,
-                           best_response_champion, matchups_count)
-            Sorted by threat_score (descending)
+            List of tuples (enemy_name, threat_score, best_response_value,
+                           best_response_champion, matchups_count), threat en
+            points de winrate sur 100 parties, best_response_value en points au-dessus
+            de la moyenne de la lane. Sorted by threat_score (descending).
         """
-        excluded_lower = (
-            {name.lower() for name in exclude_champions} if exclude_champions else set()
-        )
-
-        # Get all potential enemies from database
-        all_potential_enemies = set()
-        for our_champion in champion_pool:
-            try:
-                matchups = self.db.get_champion_matchups_by_name(our_champion, lane=lane)
-                for m in matchups:
-                    if (
-                        m.pickrate >= analysis_config.MIN_PICKRATE
-                        and m.games >= analysis_config.MIN_MATCHUP_GAMES
-                        and m.enemy_name.lower() not in excluded_lower
-                    ):
-                        all_potential_enemies.add(m.enemy_name)
-            except Exception as e:
-                if self.verbose:
-                    print(f"Error getting enemies for {our_champion}: {e}")
-                continue
-
-        ban_candidates = []
-
-        # For each potential enemy, find our best response
-        for enemy_champion in all_potential_enemies:
-            best_response_delta2 = -float("inf")
-            best_response_champion = None
-            enemy_pickrate = 0.0
-            matchups_found = 0
-
-            # Check all our champions against this enemy
-            for our_champion in champion_pool:
-                try:
-                    delta2 = self.db.get_matchup_delta2(our_champion, enemy_champion, lane=lane)
-
-                    if delta2 is not None:
-                        matchups_found += 1
-
-                        # Track the best response we have
-                        if delta2 > best_response_delta2:
-                            best_response_delta2 = delta2
-                            best_response_champion = our_champion
-
-                        # Also get pickrate data for this enemy (approximate from one of our matchups)
-                        if enemy_pickrate == 0.0:
-                            try:
-                                matchups = self.db.get_champion_matchups_by_name(
-                                    our_champion, lane=lane
-                                )
-                                for m in matchups:
-                                    if m.enemy_name == enemy_champion:
-                                        enemy_pickrate = m.pickrate
-                                        break
-                            except Exception as e:
-                                if self.verbose:
-                                    print(
-                                        f"[WARNING] Failed to get pickrate for {enemy_champion}: {e}"
-                                    )
-                                # enemy_pickrate remains 0.0 as fallback
-
-                except (AttributeError, TypeError) as e:
-                    # Specific errors we expect: bad champion names, DB not initialized
-                    print(f"[ERROR] Invalid matchup check {our_champion} vs {enemy_champion}: {e}")
-                    continue
-                except Exception as e:
-                    # Unexpected errors - always log for debugging
-                    print(
-                        f"[ERROR] Unexpected error checking {our_champion} vs {enemy_champion}: {e}"
-                    )
-                    continue
-
-            # Skip if no valid matchups found
-            if best_response_champion is None or matchups_found == 0:
-                continue
-
-            # Calculate threat score: Higher score = enemy should be banned
-            # Key insight: If even our BEST response has negative delta2, this enemy is very threatening
-            base_threat = -best_response_delta2  # Invert: negative delta2 = high threat
-
-            # Weight by pickrate and coverage
-            pickrate_weight = max(enemy_pickrate, 1.0)  # At least 1.0 to avoid zero weights
-            coverage_bonus = min(
-                matchups_found / len(champion_pool), 1.0
-            )  # How much of our pool this affects
-
-            # Combined threat score
-            # - Main factor: How bad is our best response? (70%)
-            # - Secondary: How popular is this enemy? (20%)
-            # - Tertiary: How much of our pool does it affect? (10%)
-            combined_threat = (
-                base_threat * 0.7
-                + pickrate_weight * 0.2
-                + coverage_bonus * 10.0 * 0.1  # Scale coverage to reasonable range
-            )
-
-            ban_candidates.append(
-                (
-                    enemy_champion,
-                    combined_threat,
-                    best_response_delta2,
-                    best_response_champion,
-                    matchups_found,
-                )
-            )
-
-        # Sort by combined threat (descending)
-        ban_candidates.sort(key=lambda x: x[1], reverse=True)
-
-        # Return in complete format matching database: (enemy, threat_score, best_response_delta2, best_response_champion, matchups_count)
-        return [
-            (name, threat, best_delta2, best_response, matchups_found)
-            for name, threat, best_delta2, best_response, matchups_found in ban_candidates[
-                :num_bans
-            ]
-        ]
+        return self._rank_threats(champion_pool, lane, exclude_champions)[:num_bans]
 
     def precalculate_pool_bans(
         self, pool_name: str, champion_pool: List[str], lane: Optional[str] = None
@@ -171,15 +93,8 @@ class BanRecommender:
         """
         Pre-calculate and store ban recommendations for a champion pool in database.
 
-        This method calculates ban recommendations once and stores them in the database
+        Same ranking as ``get_ban_recommendations``, every threat kept, stored
         for fast retrieval during draft. Should be called during data updates.
-
-        Args:
-            pool_name: Name of the champion pool
-            champion_pool: List of champion names in the pool
-            lane: Lane optionnelle transmise aux requêtes matchups internes
-                  (voir get_ban_recommendations). None = agrégation toutes
-                  lanes, comportement inchangé.
 
         Returns:
             True if successful, False otherwise
@@ -190,98 +105,12 @@ class BanRecommender:
             return False
 
         try:
-            # Get all potential enemies from database
-            all_potential_enemies = set()
-            for our_champion in champion_pool:
-                try:
-                    matchups = self.db.get_champion_matchups_by_name(our_champion, lane=lane)
-                    for m in matchups:
-                        if (
-                            m.pickrate >= analysis_config.MIN_PICKRATE
-                            and m.games >= analysis_config.MIN_MATCHUP_GAMES
-                        ):
-                            all_potential_enemies.add(m.enemy_name)
-                except Exception as e:
-                    if self.verbose:
-                        print(f"[DEBUG] Error getting enemies for {our_champion}: {e}")
-                    continue
-
-            ban_candidates = []
-
-            # For each potential enemy, find our best response
-            for enemy_champion in all_potential_enemies:
-                best_response_delta2 = -float("inf")
-                best_response_champion = None
-                enemy_pickrate = 0.0
-                matchups_found = 0
-
-                # Check all our champions against this enemy
-                for our_champion in champion_pool:
-                    try:
-                        delta2 = self.db.get_matchup_delta2(our_champion, enemy_champion, lane=lane)
-
-                        if delta2 is not None:
-                            matchups_found += 1
-
-                            # Track the best response we have
-                            if delta2 > best_response_delta2:
-                                best_response_delta2 = delta2
-                                best_response_champion = our_champion
-
-                            # Get pickrate data for this enemy
-                            if enemy_pickrate == 0.0:
-                                try:
-                                    matchups = self.db.get_champion_matchups_by_name(
-                                        our_champion, lane=lane
-                                    )
-                                    for m in matchups:
-                                        if m.enemy_name == enemy_champion:
-                                            enemy_pickrate = m.pickrate
-                                            break
-                                except Exception as e:
-                                    # Failed to get pickrate - use 0.0 (already set)
-                                    if self.verbose:
-                                        print(
-                                            f"[DEBUG] Failed to get pickrate for {enemy_champion}: {e}"
-                                        )
-                                    pass
-
-                    except Exception as e:
-                        if self.verbose:
-                            print(f"[DEBUG] Error checking {our_champion} vs {enemy_champion}: {e}")
-                        continue
-
-                # Skip if no valid matchups found
-                if best_response_champion is None or matchups_found == 0:
-                    continue
-
-                # Calculate threat score
-                base_threat = -best_response_delta2
-                pickrate_weight = max(enemy_pickrate, 1.0)
-                coverage_bonus = min(matchups_found / len(champion_pool), 1.0)
-
-                combined_threat = (
-                    base_threat * 0.7 + pickrate_weight * 0.2 + coverage_bonus * 10.0 * 0.1
-                )
-
-                ban_candidates.append(
-                    (
-                        enemy_champion,
-                        combined_threat,
-                        best_response_delta2,
-                        best_response_champion,
-                        matchups_found,
-                    )
-                )
-
-            # Save to database
-            saved = self.db.save_pool_ban_recommendations(pool_name, ban_candidates)
-
+            saved = self.db.save_pool_ban_recommendations(
+                pool_name, self._rank_threats(champion_pool, lane)
+            )
             if self.verbose:
                 print(f"[INFO] Pre-calculated {saved} ban recommendations for pool '{pool_name}'")
-
             return saved > 0
-
         except Exception as e:
             print(f"[ERROR] Failed to pre-calculate bans for {pool_name}: {e}")
             return False

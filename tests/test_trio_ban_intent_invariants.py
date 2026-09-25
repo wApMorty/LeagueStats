@@ -56,6 +56,7 @@ class TestHolisticTrioFinderLaneIsolation:
             "Darius": (50.0, 5000),
             "Garen": (49.0, 5000),
         }
+        mock_db.get_lane_enemy_games.return_value = {"Aatrox": 5000, "Darius": 5000, "Garen": 5000}
         mock_db.get_all_matchups_bulk.return_value = {}
         mock_db.get_meta.return_value = None
         return mock_db
@@ -103,6 +104,7 @@ class TestCounterpickTrioFinderLaneIsolation:
             "Darius": (50.0, 5000),
             "Garen": (49.0, 5000),
         }
+        mock_db.get_lane_enemy_games.return_value = {"Aatrox": 5000, "Darius": 5000, "Garen": 5000}
         mock_db.get_all_matchups_bulk.return_value = {}
         mock_db.get_meta.return_value = None
         tactics = Mock()
