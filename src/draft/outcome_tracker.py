@@ -69,6 +69,11 @@ class OutcomeTracker:
             return 0
 
         matches = self.m.lcu.get_recent_matches(draft_config.OUTCOME_HISTORY_DEPTH)
+        # Une partie déjà labellisée n'est plus candidate : sans ce filtre, le
+        # doublon d'une draft déjà résolue la retentait à chaque passage et
+        # heurtait l'index unique sur game_id (« UNIQUE constraint failed »).
+        labelled_game_ids = self.m.assistant.db.get_labelled_game_ids()
+        matches = [match for match in matches if match.get("game_id") not in labelled_game_ids]
         if not matches:
             return 0
 

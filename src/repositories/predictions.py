@@ -5,7 +5,7 @@ aucun changement de comportement. Table créée par
 alembic/versions/2551bbcc9eb8_add_predictions_table.py.
 """
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 
 class PredictionsRepository:
@@ -162,6 +162,18 @@ class PredictionsRepository:
                 }
             )
         return pending
+
+    def get_labelled_game_ids(self) -> Set[int]:
+        """LCU game ids already assigned to a prediction. OutcomeTracker skips
+        them: a duplicate prediction of an already-labelled draft would
+        otherwise retry the same game on every pass and hit the unique index."""
+        try:
+            cursor = self.db.connection.cursor()
+            cursor.execute("SELECT game_id FROM predictions WHERE game_id IS NOT NULL")
+            return {row[0] for row in cursor.fetchall()}
+        except Exception as e:
+            print(f"[ERROR] Failed to get labelled game ids: {e}")
+            return set()
 
     def count_labelled_predictions(self, model_version: Optional[str]) -> int:
         """Predictions with a known outcome under ``model_version`` (SPEC-08

@@ -19,6 +19,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
   du scrape était tiré du contrôle de complétude fait *avant* la réparation
   ciblée : Ahri (0 synergie) réparée 1/1 le 2026-09-24, le run restait
   `partial`. Le contrôle est désormais refait après la réparation.
+- **« UNIQUE constraint failed: predictions.game_id » après chaque partie** —
+  une draft enregistrée deux fois (#85/#86) laissait un doublon en attente, qui
+  retentait à chaque fin de partie la partie déjà labellisée par l'autre. Le
+  rattrapage ignore désormais les parties déjà attribuées.
 
 ## [2.0.0] - 2026-09-25
 

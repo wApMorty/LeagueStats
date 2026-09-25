@@ -1,6 +1,6 @@
 import sqlite3
 from sqlite3 import Error
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 from .config_constants import analysis_config
 from .models import Matchup, MatchupDraft, Synergy
@@ -414,6 +414,9 @@ class Database:
 
     def get_pending_predictions(self, limit: Optional[int] = None) -> List[Dict]:
         return self._predictions.get_pending_predictions(limit)
+
+    def get_labelled_game_ids(self) -> Set[int]:
+        return self._predictions.get_labelled_game_ids()
 
     def count_labelled_predictions(self, model_version: Optional[str]) -> int:
         return self._predictions.count_labelled_predictions(model_version)
