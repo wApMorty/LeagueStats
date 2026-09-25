@@ -6,6 +6,16 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### 🐛 Fix
 
+- **Import de build : set d'items plus riche, sorts vérifiés** — le set « LS »
+  suit le modèle des sets Coachless : départ et autres départs, core et cores
+  alternatifs, bottes et alternatives, composants, puis les 8 items les plus
+  joués par les one-tricks (`popularItems`), avec la popularité du choix dans
+  le titre des blocs. Le bloc « Suite » (`popPath`, 0,3 à 2 % des parties) est
+  retiré : il mettait Sterak's Gage deux fois dans le set Yorick. Les sorts
+  sont relus dans la session après le PATCH, et la console affiche la paire
+  posée ou « sorts ignorés par le client ». Le client LCU accepte tout code
+  2xx (un 201 passait pour un échec).
+
 - **Bans : adversaires de lane fréquents** — la popularité des adversaires se
   lisait côté `enemy` des matchups, où LoLalytics range les 5 adversaires de la
   partie (Kai'Sa « ennemie » n°1 d'Aatrox top) ; elle se lit de nouveau sur les
