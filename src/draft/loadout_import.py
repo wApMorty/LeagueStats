@@ -137,6 +137,8 @@ class LoadoutImporter:
                 f"[OK] Build importée : {label} ({build.games} parties one-tricks) "
                 f"({', '.join(written)})"
             )
+        if outcome.get("sorts") is None:
+            print(f"  Sorts    {option_name(page, 'Sorts', build.spells)}")
         for part, reason in outcome.items():
             if reason:
                 print(f"[INFO] {part} : {reason}")

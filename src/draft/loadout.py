@@ -336,18 +336,15 @@ def _apply_items(lcu, build: Build, champion_id: int, name: str) -> Optional[str
     return None if saved is not None else "set d'items refusé par le client"
 
 
+def _local_player(session: dict) -> dict:
+    cell_id = session.get("localPlayerCellId")
+    return next((m for m in session.get("myTeam", []) if m.get("cellId") == cell_id), {})
+
+
 def _apply_spells(lcu, build: Build) -> Optional[str]:
     """Pose les sorts en gardant Flash sur la touche où le joueur l'avait."""
     spell1, spell2 = build.spells
-    session = lcu.get_champion_select_session() or {}
-    me = next(
-        (
-            m
-            for m in session.get("myTeam", [])
-            if m.get("cellId") == session.get("localPlayerCellId")
-        ),
-        {},
-    )
+    me = _local_player(lcu.get_champion_select_session() or {})
     if FLASH_SPELL_ID in build.spells:
         other = spell2 if spell1 == FLASH_SPELL_ID else spell1
         if me.get("spell1Id") == FLASH_SPELL_ID:
@@ -359,7 +356,14 @@ def _apply_spells(lcu, build: Build) -> Optional[str]:
         "PATCH",
         {"spell1Id": spell1, "spell2Id": spell2},
     )
-    return None if done is not None else "sorts refusés par le client"
+    if done is None:
+        return "sorts refusés par le client"
+    # Relu dans la session : un PATCH accepté puis ignoré (fin de draft) doit
+    # se voir en console plutôt que passer pour un succès.
+    me = _local_player(lcu.get_champion_select_session() or {})
+    if (me.get("spell1Id"), me.get("spell2Id")) != (spell1, spell2):
+        return "sorts ignorés par le client"
+    return None
 
 
 def apply_build(lcu, build: Build, champion_id: int, name: str) -> Dict[str, Optional[str]]:

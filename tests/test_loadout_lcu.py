@@ -48,6 +48,7 @@ class FakeLCU:
             ],
         }
         self.fail = set(fail)
+        self.ignore_spells = False  # PATCH accepté mais sans effet (fin de draft)
         self.calls = []
 
     def get_champion_select_session(self):
@@ -76,6 +77,8 @@ class FakeLCU:
                 self.item_sets = data
             return self.item_sets
         if endpoint == "/lol-champ-select/v1/session/my-selection":
+            if not self.ignore_spells:
+                self.session["myTeam"][1].update(data)
             return {}
         return None
 
@@ -168,6 +171,13 @@ class TestSpells:
         assert apply_build(lcu, BUILD, 222, "Jinx bot")["sorts"] is None
         patch_call = next(data for method, _, data in lcu.calls if method == "PATCH")
         assert (patch_call["spell1Id"], patch_call["spell2Id"]) == expected
+
+    def test_a_patch_the_client_ignores_is_reported(self):
+        """Sorts « pas changés » en partie réelle (2026-09-25) : le résultat se
+        relit dans la session au lieu de croire la réponse du PATCH."""
+        lcu = FakeLCU(my_spells=(12, 14))
+        lcu.ignore_spells = True
+        assert apply_build(lcu, BUILD, 222, "Jinx bot")["sorts"] == "sorts ignorés par le client"
 
 
 class TestBestEffort:
