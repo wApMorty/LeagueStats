@@ -31,7 +31,6 @@ import pytest
 from src.analysis.ban_recommendations import BanRecommender
 from src.analysis.trio_counterpick import CounterpickTrioFinder
 from src.analysis.trio_holistic import HolisticTrioFinder
-from src.analysis.trio_weights import AdaptiveWeightCalculator
 from src.draft.ban_advice import BanAdvisor
 from src.draft.state import DraftState
 from src.models import Matchup
@@ -49,12 +48,21 @@ def _dummy_validate_pool(pool):
 class TestHolisticTrioFinderLaneIsolation:
     """HolisticTrioFinder.find() called directly (no Assistant facade)."""
 
-    def test_find_forwards_lane_to_the_bulk_matchup_load(self):
+    @staticmethod
+    def _db():
         mock_db = Mock()
+        mock_db.get_lane_winrates.return_value = {
+            "Aatrox": (52.0, 5000),
+            "Darius": (50.0, 5000),
+            "Garen": (49.0, 5000),
+        }
         mock_db.get_all_matchups_bulk.return_value = {}
-        mock_db.get_all_champion_names.return_value = {}
-        weights = AdaptiveWeightCalculator(mock_db, verbose=False)
-        finder = HolisticTrioFinder(mock_db, weights, verbose=False)
+        mock_db.get_meta.return_value = None
+        return mock_db
+
+    def test_find_forwards_lane_to_the_bulk_matchup_load(self):
+        mock_db = self._db()
+        finder = HolisticTrioFinder(mock_db, verbose=False)
 
         finder.find(
             ["Aatrox", "Darius", "Garen"],
@@ -63,23 +71,24 @@ class TestHolisticTrioFinderLaneIsolation:
             lane="top",
         )
 
-        mock_db.get_all_matchups_bulk.assert_called_once_with(lane="top")
+        mock_db.get_lane_winrates.assert_called_with("top")
+        for call in mock_db.get_all_matchups_bulk.call_args_list:
+            assert call.kwargs.get("lane") == "top"
 
     def test_find_without_lane_requests_the_unscoped_bulk_load(self):
         """None (default) must reach the DB as None, not silently default to
         some lane -- this is the "no regression on the unscoped path" half of
         the same invariant."""
-        mock_db = Mock()
-        mock_db.get_all_matchups_bulk.return_value = {}
-        mock_db.get_all_champion_names.return_value = {}
-        weights = AdaptiveWeightCalculator(mock_db, verbose=False)
-        finder = HolisticTrioFinder(mock_db, weights, verbose=False)
+        mock_db = self._db()
+        finder = HolisticTrioFinder(mock_db, verbose=False)
 
         finder.find(
             ["Aatrox", "Darius", "Garen"], num_results=1, validate_pool=_dummy_validate_pool
         )
 
-        mock_db.get_all_matchups_bulk.assert_called_once_with(lane=None)
+        mock_db.get_lane_winrates.assert_called_with(None)
+        for call in mock_db.get_all_matchups_bulk.call_args_list:
+            assert call.kwargs.get("lane") is None
 
 
 class TestCounterpickTrioFinderLaneIsolation:

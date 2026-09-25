@@ -15,7 +15,6 @@ import pytest
 
 from src.assistant import Assistant
 from src.utils.champion_utils import validate_champion_data, validate_champion_pool
-from src.analysis import trio_metrics
 
 # 6-champion universe with an exact matchup + its mirror negation on a
 # different lane, so that lane=None (blended, weighted equally since both
@@ -100,34 +99,6 @@ class TestChampionUtilsLaneAware:
         assert report_jungle["Aatrox"]["avg_delta2"] == pytest.approx(5.0)
 
 
-class TestTrioMetricsLaneAware:
-    def test_meta_score_reads_the_enemys_own_matchups_for_the_given_lane(self, db, insert_matchup):
-        """meta_score's pickrate lookup is `enemy`'s OWN matchups (as
-        champion), not the trio's -- must match get_champion_matchups_by_name's
-        direction (champion=<enemy>)."""
-        insert_matchup("Aatrox", "Zed", 50.0, 0.0, 0.0, 8.5, 500, lane="top")
-        insert_matchup("Aatrox", "Zed", 50.0, 0.0, 0.0, 8.5, 500, lane="jungle")
-
-        enemy_coverage = {"Aatrox": (2.0, "Darius")}
-
-        score_top = trio_metrics.meta_score(db, enemy_coverage, lane="top")
-        score_jungle = trio_metrics.meta_score(db, enemy_coverage, lane="jungle")
-
-        # Single enemy -> the pickrate weight cancels out of the weighted
-        # average either way; the point is that both lanes resolve to real
-        # data instead of an empty lookup (which would fall back to 50.0).
-        assert score_top == pytest.approx(70.0)  # (2.0 + 5) * 10
-        assert score_jungle == pytest.approx(70.0)
-
-    def test_meta_score_falls_back_to_neutral_when_lane_has_no_data(self, db, insert_matchup):
-        insert_matchup("Aatrox", "Zed", 50.0, 0.0, 0.0, 8.5, 500, lane="top")
-
-        enemy_coverage = {"Aatrox": (2.0, "Darius")}
-
-        assert trio_metrics.meta_score(db, enemy_coverage, lane="top") == pytest.approx(70.0)
-        assert trio_metrics.meta_score(db, enemy_coverage, lane="jungle") == pytest.approx(50.0)
-
-
 class TestOptimalTrioFromPoolLaneAware:
     def test_blind_pick_is_filtered_by_lane(self, dual_lane_assistant):
         top_result = dual_lane_assistant.optimal_trio_from_pool(CHAMPIONS, lane="top")
@@ -203,10 +174,8 @@ class TestTeamBuilderUiPoolLaneWiring:
             {
                 "trio": ("Aatrox", "Darius", "Garen"),
                 "total_score": 1.0,
-                "coverage_score": 1.0,
-                "balance_score": 1.0,
-                "consistency_score": 1.0,
-                "meta_score": 1.0,
+                "coverage": 0.5,
+                "blind_strength": 0.5,
             }
         ]
         instance.get_ban_recommendations.return_value = []
@@ -236,7 +205,7 @@ class TestTeamBuilderUiPoolLaneWiring:
         assert mock_assistant.optimal_duo_for_champion.call_args.kwargs.get("lane") == "top"
 
     def test_option_3_passes_pool_lane(self, mock_assistant, monkeypatch):
-        self._run("3", mock_assistant, monkeypatch, inputs=["4"])
+        self._run("3", mock_assistant, monkeypatch)
         assert mock_assistant.find_optimal_trios_holistic.call_args.kwargs.get("lane") == "top"
 
     def test_ban_recommendations_receive_pool_lane(self, mock_assistant, monkeypatch):

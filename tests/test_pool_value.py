@@ -75,3 +75,21 @@ def test_counter_tier_list_ranks_on_counter_gain(db, insert_matchup):
     gains = {e["champion"]: e["metrics"]["counter_gain"] for e in tier_list}
 
     assert gains["Darius"] > gains["Kassadin"]
+
+
+def test_holistic_ranks_trios_by_counter_value_blind_first(db, lane):
+    """Option 3 du Team Builder : tous les trios, triés par valeur de
+    contre-pick, le blind (champion le plus fort du trio) en premier."""
+    from src.analysis.trio_holistic import HolisticTrioFinder
+
+    results = HolisticTrioFinder(db).find(
+        ["Garen", "Darius", "Kassadin", "Teemo"], num_results=4, lane="top"
+    )
+
+    scores = [r["total_score"] for r in results]
+    assert scores == sorted(scores, reverse=True)
+    for r in results:
+        blind = r["trio"][0]
+        assert r["blind_strength"] == max(lane.strength[c.lower()] for c in r["trio"])
+        assert lane.strength[blind.lower()] == r["blind_strength"]
+        assert r["total_score"] == pytest.approx(lane.counter_value(r["trio"]))

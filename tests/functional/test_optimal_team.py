@@ -32,13 +32,6 @@ class TestOptimalTeamNonRegression:
             assistant.get_ban_recommendations
         ), "get_ban_recommendations must be callable"
 
-    def test_set_scoring_profile_method_exists(self, assistant):
-        """Regression test: set_scoring_profile exists."""
-        assert hasattr(
-            assistant, "set_scoring_profile"
-        ), "Assistant must have set_scoring_profile method"
-        assert callable(assistant.set_scoring_profile), "set_scoring_profile must be callable"
-
     def test_find_optimal_trios_method_exists(self, assistant):
         """Regression test: find_optimal_trios_holistic exists."""
         assert hasattr(

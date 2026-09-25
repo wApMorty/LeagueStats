@@ -104,16 +104,10 @@ def run_optimal_team_builder():
                 f"qu'en blind pick + counterpicks"
             )
 
-            # Demande à l'utilisateur un profil de scoring
-            scoring_profile = _select_scoring_profile()
-
-            # Lance l'analyse holistique des trios
             trio_results = ast.find_optimal_trios_holistic(
-                selected_pool, num_results=5, profile=scoring_profile, lane=pool_lane
+                selected_pool, num_results=5, lane=pool_lane
             )
-
-            # Affiche les résultats
-            _display_holistic_trio_results(trio_results, scoring_profile)
+            _display_holistic_trio_results(trio_results)
 
             # Propose de sauvegarder le meilleur trio
             if trio_results:
@@ -121,7 +115,7 @@ def run_optimal_team_builder():
                 best_score = trio_results[0]["total_score"]
                 _offer_save_optimization_result(
                     list(best_trio),
-                    f"Trio holistique (Score : {best_score:.2f})",
+                    f"Trio holistique (Gain : {best_score:+.2f} pts)",
                     lane=pool_lane,
                 )
 
@@ -197,104 +191,28 @@ def _offer_save_optimization_result(
         print(f"[ERROR] Erreur lors de la sauvegarde du résultat d'optimisation : {e}")
 
 
-def _select_scoring_profile() -> str:
-    """Demande à l'utilisateur de choisir un profil de scoring pour l'analyse des trios."""
-    print(f"\n" + "=" * 50)
-    print("SÉLECTIONNER UN PROFIL DE SCORING")
-    print("=" * 50)
-    print("Choisissez votre style d'analyse préféré :")
-    print()
-    print("  1. SAFE       - Priorise la régularité et l'équilibre plutôt que la performance brute")
-    print("                  Idéal pour : joueurs prudents, montée en ranked")
-    print()
-    print("  2. META       - Se concentre sur la performance face aux champions populaires")
-    print("                  Idéal pour : adaptation au patch actuel, jeu en haut elo")
-    print()
-    print("  3. AGGRESSIVE - Maximise la couverture et la diversité des profils de champions")
-    print("                  Idéal pour : joueurs proactifs, flexibilité d'équipe")
-    print()
-    print("  4. BALANCED   - Pondérations mathématiques sans biais")
-    print("                  Idéal pour : choix par défaut, usage général")
-    print()
+def _display_holistic_trio_results(trio_results: List[dict]):
+    """Affiche les meilleurs trios du pool (SPEC-18 §4)."""
+    if not trio_results:
+        print("Aucun trio viable trouvé")
+        return
 
-    profile_map = {"1": "safe", "2": "meta", "3": "aggressive", "4": "balanced"}
+    print("\nMEILLEURS TRIOS DU POOL :")
+    print("=" * 80)
+    for i, result in enumerate(trio_results, 1):
+        blind, counter1, counter2 = result["trio"]
+        print(f"\n{i}. {blind} (blind) + {counter1} + {counter2}")
+        print(
+            f"   Gain en contre-pick : {result['total_score']:+.2f} pts | "
+            f"Couverture : {result['coverage']:.0%} des games | "
+            f"Blind : {result['blind_strength']:+.2f} pts vs moyenne"
+        )
 
-    while True:
-        choice = input("Choisissez un profil de scoring (1-4) : ").strip()
-
-        if choice in profile_map:
-            selected_profile = profile_map[choice]
-            profile_names = {
-                "safe": "SAFE",
-                "meta": "META",
-                "aggressive": "AGGRESSIVE",
-                "balanced": "BALANCED",
-            }
-            print(f"\nProfil sélectionné : {profile_names[selected_profile]}")
-            return selected_profile
-        else:
-            print("[ERROR] Choix invalide. Sélectionnez entre 1 et 4.")
-
-
-def _display_holistic_trio_results(trio_results: List[dict], profile: str = "balanced"):
-    """Affiche les résultats de l'analyse holistique des trios de façon claire."""
-    try:
-        if not trio_results:
-            print("Aucun trio viable trouvé")
-            return
-
-        # Affiche les infos du profil
-        profile_names = {
-            "safe": "SAFE (Focus régularité)",
-            "meta": "META (Focus champions populaires)",
-            "aggressive": "AGGRESSIVE (Focus couverture)",
-            "balanced": "BALANCED (Pondérations mathématiques)",
-        }
-
-        print(f"\nMEILLEURES COMBINAISONS DE TRIOS TROUVÉES :")
-        print(f"Profil d'analyse : {profile_names.get(profile, profile.upper())}")
-        print("=" * 80)
-
-        for i, result in enumerate(trio_results, 1):
-            trio = result["trio"]
-            total = result["total_score"]
-            coverage = result["coverage_score"]
-            balance = result["balance_score"]
-            consistency = result["consistency_score"]
-            meta = result["meta_score"]
-
-            print(f"\n{i}. {trio[0]} + {trio[1]} + {trio[2]}")
-            print(f"   Score total : {total:>5.2f}/100")
-            print(f"   Couverture :  {coverage:>5.2f}/100  (Couverture des matchups adverses)")
-            print(f"   Équilibre :   {balance:>5.2f}/100  (Diversité des profils)")
-            print(f"   Régularité :  {consistency:>5.2f}/100  (Performance fiable)")
-            print(f"   Méta :        {meta:>5.2f}/100  (Face aux picks populaires)")
-
-            # Affiche quelques exemples de couverture ennemie pour le meilleur trio
-            if i == 1 and "enemy_coverage" in result:
-                coverage_data = result["enemy_coverage"]
-                if coverage_data:
-                    print(f"   Meilleurs matchups : ", end="")
-                    top_matchups = sorted(
-                        coverage_data.items(), key=lambda x: x[1][0], reverse=True
-                    )[:3]
-                    matchup_strs = [
-                        f"{enemy}(+{delta2:.2f})"
-                        for enemy, (delta2, _) in top_matchups
-                        if delta2 > 0
-                    ]
-                    print(", ".join(matchup_strs[:3]) if matchup_strs else "Aucun significatif")
-
-        print("\n" + "=" * 80)
-        print("INTERPRÉTATION :")
-        print("   - Score plus élevé = meilleure performance globale du trio")
-        print("   - Couverture = capacité du trio à gérer tous les adversaires")
-        print("   - Équilibre = diversité pour éviter des faiblesses communes")
-        print("   - Régularité = performance fiable sur l'ensemble des matchups")
-        print("   - Méta = performance face aux champions actuellement populaires")
-
-    except Exception as e:
-        print(f"[ERROR] Erreur lors de l'affichage des résultats des trios : {e}")
+    print("\n" + "=" * 80)
+    print("INTERPRÉTATION :")
+    print("   - Gain = avantage moyen quand on contre-pick avec le meilleur du trio,")
+    print("     ennemis pondérés par leur popularité sur la lane")
+    print("   - Couverture = part des games où le trio a un contre-pick au-dessus de la moyenne")
 
 
 def _show_ban_recommendations(champions: List[str], lane: Optional[str] = None):

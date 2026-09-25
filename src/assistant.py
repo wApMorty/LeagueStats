@@ -20,7 +20,6 @@ from .analysis.recommendations import RecommendationEngine
 from .analysis.team_analysis import TeamAnalyzer
 from .analysis.champion_scores import GlobalScoreCalculator
 from .analysis.ban_recommendations import BanRecommender
-from .analysis.trio_weights import AdaptiveWeightCalculator
 from .analysis.trio_holistic import HolisticTrioFinder
 from .analysis.trio_tactics import TrioTacticsReporter
 from .analysis.trio_counterpick import CounterpickTrioFinder
@@ -102,8 +101,7 @@ class Assistant(_TrioFacadeMixin):
         self.team_analyzer = TeamAnalyzer(self._db, self.scorer)
         self.global_scores = GlobalScoreCalculator(self._db, self.scorer, verbose=self.verbose)
         self.ban_recommender = BanRecommender(self._db, verbose=self.verbose)
-        self.trio_weights = AdaptiveWeightCalculator(self._db, verbose=self.verbose)
-        self.trio_finder = HolisticTrioFinder(self._db, self.trio_weights, verbose=self.verbose)
+        self.trio_finder = HolisticTrioFinder(self._db, verbose=self.verbose)
         self.trio_tactics = TrioTacticsReporter(self._db, verbose=self.verbose)
         self.trio_counterpick = CounterpickTrioFinder(
             self._db, self.trio_tactics, verbose=self.verbose
