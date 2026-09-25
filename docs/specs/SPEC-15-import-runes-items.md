@@ -267,7 +267,42 @@ Exemple sur les fixtures, Jinx contre Draven (40 parties) :
 | Core Hexoptics C44 + Infinity Edge | 12,9 % | < 8,4 % (plus petite publiée) | 0,239 | non |
 | Gluttonous Greaves (3008) | 10,7 % | 15,5 % | 0,886 | non |
 
-La build affinée ne change donc que les sorts. α se règle dans `config_constants.py`.
+Les items ne changent donc pas : seuls les sorts, et une rune (§3.2.2). α se règle dans
+`config_constants.py`.
+
+#### 3.2.2 Runes mineures (@pj35, 2026-09-25)
+
+Si la keystone ne change pas, la page de runes est comparée **emplacement par emplacement**,
+avec la règle de §3.2.1. Il y a quatre catégories : les rangées 1, 2 et 3 de l'arbre principal,
+puis l'**arbre secondaire et ses 2 runes**, pris comme une seule unité. Chaque combinaison reste
+ainsi une page valide.
+
+**Données** : OneTricks ne publie aucun pickrate par rune. `popRunes[keystone]` ne donne que les
+~4 pages complètes les plus jouées, qui couvrent environ 70 % des parties. `matchHistory` ne
+contient que la keystone et l'arbre secondaire. La part d'une option se déduit donc en
+additionnant les parts des pages qui la contiennent, puis en **renormalisant par la couverture**
+(somme des pages publiées). C'est un pari : on suppose que les pages non publiées se répartissent
+comme les pages publiées (marqué `ponytail:` dans le code).
+
+- Une rune absente des pages générales prend comme majorant la part de la moins jouée des
+  pages publiées (renormalisée). Ce majorant ne descend jamais sous `1 / parties générales`.
+- `n` compte les parties du duel jouées avec cette keystone : `patchStats × popKeystone`.
+- La nouvelle page reprend la keystone, les choix de chaque emplacement et l'arbre secondaire
+  retenu. Les fragments (`popStat`) restent ceux de la build générale : OneTricks ne publie pas
+  leur popularité.
+- Alternatives écartées : les **bornes strictes** (part publiée + masse non publiée), valides
+  mais qui ne déclenchent jamais rien sur 40 parties, et la **page entière comme unité**, trop
+  grossière.
+
+Jinx contre Draven (fixtures, 40 parties) :
+
+| Emplacement | Option du duel | Duel | Général (p0) | p | Substituée |
+|---|---|---|---|---|---|
+| Rangée 3 | Coup de Grâce | 22,9 % | 8,6 % | 0,006 | **oui** |
+| Rangée 2 | Legend: Alacrity | 14,6 % | < 8,6 % (page la moins jouée) | 0,125 | non |
+| Secondaire | Sorcellerie (Absolute Focus + Gathering Storm) | 51,4 % | 38,7 % | 0,053 | non |
+
+Sur la page du 2026-09-25, l'arbre secondaire passe aussi (62,7 % contre 41,8 %).
 
 ### 3.3 Écritures LCU
 
@@ -303,11 +338,12 @@ enregistrée et tronquée comme fixture, sans aucun appel réseau réel.
    Un deuxième passage dans la boucle avec le même état n'en déclenche pas de second.
 2. **Affinage** : le lock de l'adversaire direct déclenche une seule comparaison ; un ennemi
    d'une autre lane n'en déclenche aucune. Sans substitution, aucune écriture LCU n'a lieu.
-11. **Substitutions** (`adapt_to_matchup`) : sur les fixtures Jinx contre Draven, seuls les
-    sorts sont remplacés (Barrière+Flash → Fatigue+Flash). Une option absente de la page générale est
+11. **Substitutions** (`adapt_to_matchup`) : sur les fixtures Jinx contre Draven, la rune de la
+    rangée 3 (Cut Down → Coup de Grâce) et les sorts (Barrière+Flash → Fatigue+Flash) sont
+    remplacés. Une option absente de la page générale est
     testée contre `min(plus petite publiée, 1 − somme publiée)`. Avec deux options
     significatives, la plus jouée l'emporte. Un changement de keystone emporte la page de runes
-    du duel pour cette keystone.
+    du duel pour cette keystone, sans comparaison par emplacement (§3.2.2).
 3. Un trade de champion après le lock-in relance l'import.
 4. **Runes** : une page `"LS …"` existante est supprimée puis recréée. Les pages sans préfixe ne
    subissent jamais de `DELETE`. Sans emplacement libre, pas d'écriture et un `[INFO]`.

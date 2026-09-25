@@ -159,7 +159,7 @@ class TestGetPage:
             "patchStats",
             "itemData",
             "summonerSpells",
-            "keystones",
+            "runes",
         }
         assert trimmed["summonerSpells"]["3"] == "Exhaust"
 
@@ -189,15 +189,22 @@ class TestBinomialTail:
 
 
 class TestAdaptToMatchup:
-    def test_jinx_vs_draven_only_swaps_the_spells(self):
-        """§3.5.11 : Barrière+Flash -> Fatigue+Flash, rien d'autre."""
+    def test_jinx_vs_draven_swaps_a_rune_and_the_spells(self):
+        """§3.5.11 : Cut Down -> Coup de Grâce, Barrière+Flash -> Fatigue+Flash."""
         build, subs = adapt_to_matchup(load(GENERAL), load(DUEL))
-        assert [(sub.category, sub.old, sub.new) for sub in subs] == [("Sorts", (21, 4), (3, 4))]
-        sub = subs[0]
-        assert sub.duel_games == 40
-        assert not sub.general_listed
-        assert sub.general_share == pytest.approx(1 - 0.963, abs=0.001)  # masse restante
-        assert build == replace(pick_build(load(GENERAL)), spells=(3, 4))
+        assert [(sub.category, sub.old, sub.new) for sub in subs] == [
+            ("Rune 3", (8017,), (8014,)),
+            ("Sorts", (21, 4), (3, 4)),
+        ]
+        spells = subs[1]
+        assert spells.duel_games == 40
+        assert not spells.general_listed
+        assert spells.general_share == pytest.approx(1 - 0.963, abs=0.001)  # masse restante
+        assert build == replace(
+            pick_build(load(GENERAL)),
+            perks=(8008, 8009, 8014, 8313, 8321, 9103),
+            spells=(3, 4),
+        )
 
     def test_unlisted_option_is_bounded_by_the_remaining_mass(self, monkeypatch):
         """Le départ général ne publie qu'une option, à 94 % : le majorant d'une
@@ -231,6 +238,7 @@ class TestAdaptToMatchup:
         assert ("Keystone", (8008,), (8021,)) in [(s.category, s.old, s.new) for s in subs]
         assert build.perks == tuple(page[0])
         assert (build.primary_style, build.sub_style) == (8000, 8200)
+        assert not [s for s in subs if s.category.startswith("Rune")]  # page du duel telle quelle
 
     def test_one_duel_game_never_flips_a_full_category(self):
         """Somme publiée = 100 % : le majorant tombe à la résolution de
@@ -267,12 +275,62 @@ class TestAdaptToMatchup:
         assert adapt_to_matchup(load(GENERAL), duel) is None
 
 
+class TestRuneSlots:
+    """§3.2.2 : la règle des items, emplacement par emplacement de la page."""
+
+    def test_rune_shares_are_renormalised_by_the_published_pages(self):
+        _, subs = adapt_to_matchup(load(GENERAL), load(DUEL))
+        rune = subs[0]
+        # Coup de Grâce : 6,1 % des parties, sur 70,5 % publiés en général.
+        assert rune.general_share == pytest.approx(0.0606 / 0.7051, abs=0.001)
+        assert rune.duel_share == pytest.approx(0.1512 / 0.6614, abs=0.001)
+        assert rune.general_listed
+
+    def test_unlisted_rune_is_bounded_by_the_least_played_page(self, monkeypatch):
+        monkeypatch.setattr(draft_config, "LOADOUT_MATCHUP_ALPHA", 0.3)
+        _, subs = adapt_to_matchup(load(GENERAL), load(DUEL))
+        legend = next(sub for sub in subs if sub.category == "Rune 2")
+        assert legend.new == (9104,)  # Legend: Alacrity, absente des pages générales
+        assert not legend.general_listed
+        assert legend.general_share == pytest.approx(0.0606 / 0.7051, abs=0.001)
+
+    def test_secondary_tree_swaps_as_a_unit(self):
+        general, duel = load(GENERAL), load(DUEL)
+        sorcery = [[8008, 8009, 8017, 8233, 8236, 9103], 0.6, [8000, 8200, 8008]]
+        stats(duel)["popRunes"]["8008"] = [sorcery, stats(duel)["popRunes"]["8008"][0]]
+        build, subs = adapt_to_matchup(general, duel)
+        secondary = next(sub for sub in subs if sub.category == "Secondaire")
+        assert (secondary.old, secondary.new) == ((8313, 8321), (8233, 8236))
+        assert build.sub_style == 8200
+        assert build.perks == (8008, 8009, 8017, 8233, 8236, 9103)
+
+    def test_sample_is_the_duel_games_with_this_keystone(self):
+        duel = load(DUEL)
+        stats(duel)["popKeystone"] = [["8008", 0.5]]
+        _, subs = adapt_to_matchup(load(GENERAL), duel)
+        assert next(sub for sub in subs if sub.category == "Rune 3").duel_games == 20
+
+    def test_page_without_rune_tree_keeps_the_general_runes(self):
+        general, duel = load(GENERAL), load(DUEL)
+        general.pop("runes")
+        build, subs = adapt_to_matchup(general, duel)
+        assert [sub.category for sub in subs] == ["Sorts"]
+        assert build.perks == pick_build(general).perks
+
+    def test_trimmed_pages_give_the_same_substitutions(self):
+        """La boucle de draft compare des pages réduites par ``_trim``."""
+        raw = adapt_to_matchup(load(GENERAL), load(DUEL))
+        assert adapt_to_matchup(loadout._trim(load(GENERAL)), loadout._trim(load(DUEL))) == raw
+
+
 class TestOptionName:
     def test_names_come_from_the_page(self):
         page = loadout._trim(load(GENERAL))
         assert option_name(page, "Sorts", (3, 4)) == "Exhaust+Flash"
         assert option_name(page, "Core", (2523, 3031)) == "Hexoptics C44+Infinity Edge"
         assert option_name(page, "Keystone", (8008,)) == "Lethal Tempo"
+        assert option_name(page, "Rune 3", (8014,)) == "Coup de Grace"
+        assert option_name(page, "Secondaire", (8233, 8236)) == "Absolute Focus+Gathering Storm"
 
     def test_unknown_id_falls_back_to_the_id(self):
         assert option_name(loadout._trim(load(GENERAL)), "Bottes", (999999,)) == "999999"

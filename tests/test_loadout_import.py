@@ -124,6 +124,7 @@ class TestRefinement:
         out = capsys.readouterr().out
         assert "[OK] Build affinée vs Draven (40 parties) :" in out
         assert "Barrier+Flash -> Exhaust+Flash" in out
+        assert "Cut Down -> Coup de Grace" in out
 
     def test_enemy_of_another_lane_triggers_nothing(self, importer, lcu, http):
         importer.on_tick(session(), state())

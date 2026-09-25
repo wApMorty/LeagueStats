@@ -4,6 +4,15 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### ✨ Feature
+
+- **Import de build : runes mineures affinées au duel** — à keystone égale, la
+  page de runes est comparée au duel emplacement par emplacement (rangées 1 à 3,
+  puis l'arbre secondaire et ses deux runes), avec le test binomial des items.
+  OneTricks ne publiant que les ~4 pages les plus jouées, la part de chaque rune
+  est déduite de ces pages, renormalisée par leur couverture (SPEC-15 §3.2.2).
+  Contre Draven, Jinx passe à Coup de Grâce au lieu de Cut Down.
+
 ## [2.0.0] - 2026-09-25
 
 Version majeure : le Live Coach raisonne par recherche minimax sur les picks

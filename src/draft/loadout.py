@@ -15,6 +15,7 @@ parties la build la plus jouée du duel diffère surtout par le bruit.
 import json
 import math
 import re
+from collections import Counter
 from dataclasses import dataclass, replace
 from typing import Dict, List, Optional, Tuple
 
@@ -40,6 +41,10 @@ CATEGORIES = (
 )
 # Composants d'items choisis un à un (substituables au duel) : (catégorie, clé).
 _ITEM_CHOICES = (("Départ", "startingItems"), ("Core", "popCore"), ("Bottes", "boots"))
+# Emplacements de la page de runes comparés au duel, keystone inchangée
+# (§3.2.2) : chaque rangée primaire, et l'arbre secondaire avec ses 2 runes.
+RUNE_SLOTS = ("Rune 1", "Rune 2", "Rune 3")
+SECONDARY = "Secondaire"
 
 
 @dataclass(frozen=True)
@@ -103,7 +108,7 @@ def _trim(page: dict) -> dict:
         "patchStats": page["patchStats"],
         "itemData": names(page.get("itemData")),
         "summonerSpells": names(page.get("summonerSpells")),
-        "keystones": names((page.get("runes") or {}).get("keystone")),
+        "runes": {"subStyle": (page.get("runes") or {}).get("subStyle") or {}},
     }
 
 
@@ -203,14 +208,38 @@ def binomial_tail(n: int, p: float, k: int) -> float:
     return sum(math.comb(n, i) * p**i * (1 - p) ** (n - i) for i in range(k, n + 1))
 
 
+def _best_option(
+    category: str,
+    chosen: Tuple[int, ...],
+    general: Dict[Tuple[int, ...], float],
+    duel: Dict[Tuple[int, ...], float],
+    ceiling: float,
+    duel_games: int,
+) -> Optional[Substitution]:
+    """L'option du duel la plus jouée parmi celles que le duel sur-représente.
+
+    ``general`` et ``duel`` : part de chaque option publiée ; ``ceiling`` :
+    majorant de la part générale d'une option non publiée.
+    """
+    best = None
+    for option, share in duel.items():
+        if option == chosen:
+            continue
+        p0 = general.get(option, ceiling)
+        k = round(share * duel_games)
+        if binomial_tail(duel_games, p0, k) >= draft_config.LOADOUT_MATCHUP_ALPHA:
+            continue
+        if best is None or share > best.duel_share:
+            best = Substitution(category, chosen, option, share, p0, option in general, duel_games)
+    return best
+
+
 def _significant(
     category: str, key: str, general: dict, duel: dict, duel_games: int
 ) -> Optional[Substitution]:
-    """L'option du duel la plus jouée parmi celles que le duel sur-représente."""
+    """Substitution d'une catégorie publiée comme options (keystone, items, sorts)."""
     general_options = general["firstItemStats"]["all"]["all"][key]
-    duel_options = duel["firstItemStats"]["all"]["all"][key]
     shares = {_option(raw): share for raw, share in general_options}
-    chosen = _option(general_options[0][0])
     # Option non publiée : majorée par la plus petite part publiée et par la
     # masse restante, et jamais sous la résolution de l'échantillon général
     # (sinon une seule partie de duel suffirait à la faire passer).
@@ -218,18 +247,83 @@ def _significant(
         min(min(shares.values()), 1.0 - sum(shares.values())),
         1.0 / int(general["patchStats"]["all"]),
     )
-    best = None
-    for raw, share in duel_options:
-        option = _option(raw)
-        if option == chosen:
-            continue
-        p0 = shares.get(option, ceiling)
-        k = round(share * duel_games)
-        if binomial_tail(duel_games, p0, k) >= draft_config.LOADOUT_MATCHUP_ALPHA:
-            continue
-        if best is None or share > best.duel_share:
-            best = Substitution(category, chosen, option, share, p0, option in shares, duel_games)
-    return best
+    duel_shares = {_option(raw): share for raw, share in duel["firstItemStats"]["all"]["all"][key]}
+    chosen = _option(general_options[0][0])
+    return _best_option(category, chosen, shares, duel_shares, ceiling, duel_games)
+
+
+def _rune_table(page: dict) -> Dict[int, Tuple[int, int, str]]:
+    """Rune -> (arbre, rangée, nom) ; la rangée 0 est celle des keystones."""
+    trees = (page.get("runes") or {}).get("subStyle") or {}
+    return {
+        rune["id"]: (int(style), row, rune.get("name", str(rune["id"])))
+        for style, tree in trees.items()
+        for row, slot in enumerate(tree["slots"])
+        for rune in slot["runes"]
+    }
+
+
+def _rune_choices(perks, primary: int, table: dict) -> Dict[str, Tuple[int, ...]]:
+    """Choix d'une page pour chaque emplacement de ``RUNE_SLOTS`` et ``SECONDARY``."""
+    choices = {
+        RUNE_SLOTS[table[perk][1] - 1]: (perk,)
+        for perk in perks
+        if table[perk][0] == primary and table[perk][1]
+    }
+    choices[SECONDARY] = tuple(sorted(perk for perk in perks if table[perk][0] != primary))
+    return choices
+
+
+def _rune_shares(pages: list, table: dict) -> Dict[str, Counter]:
+    """Part de chaque option d'emplacement, déduite des pages publiées.
+
+    ponytail: OneTricks ne publie que ~4 pages par keystone (~70 % des
+    parties) ; les parts sont renormalisées par leur somme, en supposant que
+    le non-publié se répartit comme le publié (§3.2.2). Borne stricte (part +
+    masse restante) si les substitutions se révèlent trop bruitées.
+    """
+    coverage = sum(share for _, share, _ in pages)
+    shares = {category: Counter() for category in (*RUNE_SLOTS, SECONDARY)}
+    for perks, share, (primary, _, _) in pages:
+        for category, option in _rune_choices(perks, int(primary), table).items():
+            shares[category][option] += share / coverage
+    return shares
+
+
+def _rune_substitutions(
+    build: Build, general: dict, duel: dict, duel_games: int
+) -> List[Substitution]:
+    """Emplacements de la page générale que le duel change, à keystone égale."""
+    table = _rune_table(general)
+    general_stats = general["firstItemStats"]["all"]["all"]
+    duel_stats = duel["firstItemStats"]["all"]["all"]
+    keystone = str(general_stats["popKeystone"][0][0])
+    general_pages = general_stats["popRunes"][keystone]
+    duel_pages = duel_stats["popRunes"].get(keystone)
+    if not table or not duel_pages:
+        return []
+    # Le test porte sur les parties du duel jouées avec cette keystone.
+    keystone_games = round(duel_games * dict(duel_stats["popKeystone"]).get(keystone, 0.0))
+    # Rune non publiée : pas plus jouée que la moins jouée des pages publiées.
+    general_shares = [share for _, share, _ in general_pages]
+    ceiling = max(
+        min(general_shares) / sum(general_shares), 1.0 / int(general["patchStats"]["all"])
+    )
+    chosen = _rune_choices(build.perks, build.primary_style, table)
+    general_options = _rune_shares(general_pages, table)
+    duel_options = _rune_shares(duel_pages, table)
+    substitutions = (
+        _best_option(
+            category,
+            chosen.get(category, ()),
+            general_options[category],
+            duel_options[category],
+            ceiling,
+            keystone_games,
+        )
+        for category in (*RUNE_SLOTS, SECONDARY)
+    )
+    return [sub for sub in substitutions if sub is not None]
 
 
 def adapt_to_matchup(general: dict, duel: dict) -> Optional[Tuple[Build, List[Substitution]]]:
@@ -247,8 +341,12 @@ def adapt_to_matchup(general: dict, duel: dict) -> Optional[Tuple[Build, List[Su
             )
             if sub is not None
         ]
+        if all(sub.category != "Keystone" for sub in substitutions):
+            substitutions = _rune_substitutions(build, general, duel, duel_games) + substitutions
         general_stats = general["firstItemStats"]["all"]["all"]
         chosen = _chosen_items(general_stats)
+        table = _rune_table(general)
+        runes = _rune_choices(build.perks, build.primary_style, table) if table else {}
         for sub in substitutions:
             if sub.category == "Keystone":
                 keystone_pages = duel["firstItemStats"]["all"]["all"]["popRunes"]
@@ -261,6 +359,14 @@ def adapt_to_matchup(general: dict, duel: dict) -> Optional[Tuple[Build, List[Su
                 )
             elif sub.category == "Sorts":
                 build = replace(build, spells=sub.new)
+            elif sub.category in runes:
+                runes[sub.category] = sub.new
+                keystone = next(perk for perk in build.perks if table[perk][1] == 0)
+                build = replace(
+                    build,
+                    sub_style=table[runes[SECONDARY][0]][0],
+                    perks=tuple(sorted(sum(runes.values(), (keystone,)))),
+                )
             else:
                 chosen[sub.category] = (sub.new, sub.duel_share)
         return replace(build, item_blocks=_item_blocks(general_stats, chosen)), substitutions
@@ -270,6 +376,8 @@ def adapt_to_matchup(general: dict, duel: dict) -> Optional[Tuple[Build, List[Su
 
 def option_name(page: dict, category: str, option: Tuple[int, ...]) -> str:
     """Nom lisible d'une option, pour la console (ids en repli)."""
-    table = {"Keystone": "keystones", "Sorts": "summonerSpells"}.get(category, "itemData")
-    names = page.get(table, {})
+    if category in ("Keystone", *RUNE_SLOTS, SECONDARY):
+        names = {str(rune): name for rune, (_, _, name) in _rune_table(page).items()}
+    else:
+        names = page.get({"Sorts": "summonerSpells"}.get(category, "itemData"), {})
     return "+".join(names.get(str(i), str(i)) for i in option)

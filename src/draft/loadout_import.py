@@ -132,7 +132,7 @@ class LoadoutImporter:
             for sub in substitutions:
                 bound = "" if sub.general_listed else "<"
                 print(
-                    f"  {sub.category:<8} {option_name(page, sub.category, sub.old)} -> "
+                    f"  {sub.category:<10} {option_name(page, sub.category, sub.old)} -> "
                     f"{option_name(page, sub.category, sub.new)}  "
                     f"({sub.duel_share:.0%} vs {bound}{sub.general_share:.0%} en général)"
                 )
@@ -142,7 +142,7 @@ class LoadoutImporter:
                 f"({', '.join(written)})"
             )
         if outcome.get("sorts") is None:
-            print(f"  Sorts    {option_name(page, 'Sorts', build.spells)}")
+            print(f"  {'Sorts':<10} {option_name(page, 'Sorts', build.spells)}")
         for part, reason in outcome.items():
             if reason:
                 print(f"[INFO] {part} : {reason}")
