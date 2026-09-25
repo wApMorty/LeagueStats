@@ -280,6 +280,9 @@ class DraftConfig:
     # Préfixe de la page de runes et du set d'items écrits par le coach : seuls
     # les éléments portant ce préfixe sont jamais supprimés ou remplacés.
     LOADOUT_PREFIX: str = "LS "
+    # Items les plus joués ajoutés en fin de set (bloc « Situationnels »), hors
+    # départ, core, bottes et composants déjà listés.
+    LOADOUT_SITUATIONAL_ITEMS: int = 8
 
     # Draft phase detection
     READY_CHECK_COOLDOWN: float = 2.0  # Seconds after accepting queue

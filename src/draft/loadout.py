@@ -40,7 +40,8 @@ CATEGORIES = (
     ("Bottes", "boots"),
     ("Sorts", "sSpells"),
 )
-_ITEM_BLOCK = {"Départ": 0, "Core": 1, "Bottes": 2}  # index dans Build.item_blocks
+# Composants d'items choisis un à un (substituables au duel) : (catégorie, clé).
+_ITEM_CHOICES = (("Départ", "startingItems"), ("Core", "popCore"), ("Bottes", "boots"))
 
 
 @dataclass(frozen=True)
@@ -127,25 +128,57 @@ def get_page(champion: str, lane: Optional[str], opponent: Optional[str] = None)
     return _pages[key]
 
 
+def _item_blocks(stats: dict, chosen: Dict[str, Tuple[Tuple[int, ...], float]]) -> tuple:
+    """Blocs du set, du choix le plus joué aux alternatives, façon Coachless.
+
+    ``chosen`` : option retenue et sa popularité, par catégorie de
+    ``_ITEM_CHOICES``. Chaque bloc suivant ne reprend que les items pas encore
+    listés ; le départ garde ses doublons (deux potions).
+    """
+    (start, start_share), (core, core_share), (boots, boots_share) = (
+        chosen[category] for category, _ in _ITEM_CHOICES
+    )
+
+    def ids(key: str) -> List[int]:
+        return [item for option, _ in stats.get(key) or [] for item in _option(option)]
+
+    blocks = [(f"Départ ({start_share:.0%})", start)]
+    seen = set(start)
+    for title, items, limit in (
+        ("Autres départs", ids("startingItems"), None),
+        (f"Core ({core_share:.0%})", core, None),
+        ("Cores alternatifs", ids("popCore"), None),
+        (f"Bottes ({boots_share:.0%})", boots + tuple(ids("boots")), None),
+        ("Composants", ids("componentBuildPaths"), None),
+        ("Situationnels", ids("popularItems"), draft_config.LOADOUT_SITUATIONAL_ITEMS),
+    ):
+        kept = [item for item in dict.fromkeys(items) if item not in seen][:limit]
+        seen.update(kept)
+        blocks.append((title, tuple(kept)))
+    return tuple(blocks)
+
+
+def _chosen_items(stats: dict) -> Dict[str, Tuple[Tuple[int, ...], float]]:
+    """Option la plus jouée de chaque catégorie d'items, avec sa popularité."""
+    return {
+        category: (_option(stats[key][0][0]), float(stats[key][0][1]))
+        for category, key in _ITEM_CHOICES
+    }
+
+
 def pick_build(page: dict) -> Optional[Build]:
-    """La build la plus jouée de la page : keystone, page de runes, core, sorts."""
+    """La build la plus jouée de la page : keystone, page de runes, items, sorts."""
     try:
         stats = page["firstItemStats"]["all"]["all"]
         keystone = stats["popKeystone"][0][0]
         perks, _, (primary_style, sub_style, _) = stats["popRunes"][str(keystone)][0]
-        blocks = (
-            ("Départ", stats["startingItems"][0][0]),
-            ("Core", stats["popCore"][0][0]),
-            ("Bottes", [stats["boots"][0][0]]),
-            ("Suite", [slot[0][0] for slot in stats["popPath"][0] if slot]),
-        )
         spell1, spell2 = stats["sSpells"][0][0]
         return Build(
             primary_style=int(primary_style),
             sub_style=int(sub_style),
             perks=tuple(int(perk) for perk in perks),
             shards=tuple(int(shard) for shard in stats["popStat"]),
-            item_blocks=tuple((title, tuple(int(i) for i in items)) for title, items in blocks),
+            item_blocks=_item_blocks(stats, _chosen_items(stats)),
             spells=(int(spell1), int(spell2)),
             games=int(page["patchStats"]["all"]),
         )
@@ -216,7 +249,8 @@ def adapt_to_matchup(general: dict, duel: dict) -> Optional[Tuple[Build, List[Su
             )
             if sub is not None
         ]
-        blocks = list(build.item_blocks)
+        general_stats = general["firstItemStats"]["all"]["all"]
+        chosen = _chosen_items(general_stats)
         for sub in substitutions:
             if sub.category == "Keystone":
                 keystone_pages = duel["firstItemStats"]["all"]["all"]["popRunes"]
@@ -230,12 +264,8 @@ def adapt_to_matchup(general: dict, duel: dict) -> Optional[Tuple[Build, List[Su
             elif sub.category == "Sorts":
                 build = replace(build, spells=sub.new)
             else:
-                index = _ITEM_BLOCK[sub.category]
-                blocks[index] = (blocks[index][0], sub.new)
-        # Un item passé dans le core ne doit pas réapparaître en « Suite ».
-        core = set(blocks[1][1])
-        blocks[3] = (blocks[3][0], tuple(i for i in blocks[3][1] if i not in core))
-        return replace(build, item_blocks=tuple(blocks)), substitutions
+                chosen[sub.category] = (sub.new, sub.duel_share)
+        return replace(build, item_blocks=_item_blocks(general_stats, chosen)), substitutions
     except (KeyError, IndexError, TypeError, ValueError, ZeroDivisionError):
         return None
 
