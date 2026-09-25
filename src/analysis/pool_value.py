@@ -79,3 +79,18 @@ class PoolEvaluator:
         """Part des games de la lane où le pool a un contre-pick au-dessus de la moyenne."""
         columns = zip(*(self.values(champion) for champion in pool))
         return sum(w for w, column in zip(self.popularity, columns) if max(column) > 0.0)
+
+
+def dominant_lane(db, champions: Sequence[str]) -> Optional[str]:
+    """Lane où les champions d'un pool sont le plus joués (somme des parts).
+
+    Pour un pool sans rôle déclaré (``custom``) : sans lane, les bans et les
+    valeurs agrégeraient toutes les lanes, et un pool de tanks top se verrait
+    conseiller de bannir des ADC.
+    """
+    distributions = db.get_lane_distributions_by_name()
+    totals: Dict[str, float] = {}
+    for champion in champions:
+        for lane, share in distributions.get(champion.lower(), {}).items():
+            totals[lane] = totals.get(lane, 0.0) + share
+    return max(totals, key=totals.get) if totals else None

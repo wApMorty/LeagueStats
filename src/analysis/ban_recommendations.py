@@ -8,7 +8,7 @@ et non plus sur le meilleur ``delta2`` brut de la pool.
 from typing import Dict, Iterable, List, Optional
 
 from ..db import Database
-from .pool_value import PoolEvaluator
+from .pool_value import PoolEvaluator, dominant_lane
 
 
 class BanRecommender:
@@ -159,9 +159,10 @@ class BanRecommender:
                 # SPEC-04: une pool mono-rôle (top/jungle/mid/adc/support) a
                 # une lane résoluble ; une pool "custom" multi-rôles n'en a
                 # pas (None = agrégation toutes lanes, comportement inchangé).
-                success = self.precalculate_pool_bans(
-                    pool_name, pool.champions, lane=pool_role_to_lane(pool.role)
-                )
+                # SPEC-18 §4 : un pool "custom" prend la lane dominante de ses
+                # champions, sinon ses bans agrègent toutes les lanes.
+                lane = pool_role_to_lane(pool.role) or dominant_lane(self.db, pool.champions)
+                success = self.precalculate_pool_bans(pool_name, pool.champions, lane=lane)
 
                 if success:
                     # Get count of saved bans

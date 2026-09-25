@@ -392,10 +392,6 @@ class DraftMonitor:
         """Show ban recommendations for current pool during draft."""
         self.ban_advisor.show_ban_recommendations_draft()
 
-    def _show_adaptive_ban_recommendations(self, state: DraftState):
-        """Show ban recommendations adapted to enemy picks."""
-        self.ban_advisor.show_adaptive_ban_recommendations(state)
-
     def _select_champion_pool_by_name(self, pool_name: str) -> List[str]:
         """Charge une pool mémorisée par son nom, sans re-poser la question.
 

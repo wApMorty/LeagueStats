@@ -1,7 +1,6 @@
 """Ban recommendation display and auto-ban-hover.
 
-Extracted from src/draft_monitor.py (SPEC-07 E10, lot 10) : déplacement
-verbatim, aucun changement de comportement.
+Extracted from src/draft_monitor.py (SPEC-07 E10, lot 10).
 
 Back-reference to the monitor: reads pool_name/current_pool/assistant/
 verbose, writes last_ban_recommendation, and calls back into the monitor's
@@ -10,23 +9,28 @@ because several tests replace those facades directly on the monitor
 instance (``draft_monitor._is_player_ban_turn = Mock(...)``) and expect
 this code to observe the replacement.
 
-The three "pre-calculated bans in DB, else real-time" blocks below are
-near-identical on purpose: they differ in their verbose logging branches,
-and factoring them would be a behavior change, not a pure move (dette
-signalée dans le plan d'extraction, hors périmètre de ce lot).
+SPEC-18 §4 : en soloQ, les bans sont simultanés et à l'aveugle. Le meilleur ban
+est la pire menace de la lane jouée pour la pool (``BanRecommender``). Encore
+faut-il connaître cette lane : un pool ``custom`` n'en déclare pas, et le calcul
+agrégeait alors toutes les lanes (un pool de tanks top se voyait conseiller des
+ADC). La lane se résout désormais dans cet ordre : rôle du pool, poste assigné
+par le client, lane dominante des champions du pool.
 
-Dette SPEC-10 corrigée : handle_auto_ban_hover et show_adaptive_ban_recommendations
-filtrent désormais les champions déjà bannis/pickés (camp allié ou ennemi) --
-côté source pour le calcul temps réel (exclude_champions, porté par
-BanRecommender), côté consommateur pour les bans précalculés en base (qui ne
-peuvent pas connaître l'état live). show_ban_recommendations_draft n'a pas
-cette dette : son unique appel se fait avant le début du draft (hover initial),
-quand rien n'est encore banni ni pické.
+Les champions déjà bannis/pickés sont filtrés (dette SPEC-10) : côté source
+pour le calcul temps réel (exclude_champions), côté consommateur pour les bans
+précalculés en base, qui ne connaissent pas l'état live.
 """
 
 import sys
+from typing import List, Optional
 
+from ..analysis.pool_value import dominant_lane
 from .state import DraftState
+
+# Candidats lus en base avant filtrage des indisponibles : assez pour qu'il en
+# reste 3 même après les bans alliés et ennemis.
+_PRECALCULATED_LIMIT = 15
+_SHOWN_BANS = 3
 
 
 class BanAdvisor:
@@ -40,6 +44,48 @@ class BanAdvisor:
         candidats valides à un ban. `state.*_picks`/`*_bans` portent des
         champion_id malgré le type hint `List[str]` (voir state_parser.py)."""
         return [self.m._get_display_name(cid) for cid in state.get_all_actions()]
+
+    def _ban_lane(self, state: Optional[DraftState] = None) -> Optional[str]:
+        """Lane pour laquelle bannir : rôle du pool, sinon poste assigné par le
+        client, sinon lane dominante des champions du pool."""
+        if getattr(self.m, "pool_lane", None):
+            return self.m.pool_lane
+        state = state or getattr(self.m, "last_draft_state", None)
+        if state is not None:
+            position = state.ally_positions.get(state.local_player_cell_id)
+            if position:
+                return position
+        try:
+            return dominant_lane(self.m.assistant.db, self.m.current_pool)
+        except Exception as e:  # repli best-effort : jamais d'exception dans la draft
+            print(f"[WARNING] Lane dominante du pool introuvable, bans toutes lanes : {e}")
+            return None
+
+    def _recommendations(self, state: Optional[DraftState] = None) -> List[tuple]:
+        """Les meilleurs bans disponibles pour la pool, pire menace d'abord.
+
+        Les bans précalculés en base ne servent que pour un pool à rôle déclaré :
+        c'est la seule lane pour laquelle ils ont été calculés.
+        """
+        unavailable = self._unavailable_champions(state) if state else []
+        unavailable_lower = {name.lower() for name in unavailable}
+
+        if getattr(self.m, "pool_name", None) and getattr(self.m, "pool_lane", None):
+            stored = self.m.assistant.db.get_pool_ban_recommendations(
+                self.m.pool_name, limit=_PRECALCULATED_LIMIT
+            )
+            usable = [r for r in stored or [] if r[0].lower() not in unavailable_lower]
+            if usable:
+                if self.m.verbose:
+                    print(f"[DEBUG] Using pre-calculated bans for pool '{self.m.pool_name}'")
+                return usable[:_SHOWN_BANS]
+
+        return self.m.assistant.get_ban_recommendations(
+            self.m.current_pool,
+            num_bans=_SHOWN_BANS,
+            lane=self._ban_lane(state),
+            exclude_champions=unavailable,
+        )
 
     def handle_auto_ban_hover(self, state: DraftState) -> None:
         """Handle auto-ban-hover when it's our turn to ban."""
@@ -62,36 +108,8 @@ class BanAdvisor:
                     f"[DEBUG] It's our ban turn! Getting recommendations for pool size {len(self.m.current_pool)}"
                 )
 
-            unavailable = self._unavailable_champions(state)
-            unavailable_lower = {name.lower() for name in unavailable}
-
-            # Try to get pre-calculated bans from database first (fast).
-            # Ces bans sont calculés hors contexte de draft (precalculate_pool_bans) :
-            # ils ne peuvent pas connaître l'état live, d'où le filtrage ici.
-            ban_recommendations = None
-            if hasattr(self.m, "pool_name") and self.m.pool_name:
-                raw_recommendations = self.m.assistant.db.get_pool_ban_recommendations(
-                    self.m.pool_name, limit=3
-                )
-                if raw_recommendations:
-                    ban_recommendations = [
-                        r for r in raw_recommendations if r[0].lower() not in unavailable_lower
-                    ]
-                    if ban_recommendations and self.m.verbose:
-                        print(
-                            f"[DEBUG] Using pre-calculated bans from database for pool '{self.m.pool_name}'"
-                        )
-
-            # Fallback to real-time calculation if no pre-calculated data usable
-            if not ban_recommendations:
-                if self.m.verbose:
-                    print(f"[DEBUG] No pre-calculated bans found, calculating in real-time...")
-                ban_recommendations = self.m.assistant.get_ban_recommendations(
-                    self.m.current_pool,
-                    num_bans=3,
-                    lane=getattr(self.m, "pool_lane", None),
-                    exclude_champions=unavailable,
-                )
+            unavailable_lower = {name.lower() for name in self._unavailable_champions(state)}
+            ban_recommendations = self._recommendations(state)
 
             if not ban_recommendations:
                 print("[DEBUG] No ban recommendations available")
@@ -101,11 +119,7 @@ class BanAdvisor:
                 print(f"[DEBUG] Got {len(ban_recommendations)} ban recommendations")
 
             # Get the top ban recommendation
-            # Tuple format: (enemy, threat_score, best_delta2, best_champ, matchup_count)
-            top_ban_data = ban_recommendations[0]
-            top_ban = top_ban_data[0]
-            threat_score = top_ban_data[1]
-            matchup_count = top_ban_data[4] if len(top_ban_data) >= 5 else 0
+            top_ban, threat_score = ban_recommendations[0][:2]
 
             if self.m.verbose:
                 print(f"[DEBUG] Top ban recommendation: {top_ban} (threat: {threat_score:.2f})")
@@ -145,35 +159,22 @@ class BanAdvisor:
             print(f"\n[BANS] RECOMMANDATIONS DE BAN STRATÉGIQUES")
             print("-" * 50)
 
-            # Try to get pre-calculated bans from database first (fast)
-            ban_recommendations = None
-            if hasattr(self.m, "pool_name") and self.m.pool_name:
-                ban_recommendations = self.m.assistant.db.get_pool_ban_recommendations(
-                    self.m.pool_name, limit=3
-                )
-                if ban_recommendations and self.m.verbose:
-                    print(
-                        f"[DEBUG] Using pre-calculated bans from database for pool '{self.m.pool_name}'"
-                    )
-
-            # Fallback to real-time calculation if no pre-calculated data
-            if not ban_recommendations:
-                if self.m.verbose:
-                    print(f"[DEBUG] No pre-calculated bans found, calculating in real-time...")
-                ban_recommendations = self.m.assistant.get_ban_recommendations(
-                    self.m.current_pool, num_bans=3, lane=getattr(self.m, "pool_lane", None)
-                )
+            lane = self._ban_lane()
+            if lane:
+                print(f"Lane : {lane}")
+            ban_recommendations = self._recommendations()
 
             if ban_recommendations:
                 print(f"Envisagez de bannir ces menaces pour votre pool :")
-                # Tuple format: (enemy, threat_score, best_delta2, best_champ, matchup_count)
-                for i, (enemy, threat_score, _best_delta2, _best_champ, matchup_count) in enumerate(
+                # Tuple : (enemy, threat, best_response_value, best_champ, matchup_count)
+                for i, (enemy, threat_score, best_value, best_champ, _) in enumerate(
                     ban_recommendations, 1
                 ):
                     print(
-                        f"  {i}. {enemy:<12} | Menace : {threat_score:>5.2f} | Counter {matchup_count}/{len(self.m.current_pool)} de vos champions"
+                        f"  {i}. {enemy:<12} | Menace : {threat_score:>5.2f} | "
+                        f"Meilleure réponse : {best_champ} ({best_value:+.1f} pts)"
                     )
-                print(f"[INFO] Ces champions ont de bons matchups contre votre pool")
+                print("[INFO] Menace : winrate gagné sur 100 parties en le bannissant")
             else:
                 if self.m.verbose:
                     print(f"[ALERTE] Aucune donnée de ban disponible pour votre pool")
@@ -181,52 +182,3 @@ class BanAdvisor:
         except Exception as e:
             if self.m.verbose:
                 print(f"[WARNING] Erreur lors de l'affichage des recommandations de ban: {e}")
-
-    def show_adaptive_ban_recommendations(self, state: DraftState) -> None:
-        """Show ban recommendations adapted to enemy picks."""
-        if getattr(sys, "frozen", False):
-            return  # Skip adaptive bans in .exe mode
-        try:
-            if not state.enemy_picks:
-                return
-
-            print(f"\n[ADAPTIVE BANS] RECOMMANDATIONS DE BAN CIBLÉES")
-            print("-" * 50)
-
-            # Get enemy champion names
-            enemy_names = [self.m._get_display_name(champ_id) for champ_id in state.enemy_picks]
-            print(f"L'équipe ennemie a : {', '.join(enemy_names)}")
-
-            unavailable = self._unavailable_champions(state)
-            unavailable_lower = {name.lower() for name in unavailable}
-
-            # Try to get pre-calculated bans from database first (fast). Filtrage
-            # requis : ces bans sont calculés hors contexte de draft.
-            ban_recommendations = None
-            if hasattr(self.m, "pool_name") and self.m.pool_name:
-                raw_recommendations = self.m.assistant.db.get_pool_ban_recommendations(
-                    self.m.pool_name, limit=3
-                )
-                if raw_recommendations:
-                    ban_recommendations = [
-                        r for r in raw_recommendations if r[0].lower() not in unavailable_lower
-                    ]
-
-            # Fallback to real-time calculation if no pre-calculated data usable
-            if not ban_recommendations:
-                ban_recommendations = self.m.assistant.get_ban_recommendations(
-                    self.m.current_pool,
-                    num_bans=3,
-                    lane=getattr(self.m, "pool_lane", None),
-                    exclude_champions=unavailable,
-                )
-
-            if ban_recommendations:
-                print(f"Bans prioritaires pour neutraliser les synergies ennemies :")
-                for i, (enemy, threat_score, *_) in enumerate(ban_recommendations[:3], 1):
-                    print(f"  {i}. {enemy:<12} | Menace : {threat_score:>5.2f}")
-                print(f"[INFO] Ciblez les champions qui synergisent avec leurs picks")
-
-        except Exception as e:
-            if self.m.verbose:
-                print(f"[WARNING] Erreur lors de l'affichage des bans ciblés: {e}")

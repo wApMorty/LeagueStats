@@ -87,21 +87,6 @@ class TestBanAdvisorWiresDraftStateIntoRealTimeCalculation:
         call_kwargs = monitor.assistant.get_ban_recommendations.call_args.kwargs
         assert set(call_kwargs["exclude_champions"]) == {"Darius", "Ahri", "Ashe"}
 
-    def test_show_adaptive_ban_recommendations_excludes_bans_and_picks(self):
-        monitor = self._make_monitor()
-        monitor.assistant.get_ban_recommendations.return_value = [
-            ("Garen", 12.0, -5.0, "Aatrox", 1)
-        ]
-        advisor = BanAdvisor(monitor)
-        state = DraftState(
-            phase="BAN_PICK", ally_bans=[1], enemy_bans=[], ally_picks=[2], enemy_picks=[3]
-        )
-
-        advisor.show_adaptive_ban_recommendations(state)
-
-        call_kwargs = monitor.assistant.get_ban_recommendations.call_args.kwargs
-        assert set(call_kwargs["exclude_champions"]) == {"Darius", "Ahri", "Ashe"}
-
 
 class TestBanAdvisorFiltersStalePrecalculatedBans:
     """Les bans précalculés en base ignorent l'état de draft par construction
@@ -112,7 +97,7 @@ class TestBanAdvisorFiltersStalePrecalculatedBans:
         monitor.verbose = False
         monitor.pool_name = "TestPool"
         monitor.current_pool = ["Aatrox"]
-        monitor.pool_lane = None
+        monitor.pool_lane = "top"  # SPEC-18 : précalcul réservé aux pools à rôle
         monitor.last_ban_recommendation = None
         monitor.assistant.db.get_pool_ban_recommendations.return_value = precalculated
         monitor._is_player_ban_turn.return_value = True

@@ -37,6 +37,7 @@ def draft_monitor(mock_lcu_client, mock_assistant):
             monitor = DraftMonitor(verbose=False)
             monitor.current_pool = ["Aatrox", "Darius", "Garen"]
             monitor.pool_name = "top"
+            monitor.pool_lane = "top"
             return monitor
 
 
@@ -132,82 +133,15 @@ class TestShowBanRecommendationsDraftExeMode:
             assert "RECOMMANDATIONS DE BAN STRATÉGIQUES" in captured.out
 
 
-class TestShowAdaptiveBanRecommendationsExeMode:
-    """Tests for _show_adaptive_ban_recommendations() exe mode skipping."""
-
-    def test_show_adaptive_ban_recommendations_skip_in_exe_mode(
-        self, draft_monitor, draft_state, capsys
-    ):
-        """
-        Regression test for T11: _show_adaptive_ban_recommendations() skips in .exe mode.
-
-        Before fix: Method would display adaptive bans in .exe mode
-        After fix: Method returns immediately when sys.frozen = True
-        """
-        # Ensure enemy_picks is populated (method skips if empty)
-        draft_state.enemy_picks = ["Darius", "Garen"]
-
-        # Mock sys.frozen = True (.exe mode)
-        with patch("sys.frozen", True, create=True):
-            # Call the method
-            draft_monitor._show_adaptive_ban_recommendations(draft_state)
-
-            # Verify no adaptive ban header printed
-            captured = capsys.readouterr()
-            assert "ADAPTIVE BANS" not in captured.out
-            assert "RECOMMANDATIONS DE BAN CIBLÉES" not in captured.out
-            assert "🎯" not in captured.out
-
-            # Verify no database calls were made
-            draft_monitor.assistant.db.get_pool_ban_recommendations.assert_not_called()
-
-    def test_show_adaptive_ban_recommendations_runs_in_normal_mode(
-        self, draft_monitor, draft_state, capsys
-    ):
-        """Verify that method still runs normally when NOT in .exe mode."""
-        # Ensure enemy_picks is populated
-        draft_state.enemy_picks = ["Darius", "Garen"]
-
-        # Mock sys.frozen = False (normal mode)
-        with patch("sys.frozen", False, create=True):
-            # Mock database and _get_display_name
-            draft_monitor.assistant.db.get_pool_ban_recommendations.return_value = []
-            draft_monitor._get_display_name = Mock(side_effect=lambda x: x)
-
-            # Call the method
-            draft_monitor._show_adaptive_ban_recommendations(draft_state)
-
-            # Verify header was printed (method executed)
-            captured = capsys.readouterr()
-            assert "RECOMMANDATIONS DE BAN CIBLÉES" in captured.out
-
-    def test_show_adaptive_ban_recommendations_skip_if_no_enemy_picks(
-        self, draft_monitor, draft_state, capsys
-    ):
-        """Verify method skips when no enemy picks (even in normal mode)."""
-        # Empty enemy_picks
-        draft_state.enemy_picks = []
-
-        # Mock sys.frozen = False (normal mode)
-        with patch("sys.frozen", False, create=True):
-            # Call the method
-            draft_monitor._show_adaptive_ban_recommendations(draft_state)
-
-            # Verify no output (early return due to no enemy picks)
-            captured = capsys.readouterr()
-            assert "RECOMMANDATIONS DE BAN CIBLÉES" not in captured.out
-
-
 class TestExeModeGuardClauseCoverage:
     """Additional tests to ensure guard clause coverage."""
 
     def test_all_methods_check_sys_frozen(self, draft_monitor, draft_state):
-        """Verify three methods (T9, T10, T11) have sys.frozen guard clause."""
+        """Verify both ban methods (T9, T10) have sys.frozen guard clause."""
         with patch("sys.frozen", True, create=True):
             # Three methods should return immediately without errors
             draft_monitor._handle_auto_ban_hover(draft_state)
             draft_monitor._show_ban_recommendations_draft()
-            draft_monitor._show_adaptive_ban_recommendations(draft_state)
 
             # No exceptions should be raised
             assert True

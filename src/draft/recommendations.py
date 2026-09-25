@@ -10,7 +10,7 @@ Back-reference to the monitor: touches ~9 different domains (verbose,
 current_pool, champion_id_to_name, assistant, search, auto_hover,
 auto_ban_hover, last_recommendation — written, last_draft_state) and calls back
 through the monitor's own facades (_is_ban_phase,
-_show_adaptive_ban_recommendations, _get_display_name, _is_player_turn,
+_get_display_name, _is_player_turn,
 _enemy_picks_changed, _auto_hover_champion, _handle_auto_ban_hover) because
 tests/test_draft_monitor_recommendations.py patches some of these directly on
 the monitor instance and counts calls — they must be invoked via
@@ -155,10 +155,6 @@ class DraftRecommender:
             if enemy_picks:
                 print(f"\n[PICKS] RECOMMANDATIONS DE COUNTERPICK :")
                 print("-" * 50)
-
-                # Show adaptive ban recommendations only during actual ban phases
-                if self.m._is_ban_phase(state) and len(enemy_picks) >= 1:
-                    self.m._show_adaptive_ban_recommendations(state)
 
                 # SPEC-04 B4 §4.3 : notre lane (LCU) et celles inférées côté
                 # ennemi, qui pondèrent les paires dans l'évaluateur.
