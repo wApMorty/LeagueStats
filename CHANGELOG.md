@@ -4,6 +4,24 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-09-25
+
+Version majeure : le Live Coach raisonne par recherche minimax sur les picks
+réellement joués, importe la build des one-tricks dans le client, et tous les
+classements reposent sur des mesures au lieu de scores bruités.
+
+- **Nouveau** : import runes/items/sorts OneTricks au lock-in, affiné au duel
+  (SPEC-15) ; recherche minimax (SPEC-12, SPEC-17) ; draft finale en
+  face-à-face (SPEC-14) ; résultat de partie automatique et calibration
+  (SPEC-08, SPEC-12) ; shrink mesuré des tables de paires (SPEC-13) ;
+  classements au winrate de lane et à la valeur de pool (SPEC-18).
+- **Retiré** (changements incompatibles) : curseur synergie/matchup du Live
+  Coach, bans ciblés, profils de scoring et pondérations du Team Builder,
+  tier lists `delta1`/`delta2`.
+- **Action requise** : `python -m alembic upgrade head` (colonne `lane` de
+  `champion_scores`, `predictions.game_id`), puis un scrape complet (le
+  scraper ne lisait que ~18 adversaires par lane).
+
 ### 🐛 Fix
 
 - **Import de build : set d'items plus riche, sorts vérifiés** — le set « LS »
