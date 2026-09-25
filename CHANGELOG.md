@@ -6,6 +6,14 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### 🐛 Fix
 
+- **Bans : adversaires de lane fréquents** — la popularité des adversaires se
+  lisait côté `enemy` des matchups, où LoLalytics range les 5 adversaires de la
+  partie (Kai'Sa « ennemie » n°1 d'Aatrox top) ; elle se lit de nouveau sur les
+  champions joués sur la lane. La menace se calcule après notre pick (retard
+  moyen de la pool) et non plus sur sa meilleure réponse, qui ne laissait que
+  des picks rares de spécialistes (Zilean, Azir top). Pool GRIND : Camille,
+  Malphite, Gangplank, Yone, Tryndamere.
+
 - **Bans du Live Coach sur la lane jouée** — un pool `custom` (ex. GRIND) n'a pas
   de lane : ses bans agrégeaient toutes les lanes et un pool de tanks top se
   voyait conseiller des ADC (Yunara, Kai'Sa, Jhin). La lane se résout désormais :
