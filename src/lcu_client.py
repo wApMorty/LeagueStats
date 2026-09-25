@@ -212,7 +212,7 @@ class LCUClient(_MatchHistoryMixin):
             else:
                 return None
 
-            if response.status_code in [200, 204]:  # Include 204 No Content for PATCH success
+            if 200 <= response.status_code < 300:  # 201 Created, 204 No Content
                 try:
                     return response.json() if response.content else {}
                 except:

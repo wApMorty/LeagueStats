@@ -67,6 +67,14 @@ class TestMakeRequest:
         with patch.object(client.session, "patch", return_value=response):
             assert client._make_request("/x", method="PATCH", data={}) == {}
 
+    def test_status_201_created_is_a_success(self):
+        """POST/PUT that create a resource (rune page, item sets) may answer 201."""
+        client = _client_with_credentials()
+        response = Mock(status_code=201, content=b'{"id": 99}')
+        response.json.return_value = {"id": 99}
+        with patch.object(client.session, "post", return_value=response):
+            assert client._make_request("/x", method="POST", data={}) == {"id": 99}
+
     def test_status_200_with_invalid_json_returns_empty_dict(self):
         """A malformed body must degrade to {}, never raise."""
         client = _client_with_credentials()
