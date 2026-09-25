@@ -8,6 +8,8 @@ import shutil
 import subprocess
 import sys
 
+from src import __version__
+
 
 def main():
     """Build l'application avec la nouvelle structure."""
@@ -73,23 +75,24 @@ INSTALLATION:
 
 PREREQUIS:
 - League of Legends installe
-- Firefox browser installe
+- Firefox installe (scraping des statistiques)
+- Brave installe (optionnel : page OneTricks en fin de draft)
 
 UTILISATION:
 - Double-cliquer sur LeagueStatsCoach.exe
 
 PREMIERE UTILISATION:
-1. Option 2: "Update Champion Data" 
-2. Option 3: "Parse Match Statistics"
-3. Option 1: "Real-time Draft Coach"
+1. Option 2 : "Mettre a jour les donnees"
+2. Option 3 : "Analyser des statistiques"
+3. Option 1 : "Draft Coach en temps reel"
 
 FONCTIONNALITES:
-- Draft Coach temps reel avec pools multiples
-- Team Builder avec pools elargis
-- Parsing automatique des statistiques
+- Draft Coach temps reel (recherche minimax, bans de pool)
+- Import des runes, items et sorts OneTricks au lock-in
+- Team Builder, tier lists, Tournament Coach
 
-Version: 1.0.0 - Architecture reorganisee
-"""
+Version: {version}
+""".format(version=__version__)
 
     with open(f"{release_dir}/INSTRUCTIONS.txt", "w", encoding="utf-8") as f:
         f.write(instructions)
