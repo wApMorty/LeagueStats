@@ -224,11 +224,6 @@ class AnalysisConfig:
         }
     )
 
-    # Blind Pick scoring weights (must sum to 1.0)
-    BLIND_AVG_WEIGHT: float = 0.5  # Average performance
-    BLIND_STABILITY_WEIGHT: float = 0.3  # Low variance
-    BLIND_COVERAGE_WEIGHT: float = 0.2  # Coverage of decent matchups
-
     # Matchup quality thresholds
     DECENT_MATCHUP_THRESHOLD: float = 0.0  # delta2 > 0
     GOOD_MATCHUP_THRESHOLD: float = 1.0  # Good matchup

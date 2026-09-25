@@ -47,9 +47,7 @@ class TestTierListGeneration:
             # Validate metrics
             metrics = entry["metrics"]
             assert "final_score" in metrics
-            assert "avg_performance_norm" in metrics
-            assert "stability" in metrics
-            assert "coverage_norm" in metrics
+            assert "lane_winrate" in metrics
 
     def test_generate_counter_pick_tier_list(self, assistant, sample_champions):
         """Test counter pick tier list generation."""

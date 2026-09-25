@@ -130,8 +130,6 @@ class TierListGenerator:
                 'metrics': dict (detailed metrics)
             }
         """
-        import statistics
-
         lane_key = lane or analysis_config.ALL_LANES_KEY
 
         # Check if champion_scores table exists and has data
@@ -140,139 +138,56 @@ class TierListGenerator:
             print("[INFO] Please run 'Parse Match Statistics' to generate scores first.")
             return []
 
-        # Step 1: Collect all scores from database for global normalization
+        # Step 1: the lane's champions, for global normalization
         all_scores_data = self.db.get_all_champion_scores(lane=lane_key)
 
         if not all_scores_data:
             print(f"[ERROR] No champion scores found in database for lane={lane_key}")
             return []
+        lane_champions = [row[0] for row in all_scores_data]
 
-        # SPEC-18 : la performance en blind pick est le winrate de lane rétréci,
-        # pas avg_delta2 (nul par construction, sa dispersion est du bruit).
-        lane_winrates = shrunk_lane_winrates(self.db, lane)
-
-        # Extract global ranges for normalization
-        all_metrics = {
-            "lane_winrate": [],
-            "variance": [],
-            "coverage": [],
-        }
-
-        for row in all_scores_data:
-            # row = (name, avg_delta2, variance, coverage, peak_impact, volatility, target_ratio)
-            if row[0] in lane_winrates:
-                all_metrics["lane_winrate"].append(lane_winrates[row[0]])
-            all_metrics["variance"].append(row[2])
-            all_metrics["coverage"].append(row[3])
-
-        # Calculate global ranges
-        min_winrate_global = min(all_metrics["lane_winrate"], default=0.0)
-        max_winrate_global = max(all_metrics["lane_winrate"], default=0.0)
-        min_variance_global = min(all_metrics["variance"])
-        max_variance_global = max(all_metrics["variance"])
-        min_coverage_global = min(all_metrics["coverage"])
-        max_coverage_global = max(all_metrics["coverage"])
-
-        # Avoid division by zero
-        if max_winrate_global == min_winrate_global:
-            min_winrate_global -= 0.05
-            max_winrate_global += 0.05
-        if max_variance_global == min_variance_global:
-            min_variance_global -= 0.05
-            max_variance_global += 0.05
-        if max_coverage_global == min_coverage_global:
-            min_coverage_global -= 0.05
-            max_coverage_global += 0.05
-
-        if verbose:
-            print(f"[INFO] Global normalization ranges:")
-            print(f"  Lane winrate: {min_winrate_global:.2f} to {max_winrate_global:.2f}")
-            print(f"  Variance: {min_variance_global:.2f} to {max_variance_global:.2f}")
-            if analysis_type == "blind_pick":
-                print(f"  Coverage: {min_coverage_global:.3f} to {max_coverage_global:.3f}")
-
-        # SPEC-18 §4 : un contre-pick se note au gain moyen quand on ne le joue
-        # que contre les ennemis où il bat la moyenne de la lane, pondérés par
-        # leur popularité. Pic d'impact, volatilité et cibles (dérivés de delta2)
-        # avaient la dispersion du bruit pur.
-        counter_gains = {}
-        if analysis_type == "counter_pick":
+        # SPEC-18 : un seul critère mesuré par type de tier list. Blind : le
+        # winrate de lane rétréci. Contre-pick : le gain moyen quand on ne joue
+        # le champion que contre les ennemis où il bat la moyenne, pondérés par
+        # leur popularité. Les anciennes composantes (avg_delta2, stabilité,
+        # couverture, pic d'impact, volatilité, cibles) avaient la dispersion
+        # du bruit pur.
+        if analysis_type == "blind_pick":
+            winrates = shrunk_lane_winrates(self.db, lane)
+            raw = {name: winrates[name] for name in lane_champions if name in winrates}
+            metric = "lane_winrate"
+        elif analysis_type == "counter_pick":
             evaluator = PoolEvaluator(self.db, lane)
-            counter_gains = {
-                row[0]: evaluator.counter_value([row[0]], floor=0.0) for row in all_scores_data
-            }
-            min_gain = min(counter_gains.values())
-            max_gain = max(counter_gains.values())
-            if max_gain == min_gain:
-                min_gain, max_gain = min_gain - 0.05, max_gain + 0.05
+            raw = {name: evaluator.counter_value([name], floor=0.0) for name in lane_champions}
+            metric = "counter_gain"
+        else:
+            raise ValueError(f"Unknown analysis type: {analysis_type}")
 
-        # Step 2: Get scores from database and calculate normalized scores
+        if not raw:
+            return []
+        low, high = min(raw.values()), max(raw.values())
+        if high == low:
+            low, high = low - 0.05, high + 0.05
+        if verbose:
+            print(f"[INFO] {metric}: {low:.2f} to {high:.2f}")
+
+        # Step 2: score the pool
         results = []
-
         for champion in champion_pool:
-            # Get pre-computed scores from database
-            scores = self.db.get_champion_scores_by_name(champion, lane=lane_key)
-
-            if scores is None:
+            value = raw.get(champion)
+            if value is None:
                 if verbose:
-                    print(f"  [SKIP] {champion}: No scores in database for lane={lane_key}")
+                    print(f"  [SKIP] {champion}: No data in database for lane={lane_key}")
                 continue
 
-            # Calculate normalized score based on analysis type
-            if analysis_type == "blind_pick":
-                lane_winrate = lane_winrates.get(champion)
-                if lane_winrate is None:
-                    if verbose:
-                        print(f"  [SKIP] {champion}: No winrate in database for lane={lane_key}")
-                    continue
+            normalized = max(0.0, min(1.0, (value - low) / (high - low)))
+            final_score = normalized * 100
+            metrics = {
+                "final_score": final_score,
+                "avg_performance_norm": normalized,
+                metric: value,
+            }
 
-                # Normalize components
-                avg_perf_norm = (lane_winrate - min_winrate_global) / (
-                    max_winrate_global - min_winrate_global
-                )
-                avg_perf_norm = max(0.0, min(1.0, avg_perf_norm))
-
-                variance_norm = (scores["variance"] - min_variance_global) / (
-                    max_variance_global - min_variance_global
-                )
-                variance_norm = max(0.0, min(1.0, variance_norm))
-                stability = 1.0 - variance_norm  # Invert: low variance = high stability
-
-                coverage_norm = (scores["coverage"] - min_coverage_global) / (
-                    max_coverage_global - min_coverage_global
-                )
-                coverage_norm = max(0.0, min(1.0, coverage_norm))
-
-                # Calculate final score
-                normalized_score = (
-                    avg_perf_norm * analysis_config.BLIND_AVG_WEIGHT
-                    + stability * analysis_config.BLIND_STABILITY_WEIGHT
-                    + coverage_norm * analysis_config.BLIND_COVERAGE_WEIGHT
-                )
-                final_score = normalized_score * 100
-
-                # Build metrics dict for display
-                metrics = {
-                    "final_score": final_score,
-                    "avg_performance_norm": avg_perf_norm,
-                    "lane_winrate": lane_winrate,
-                    "stability": stability,
-                    "variance": scores["variance"],
-                    "coverage_norm": coverage_norm,
-                    "coverage_raw": scores["coverage"],
-                }
-
-            elif analysis_type == "counter_pick":
-                gain = counter_gains.get(champion)
-                if gain is None:
-                    continue
-                final_score = max(0.0, min(1.0, (gain - min_gain) / (max_gain - min_gain))) * 100
-                metrics = {"final_score": final_score, "counter_gain": gain}
-
-            else:
-                raise ValueError(f"Unknown analysis type: {analysis_type}")
-
-            # Determine tier
             if final_score >= analysis_config.TIER_THRESHOLDS["S"]:
                 tier = "S"
             elif final_score >= analysis_config.TIER_THRESHOLDS["A"]:
@@ -286,7 +201,5 @@ class TierListGenerator:
                 {"champion": champion, "tier": tier, "score": final_score, "metrics": metrics}
             )
 
-        # Sort by score (descending)
         results.sort(key=lambda x: x["score"], reverse=True)
-
         return results

@@ -184,14 +184,10 @@ def _display_tier_list(
 
             # Afficher les métriques selon le type d'analyse
             if analysis_type == "blind_pick":
-                lane_winrate = metrics["lane_winrate"]
-                variance = metrics["variance"]
-                coverage = metrics["coverage_raw"]
-                safe_print(f"     Winrate lissé :  {lane_winrate:>5.1f}%  (Performance)")
                 safe_print(
-                    f"     Stabilité :      {metrics['stability']:>5.2f}  (Variance : {variance:.2f})"
+                    f"     Winrate lissé :  {metrics['lane_winrate']:>5.1f}%  "
+                    "(rétréci vers la moyenne de la lane)"
                 )
-                safe_print(f"     Couverture :     {coverage:>5.1%}  (Matchups corrects)")
 
             elif analysis_type == "counter_pick":
                 safe_print(
@@ -205,11 +201,7 @@ def _display_tier_list(
     print("=" * 80)
     safe_print("CONFIGURATION DE LA TIER LIST :")
     if analysis_type == "blind_pick":
-        safe_print(
-            f"   • Pondérations : Performance {analysis_config.BLIND_AVG_WEIGHT:.0%}, "
-            f"Stabilité {analysis_config.BLIND_STABILITY_WEIGHT:.0%}, "
-            f"Couverture {analysis_config.BLIND_COVERAGE_WEIGHT:.0%}"
-        )
+        safe_print("   • Score : winrate de lane rétréci vers la moyenne de la lane")
     else:
         safe_print("   • Score : gain moyen en contre-pick, pondéré par la popularité des ennemis")
     safe_print(
