@@ -58,8 +58,11 @@ class LoadoutImporter:
         # champion en fait partie : la page et le set portent son nom et son id.
         self._applied: Optional[Tuple[int, str, Build]] = None
 
-    def _opponent(self, state: DraftState, lane: Optional[str]) -> Optional[str]:
-        """Adversaire direct locké, s'il est le seul ennemi inféré sur notre lane."""
+    def direct_opponent(self, state: DraftState, lane: Optional[str]) -> Optional[str]:
+        """Adversaire direct locké, s'il est le seul ennemi inféré sur notre lane.
+
+        Partagé avec la fenêtre OneTricks de fin de draft, qui ouvre la page du duel.
+        """
         if not lane:
             return None
         rivals = [c for c in state.enemy_picks if state.inferred_roles.get(c) == lane]
@@ -74,7 +77,7 @@ class LoadoutImporter:
             if champion_id is None:
                 return
             lane = state.inferred_roles.get(champion_id) or self.m.hover._resolve_player_lane()
-            opponent = self._opponent(state, lane)
+            opponent = self.direct_opponent(state, lane)
             key = (champion_id, lane, opponent)
             if key == self._last_key:
                 return

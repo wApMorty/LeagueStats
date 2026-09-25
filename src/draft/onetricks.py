@@ -89,6 +89,11 @@ class OneTricksWindow:
             if lane:
                 role = _LANE_TO_ONETRICKS_ROLE.get(lane, lane)
                 onetricks_url += f"?role={role}"
+                # Page du duel dès que l'adversaire direct est connu, comme
+                # l'affinage de l'import de build (SPEC-15 §3.2).
+                opponent = self.m.loadout.direct_opponent(self.m.last_draft_state, lane)
+                if opponent:
+                    onetricks_url += f"&matchup={normalize_champion_name_for_onetricks(opponent)}"
 
             # Try to get Brave browser path
             try:

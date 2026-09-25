@@ -67,3 +67,35 @@ class TestOneTricksLaneAwareUrl:
         draft_monitor.pool_lane = internal_lane
         url = _open_and_capture_url(draft_monitor)
         assert url == f"https://www.onetricks.gg/champions/builds/Ahri?role={onetricks_role}"
+
+
+class TestOneTricksMatchupUrl:
+    """The end-of-draft page opens on the duel against the direct opponent."""
+
+    def _state(self, enemies):
+        state = DraftState()
+        state.enemy_picks = list(enemies)
+        state.inferred_roles = enemies
+        return state
+
+    def test_direct_opponent_opens_the_duel_page(self, draft_monitor):
+        draft_monitor.pool_lane = "top"
+        draft_monitor.champion_id_to_name = {121: "Kha'Zix", 122: "Darius"}
+        draft_monitor.last_draft_state = self._state({121: "jungle", 122: "top"})
+        url = _open_and_capture_url(draft_monitor)
+        assert url == "https://www.onetricks.gg/champions/builds/Ahri?role=top&matchup=Darius"
+
+    def test_opponent_name_is_normalized(self, draft_monitor):
+        draft_monitor.pool_lane = "jungle"
+        draft_monitor.champion_id_to_name = {121: "Kha'Zix"}
+        draft_monitor.last_draft_state = self._state({121: "jungle"})
+        url = _open_and_capture_url(draft_monitor)
+        assert url.endswith("?role=jungle&matchup=Khazix")
+
+    def test_ambiguous_lane_keeps_the_champion_page(self, draft_monitor):
+        """Two enemies inferred on our lane: no single direct opponent."""
+        draft_monitor.pool_lane = "top"
+        draft_monitor.champion_id_to_name = {121: "Kha'Zix", 122: "Darius"}
+        draft_monitor.last_draft_state = self._state({121: "top", 122: "top"})
+        url = _open_and_capture_url(draft_monitor)
+        assert url == "https://www.onetricks.gg/champions/builds/Ahri?role=top"
