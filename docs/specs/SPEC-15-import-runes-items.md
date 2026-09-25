@@ -192,12 +192,13 @@ la plus jouée du duel qu'on copie : sur 40 parties, elle diffère surtout par l
   - **runes** : `popKeystone[0]`, puis la première page de `popRunes[keystone]` (6 perks et
     `[style principal, style secondaire, keystone]`), et les fragments `popStat` ;
   - **items** (révisé le 2026-09-25, set « façon Coachless ») : départ `startingItems[0]`,
-    autres départs, core `popCore[0]`, cores alternatifs, bottes (choix puis alternatives),
+    autres départs, core `popCore[0]`, bottes (choix puis alternatives),
     composants (`componentBuildPaths`) et les `LOADOUT_SITUATIONAL_ITEMS` items les plus joués
     (`popularItems`). La popularité du choix est dans le titre du bloc (« Core (57%) »), et un
     item ne figure qu'une fois hors départ. `popPath` n'est plus lu : ses options pèsent 0,3 à
     2 % des parties, et le même item pouvait arriver premier de deux emplacements (Sterak ×2
-    dans le set Yorick du 2026-09-25) ;
+    dans le set Yorick du 2026-09-25). Plus de bloc « Cores alternatifs » : il retirait des
+    situationnels des items très joués (Death's Dance d'Ambessa, 46 %) ;
   - **sorts** : `sSpells[0]`.
 
   Tout champ manquant donne `None`, car la structure n'est pas documentée et peut changer.

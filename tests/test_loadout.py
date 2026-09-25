@@ -62,10 +62,9 @@ class TestPickBuild:
                 ("Départ (94%)", (1086, 2003, 2003, 3340)),
                 ("Autres départs", ()),
                 ("Core (57%)", (2523, 3085)),
-                ("Cores alternatifs", (3032, 3031, 3046)),
                 ("Bottes (78%)", (3006, 3008, 3047)),
                 ("Composants", (1037, 6670, 1036, 1083, 1038, 3144)),
-                ("Situationnels", (3036, 3033, 3026, 6672, 3072, 3139, 6673)),
+                ("Situationnels", (3031, 3036, 3032, 3033, 3046, 3026, 6672, 3072)),
             ),
             spells=(21, 4),
             games=500,
@@ -220,7 +219,7 @@ class TestAdaptToMatchup:
         build, subs = adapt_to_matchup(load(GENERAL), load(DUEL))
         blocks = dict(build.item_blocks)
         assert blocks["Core (13%)"] == (2523, 3031)  # popularité dans le duel
-        assert blocks["Cores alternatifs"] == (3085, 3032, 3046)  # l'ancien core y passe
+        assert blocks["Situationnels"][0] == 3085  # l'ancien core, le plus joué
         assert 3031 not in blocks["Situationnels"]
 
     def test_most_played_significant_option_wins(self):

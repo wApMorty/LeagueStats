@@ -136,7 +136,9 @@ def _item_blocks(stats: dict, chosen: Dict[str, Tuple[Tuple[int, ...], float]]) 
 
     ``chosen`` : option retenue et sa popularité, par catégorie de
     ``_ITEM_CHOICES``. Chaque bloc suivant ne reprend que les items pas encore
-    listés ; le départ garde ses doublons (deux potions).
+    listés ; le départ garde ses doublons (deux potions). Pas de bloc des cores
+    alternatifs : leurs items sont parmi les plus joués, et les y lister les
+    retirait des situationnels (Death's Dance d'Ambessa, 2026-09-25).
     """
     (start, start_share), (core, core_share), (boots, boots_share) = (
         chosen[category] for category, _ in _ITEM_CHOICES
@@ -150,7 +152,6 @@ def _item_blocks(stats: dict, chosen: Dict[str, Tuple[Tuple[int, ...], float]]) 
     for title, items, limit in (
         ("Autres départs", ids("startingItems"), None),
         (f"Core ({core_share:.0%})", core, None),
-        ("Cores alternatifs", ids("popCore"), None),
         (f"Bottes ({boots_share:.0%})", boots + tuple(ids("boots")), None),
         ("Composants", ids("componentBuildPaths"), None),
         ("Situationnels", ids("popularItems"), draft_config.LOADOUT_SITUATIONAL_ITEMS),

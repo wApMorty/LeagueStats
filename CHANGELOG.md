@@ -23,6 +23,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
   une draft enregistrée deux fois (#85/#86) laissait un doublon en attente, qui
   retentait à chaque fin de partie la partie déjà labellisée par l'autre. Le
   rattrapage ignore désormais les parties déjà attribuées.
+- **Items très joués absents des situationnels** — le bloc « Cores alternatifs »
+  listait le 2e item des autres cores, et la déduplication le retirait ensuite
+  des situationnels : Death's Dance (46 % des parties d'Ambessa) disparaissait.
+  Le bloc est supprimé ; ces items reprennent leur rang dans les situationnels.
 
 ## [2.0.0] - 2026-09-25
 
