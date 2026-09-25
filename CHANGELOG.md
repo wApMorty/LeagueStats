@@ -13,6 +13,13 @@ All notable changes to LeagueStats Coach will be documented in this file.
   est déduite de ces pages, renormalisée par leur couverture (SPEC-15 §3.2.2).
   Contre Draven, Jinx passe à Coup de Grâce au lieu de Cut Down.
 
+### 🐛 Fix
+
+- **Alerte « dernier run incomplet » après une réparation réussie** — le statut
+  du scrape était tiré du contrôle de complétude fait *avant* la réparation
+  ciblée : Ahri (0 synergie) réparée 1/1 le 2026-09-24, le run restait
+  `partial`. Le contrôle est désormais refait après la réparation.
+
 ## [2.0.0] - 2026-09-25
 
 Version majeure : le Live Coach raisonne par recherche minimax sur les picks

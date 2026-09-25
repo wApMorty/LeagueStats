@@ -27,7 +27,12 @@ from .analysis.shrink import refresh_shrink_k
 from .config import config
 from .config_constants import data_quality_config, scraping_config
 from .constants import normalize_champion_name_for_url
-from .data_quality import CompletenessReport, DataCompletenessError, assert_completeness
+from .data_quality import (
+    CompletenessReport,
+    DataCompletenessError,
+    assert_completeness,
+    check_completeness,
+)
 from .db import Database
 from .db_backup import backup_database, purge_old_backups, restore_database
 from .lane_discovery import discover_lanes_for_champions
@@ -351,6 +356,9 @@ def run_pipeline(
             repair_results = _repair_incomplete_champions(
                 db, completeness_report, resolved_patch, workers
             )
+            # Re-grade after the repair: a successful one clears the warnings,
+            # so the run is "ok" (2026-09-24: Ahri repaired 1/1, run stuck "partial").
+            completeness_report = check_completeness(db, include_synergies=include_synergies)
 
         # ── 5. Freshness metadata ────────────────────────────────────────────
         if recompute_only:

@@ -31,6 +31,7 @@ class TestRunPipeline:
         completeness_side_effect=None,
         completeness_return_value=None,
         repair_results=None,
+        recheck_return_value=None,
         **kwargs,
     ):
         """Run run_pipeline() with every external dependency mocked."""
@@ -63,6 +64,10 @@ class TestRunPipeline:
 
         mocks["repair"] = MagicMock(return_value=repair_results or {})
         monkeypatch.setattr(module, "_repair_incomplete_champions", mocks["repair"])
+
+        # Post-repair re-grade; default: the repair fixed nothing.
+        mocks["recheck"] = MagicMock(return_value=recheck_return_value or completeness_return_value)
+        monkeypatch.setattr(module, "check_completeness", mocks["recheck"])
 
         mocks["notifier"] = MagicMock()
         monkeypatch.setattr(module, "Notifier", MagicMock(return_value=mocks["notifier"]))
@@ -197,6 +202,30 @@ class TestRunPipeline:
         assert meta_calls["last_scrape_status"] == "partial"
         assert "last_full_success_utc" not in meta_keys
         mocks["notifier"].notify_success.assert_called_once()
+
+    def test_successful_repair_clears_partial_status(self, monkeypatch):
+        """Regression 2026-09-24: Ahri had 0 synergies, the targeted repair
+        succeeded (1/1), yet the run stayed "partial" because the status was
+        taken from the pre-repair report — the app kept warning about it."""
+        warned = MagicMock(
+            warnings=["1 champion(s) below 50 synergies: Ahri=0"],
+            incomplete_matchup_champions=[],
+            incomplete_synergy_champions=["Ahri"],
+        )
+        warned.summary.return_value = "Completeness check PARTIAL"
+        clean = MagicMock(warnings=[])
+        result, mocks = self._run(
+            monkeypatch,
+            completeness_return_value=warned,
+            repair_results={"synergies": {"success": 1, "failed": 0, "total": 1, "duration": 1.0}},
+            recheck_return_value=clean,
+        )
+
+        assert result.status == "ok"
+        mocks["recheck"].assert_called_once()
+        meta_calls = {call.args[0]: call.args[1] for call in mocks["db"].set_meta.call_args_list}
+        assert meta_calls["last_scrape_status"] == "ok"
+        assert "last_full_success_utc" in meta_calls
 
     def test_scrape_crash_returns_failed_with_notification(self, monkeypatch):
         import src.pipeline as module
