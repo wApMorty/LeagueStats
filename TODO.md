@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-09-24 (replanification après le spike OneTricks, puis ajout de SPEC-17 — voir §Priorités)
+**Mis à jour** : 2026-09-26 (recette de SPEC-15 validée en partie réelle : sprint 2 soldé)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -37,7 +37,7 @@ plus = à redécouper avant de démarrer).
 | 7 | `GameEvaluator.has_matchup_data()` + tests | SPEC-14 §2.2 | 1 | ✅ |
 | 8 | Tableau miroir ordonné par lane, colonne DUEL | SPEC-14 | 3 | ✅ |
 
-### Sprint 2 — Import OneTricks dans le client (~18 pts)
+### Sprint 2 — Import OneTricks dans le client (~18 pts) ✅ (2026-09-26)
 
 **Objectif** : au lock-in, les runes, les items et les sorts les plus joués par les one-tricks
 sont dans le client, puis affinés dès que l'adversaire direct est locké (seuls les composants
@@ -51,7 +51,7 @@ toucher aux pages ni aux sets du joueur.
 | 11 | `loadout.apply_build()` : page de runes `LS`, set d'items préservant ceux du joueur, sorts avec Flash sur sa touche habituelle | SPEC-15 §3.3 | 5 | 10 | ✅ |
 | 12 | Déclenchement sur `completed: True` (et non sur `player_champion`), affinage au lock de l'adversaire direct via `adapt_to_matchup`, relance sur trade, flag `AUTO_IMPORT_LOADOUT` | SPEC-15 §3.2 | 3 | 10b, 11 | ✅ |
 | 13 | Tests §3.5 (11 critères) | SPEC-15 §3.5 | 3 | 12 | ✅ |
-| 14 | Recette en partie réelle : vérifier les corps de requête LCU contre le client (non documentés par Riot) | SPEC-15 §3.3 | 1 | 12 | ⬜ |
+| 14 | Recette en partie réelle : vérifier les corps de requête LCU contre le client (non documentés par Riot) | SPEC-15 §3.3 | 1 | 12 | ✅ Validée par @pj35 le 2026-09-26 |
 
 ### Sprint 3 — Recherche minimax plus pertinente et plus profonde (~12 pts) ✅ (2026-09-24)
 

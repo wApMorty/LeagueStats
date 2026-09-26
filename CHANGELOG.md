@@ -4,6 +4,12 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### 📝 Docs
+
+- **SPEC-15 : recette en partie réelle validée** — les corps de requête LCU
+  (page de runes, set d'items, sorts), documentés par la communauté et non par
+  Riot, sont confirmés contre le client (tâche 14). Le sprint 2 est soldé.
+
 ## [2.1.0] - 2026-09-25
 
 Version mineure : l'import de build affine désormais les runes mineures au duel,

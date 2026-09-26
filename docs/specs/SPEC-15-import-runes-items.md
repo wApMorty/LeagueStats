@@ -1,6 +1,6 @@
 # SPEC-15 — Runes, items et sorts poussés dans le client au lock-in
 
-**Statut** : 🟡 Phase 1 **implémentée le 2026-09-24**, recette en partie réelle à faire (tâche 14)
+**Statut** : ✅ Phase 1 **implémentée le 2026-09-24**, recette en partie réelle validée par @pj35 le 2026-09-26 (tâche 14)
 (source OneTricks, [ADR-003](../adr/ADR-003-onetricks-temps-reel.md)).
 Spike OneTricks fait (§2.2.1). Spike Coachless (§2.1.1) **fait le 2026-09-24** : faisable
 techniquement mais exclu par les CGU de Coachless, ce qui bloque aussi
@@ -313,8 +313,8 @@ Sur la page du 2026-09-25, l'arbre secondaire passe aussi (62,7 % contre 41,8 %)
 | Items | `PUT /lol-item-sets/v1/item-sets/{summonerId}/sets` | `summonerId` via `GET /lol-summoner/v1/current-summoner`. Le PUT remplace **toute** la liste : faire un GET, retirer uniquement le set au préfixe `"LS "`, ajouter le nouveau, puis PUT. Les sets du joueur sont préservés. |
 | Sorts | `PATCH /lol-champ-select/v1/session/my-selection` `{spell1Id, spell2Id}` | Respecter l'ordre Flash existant du joueur : si Flash est déjà sur D ou F, le garder sur cette touche. |
 
-Les formats exacts des corps de requête sont à confirmer contre le client réel pendant
-l'implémentation : les champs ci-dessus sont ceux documentés par la communauté, pas par Riot.
+Les champs ci-dessus sont ceux documentés par la communauté, pas par Riot. Ils ont été
+confirmés contre le client réel lors de la recette du 2026-09-26 (tâche 14).
 Les identifiants OneTricks sont ceux de Riot (§2.2.1) : aucun mapping n'est nécessaire.
 
 ### 3.4 Sortie console
