@@ -11,6 +11,8 @@ Répond aux questions du spike :
     4. La timeline de la partie la plus ancienne de l'historique est-elle
        encore servie (purge) ?
     5. `/lol-end-of-game/v1/eog-stats-block` pendant l'écran de fin.
+    6. Classement : le LCU expose-t-il la variation de LP d'une partie (le
+       « +19 LP » de l'écran de fin), ou seulement le rang courant ?
 
 Les réponses brutes sont écrites dans `outputs/spike_gameplay/` (ignoré par
 git), avec les identités des joueurs anonymisées pour pouvoir en tirer des
@@ -129,6 +131,46 @@ def describe_timeline(timeline: Optional[Dict[str, Any]]) -> None:
         print(f"      {event_type} : {json.dumps(example)[:300]}")
 
 
+# Endpoints de classement candidats (documentation communautaire, non vérifiée).
+RANKED_ENDPOINTS = (
+    "/lol-ranked/v1/current-ranked-stats",
+    "/lol-ranked/v1/current-lp-change-notification",
+    "/lol-ranked/v1/notifications",
+)
+
+
+def lp_fields(obj: Any, path: str = "") -> List[str]:
+    """Chemins des champs dont le nom évoque des LP ou un rang."""
+    hints = ("lp", "leaguepoint", "tier", "division", "rank")
+    found: List[str] = []
+    if isinstance(obj, dict):
+        for key, value in obj.items():
+            child = f"{path}.{key}" if path else key
+            if any(hint in key.lower() for hint in hints) and not isinstance(value, (dict, list)):
+                found.append(f"{child} = {value}")
+            found.extend(lp_fields(value, child))
+    elif isinstance(obj, list):
+        for index, item in enumerate(obj[:3]):
+            found.extend(lp_fields(item, f"{path}[{index}]"))
+    return found
+
+
+def describe_ranked(lcu: LCUClient, eog: Optional[Dict[str, Any]], aliases: Dict[str, str]) -> None:
+    print("\n[6] Classement")
+    for endpoint in RANKED_ENDPOINTS:
+        payload = lcu._make_request(endpoint)
+        fields = lp_fields(payload)
+        print(f"    {endpoint} : {'indisponible' if payload is None else f'{len(fields)} champs'}")
+        for field in fields[:15]:
+            print(f"      {field}")
+        if payload is not None:
+            dump(endpoint.rsplit("/", 1)[-1] + ".json", payload, aliases)
+    if eog:
+        print("    champs LP/rang de l'écran de fin :")
+        for field in lp_fields(eog)[:15] or ["aucun"]:
+            print(f"      {field}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--game-id", type=int, help="partie à détailler (défaut : la dernière)")
@@ -166,6 +208,8 @@ def main() -> int:
     print(f"\n[5] Écran de fin : {'disponible' if eog else 'indisponible'}")
     if eog:
         dump("eog_stats_block.json", eog, aliases)
+
+    describe_ranked(lcu, eog, aliases)
 
     print(f"\n[OK] Fichiers dans {OUTPUT_DIR.relative_to(project_root)}")
     return 0
