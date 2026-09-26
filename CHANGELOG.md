@@ -9,6 +9,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 - **SPEC-15 : recette en partie réelle validée** — les corps de requête LCU
   (page de runes, set d'items, sorts), documentés par la communauté et non par
   Riot, sont confirmés contre le client (tâche 14). Le sprint 2 est soldé.
+- **SPEC-19 (brouillon) : coach de gameplay** — analyse de fin de partie par
+  rôle (écarts à la norme et à l'objectif) et suivi de progression, à partir du
+  LCU seul. `scripts/spike_gameplay_dump.py` (lecture seule) relève ce que le
+  client expose d'une partie terminée, identités anonymisées.
 
 ## [2.1.0] - 2026-09-25
 

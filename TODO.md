@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-09-26 (recette de SPEC-15 validée en partie réelle : sprint 2 soldé)
+**Mis à jour** : 2026-09-26 (recette de SPEC-15 validée : sprint 2 soldé ; SPEC-19 en brouillon)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -72,6 +72,21 @@ les trois leviers, parallélisables entre eux, du moins risqué au plus structur
 | 24 | Lane des alliés : `PickTurn.lane`, renseignée par `DraftStateParser` depuis `ally_positions`, `_moves()` restreint à cette lane si libre (repli sinon) + tests | SPEC-17 §4.2, §4.5.2-3 | 3 | 21 | ✅ B1 5, B2 7/7 |
 | 25 | Calibrer `SEARCH_TOP_N` (8 / 10 / 12) au bench, retenir le plus grand qui tient §2.2, consigner la couverture de games dans le commentaire | SPEC-17 §4.1 | 1 | 22, 23, 24 | ✅ N = 8 (10 et 12 : B2 6/7) |
 | 26 | Critères d'acceptation §6 (bench B2 7/7, B1 ≥ 5, aucune variante hors top-N), `CHANGELOG.md`, statut de la spec | SPEC-17 §6 | 1 | 25 | ✅ |
+
+### Prochain lot — SPEC-19, coach de gameplay (📝 brouillon du 2026-09-26, à valider)
+
+[SPEC-19](docs/specs/SPEC-19-coach-de-gameplay.md) : analyse de chaque partie SoloQ/Flex en fin de
+partie (écarts à la norme et à l'objectif, par rôle), puis suivi de progression (schémas
+récurrents, axes de travail). Source LCU seule, Live Client Data API plus tard, pas de clé API
+Riot (@pj35). Découpage détaillé en SPEC-19 §11 (tâches 27 à 38, ~31 pts) :
+
+| Phase | Contenu | Pts | État |
+|---|---|---|---|
+| 0 | Spike LCU : `scripts/spike_gameplay_dump.py`, à lancer sur le PC de jeu après une partie | 2 | 🟡 script prêt |
+| 1 | Capture du brut en fin de partie et rattrapage au démarrage (**au plus tôt** : chaque partie non capturée est perdue) | 5 | ⬜ |
+| 2 | Métriques des 10 participants, exploration sur ~30 parties | 5 | ⬜ |
+| 3 | Grille par rôle, moteur de constats, rapport console | 8 | ⬜ |
+| 4 | Récurrence, tendances, axes de travail, bilan | 11 | ⬜ |
 
 ### Hors sprint — SPEC-18 phase A ✅ (2026-09-24)
 
@@ -194,6 +209,8 @@ encore mesurer la qualité.*
    avant d'engager.
 5. **GUI légère locale** (FastAPI + HTMX/React servi en localhost) — ex-Tâche #6 re-scopée,
    réutilise les algorithmes en l'état.
+   **À reprioriser** (@pj35, 2026-09-26) : le suivi de progression de SPEC-19 (courbes par
+   métrique, axes de travail) est son premier vrai besoin.
 6. **Depuis `docs/TOURNAMENT_COACH_IMPROVEMENTS.md`** : chargement de draft depuis JSON,
    comparaison multi-drafts, templates de composition, simulation IA vs IA, base de drafts
    historiques, timer pick/ban, tracking explicite de phase ban/pick.

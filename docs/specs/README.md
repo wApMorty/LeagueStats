@@ -60,6 +60,7 @@ Specs issues de notes de features au fil de l'eau, chacune indépendante sauf me
 | [SPEC-16](SPEC-16-moteur-optimisation-builds.md) ⏸️ | Moteur d'optimisation des builds : shrinkage mesuré (A), puis correction par les patchs (A+) ([ADR-002](../adr/ADR-002-moteur-optimisation-builds.md)) | `src/analysis/build_engine.py`, `src/analysis/patch_diff.py` (nouveaux) | Reportée : A avec le spike Coachless, A+ abandonnée (ADR-003) |
 | [SPEC-17](SPEC-17-recherche-plus-profonde.md) ✅ | Recherche minimax : candidats par popularité, lane des alliés, cache des paires ; multi-processus en phase 2 conditionnelle | `src/draft/search.py`, `src/analysis/game_eval.py`, `src/draft/state_parser.py`, `src/repositories/matchups.py` | Phase 1 implémentée le 2026-09-24 (B1 5, B2 7/7) ; phase 2 non ouverte |
 | [SPEC-18](SPEC-18-force-intrinseque.md) 🟢 | Tier list et blind pick classés au winrate de lane rétréci (`avg_delta2` est du bruit) ; terme de force intrinsèque du modèle décidé sur mesure | `src/analysis/shrink.py`, `src/analysis/tier_list.py`, `src/draft/automation.py`, `scripts/compare_intrinsic_strength.py` | Phase A implémentée le 2026-09-24 ; phase B reportée (IC d'AUC contient 0) |
+| [SPEC-19](SPEC-19-coach-de-gameplay.md) 📝 | Coach de gameplay : capture LCU des parties SoloQ/Flex, grille de lecture par rôle, écarts à la norme et à l'objectif en fin de partie, schémas récurrents et axes de travail | `src/coaching/` (nouveau), `src/lcu_match_history.py`, `alembic/versions/` | ~6 j sur 4 phases ; brouillon du 2026-09-26, spike à lancer |
 
 ---
 
