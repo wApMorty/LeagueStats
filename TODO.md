@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-09-26 (recette de SPEC-15 validée : sprint 2 soldé ; SPEC-19 en brouillon)
+**Mis à jour** : 2026-09-26 (recette de SPEC-15 validée : sprint 2 soldé ; SPEC-19 validée)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -73,17 +73,18 @@ les trois leviers, parallélisables entre eux, du moins risqué au plus structur
 | 25 | Calibrer `SEARCH_TOP_N` (8 / 10 / 12) au bench, retenir le plus grand qui tient §2.2, consigner la couverture de games dans le commentaire | SPEC-17 §4.1 | 1 | 22, 23, 24 | ✅ N = 8 (10 et 12 : B2 6/7) |
 | 26 | Critères d'acceptation §6 (bench B2 7/7, B1 ≥ 5, aucune variante hors top-N), `CHANGELOG.md`, statut de la spec | SPEC-17 §6 | 1 | 25 | ✅ |
 
-### Prochain lot — SPEC-19, coach de gameplay (📝 brouillon du 2026-09-26, à valider)
+### Prochain lot — SPEC-19, coach de gameplay (🟢 validée par @pj35 le 2026-09-26)
 
 [SPEC-19](docs/specs/SPEC-19-coach-de-gameplay.md) : analyse de chaque partie SoloQ/Flex en fin de
 partie (écarts à la norme et à l'objectif, par rôle), puis suivi de progression (schémas
 récurrents, axes de travail). Source LCU seule, Live Client Data API plus tard, pas de clé API
-Riot (@pj35). Découpage détaillé en SPEC-19 §11 (tâches 27 à 38, ~31 pts) :
+Riot (@pj35). Tout est stocké après chaque partie (valeur brute, `z_norm`, `z_objective`) et
+les LP sont suivis depuis le LCU. Découpage détaillé en SPEC-19 §11 (tâches 27 à 38, ~33 pts) :
 
 | Phase | Contenu | Pts | État |
 |---|---|---|---|
-| 0 | Spike LCU : `scripts/spike_gameplay_dump.py`, à lancer sur le PC de jeu après une partie | 2 | 🟡 script prêt |
-| 1 | Capture du brut en fin de partie et rattrapage au démarrage (**au plus tôt** : chaque partie non capturée est perdue) | 5 | ⬜ |
+| 0 | Spike LCU : `scripts/spike_gameplay_dump.py`, à lancer sur le PC de jeu pendant l'écran de fin d'une partie classée, puis après | 2 | 🟡 script prêt |
+| 1 | Capture du brut en fin de partie et rattrapage au démarrage (**au plus tôt** : chaque partie non capturée est perdue), photos de classement (LP) | 7 | ⬜ |
 | 2 | Métriques des 10 participants, exploration sur ~30 parties | 5 | ⬜ |
 | 3 | Grille par rôle, moteur de constats, rapport console | 8 | ⬜ |
 | 4 | Récurrence, tendances, axes de travail, bilan | 11 | ⬜ |
