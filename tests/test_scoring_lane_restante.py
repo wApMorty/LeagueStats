@@ -3,12 +3,10 @@ against a real database (never data/db.db -- the `db` fixture is temp_db).
 
 Unlike tests/test_lane_restante.py (pure math on the blind_pick_contribution
 formula), this file only checks the plumbing: does the gate actually stay
-off below the threshold, does it flip on above it, does effective_model_
-version() reflect that, and is the decision cached per ChampionScorer
+off below the threshold, does it flip on above it, and is the decision cached per ChampionScorer
 instance rather than re-queried on every call.
 """
 
-from src.analysis.lane_restante import effective_model_version
 from src.analysis.scoring import ChampionScorer
 from src.config_constants import analysis_config
 
@@ -34,10 +32,10 @@ def _ensure_champion_lanes_table(db) -> None:
 
 
 class TestGateStaysOffBelowThreshold:
-    def test_effective_model_version_is_unsuffixed(self, db, scorer):
+    def test_gate_is_off(self, db, scorer):
         _label_n_predictions(db, analysis_config.MIN_ROWS_FOR_CALIBRATION - 1)
 
-        assert scorer.effective_model_version() == analysis_config.MODEL_VERSION
+        assert scorer._is_lane_restante_enabled() is False
 
     def test_score_against_team_is_unaffected_by_player_lane(self, db, scorer, insert_matchup):
         """With the gate off, passing player_lane/enemy_lanes must produce
@@ -59,10 +57,10 @@ class TestGateStaysOffBelowThreshold:
 
 
 class TestGateTurnsOnAtThreshold:
-    def test_effective_model_version_is_suffixed(self, db, scorer):
+    def test_gate_is_on(self, db, scorer):
         _label_n_predictions(db, analysis_config.MIN_ROWS_FOR_CALIBRATION)
 
-        assert scorer.effective_model_version() == f"{analysis_config.MODEL_VERSION}+lane-restante"
+        assert scorer._is_lane_restante_enabled() is True
 
     def test_score_against_team_changes_when_our_lane_is_still_open(
         self, db, scorer, insert_matchup
@@ -107,35 +105,13 @@ class TestGateIsCachedPerInstance:
         self, db, scorer
     ):
         _label_n_predictions(db, analysis_config.MIN_ROWS_FOR_CALIBRATION - 1)
-        assert scorer.effective_model_version() == analysis_config.MODEL_VERSION  # caches "off"
+        assert scorer._is_lane_restante_enabled() is False  # caches "off"
 
         _label_n_predictions(db, 5)  # now well past the threshold
 
-        assert scorer.effective_model_version() == analysis_config.MODEL_VERSION  # still cached
+        assert scorer._is_lane_restante_enabled() is False  # still cached
 
     def test_a_new_instance_sees_the_up_to_date_count(self, db):
         _label_n_predictions(db, analysis_config.MIN_ROWS_FOR_CALIBRATION)
 
-        assert (
-            ChampionScorer(db, verbose=False).effective_model_version()
-            == f"{analysis_config.MODEL_VERSION}+lane-restante"
-        )
-
-
-class TestModuleLevelEffectiveModelVersion:
-    """lane_restante.effective_model_version(db) -- used by
-    scripts/calibrate_model.py, which has no ChampionScorer instance to call
-    the method on. Must agree with ScoringGateMixin.effective_model_version()
-    so the script calibrates whatever regime the live scoring path is
-    actually using, without the caller needing to know about the suffix."""
-
-    def test_matches_scorer_below_threshold(self, db, scorer):
-        _label_n_predictions(db, analysis_config.MIN_ROWS_FOR_CALIBRATION - 1)
-
-        assert effective_model_version(db) == scorer.effective_model_version()
-        assert effective_model_version(db) == analysis_config.MODEL_VERSION
-
-    def test_matches_scorer_at_threshold(self, db):
-        _label_n_predictions(db, analysis_config.MIN_ROWS_FOR_CALIBRATION)
-
-        assert effective_model_version(db) == f"{analysis_config.MODEL_VERSION}+lane-restante"
+        assert ChampionScorer(db, verbose=False)._is_lane_restante_enabled() is True

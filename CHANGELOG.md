@@ -4,6 +4,15 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### 🐛 Fix
+
+- **`calibrate_model.py` retrouve les parties du modèle courant** — il filtrait
+  sur `spec13-v1+lane-restante`, un suffixe que SPEC-11 ajoutait dès 30
+  parties labellisées, alors que SPEC-12 journalise `MODEL_VERSION` seul : le
+  script ne voyait plus rien exactement quand il devenait utile. Filtre sur
+  `MODEL_VERSION`, et `effective_model_version()`, sans autre appelant, est
+  supprimée.
+
 ## [3.0.0] - 2026-09-29
 
 Version majeure : une migration Alembic est requise (`python -m alembic upgrade

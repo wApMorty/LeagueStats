@@ -260,7 +260,7 @@ class FinalDraftAnalyzer:
                 enemy_champions=enemy_picks,
                 ally_lanes=ally_lanes,
                 predicted_probability=win_probability,
-                # SPEC-12 : le suffixe « +lane-restante » d'effective_model_version()
+                # SPEC-12 : le suffixe « +lane-restante » (SPEC-11, supprimé depuis)
                 # décrivait un régime du modèle par delta, que la recherche
                 # n'emprunte plus. MODEL_VERSION seul, comme outcome_tracker.py
                 # l'utilisait déjà de son côté.

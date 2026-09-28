@@ -16,9 +16,9 @@ qu'une fois assez de résultats de partie réels en base (même seuil que
 scripts/calibrate_model.py, analysis_config.MIN_ROWS_FOR_CALIBRATION) — sous
 ce seuil, blind_pick_contribution() reproduit exactement le calcul
 pré-SPEC-11 (moyenne neutre, poids 1.0 par slot), donc la fonctionnalité est
-un no-op tant que le seuil n'est pas franchi. ChampionScorer.
-effective_model_version() suffixe MODEL_VERSION en conséquence, pour qu'une
-future calibration ne mélange jamais les deux régimes de scoring.
+un no-op tant que le seuil n'est pas franchi. Le suffixe « +lane-restante »
+que SPEC-11 ajoutait à MODEL_VERSION a disparu : SPEC-12 journalise
+MODEL_VERSION seul, et le garde-fou ne change plus l'étiquette.
 
 Hors périmètre ici (voir docs/specs/SPEC-11-lane-restante-et-recherche.md
 §3-4) : toute recherche/anticipation multi-plis — ce module ne fait
@@ -40,12 +40,8 @@ def is_enabled(db) -> bool:
     qu'un changement d'éval non éprouvé ne s'active pas sur un coup de tête
     ni sur un jeu de données trop mince pour dire s'il aide ou nuit.
 
-    Le comptage est filtré sur analysis_config.MODEL_VERSION **brut**, jamais
-    sur effective_model_version() : celle-ci appelle is_enabled(), ce qui
-    boucle. La constante brute est de toute façon la bonne clé depuis SPEC-12,
-    qui journalise MODEL_VERSION sans suffixe (src/draft/final_analysis.py) --
-    le comptage est donc exact ET stable, sans oscillation quand le garde-fou
-    bascule.
+    Le comptage est filtré sur analysis_config.MODEL_VERSION, la clé sous
+    laquelle SPEC-12 journalise (src/draft/final_analysis.py).
 
     Avant SPEC-13 ce comptage ne filtrait pas du tout : des parties jouées sous
     b7-v1 rouvraient le garde-fou pour spec13-v1, c'est-à-dire qu'un modèle
@@ -55,19 +51,8 @@ def is_enabled(db) -> bool:
     return labelled >= analysis_config.MIN_ROWS_FOR_CALIBRATION
 
 
-def effective_model_version(db) -> str:
-    """analysis_config.MODEL_VERSION, suffixé par la même règle que
-    ScoringGateMixin.effective_model_version() ci-dessous, mais sans passer
-    par une instance de ChampionScorer -- pour que scripts/calibrate_model.py
-    calibre le régime réellement actif sans avoir à connaître les suffixes de
-    model_version."""
-    base = analysis_config.MODEL_VERSION
-    return f"{base}+lane-restante" if is_enabled(db) else base
-
-
 class ScoringGateMixin:
-    """Mixin pour ChampionScorer : le garde-fou SPEC-11 et son cache, plus
-    l'étiquetage MODEL_VERSION qu'il pilote.
+    """Mixin pour ChampionScorer : le garde-fou SPEC-11 et son cache.
 
     Extrait de src/analysis/scoring.py (dette de code, ce fichier a franchi
     les 500 lignes avec l'ajout de SPEC-11) — concern autonome, aucune autre
@@ -92,16 +77,6 @@ class ScoringGateMixin:
         if self._lane_distributions_by_name is None:
             self._lane_distributions_by_name = self.db.get_lane_distributions_by_name()
         return self._lane_distributions_by_name
-
-    def effective_model_version(self) -> str:
-        """SPEC-11 : suffixe analysis_config.MODEL_VERSION quand la
-        pondération par lane restante est active, pour que
-        scripts/calibrate_model.py ne mélange jamais les deux régimes de
-        scoring dans une même analyse de calibration."""
-        base = analysis_config.MODEL_VERSION
-        if self._is_lane_restante_enabled():
-            return f"{base}+lane-restante"
-        return base
 
     def _blind_slots_contribution(
         self,
