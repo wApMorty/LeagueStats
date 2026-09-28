@@ -23,7 +23,9 @@ class _MatchHistoryMixin:
         """The `count` most recent games of the current summoner, newest first.
 
         Each entry: {"game_id": int, "game_creation_ms": int, "queue_id": int,
-        "win": bool, "player_champion_id": int, "team_id": int}.
+        "win": bool, "player_champion_id": int, "team_id": int,
+        "participant_id": int}. The LCU serves 20 games at most (SPEC-19
+        spike, 2026-09-28), whatever `count` asks for.
 
         The endpoint's `endIndex` is INCLUSIVE (verified 2026-09-05), so
         `count` games requires `endIndex = count - 1`. The payload nests
@@ -63,6 +65,7 @@ class _MatchHistoryMixin:
                         "win": bool(player["stats"]["win"]),
                         "player_champion_id": player.get("championId"),
                         "team_id": player.get("teamId"),
+                        "participant_id": player.get("participantId"),
                     }
                 )
             except (KeyError, TypeError, AttributeError):
@@ -98,6 +101,31 @@ class _MatchHistoryMixin:
             return {}
         return teams
 
+    # Réponses brutes pour la capture de SPEC-19 (formes relevées par le spike
+    # du 2026-09-28, fixtures dans tests/fixtures/spike_gameplay/). None si
+    # indisponibles.
+
+    def get_game_detail(self, game_id: int) -> Optional[Dict[str, Any]]:
+        """10 participants, 118 stats chacun."""
+        return self._make_request(f"/lol-match-history/v1/games/{game_id}")
+
+    def get_game_timeline(self, game_id: int) -> Optional[Dict[str, Any]]:
+        """Une image par minute (or, XP, CS, position) et les kills, bâtiments,
+        monstres épiques ; ni achats ni wards."""
+        return self._make_request(f"/lol-match-history/v1/game-timelines/{game_id}")
+
+    def get_end_of_game_block(self) -> Optional[Dict[str, Any]]:
+        """L'écran de fin, disparu dès la draft suivante."""
+        return self._make_request("/lol-end-of-game/v1/eog-stats-block")
+
+    def get_lp_change_notification(self) -> Optional[Dict[str, Any]]:
+        """Variation de LP de la dernière partie classée ({} hors après-partie)."""
+        return self._make_request("/lol-ranked/v1/current-lp-change-notification")
+
+    def get_ranked_stats(self) -> Optional[Dict[str, Any]]:
+        """Rang courant, par file (`queues`)."""
+        return self._make_request("/lol-ranked/v1/current-ranked-stats")
+
     def get_end_of_game_match(
         self,
     ) -> Optional[Tuple[Dict[str, Any], Dict[int, List[int]]]]:
@@ -114,7 +142,7 @@ class _MatchHistoryMixin:
         Best-effort: None when no block is available or its shape is
         unexpected.
         """
-        block = self._make_request("/lol-end-of-game/v1/eog-stats-block")
+        block = self.get_end_of_game_block()
         if not block:
             return None
         try:

@@ -349,12 +349,12 @@ class DraftConfig:
     # Phases gameflow déclenchant une tentative de résolution.
     OUTCOME_TRIGGER_PHASES: tuple = ("WaitingForStats", "PreEndOfGame", "EndOfGame")
 
-    # Relances après la fin de partie : l'historique LCU n'a souvent pas
-    # encore la partie pendant les phases de fin, et « Rejouer » les quitte en
-    # quelques secondes. On retente toutes les RETRY_INTERVAL secondes, hors
-    # champion select, jusqu'à RETRY_WINDOW secondes après la fin (2026-09-28).
-    OUTCOME_RETRY_INTERVAL: float = 15.0
-    OUTCOME_RETRY_WINDOW: float = 600.0
+    # Fenêtre d'après-partie (résultat SPEC-08, capture SPEC-19), hors
+    # champion select : l'historique LCU a ~5 min de retard, et l'écran de fin
+    # et la notification de LP disparaissent dès la draft suivante (mesuré le
+    # 2026-09-28). Une tentative toutes les RETRY_INTERVAL secondes.
+    POST_GAME_RETRY_INTERVAL: float = 5.0
+    POST_GAME_RETRY_WINDOW: float = 600.0
 
 
 @dataclass
@@ -508,6 +508,23 @@ class DataQualityConfig:
 
 
 # Global configuration instances
+@dataclass
+class CoachingConfig:
+    """Coach de gameplay (SPEC-19). Valeurs relevées par le spike du 2026-09-28."""
+
+    # Files capturées : SoloQ et Flex (queueId de l'historique LCU, queueType
+    # du classement et de l'écran de fin).
+    QUEUE_IDS: tuple = (420, 440)
+    RANKED_QUEUES: tuple = ("RANKED_SOLO_5x5", "RANKED_FLEX_SR")
+
+    # L'historique LCU sert 20 parties au plus, quelle que soit la demande.
+    HISTORY_DEPTH: int = 20
+
+    # Une timeline absente juste après la partie est réessayée ; au-delà de
+    # ce délai après la fin, la partie est capturée sans elle.
+    TIMELINE_GRACE_S: int = 3600
+
+
 scraping_config = ScrapingConfig()
 analysis_config = AnalysisConfig()
 draft_config = DraftConfig()
@@ -517,3 +534,4 @@ xpath_config = XPathConfig()
 pool_stats_config = PoolStatisticsConfig()
 synergy_config = SynergyConfig()
 data_quality_config = DataQualityConfig()
+coaching_config = CoachingConfig()

@@ -36,7 +36,14 @@ def _game(
             {"teamId": 100, "win": "Win" if team_id == 100 else "Fail"},
             {"teamId": 200, "win": "Win" if team_id == 200 else "Fail"},
         ],
-        "participants": [{"championId": champion_id, "teamId": team_id, "stats": {"win": win}}],
+        "participants": [
+            {
+                "championId": champion_id,
+                "participantId": 3,
+                "teamId": team_id,
+                "stats": {"win": win},
+            }
+        ],
     }
 
 
@@ -55,6 +62,7 @@ class TestGetRecentMatches:
                 "win": True,
                 "player_champion_id": 266,
                 "team_id": 100,
+                "participant_id": 3,
             }
         ]
         mock_request.assert_called_once_with(

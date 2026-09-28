@@ -11,6 +11,7 @@ from .utils.display import safe_print
 from .utils.console import clear_console
 from .constants import TOP_SOLOQ_POOL, CHAMPIONS_BY_ROLE
 from .config_constants import analysis_config, draft_config
+from .coaching.capture import GameCapture
 from .draft.state import ChampionAction, DraftState
 from .draft import phases
 from .draft import display
@@ -108,6 +109,7 @@ class DraftMonitor:
         self.final_analyzer = FinalDraftAnalyzer(self)
         self.lifecycle = MonitorLifecycle(self)
         self.outcome_tracker = OutcomeTracker(self)
+        self.game_capture = GameCapture(self)  # SPEC-19
         self.loadout = LoadoutImporter(self)  # SPEC-15
         self.last_recommendation = None  # Track last recommendation to avoid spam
         self.last_ban_recommendation = None  # Track last ban recommendation to avoid spam
@@ -124,12 +126,12 @@ class DraftMonitor:
 
         # SPEC-08 §2.6a: last gameflow phase seen among
         # draft_config.OUTCOME_TRIGGER_PHASES (None outside them). Entering
-        # the first of them opens a retry window: the LCU history lags behind
-        # the end-of-game phases, and "Play Again" leaves them within seconds,
-        # so one attempt per phase was not enough (2026-09-28).
+        # the first of them opens the post-game window (outcome, SPEC-19
+        # capture): the LCU history lags ~5 min behind the end of the game,
+        # and "Play Again" leaves the end-of-game phases within seconds.
         self._last_outcome_trigger_phase: Optional[str] = None
-        self._outcome_retry_until = 0.0  # time.time() deadline, 0 = closed
-        self._next_outcome_attempt = 0.0
+        self._post_game_until = 0.0  # time.time() deadline, 0 = closed
+        self._next_post_game_attempt = 0.0
 
         # OneTricks browser window recycling: keep a single handle so each new
         # draft replaces the previous window instead of stacking tabs/processes
@@ -152,6 +154,7 @@ class DraftMonitor:
         # (named by the spec) cannot guarantee without connecting a second
         # time. Best-effort: never raises, never blocks startup.
         self._resolve_pending_outcomes(limit=draft_config.OUTCOME_BACKFILL_LIMIT)
+        self.game_capture.on_startup()  # SPEC-19: same catch-up, same guarantees
 
         # Load champion ID mappings
         self._load_champion_mappings()

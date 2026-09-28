@@ -69,18 +69,18 @@ class MonitorLifecycle:
                             self.m._reset_for_next_game()
                         self.m._last_outcome_trigger_phase = None
                     elif current_phase in draft_config.OUTCOME_TRIGGER_PHASES:
-                        # The game just ended: open the retry window once, on
-                        # the first end-of-game phase entered.
+                        # The game just ended: open the post-game window
+                        # once, on the first end-of-game phase entered.
                         if self.m._last_outcome_trigger_phase is None:
-                            self.m._outcome_retry_until = (
-                                time.time() + draft_config.OUTCOME_RETRY_WINDOW
+                            self.m._post_game_until = (
+                                time.time() + draft_config.POST_GAME_RETRY_WINDOW
                             )
-                            self.m._next_outcome_attempt = 0.0
+                            self.m._next_post_game_attempt = 0.0
                         self.m._last_outcome_trigger_phase = current_phase
                     else:
                         self.m._last_outcome_trigger_phase = None
 
-                self.retry_pending_outcomes()
+                self.retry_post_game()
                 return
 
             # Get current champion select data
@@ -113,20 +113,21 @@ class MonitorLifecycle:
             if self.m.verbose:
                 print(f"[WARNING] Monitor error: {e}")
 
-    def retry_pending_outcomes(self) -> None:
-        """Retry the outcome resolution every OUTCOME_RETRY_INTERVAL seconds
-        while the post-game window is open, and close it on success.
+    def retry_post_game(self) -> None:
+        """One post-game pass every POST_GAME_RETRY_INTERVAL seconds while the
+        window is open: outcome resolution (SPEC-08) and capture (SPEC-19).
 
-        The window survives the Lobby reset: "Play Again" leaves the
-        end-of-game phases within seconds, often before the LCU history
-        carries the game.
+        The window survives the Lobby reset and runs to its end: the history
+        lags ~5 min, while the end-of-game screen and the LP notification the
+        capture needs vanish at the next draft. Idle passes cost a few local
+        LCU reads and print nothing.
         """
         now = time.time()
-        if now >= self.m._outcome_retry_until or now < self.m._next_outcome_attempt:
+        if now >= self.m._post_game_until or now < self.m._next_post_game_attempt:
             return
-        self.m._next_outcome_attempt = now + draft_config.OUTCOME_RETRY_INTERVAL
-        if self.m._resolve_pending_outcomes():
-            self.m._outcome_retry_until = 0.0
+        self.m._next_post_game_attempt = now + draft_config.POST_GAME_RETRY_INTERVAL
+        self.m._resolve_pending_outcomes()
+        self.m.game_capture.on_post_game()
 
     def handle_ready_check(self) -> None:
         """Handle ready check (queue found) and auto-accept if enabled."""

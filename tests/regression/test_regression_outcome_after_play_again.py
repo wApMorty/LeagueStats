@@ -15,7 +15,7 @@ import pytest
 from src.config_constants import draft_config
 from src.draft_monitor import DraftMonitor
 
-INTERVAL = draft_config.OUTCOME_RETRY_INTERVAL
+INTERVAL = draft_config.POST_GAME_RETRY_INTERVAL
 
 
 @pytest.fixture
@@ -33,8 +33,10 @@ def _tick(monitor, phase, now, resolved=0):
         patch("src.draft.lifecycle.time.time", return_value=now),
         patch("src.draft.lifecycle.clear_console") as clear,
         patch.object(monitor, "_resolve_pending_outcomes", return_value=resolved) as resolve,
+        patch.object(monitor.game_capture, "on_post_game") as capture,
     ):
         monitor._monitor_loop()
+    monitor.last_capture = capture
     return resolve, clear
 
 
@@ -49,18 +51,21 @@ def test_history_lag_then_play_again_still_resolves_in_lobby(monitor):
     assert monitor.has_analyzed_final_draft is False  # le reset a bien eu lieu
 
 
-def test_success_closes_the_window(monitor):
+def test_window_runs_on_after_a_resolution_for_the_capture(monitor):
+    """SPEC-19 : la capture attend l'historique (~5 min) même quand l'écran de
+    fin a déjà donné le résultat, la fenêtre ne se referme donc pas."""
     _tick(monitor, "EndOfGame", 1000.0, resolved=1)
 
     resolve, _ = _tick(monitor, "Lobby", 1000.0 + INTERVAL)
 
-    resolve.assert_not_called()
+    resolve.assert_called_once_with()
+    monitor.last_capture.assert_called_once_with()
 
 
 def test_window_expires(monitor):
     _tick(monitor, "EndOfGame", 1000.0)
 
-    resolve, _ = _tick(monitor, "Lobby", 1000.0 + draft_config.OUTCOME_RETRY_WINDOW)
+    resolve, _ = _tick(monitor, "Lobby", 1000.0 + draft_config.POST_GAME_RETRY_WINDOW)
 
     resolve.assert_not_called()
 

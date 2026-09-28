@@ -445,7 +445,7 @@ class TestOutcomeResolutionTrigger:
 
     def test_end_of_game_sequence_retries_on_the_interval_not_per_phase(self, monitor):
         """WaitingForStats -> PreEndOfGame -> EndOfGame follow each other in
-        seconds: the retry is paced by OUTCOME_RETRY_INTERVAL, not by phase."""
+        seconds: the retry is paced by POST_GAME_RETRY_INTERVAL, not by phase."""
         with patch("src.draft.lifecycle.time.time", return_value=1000.0):
             for phase in ("WaitingForStats", "PreEndOfGame", "EndOfGame"):
                 self._outside_champion_select(monitor, phase)
@@ -454,7 +454,7 @@ class TestOutcomeResolutionTrigger:
                 assert resolve.call_count == (1 if phase == "WaitingForStats" else 0)
                 assert monitor._last_outcome_trigger_phase == phase
 
-        later = 1000.0 + draft_config.OUTCOME_RETRY_INTERVAL
+        later = 1000.0 + draft_config.POST_GAME_RETRY_INTERVAL
         with patch("src.draft.lifecycle.time.time", return_value=later):
             with patch.object(monitor, "_resolve_pending_outcomes", return_value=0) as resolve:
                 monitor._monitor_loop()
