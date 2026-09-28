@@ -2,7 +2,7 @@
 
 Extracted so src/lcu_client.py stays under the project's 500-line ceiling
 (cf. src/parser_cookie_banner.py for the same pattern applied to Parser).
-These two methods only fetch and normalize the LCU's raw JSON shapes into a
+These methods only fetch and normalize the LCU's raw JSON shapes into a
 small, stable dict per game -- the matching logic that consumes them
 (temporal filter + team-composition confirmation) lives in
 src/draft/outcome_tracker.py, not here.
@@ -12,11 +12,12 @@ docs/specs/SPEC-08-boucle-de-mesure.md §2.1) -- do not re-derive them from
 speculation, and do not re-run the spike.
 """
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class _MatchHistoryMixin:
-    """get_recent_matches() / get_match_participants() for LCUClient."""
+    """get_recent_matches() / get_match_participants() /
+    get_end_of_game_match() for LCUClient."""
 
     def get_recent_matches(self, count: int = 5) -> List[Dict[str, Any]]:
         """The `count` most recent games of the current summoner, newest first.
@@ -96,3 +97,44 @@ class _MatchHistoryMixin:
         except (KeyError, TypeError):
             return {}
         return teams
+
+    def get_end_of_game_match(
+        self,
+    ) -> Optional[Tuple[Dict[str, Any], Dict[int, List[int]]]]:
+        """The game on the end-of-game screen, as (match, participants) in the
+        shapes of get_recent_matches / get_match_participants.
+
+        `/lol-end-of-game/v1/eog-stats-block` carries the game as soon as the
+        stats screen shows, while the match history lags ~5 min behind
+        (measured 2026-09-28; shape verified by the SPEC-19 spike the same
+        day). The block has no creation time: it is estimated as
+        `endOfGameTimestamp - gameLength`, i.e. the game start, which is what
+        the temporal filter needs (after the draft end).
+
+        Best-effort: None when no block is available or its shape is
+        unexpected.
+        """
+        block = self._make_request("/lol-end-of-game/v1/eog-stats-block")
+        if not block:
+            return None
+        try:
+            participants: Dict[int, List[int]] = {}
+            player_team = None
+            for team in block["teams"]:
+                team_id = team["teamId"]
+                participants[team_id] = [p["championId"] for p in team["players"]]
+                if team["isPlayerTeam"]:
+                    player_team = team
+            if player_team is None:
+                return None
+            match = {
+                "game_id": block["gameId"],
+                "game_creation_ms": block["endOfGameTimestamp"] - block["gameLength"] * 1000,
+                "queue_id": None,
+                "win": bool(player_team["isWinningTeam"]),
+                "player_champion_id": (block.get("localPlayer") or {}).get("championId"),
+                "team_id": player_team["teamId"],
+            }
+        except (KeyError, TypeError, AttributeError):
+            return None
+        return match, participants

@@ -23,7 +23,9 @@ PRED_CREATED = "2026-09-05 10:00:00"
 
 
 def _fake_monitor(db):
-    return SimpleNamespace(assistant=SimpleNamespace(db=db), lcu=Mock(), verbose=False)
+    lcu = Mock()
+    lcu.get_end_of_game_match.return_value = None  # historique seul, sauf test dédié
+    return SimpleNamespace(assistant=SimpleNamespace(db=db), lcu=lcu, verbose=False)
 
 
 def _insert_prediction(db, ally=ALLY, enemy=ENEMY, created_utc=PRED_CREATED, probability=0.5):

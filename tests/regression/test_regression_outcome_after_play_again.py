@@ -63,3 +63,45 @@ def test_window_expires(monitor):
     resolve, _ = _tick(monitor, "Lobby", 1000.0 + draft_config.OUTCOME_RETRY_WINDOW)
 
     resolve.assert_not_called()
+
+
+def test_end_of_game_screen_labels_without_waiting_for_the_history(db):
+    """L'historique a ~5 min de retard (mesuré le 2026-09-28) : l'écran de fin
+    suffit à labelliser, sans l'historique ni le détail de la partie."""
+    from types import SimpleNamespace
+
+    from src.config_constants import analysis_config
+    from src.draft.outcome_tracker import OutcomeTracker
+
+    cursor = db.connection.cursor()
+    cursor.execute(
+        "INSERT INTO predictions (created_utc, ally_champions, enemy_champions, "
+        "predicted_probability, model_version) VALUES (?, ?, ?, ?, ?)",
+        (
+            "2026-09-28 21:22:44",
+            "412,57,236,2,4",
+            "141,117,804,45,240",
+            0.5,
+            analysis_config.MODEL_VERSION,
+        ),
+    )
+    db.connection.commit()
+    lcu = Mock()
+    lcu.get_recent_matches.return_value = []  # historique pas encore à jour
+    lcu.get_end_of_game_match.return_value = (
+        {
+            "game_id": 7998195590,
+            "game_creation_ms": 1790630634230,
+            "queue_id": None,
+            "win": True,
+            "player_champion_id": 2,
+            "team_id": 100,
+        },
+        {100: [2, 57, 4, 236, 412], 200: [240, 141, 45, 804, 117]},
+    )
+    monitor = SimpleNamespace(assistant=SimpleNamespace(db=db), lcu=lcu, verbose=False)
+
+    assert OutcomeTracker(monitor).resolve_pending() == 1
+    lcu.get_match_participants.assert_not_called()
+    cursor.execute("SELECT outcome, game_id FROM predictions")
+    assert cursor.fetchone() == (1, 7998195590)

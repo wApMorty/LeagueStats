@@ -69,6 +69,16 @@ class OutcomeTracker:
             return 0
 
         matches = self.m.lcu.get_recent_matches(draft_config.OUTCOME_HISTORY_DEPTH)
+        participants_cache: Dict[int, Dict[int, List[int]]] = {}
+        # L'écran de fin a la partie tout de suite, l'historique ~5 min plus
+        # tard (mesuré le 2026-09-28) : elle passe en tête des candidates.
+        end_of_game = self.m.lcu.get_end_of_game_match()
+        if end_of_game:
+            eog_match, eog_participants = end_of_game
+            participants_cache[eog_match["game_id"]] = eog_participants
+            matches = [eog_match] + [
+                match for match in matches if match.get("game_id") != eog_match["game_id"]
+            ]
         # Une partie déjà labellisée n'est plus candidate : sans ce filtre, le
         # doublon d'une draft déjà résolue la retentait à chaque passage et
         # heurtait l'index unique sur game_id (« UNIQUE constraint failed »).
@@ -92,7 +102,6 @@ class OutcomeTracker:
         model_version = analysis_config.MODEL_VERSION
         before_count = len(fetch_labeled_predictions(self.m.assistant.db, model_version))
 
-        participants_cache: Dict[int, Dict[int, List[int]]] = {}
         used_prediction_ids: Set[int] = set()
         used_game_ids: Set[int] = set()
         resolved_count = 0

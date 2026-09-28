@@ -152,3 +152,56 @@ class TestGetMatchParticipants:
     def test_no_credentials_returns_empty_dict_without_raising(self):
         client = LCUClient()
         assert client.get_match_participants(1) == {}
+
+
+def _eog_block(player_wins=True):
+    """Shape relevée par le spike SPEC-19 (2026-09-28), réduite aux champs lus."""
+    return {
+        "gameId": 7998195590,
+        "endOfGameTimestamp": 1790632122230,
+        "gameLength": 1488,
+        "localPlayer": {"championId": 2, "teamId": 100},
+        "teams": [
+            {
+                "teamId": 100,
+                "isPlayerTeam": True,
+                "isWinningTeam": player_wins,
+                "players": [{"championId": c} for c in (2, 57, 4, 236, 412)],
+            },
+            {
+                "teamId": 200,
+                "isPlayerTeam": False,
+                "isWinningTeam": not player_wins,
+                "players": [{"championId": c} for c in (240, 141, 45, 804, 117)],
+            },
+        ],
+    }
+
+
+class TestGetEndOfGameMatch:
+    def test_block_is_normalized_like_the_history(self):
+        client = _make_client()
+        with patch.object(client, "_make_request", return_value=_eog_block()):
+            match, participants = client.get_end_of_game_match()
+
+        assert match == {
+            "game_id": 7998195590,
+            "game_creation_ms": 1790632122230 - 1488 * 1000,
+            "queue_id": None,
+            "win": True,
+            "player_champion_id": 2,
+            "team_id": 100,
+        }
+        assert participants == {100: [2, 57, 4, 236, 412], 200: [240, 141, 45, 804, 117]}
+
+    def test_defeat(self):
+        client = _make_client()
+        with patch.object(client, "_make_request", return_value=_eog_block(player_wins=False)):
+            match, _ = client.get_end_of_game_match()
+        assert match["win"] is False
+
+    def test_no_block_or_unexpected_shape_is_none(self):
+        client = _make_client()
+        for payload in (None, {}, {"gameId": 1, "teams": None}):
+            with patch.object(client, "_make_request", return_value=payload):
+                assert client.get_end_of_game_match() is None

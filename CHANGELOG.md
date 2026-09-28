@@ -8,10 +8,12 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 - **Résultat de partie labellisé en fin de partie, « Rejouer » n'efface plus le
   terminal** — l'historique LCU n'a pas encore la partie pendant les phases de
-  fin, et la seule tentative par phase échouait : le résultat attendait le
-  rattrapage du prochain démarrage. Le Live Coach retente désormais toutes les
-  15 s pendant 10 min après la fin, même revenu au lobby. Le retour au lobby ne
-  vide plus la console : c'est la draft suivante qui le fait.
+  fin (~5 min de retard, mesuré), et la seule tentative par phase échouait : le
+  résultat attendait le rattrapage du prochain démarrage. Le Live Coach lit
+  maintenant l'écran de fin de partie (`/lol-end-of-game/v1/eog-stats-block`,
+  forme relevée par le spike SPEC-19), qui a la partie tout de suite, et
+  retente toutes les 15 s pendant 10 min, même revenu au lobby. Le retour au
+  lobby ne vide plus la console : c'est la draft suivante qui le fait.
 
 ### 📝 Docs
 
