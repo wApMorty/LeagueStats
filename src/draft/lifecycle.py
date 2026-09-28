@@ -69,21 +69,18 @@ class MonitorLifecycle:
                             self.m._reset_for_next_game()
                         self.m._last_outcome_trigger_phase = None
                     elif current_phase in draft_config.OUTCOME_TRIGGER_PHASES:
-                        # One attempt per end-of-game phase actually entered,
-                        # not one for the whole sequence: the three phases
-                        # follow each other (WaitingForStats -> PreEndOfGame
-                        # -> EndOfGame) and the match history usually does not
-                        # carry the game yet at the first one. Collapsing them
-                        # into a single boolean spent the only attempt on the
-                        # least likely to succeed, pushing the result to the
-                        # next session's startup backfill. Still never once per
-                        # tick: only when the phase itself changes.
-                        if self.m._last_outcome_trigger_phase != current_phase:
-                            self.m._resolve_pending_outcomes()
+                        # The game just ended: open the retry window once, on
+                        # the first end-of-game phase entered.
+                        if self.m._last_outcome_trigger_phase is None:
+                            self.m._outcome_retry_until = (
+                                time.time() + draft_config.OUTCOME_RETRY_WINDOW
+                            )
+                            self.m._next_outcome_attempt = 0.0
                         self.m._last_outcome_trigger_phase = current_phase
                     else:
                         self.m._last_outcome_trigger_phase = None
 
+                self.retry_pending_outcomes()
                 return
 
             # Get current champion select data
@@ -115,6 +112,21 @@ class MonitorLifecycle:
         except Exception as e:
             if self.m.verbose:
                 print(f"[WARNING] Monitor error: {e}")
+
+    def retry_pending_outcomes(self) -> None:
+        """Retry the outcome resolution every OUTCOME_RETRY_INTERVAL seconds
+        while the post-game window is open, and close it on success.
+
+        The window survives the Lobby reset: "Play Again" leaves the
+        end-of-game phases within seconds, often before the LCU history
+        carries the game.
+        """
+        now = time.time()
+        if now >= self.m._outcome_retry_until or now < self.m._next_outcome_attempt:
+            return
+        self.m._next_outcome_attempt = now + draft_config.OUTCOME_RETRY_INTERVAL
+        if self.m._resolve_pending_outcomes():
+            self.m._outcome_retry_until = 0.0
 
     def handle_ready_check(self) -> None:
         """Handle ready check (queue found) and auto-accept if enabled."""
@@ -205,10 +217,11 @@ class MonitorLifecycle:
                 traceback.print_exc()
 
     def reset_for_next_game(self) -> None:
-        """Reset state for the next game."""
-        # Clear console when returning to queue for clean slate
-        clear_console()
+        """Reset state for the next game.
 
+        No console clear here: this runs on "Play Again" and used to wipe the
+        end-of-game output. The next draft clears the console itself.
+        """
         self.m.last_draft_state = DraftState()
         self.m.has_done_initial_hover = False
         self.m.has_analyzed_final_draft = False

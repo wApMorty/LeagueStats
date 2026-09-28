@@ -349,6 +349,13 @@ class DraftConfig:
     # Phases gameflow déclenchant une tentative de résolution.
     OUTCOME_TRIGGER_PHASES: tuple = ("WaitingForStats", "PreEndOfGame", "EndOfGame")
 
+    # Relances après la fin de partie : l'historique LCU n'a souvent pas
+    # encore la partie pendant les phases de fin, et « Rejouer » les quitte en
+    # quelques secondes. On retente toutes les RETRY_INTERVAL secondes, hors
+    # champion select, jusqu'à RETRY_WINDOW secondes après la fin (2026-09-28).
+    OUTCOME_RETRY_INTERVAL: float = 15.0
+    OUTCOME_RETRY_WINDOW: float = 600.0
+
 
 @dataclass
 class RoleInferenceConfig:

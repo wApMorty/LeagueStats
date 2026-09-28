@@ -123,12 +123,13 @@ class DraftMonitor:
         self._last_prediction_id: Optional[int] = None
 
         # SPEC-08 §2.6a: last gameflow phase seen among
-        # draft_config.OUTCOME_TRIGGER_PHASES (None outside them), so the loop
-        # resolves once per end-of-game phase actually entered rather than
-        # once per poll tick. Holding the phase name rather than a boolean is
-        # deliberate: the first phase of the sequence is the one least likely
-        # to find the game in the LCU history, so the later ones must retry.
+        # draft_config.OUTCOME_TRIGGER_PHASES (None outside them). Entering
+        # the first of them opens a retry window: the LCU history lags behind
+        # the end-of-game phases, and "Play Again" leaves them within seconds,
+        # so one attempt per phase was not enough (2026-09-28).
         self._last_outcome_trigger_phase: Optional[str] = None
+        self._outcome_retry_until = 0.0  # time.time() deadline, 0 = closed
+        self._next_outcome_attempt = 0.0
 
         # OneTricks browser window recycling: keep a single handle so each new
         # draft replaces the previous window instead of stacking tabs/processes

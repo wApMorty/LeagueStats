@@ -328,11 +328,12 @@ class TestResetForNextGame:
         assert monitor._last_prediction_id is None
         assert monitor.loadout._last_key is None  # SPEC-15 : la draft suivante réimporte
 
-    def test_console_is_cleared(self, monitor):
+    def test_console_is_not_cleared(self, monitor):
+        """ "Play Again" lands here: clearing wiped the end-of-game output."""
         with patch("src.draft.lifecycle.clear_console") as clear:
             monitor._reset_for_next_game()
 
-        clear.assert_called_once_with()
+        clear.assert_not_called()
 
     def test_shown_ready_message_attribute_is_deleted_when_present(self, monitor):
         # Arrange
@@ -442,23 +443,22 @@ class TestOutcomeResolutionTrigger:
         resolve.assert_not_called()
         assert monitor._last_outcome_trigger_phase == "WaitingForStats"
 
-    def test_each_trigger_phase_entered_retries_the_resolution(self, monitor):
-        """WaitingForStats -> PreEndOfGame -> EndOfGame must retry at each
-        step, not spend a single attempt on the whole sequence.
+    def test_end_of_game_sequence_retries_on_the_interval_not_per_phase(self, monitor):
+        """WaitingForStats -> PreEndOfGame -> EndOfGame follow each other in
+        seconds: the retry is paced by OUTCOME_RETRY_INTERVAL, not by phase."""
+        with patch("src.draft.lifecycle.time.time", return_value=1000.0):
+            for phase in ("WaitingForStats", "PreEndOfGame", "EndOfGame"):
+                self._outside_champion_select(monitor, phase)
+                with patch.object(monitor, "_resolve_pending_outcomes", return_value=0) as resolve:
+                    monitor._monitor_loop()
+                assert resolve.call_count == (1 if phase == "WaitingForStats" else 0)
+                assert monitor._last_outcome_trigger_phase == phase
 
-        The LCU match history usually does not carry the game yet at
-        WaitingForStats — the first and least likely phase to succeed. A
-        single boolean over the whole set would burn the only attempt there
-        and defer the result to the next session's startup backfill, which
-        defeats the point of the live trigger. Retrying costs one SQL query
-        that returns immediately when nothing is pending.
-        """
-        for phase in ("WaitingForStats", "PreEndOfGame", "EndOfGame"):
-            self._outside_champion_select(monitor, phase)
-            with patch.object(monitor, "_resolve_pending_outcomes") as resolve:
+        later = 1000.0 + draft_config.OUTCOME_RETRY_INTERVAL
+        with patch("src.draft.lifecycle.time.time", return_value=later):
+            with patch.object(monitor, "_resolve_pending_outcomes", return_value=0) as resolve:
                 monitor._monitor_loop()
-            resolve.assert_called_once_with()
-            assert monitor._last_outcome_trigger_phase == phase
+        resolve.assert_called_once_with()
 
     def test_leaving_and_re_entering_resolves_again(self, monitor):
         self._outside_champion_select(monitor, "EndOfGame")

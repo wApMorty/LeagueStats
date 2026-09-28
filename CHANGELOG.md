@@ -4,6 +4,15 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### 🐛 Fix
+
+- **Résultat de partie labellisé en fin de partie, « Rejouer » n'efface plus le
+  terminal** — l'historique LCU n'a pas encore la partie pendant les phases de
+  fin, et la seule tentative par phase échouait : le résultat attendait le
+  rattrapage du prochain démarrage. Le Live Coach retente désormais toutes les
+  15 s pendant 10 min après la fin, même revenu au lobby. Le retour au lobby ne
+  vide plus la console : c'est la draft suivante qui le fait.
+
 ### 📝 Docs
 
 - **SPEC-15 : recette en partie réelle validée** — les corps de requête LCU
