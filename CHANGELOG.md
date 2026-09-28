@@ -4,6 +4,13 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-09-29
+
+Version majeure : une migration Alembic est requise (`python -m alembic upgrade
+head`). Le coach de gameplay capture désormais chaque partie SoloQ/Flex et le
+classement (SPEC-19 phase 1), et le résultat de partie est labellisé dès l'écran
+de fin ; « Rejouer » n'efface plus le terminal.
+
 ### ✨ Feature
 
 - **Coach de gameplay, phase 1 : capture des parties** (SPEC-19) — chaque
