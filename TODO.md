@@ -83,9 +83,9 @@ les LP sont suivis depuis le LCU. Découpage détaillé en SPEC-19 §11 (tâches
 
 | Phase | Contenu | Pts | État |
 |---|---|---|---|
-| 0 | Spike LCU : `scripts/spike_gameplay_dump.py`, à lancer sur le PC de jeu pendant l'écran de fin d'une partie classée, puis après | 2 | 🟡 script prêt |
-| 1 | Capture du brut en fin de partie et rattrapage au démarrage (**au plus tôt** : chaque partie non capturée est perdue), photos de classement (LP) | 7 | ⬜ |
-| 2 | Métriques des 10 participants, exploration sur ~30 parties | 5 | ⬜ |
+| 0 | Spike LCU : `scripts/spike_gameplay_dump.py`, résultats en SPEC-19 §3.4 | 2 | ✅ 2026-09-28 |
+| 1 | Capture du brut en fin de partie et rattrapage au démarrage (**au plus tôt** : chaque partie non capturée est perdue), photos de classement (LP) | 7 | ✅ 2026-09-29 |
+| 2 | Métriques des 10 participants, exploration sur ~30 parties | 5 | ⏳ ~30 parties à capturer |
 | 3 | Grille par rôle, moteur de constats, rapport console | 8 | ⬜ |
 | 4 | Récurrence, tendances, axes de travail, bilan | 11 | ⬜ |
 

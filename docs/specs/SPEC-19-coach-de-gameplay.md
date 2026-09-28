@@ -1,8 +1,8 @@
 # SPEC-19 — Coach de gameplay : analyse de fin de partie et suivi de progression
 
 **Statut** : 🟢 **Validée par @pj35 le 2026-09-26**, schéma de suivi compris (§7, §8). Phase 0
-(spike) prête à lancer (`scripts/spike_gameplay_dump.py`) ; les phases 1 à 4 seront précisées
-avec ses résultats.
+(spike) rendue le 2026-09-28 (§3.4), phase 1 (capture) livrée le 2026-09-29. Les phases 2 à 4
+attendent ~30 parties capturées.
 
 **Origine** : @pj35, 2026-09-26 — « capitaliser sur notre capacité à repérer les fins de game et
 exploiter les stats pour que le live coach étende ses capacités à de l'analyse de gameplay […]
@@ -91,9 +91,23 @@ Le script est en lecture seule. Il affiche un résumé et écrit les réponses b
 devenir les fixtures des tests. Le lancer aussi **pendant l'écran de fin d'une partie classée,
 puis une fois après**, pour les questions 5 et 6.
 
-### 3.4 Résultats
+### 3.4 Résultats (2026-09-28, SoloQ, Olaf top, 24 min 48)
 
-*À compléter.*
+Fixtures anonymisées, jetons de session retirés : `tests/fixtures/spike_gameplay/`.
+
+| # | Question | Réponse |
+|---|---|---|
+| 1 | Profondeur de l'historique | **20 parties au plus**, quelle que soit la demande (testé de 20 à 200), soit ~6 jours ici. Au-delà, une partie non capturée est perdue. |
+| 2 | Détail `games/{id}` | Les 10 participants, **118 stats** chacun (CS, or, dégâts, vision, wards posées et détruites, pinks, objectifs, pings). `timeline.lane`/`role` **inutilisables** : deux « JUNGLE » par équipe, le top compris ; les champs `*PerMinDeltas` sont vides. |
+| 3 | Timeline | Répond. **Une image par minute** : or courant et total, XP, niveau, CS, camps de jungle, **position**. Événements : `CHAMPION_KILL` (tueur, victime, assistants, position), `BUILDING_KILL`, `ELITE_MONSTER_KILL`. **Ni achats d'items, ni wards** : la « minute du premier item core » (§5.1) n'est pas calculable depuis le LCU. |
+| 4 | Timeline ancienne | Encore servie pour la plus ancienne des 20 parties. |
+| 5 | `eog-stats-block` | Les stats des 10 joueurs, leurs totaux par équipe, et surtout `detectedTeamPosition` (TOP à UTILITY), **seule source fiable du poste**. Disponible sur l'écran de fin, disparu dès la draft suivante. Porte des jetons de session (`mucJwtDto`, `multiUserChatPassword`), jamais stockés. |
+| 6 | LP | `current-lp-change-notification` donne `leaguePointsDelta`, `gameId`, `queueType`, tier, division, LP, victoires et défaites : **la variation est exposée**, mais seulement pendant l'après-partie (`{}` ensuite). `current-ranked-stats` donne le rang courant par file. Aucun champ LP dans l'écran de fin. |
+
+**Délai de l'historique** (mesuré le même jour) : la partie y apparaît ~5 min après la fin, quand
+le joueur est souvent déjà en draft. D'où la capture en deux temps : l'écran de fin et la
+notification de LP mis de côté pendant l'après-partie, le détail et la timeline lus dès que
+l'historique les sert.
 
 ## 4. Références : attendu, norme, objectif
 
@@ -239,12 +253,13 @@ Tout se lit dans les tables de §8. Aucune donnée n'est recalculée depuis le L
 
 ## 8. Stockage et modules
 
-**Migration Alembic** (numéro de révision au moment de l'écrire). **Tout est stocké**, en fin de
-partie (@pj35, 2026-09-26) :
+**Migration Alembic** `5c19a7e2d4b1` pour `game_records` et `rank_snapshots` (phase 1) ; les
+autres tables arrivent avec la phase qui les écrit, une fois la grille arrêtée. **Tout est
+stocké**, en fin de partie (@pj35, 2026-09-26) :
 
 | Table | Contenu |
 |---|---|
-| `game_records` | `game_id` (PK), `queue_id`, `game_creation_utc`, `duration_s`, `player_participant_id`, `raw_game` (JSON), `raw_timeline` (JSON, NULL si indisponible), `captured_utc`. Le brut est la **source de vérité**. |
+| `game_records` | `game_id` (PK), `queue_id`, `game_creation_utc`, `duration_s`, `player_participant_id`, `raw_game` (JSON), `raw_timeline` (JSON, NULL si indisponible), `raw_eog` (JSON de l'écran de fin, NULL au rattrapage : seule source du poste, spike §3.4), `captured_utc`. Le brut est la **source de vérité**. |
 | `game_metrics` | Format long : une ligne par (`game_id`, `participant_id`, `metric`), avec `role`, `champion_id`, `value`. **Sur les lignes du joueur seulement** : `norm_mean`, `norm_sd`, `norm_n`, `z_norm`, `objective_value`, `objective_sd`, `objective_source`, `z_objective`, `grid_version`. Les lignes des 9 autres participants construisent la norme. |
 | `rank_snapshots` | `captured_utc`, `queue` (SoloQ ou Flex), `tier`, `division`, `lp`, `wins`, `losses`, `lp_delta` (si le client l'expose, spike question 6), `game_id` (NULL pour une photo sans partie, prise au démarrage de l'app). |
 | `game_findings` | Les constats affichés en fin de partie : `game_id`, `metric`, `polarity`, `z`, `reference`, `rank`. |
@@ -279,6 +294,11 @@ division) pour les courbes.
 | `ranked.py` | Photos de classement, variation de LP, échelle continue |
 | `progression.py` | Récurrence, tendances, axes de travail, bilan (phase 4) |
 
+Phase 1 livrée le 2026-09-29 : `capture.py` et `ranked.py`, branchés sur la fenêtre
+d'après-partie du Live Coach (une passe toutes les 5 s pendant 10 min après la fin, hors
+champion select) et sur son démarrage (rattrapage des 20 parties de l'historique, photo du
+classement).
+
 `src/lcu_client.py` est à 500 lignes : les nouvelles lectures LCU vont dans
 `src/lcu_match_history.py` (mixin existant).
 
@@ -307,10 +327,10 @@ contexte de la draft et de l'axe de travail.
 | # | Tâche | Phase | Pts | Dépend de |
 |---|---|---|---|---|
 | 27 | Script du spike `scripts/spike_gameplay_dump.py` | 0 | 1 | — |
-| 28 | Spike sur le PC de jeu, puis résultats consignés en §3.4 et fixtures anonymisées | 0 | 1 | 27 |
-| 29 | Migration des tables de §8, repository et délégué `db.py` | 1 | 2 | 28 |
-| 30 | `capture.py` : capture en fin de partie, rattrapage au démarrage, filtre de files | 1 | 3 | 29 |
-| 30b | `ranked.py` : photos de classement (démarrage, fin de partie), variation de LP selon le résultat du spike | 1 | 2 | 29 |
+| 28 | ✅ Spike sur le PC de jeu, puis résultats consignés en §3.4 et fixtures anonymisées | 0 | 1 | 27 |
+| 29 | ✅ Migration de `game_records` et `rank_snapshots`, repository et délégué `db.py` | 1 | 2 | 28 |
+| 30 | ✅ `capture.py` : capture en fin de partie, rattrapage au démarrage, filtre de files | 1 | 3 | 29 |
+| 30b | ✅ `ranked.py` : photos de classement (démarrage, fin de partie), variation de LP lue dans la notification | 1 | 2 | 29 |
 | 31 | `metrics.py` : métriques de la grille pour les 10 participants, rôles inférés | 2 | 3 | 28 |
 | 32 | Script d'exploration : distributions par rôle et lien avec la victoire, sur les parties capturées (~30) | 2 | 2 | 30, 31 |
 | 33 | `grid.py` : grille par rôle, norme, objectif OneTricks, valeurs repères sourcées | 3 | 3 | 32 |

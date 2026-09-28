@@ -4,6 +4,17 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### ✨ Feature
+
+- **Coach de gameplay, phase 1 : capture des parties** (SPEC-19) — chaque
+  partie SoloQ/Flex est stockée brute (détail des 10 joueurs, timeline minute
+  par minute, écran de fin avec le poste de chacun) dans `game_records`, et le
+  classement dans `rank_snapshots` : une photo au démarrage, une par partie
+  classée avec sa variation de LP. Rattrapage au démarrage sur les 20 parties
+  que sert le client. **Action requise** : `python -m alembic upgrade head`
+  (migration `5c19a7e2d4b1`) ; sans elle, le Live Coach le signale une fois et
+  continue sans capturer.
+
 ### 🐛 Fix
 
 - **Résultat de partie labellisé en fin de partie, « Rejouer » n'efface plus le
@@ -12,7 +23,7 @@ All notable changes to LeagueStats Coach will be documented in this file.
   résultat attendait le rattrapage du prochain démarrage. Le Live Coach lit
   maintenant l'écran de fin de partie (`/lol-end-of-game/v1/eog-stats-block`,
   forme relevée par le spike SPEC-19), qui a la partie tout de suite, et
-  retente toutes les 15 s pendant 10 min, même revenu au lobby. Le retour au
+  retente toutes les 5 s pendant 10 min, même revenu au lobby. Le retour au
   lobby ne vide plus la console : c'est la draft suivante qui le fait.
 
 ### 📝 Docs
@@ -25,7 +36,9 @@ All notable changes to LeagueStats Coach will be documented in this file.
   (`z_objective`), tout stocké pour le suivi dans le temps : patterns, axes de
   travail, LP suivis depuis le LCU. `scripts/spike_gameplay_dump.py` (lecture
   seule) relève ce que le client expose d'une partie terminée et du classement,
-  identités anonymisées.
+  identités anonymisées. Résultats consignés en §3.4 (historique limité à 20
+  parties, timeline sans achats ni wards, poste fiable sur l'écran de fin
+  seulement, variation de LP exposée pendant l'après-partie).
 
 ## [2.1.0] - 2026-09-25
 
