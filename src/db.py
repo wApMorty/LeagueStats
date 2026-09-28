@@ -10,6 +10,7 @@ from .repositories.matchups import MatchupsRepository
 from .repositories.matchups_draft import MatchupsDraftRepository
 from .repositories.meta import MetaRepository
 from .repositories.pool_bans import PoolBansRepository
+from .repositories.game_records import GameRecordsRepository
 from .repositories.predictions import PredictionsRepository
 from .repositories.synergies import SynergiesRepository
 
@@ -54,6 +55,7 @@ class Database:
         self._champion_scores = ChampionScoresRepository(self)
         self._pool_bans = PoolBansRepository(self)
         self._predictions = PredictionsRepository(self)
+        self._game_records = GameRecordsRepository(self)
         self._meta = MetaRepository(self)
 
     def close(self) -> None:
@@ -420,3 +422,14 @@ class Database:
 
     def count_labelled_predictions(self, model_version: Optional[str]) -> int:
         return self._predictions.count_labelled_predictions(model_version)
+
+    # ========== Game records & rank snapshots (SPEC-19) ==========
+
+    def get_captured_game_ids(self) -> Set[int]:
+        return self._game_records.get_captured_game_ids()
+
+    def insert_game_record(self, **fields) -> bool:
+        return self._game_records.insert_game_record(**fields)
+
+    def insert_rank_snapshot(self, **fields) -> bool:
+        return self._game_records.insert_rank_snapshot(**fields)

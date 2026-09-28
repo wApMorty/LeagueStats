@@ -150,6 +150,39 @@ def temp_db(tmp_path):
         "ON predictions(game_id) WHERE game_id IS NOT NULL"
     )
 
+    # SPEC-19 phase 1 — migration 5c19a7e2d4b1
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS game_records (
+            game_id INTEGER PRIMARY KEY,
+            queue_id INTEGER NOT NULL,
+            game_creation_utc TEXT NOT NULL,
+            duration_s INTEGER,
+            player_participant_id INTEGER,
+            raw_game TEXT NOT NULL,
+            raw_timeline TEXT,
+            raw_eog TEXT,
+            captured_utc TEXT NOT NULL
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS rank_snapshots (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            captured_utc TEXT NOT NULL,
+            queue TEXT NOT NULL,
+            tier TEXT NOT NULL,
+            division TEXT,
+            lp INTEGER NOT NULL,
+            wins INTEGER,
+            losses INTEGER,
+            lp_delta INTEGER,
+            game_id INTEGER
+        )
+    """)
+    cursor.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_rank_snapshots_game_id "
+        "ON rank_snapshots(game_id) WHERE game_id IS NOT NULL"
+    )
+
     conn.commit()
     conn.close()
 
