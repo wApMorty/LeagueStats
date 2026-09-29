@@ -47,3 +47,23 @@ def test_upgrade_then_downgrade(tmp_path):
 
     command.downgrade(cfg, "13cbeb46785a")
     assert not {"game_records", "rank_snapshots"} & _tables(db_path)
+
+
+ANALYSIS_TABLES = {"game_metrics", "game_findings", "coaching_goals", "goal_verdicts"}
+
+
+def test_analysis_tables_upgrade_then_downgrade(tmp_path):
+    """Migration a4d2e9c7b813 (SPEC-19 phases 2 à 4)."""
+    db_path = tmp_path / "mig.db"
+    sqlite3.connect(str(db_path)).close()
+    cfg = Config("alembic.ini")
+    cfg.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
+    command.stamp(cfg, "13cbeb46785a")
+
+    command.upgrade(cfg, "a4d2e9c7b813")
+    assert ANALYSIS_TABLES <= _tables(db_path)
+
+    command.downgrade(cfg, "5c19a7e2d4b1")
+    tables = _tables(db_path)
+    assert not ANALYSIS_TABLES & tables
+    assert "game_records" in tables

@@ -183,6 +183,61 @@ def temp_db(tmp_path):
         "ON rank_snapshots(game_id) WHERE game_id IS NOT NULL"
     )
 
+    # SPEC-19 phases 2 à 4 — migration a4d2e9c7b813
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS game_metrics (
+            game_id INTEGER NOT NULL,
+            participant_id INTEGER NOT NULL,
+            metric TEXT NOT NULL,
+            is_player INTEGER NOT NULL DEFAULT 0,
+            role TEXT,
+            champion_id INTEGER,
+            value REAL NOT NULL,
+            norm_mean REAL,
+            norm_sd REAL,
+            norm_n INTEGER,
+            z_norm REAL,
+            objective_value REAL,
+            objective_sd REAL,
+            objective_source TEXT,
+            z_objective REAL,
+            grid_version INTEGER,
+            PRIMARY KEY (game_id, participant_id, metric)
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS game_findings (
+            game_id INTEGER NOT NULL,
+            metric TEXT NOT NULL,
+            polarity TEXT NOT NULL,
+            z REAL NOT NULL,
+            reference TEXT NOT NULL,
+            rank INTEGER NOT NULL,
+            PRIMARY KEY (game_id, metric)
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS coaching_goals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            metric TEXT NOT NULL,
+            role TEXT NOT NULL,
+            target REAL NOT NULL,
+            origin TEXT NOT NULL,
+            status TEXT NOT NULL,
+            started_utc TEXT NOT NULL,
+            acquired_utc TEXT
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS goal_verdicts (
+            goal_id INTEGER NOT NULL,
+            game_id INTEGER NOT NULL,
+            value REAL NOT NULL,
+            held INTEGER NOT NULL,
+            PRIMARY KEY (goal_id, game_id)
+        )
+    """)
+
     conn.commit()
     conn.close()
 
