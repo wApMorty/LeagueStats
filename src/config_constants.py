@@ -6,6 +6,10 @@ Centralized configuration for all hardcoded values across the application.
 from dataclasses import dataclass, field
 from typing import Dict
 
+# SPEC-19 : constantes du coach de gameplay dans leur propre module (limite de
+# 500 lignes), réexportées ici.
+from .config_coaching import coaching_config  # noqa: F401
+
 # SPEC-04 B3: LCU `assignedPosition` values -> `lane` column values.
 # The LCU calls the support role "utility"; LoLalytics (and the `lane`
 # column) call it "support". An empty string means the queue doesn't
@@ -508,23 +512,6 @@ class DataQualityConfig:
 
 
 # Global configuration instances
-@dataclass
-class CoachingConfig:
-    """Coach de gameplay (SPEC-19). Valeurs relevées par le spike du 2026-09-28."""
-
-    # Files capturées : SoloQ et Flex (queueId de l'historique LCU, queueType
-    # du classement et de l'écran de fin).
-    QUEUE_IDS: tuple = (420, 440)
-    RANKED_QUEUES: tuple = ("RANKED_SOLO_5x5", "RANKED_FLEX_SR")
-
-    # L'historique LCU sert 20 parties au plus, quelle que soit la demande.
-    HISTORY_DEPTH: int = 20
-
-    # Une timeline absente juste après la partie est réessayée ; au-delà de
-    # ce délai après la fin, la partie est capturée sans elle.
-    TIMELINE_GRACE_S: int = 3600
-
-
 scraping_config = ScrapingConfig()
 analysis_config = AnalysisConfig()
 draft_config = DraftConfig()
@@ -534,4 +521,3 @@ xpath_config = XPathConfig()
 pool_stats_config = PoolStatisticsConfig()
 synergy_config = SynergyConfig()
 data_quality_config = DataQualityConfig()
-coaching_config = CoachingConfig()
