@@ -1,8 +1,9 @@
 # SPEC-19 — Coach de gameplay : analyse de fin de partie et suivi de progression
 
 **Statut** : 🟢 **Validée par @pj35 le 2026-09-26**, schéma de suivi compris (§7, §8). Phase 0
-(spike) rendue le 2026-09-28 (§3.4), phase 1 (capture) livrée le 2026-09-29. Les phases 2 à 4
-attendent ~30 parties capturées.
+(spike) rendue le 2026-09-28 (§3.4), phase 1 (capture) livrée le 2026-09-29. Phases 2 à 4
+livrées le même jour, sans attendre les ~30 parties (@pj35) : exploration faite sur 24 parties
+(§5.3), à refaire vers 50. Écarts à la spec en §8.1. Recette en partie réelle à faire.
 
 **Origine** : @pj35, 2026-09-26 — « capitaliser sur notre capacité à repérer les fins de game et
 exploiter les stats pour que le live coach étende ses capacités à de l'analyse de gameplay […]
@@ -185,6 +186,46 @@ scrapé). Chaque valeur retenue va dans `config_constants.py`, avec sa source et
 commentaire. Si aucune source n'est jugée fiable, la métrique n'a pas d'objectif et ne se lit
 que contre la norme.
 
+**Livré (2026-09-29)** : aucune valeur repère retenue. L'objectif vient d'OneTricks seul, sur
+cinq métriques : CS/min, morts / 10 min, participation aux kills, écarts d'or et d'XP à 15 min.
+Les autres ne se lisent que contre la norme.
+
+### 5.3 Exploration du 2026-09-29 (24 parties, tâche 32)
+
+`python scripts/explore_gameplay.py` : pour chaque rôle et chaque métrique, l'écart standardisé
+(d de Cohen) entre victoires et défaites, orienté (d > 0 : la métrique va du bon côté quand on
+gagne). Deux lectures : les 10 participants (48 valeurs par rôle), et le joueur seul (24 parties,
+toutes au top).
+
+**Poste** : `roleBoundItem` (l'objet de quête de rôle, présent dans `games/{id}`) donne le poste de
+chacun. Il concorde avec `detectedTeamPosition` sur 60 valeurs sur 60 là où l'écran de fin
+existe. Le rattrapage n'a donc plus besoin de l'écran de fin, ni de `role_inference.py`.
+
+**Règle de révision de la grille**, appliquée mécaniquement sur la lecture « tous les
+participants » : un d < 0,3 fait perdre un rang (●● → ●, ● → retirée) ; un d de mauvais signe
+retire la métrique ; un d ≥ 1 fait monter une ● au rang ●● ; un d ≥ 0,9 ajoute au rang ● une
+métrique absente. L'erreur type d'un d sur 48 valeurs est d'environ 0,3 : sous ce seuil, la
+métrique ne se distingue pas du bruit.
+
+Constats principaux :
+- **Morts / 10 min** est la métrique la plus séparatrice à tous les postes (d de 1,15 à 1,71) :
+  elle passe ●● partout.
+- **Dégâts aux structures / min** sépare fortement (d de 0,77 à 1,68). Elle entre en jungle, mid
+  et support, et passe ●● au bot. En partie, c'est une conséquence de la victoire : elle
+  confirme une domination plus qu'elle ne se travaille isolément.
+- **Participation aux kills** ne sépare rien en jungle, au bot, au support ni au top (d ≤ 0,11) :
+  elle perd son rang partout sauf au mid (0,55).
+- **Part des dégâts** au top (−0,33), **vision et pinks** en jungle (−0,32, −0,58) : de mauvais
+  signe, retirées.
+- **CS @14 et CS/min** au top : d de 0,22 et 0,27, retirés ; CS @10 reste (0,34).
+- Pour le joueur seul, l'écart d'or @15 sépare (0,71) mais les CS non (≤ 0,13) : il gagne ses
+  lanes en moyenne (+1 267 en victoire, +203 en défaite).
+
+La grille révisée est dans `src/coaching/grid.py` (`GRID_VERSION = 1`). Limite : corrélation
+n'est pas causalité, et 24 parties d'un seul joueur au top restent un échantillon mince. **À
+refaire vers 50 parties**, en incrémentant `GRID_VERSION` si la grille change (recalcul
+automatique au démarrage).
+
 ## 6. Moteur de constats (déterministe)
 
 Pour chaque métrique `m` de la grille du rôle joué :
@@ -302,6 +343,38 @@ classement).
 `src/lcu_client.py` est à 500 lignes : les nouvelles lectures LCU vont dans
 `src/lcu_match_history.py` (mixin existant).
 
+Phases 2 à 4 livrées le 2026-09-29 : `metrics.py`, `grid.py`, `findings.py`, `report.py`,
+`progression.py`, plus `goals.py` (axes de travail) ; migration `a4d2e9c7b813` ; repository
+`src/repositories/coaching.py`, hors de la façade `Database`. L'analyse suit chaque passage de
+capture : un rapport par partie en direct, une ligne de synthèse au démarrage (rattrapage ou
+recalcul). Commandes du Live Coach `bilan` et `axe <métrique>`, entrée « Bilan de gameplay » du
+menu 4, `scripts/recompute_coaching.py`, `scripts/explore_gameplay.py`.
+
+### 8.1 Écarts à la spec
+
+- **Écarts d'or et d'XP à 15 min**, pas à 14 : ce sont les `gd15`/`exp15` d'OneTricks, seul
+  objectif disponible pour ces métriques. Les CS et les morts restent à 10 et 14 min.
+- **Norme des écarts face à l'adversaire direct fixée à 0.** Dans les parties du joueur, ses
+  adversaires de lane ont exactement l'opposé de son propre écart : leur moyenne ne mesurerait
+  que lui (−700 pour un joueur qui gagne ses lanes de 700). La norme vaut donc 0 par
+  construction, seule sa dispersion vient des pairs (`grid.norm_reference`). Les autres
+  métriques gardent la moyenne des pairs, même si l'adversaire direct y est en partie influencé
+  par le joueur.
+- **Norme glissante** sur les `NORM_WINDOW_GAMES` (50) dernières parties, figée au moment de la
+  partie : seules les parties antérieures comptent.
+- **Poste** : `roleBoundItem` plutôt que `role_inference.py` quand l'écran de fin manque (§5.3).
+- **Cible d'un axe** : la norme du moment (faire au moins aussi bien que ses pairs), à défaut la
+  moyenne du joueur. Un axe proposé est activé d'office ; `axe <métrique>` en fixe un autre, le
+  plus ancien cédant sa place au-delà de `MAX_ACTIVE_GOALS`.
+- **Schémas** : le test binomial porte sur `z_norm` au-delà de `MIN_ABS_Z`, dont le taux de base
+  sous l'hypothèse nulle est Φ(−1) ≈ 16 %, plutôt que sur `game_findings`, tronqué au top 3.
+- **Tendances** : t de Welch entre les deux moitiés des 20 dernières parties, sur la valeur
+  brute. Le CUSUM n'est pas fait. Le bilan affiche côte à côte la variation de LP, les
+  tendances et le profil moyen de `z_norm`, sans verdict croisé automatique (§4.2) : la lecture
+  croisée reste au joueur.
+- `CoachingConfig` quitte `config_constants.py` (537 lignes) pour `src/config_coaching.py`,
+  réexporté : `from .config_constants import coaching_config` reste valable.
+
 ## 9. Phase C, plus tard : Live Client Data API
 
 `https://127.0.0.1:2999/liveclientdata/allgamedata`, pendant la partie : événements horodatés,
@@ -331,14 +404,14 @@ contexte de la draft et de l'axe de travail.
 | 29 | ✅ Migration de `game_records` et `rank_snapshots`, repository et délégué `db.py` | 1 | 2 | 28 |
 | 30 | ✅ `capture.py` : capture en fin de partie, rattrapage au démarrage, filtre de files | 1 | 3 | 29 |
 | 30b | ✅ `ranked.py` : photos de classement (démarrage, fin de partie), variation de LP lue dans la notification | 1 | 2 | 29 |
-| 31 | `metrics.py` : métriques de la grille pour les 10 participants, rôles inférés | 2 | 3 | 28 |
-| 32 | Script d'exploration : distributions par rôle et lien avec la victoire, sur les parties capturées (~30) | 2 | 2 | 30, 31 |
-| 33 | `grid.py` : grille par rôle, norme, objectif OneTricks, valeurs repères sourcées | 3 | 3 | 32 |
-| 34 | `findings.py` : `z_norm` et `z_objective` figés dans `game_metrics`, classement, `game_findings` | 3 | 3 | 33 |
-| 35 | `report.py` : rapport console en fin de partie, ligne d'attendu de la draft | 3 | 2 | 34 |
-| 36 | `progression.py` : schémas sur `z_norm`, progression croisant LP et Z, script de recalcul par `grid_version` | 4 | 3 | 34, 30b |
-| 37 | Axes de travail : `coaching_goals`, rappel en draft, verdict, acquisition | 4 | 5 | 36 |
-| 38 | Bilan périodique (commande du Live Coach, menu, toutes les N parties) | 4 | 3 | 36 |
+| 31 | ✅ `metrics.py` : métriques de la grille pour les 10 participants, rôles inférés | 2 | 3 | 28 |
+| 32 | ✅ Script d'exploration : distributions par rôle et lien avec la victoire, sur les parties capturées (24, §5.3) | 2 | 2 | 30, 31 |
+| 33 | ✅ `grid.py` : grille par rôle, norme, objectif OneTricks (aucune valeur repère retenue) | 3 | 3 | 32 |
+| 34 | ✅ `findings.py` : `z_norm` et `z_objective` figés dans `game_metrics`, classement, `game_findings` | 3 | 3 | 33 |
+| 35 | ✅ `report.py` : rapport console en fin de partie, ligne d'attendu de la draft | 3 | 2 | 34 |
+| 36 | ✅ `progression.py` : schémas sur `z_norm`, tendances, LP, script de recalcul par `grid_version` | 4 | 3 | 34, 30b |
+| 37 | ✅ Axes de travail (`goals.py`) : `coaching_goals`, rappel en draft, verdict, acquisition | 4 | 5 | 36 |
+| 38 | ✅ Bilan périodique (commande `bilan` du Live Coach, menu 4, toutes les 10 parties) | 4 | 3 | 36 |
 
 **Ordre** : 29, 30 et 30b dès le spike rendu, pour que la capture tourne pendant qu'on explore. La
 tâche 32 n'a de sens qu'après ~30 parties capturées, soit environ deux semaines de jeu.

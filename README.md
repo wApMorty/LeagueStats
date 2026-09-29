@@ -15,10 +15,10 @@ python lol_coach.py
 
 Menu principal :
 
-1. **Draft Coach en temps réel** — suit le champion select via le client League of Legends (LCU) et recommande picks/bans ; au lock-in, importe dans le client les runes, items et sorts les plus joués par les one-tricks (OneTricks.gg), affinés contre l'adversaire direct (désactivable : `draft_config.AUTO_IMPORT_LOADOUT`)
+1. **Draft Coach en temps réel** — suit le champion select via le client League of Legends (LCU) et recommande picks/bans ; au lock-in, importe dans le client les runes, items et sorts les plus joués par les one-tricks (OneTricks.gg), affinés contre l'adversaire direct (désactivable : `draft_config.AUTO_IMPORT_LOADOUT`) ; après chaque partie SoloQ/Flex, le coach de gameplay compare tes stats à ta norme et aux one-tricks Master+, et suit tes axes de travail (commandes `bilan` et `axe <métrique>`)
 2. **Mettre à jour les données** — récupère la liste des champions depuis l'API Riot
 3. **Analyser des statistiques** — scrape les matchups (pool SoloQ ou tous les champions)
-4. **Analyse & Tournoi** — analyse statistique et coaching manuel de tournoi
+4. **Analyse & Tournoi** — analyse statistique, coaching manuel de tournoi et bilan du coach de gameplay
 5. **Constructeur d'équipe** — recherche des meilleures combinaisons de champions (duos/trios)
 6. **Gérer les pools** — création et gestion de pools de champions personnalisées
 7. Quitter

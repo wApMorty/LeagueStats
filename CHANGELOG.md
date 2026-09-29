@@ -4,6 +4,27 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### ✨ Feature
+
+- **Coach de gameplay, phases 2 à 4 : analyse et suivi** (SPEC-19) — chaque
+  partie capturée reçoit ses métriques pour les 10 joueurs, puis, pour toi,
+  deux écarts standardisés : face à ta norme (tes adversaires du même poste,
+  sur tes 50 dernières parties) et face aux one-tricks Master+ de ton champion
+  (OneTricks). Le Live Coach affiche en fin de partie les 3 plus gros écarts
+  négatifs et les 2 plus gros positifs, avec la probabilité prédite et le duel
+  de la draft. Aucun verdict sous 15 parties de norme.
+- **Suivi dans le temps** — schémas récurrents (test binomial sur les 10
+  dernières parties), tendances, variation de LP, profil moyen, et un ou deux
+  axes de travail : proposés d'après le schéma négatif le plus net, rappelés en
+  fin de draft, jugés à chaque partie, acquis à 4 parties tenues sur 5. Bilan
+  toutes les 10 parties, par la commande `bilan` du Live Coach, ou par le menu
+  4 ; `axe <métrique>` fixe un axe. **Action requise** : `python -m alembic
+  upgrade head` (migration `a4d2e9c7b813`).
+- **Grille par rôle révisée par l'exploration** de 24 parties
+  (`scripts/explore_gameplay.py`, SPEC-19 §5.3). `scripts/recompute_coaching.py`
+  recalcule toute l'analyse depuis le brut ; un changement de `GRID_VERSION` la
+  recalcule au démarrage.
+
 ### 🐛 Fix
 
 - **Les items situationnels tiennent compte du duel** (SPEC-15 §3.2.3) — le test

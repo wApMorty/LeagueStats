@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-09-26 (recette de SPEC-15 validée : sprint 2 soldé ; SPEC-19 validée)
+**Mis à jour** : 2026-09-29 (SPEC-19 phases 2 à 4 livrées, recette en partie réelle à faire)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -73,7 +73,7 @@ les trois leviers, parallélisables entre eux, du moins risqué au plus structur
 | 25 | Calibrer `SEARCH_TOP_N` (8 / 10 / 12) au bench, retenir le plus grand qui tient §2.2, consigner la couverture de games dans le commentaire | SPEC-17 §4.1 | 1 | 22, 23, 24 | ✅ N = 8 (10 et 12 : B2 6/7) |
 | 26 | Critères d'acceptation §6 (bench B2 7/7, B1 ≥ 5, aucune variante hors top-N), `CHANGELOG.md`, statut de la spec | SPEC-17 §6 | 1 | 25 | ✅ |
 
-### Prochain lot — SPEC-19, coach de gameplay (🟢 validée par @pj35 le 2026-09-26)
+### Lot en cours — SPEC-19, coach de gameplay (🟢 validée par @pj35 le 2026-09-26)
 
 [SPEC-19](docs/specs/SPEC-19-coach-de-gameplay.md) : analyse de chaque partie SoloQ/Flex en fin de
 partie (écarts à la norme et à l'objectif, par rôle), puis suivi de progression (schémas
@@ -85,9 +85,11 @@ les LP sont suivis depuis le LCU. Découpage détaillé en SPEC-19 §11 (tâches
 |---|---|---|---|
 | 0 | Spike LCU : `scripts/spike_gameplay_dump.py`, résultats en SPEC-19 §3.4 | 2 | ✅ 2026-09-28 |
 | 1 | Capture du brut en fin de partie et rattrapage au démarrage (**au plus tôt** : chaque partie non capturée est perdue), photos de classement (LP) | 7 | ✅ 2026-09-29 |
-| 2 | Métriques des 10 participants, exploration sur ~30 parties | 5 | ⏳ ~30 parties à capturer |
-| 3 | Grille par rôle, moteur de constats, rapport console | 8 | ⬜ |
-| 4 | Récurrence, tendances, axes de travail, bilan | 11 | ⬜ |
+| 2 | Métriques des 10 participants, exploration (faite sur 24 parties, grille révisée en SPEC-19 §5.3) | 5 | ✅ 2026-09-29 |
+| 3 | Grille par rôle, moteur de constats, rapport console | 8 | ✅ 2026-09-29 |
+| 4 | Récurrence, tendances, axes de travail, bilan (commandes `bilan`, `axe`, menu 4) | 11 | ✅ 2026-09-29 |
+| — | Recette en partie réelle : rapport de fin de partie, rappel d'axe en draft | 1 | ⬜ |
+| — | Refaire l'exploration vers 50 parties (`scripts/explore_gameplay.py`), réviser la grille et `GRID_VERSION` | 1 | ⬜ |
 
 ### Hors sprint — SPEC-18 phase A ✅ (2026-09-24)
 
