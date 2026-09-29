@@ -4,6 +4,13 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+## [4.0.0] - 2026-09-29
+
+Version majeure : une migration Alembic est requise (`python -m alembic upgrade
+head`), et la fenêtre OneTricks de fin de draft est retirée. Le coach de
+gameplay analyse désormais chaque partie SoloQ/Flex (écarts à ta norme et aux
+one-tricks Master+) et suit ta progression : schémas, tendances, axes de travail.
+
 ### ✨ Feature
 
 - **Coach de gameplay, phases 2 à 4 : analyse et suivi** (SPEC-19) — chaque
@@ -24,6 +31,15 @@ All notable changes to LeagueStats Coach will be documented in this file.
   (`scripts/explore_gameplay.py`, SPEC-19 §5.3). `scripts/recompute_coaching.py`
   recalcule toute l'analyse depuis le brut ; un changement de `GRID_VERSION` la
   recalcule au démarrage.
+
+### 🔥 Retiré
+
+- **Fenêtre OneTricks de fin de draft** — la build étant importée dans le
+  client dès le lock-in (SPEC-15), la page du champion ne s'ouvre plus dans
+  Brave. La question au lancement du Live Coach, les options
+  `--open-onetricks`/`--no-onetricks`, `OPEN_ONETRICKS_ON_DRAFT_END` et
+  `BRAVE_PATH` disparaissent ; `open_onetricks` est ignoré dans les
+  préférences sauvegardées.
 
 ### 🐛 Fix
 

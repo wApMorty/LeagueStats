@@ -1,7 +1,7 @@
 # 🤖 CLAUDE.md - Instructions pour Assistant IA
 
 **Projet**: LeagueStats Coach
-**Version**: 3.0.0
+**Version**: 4.0.0
 **Mainteneur**: @pj35
 **Dernière mise à jour**: 2026-09-25
 
@@ -363,4 +363,4 @@ python -m alembic revision -m "Description"
 
 **Dernière mise à jour**: 2026-09-25
 **Maintenu par**: Claude Code (Sonnet 5)
-**Pour**: @pj35 - LeagueStats Coach v3.0.0
+**Pour**: @pj35 - LeagueStats Coach v4.0.0
