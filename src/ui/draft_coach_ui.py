@@ -11,7 +11,6 @@ def run_draft_coach(
     auto_hover: bool = False,
     auto_accept_queue: bool = False,
     auto_ban_hover: bool = False,
-    open_onetricks: Optional[bool] = None,
     pool_name: Optional[str] = None,
 ) -> None:
     """
@@ -22,7 +21,6 @@ def run_draft_coach(
         auto_hover: Auto-hover recommended champions
         auto_accept_queue: Auto-accept queue
         auto_ban_hover: Auto-hover ban recommendations
-        open_onetricks: Open champion pages on draft completion
         pool_name: Pool mémorisée (SPEC-06 D2) ; None = sélection interactive
     """
     clear_console()  # Clear console at start
@@ -34,8 +32,6 @@ def run_draft_coach(
         print("[AUTO-ACCEPT] Acceptation automatique de la queue ACTIVÉE")
     if auto_ban_hover:
         print("[AUTO-BAN-HOVER] Survol automatique des bans ACTIVÉ")
-    if open_onetricks:
-        print("[ONETRICKS] Ouverture de la page du champion en fin de draft ACTIVÉE")
     print("Appuyez sur Ctrl+C pour arrêter le suivi.\n")
 
     monitor = None
@@ -46,7 +42,6 @@ def run_draft_coach(
             auto_hover=auto_hover,
             auto_accept_queue=auto_accept_queue,
             auto_ban_hover=auto_ban_hover,
-            open_onetricks=open_onetricks,
             preselected_pool_name=pool_name,
         )
         # SPEC-08 §2.6b's startup outcome backfill runs inside
@@ -72,7 +67,6 @@ def run_draft_coach(
                     auto_hover=auto_hover,
                     auto_accept_queue=auto_accept_queue,
                     auto_ban_hover=auto_ban_hover,
-                    open_onetricks=bool(monitor.open_onetricks),
                     pool_name=monitor.pool_name,
                 )
             )

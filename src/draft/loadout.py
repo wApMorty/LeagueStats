@@ -23,9 +23,11 @@ import requests
 
 from ..config_constants import draft_config
 from ..constants import normalize_champion_name_for_onetricks
-from .onetricks import _LANE_TO_ONETRICKS_ROLE
 
 ONETRICKS_BUILD_URL = "https://www.onetricks.gg/champions/builds/{}"
+# Lanes internes -> paramètre ?role= d'OneTricks ("mid"/"bot" au lieu de
+# "middle"/"bottom" ; top, jungle et support sont identiques).
+LANE_TO_ONETRICKS_ROLE = {"middle": "mid", "bottom": "bot"}
 _NEXT_DATA = re.compile(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', re.S)
 
 # (champion, lane, adversaire) -> page ; adversaire None = page générale.
@@ -81,7 +83,7 @@ def fetch_page(
     """``pageProps`` de la page OneTricks, ou None (réseau, 429, page inattendue)."""
     params = {}
     if lane:
-        params["role"] = _LANE_TO_ONETRICKS_ROLE.get(lane, lane)
+        params["role"] = LANE_TO_ONETRICKS_ROLE.get(lane, lane)
     if opponent:
         params["matchup"] = normalize_champion_name_for_onetricks(opponent)
     try:

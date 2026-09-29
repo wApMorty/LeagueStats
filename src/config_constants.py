@@ -251,7 +251,6 @@ class DraftConfig:
     # Feature toggles
     AUTO_BAN_ENABLED: bool = True
     AUTO_ACCEPT_QUEUE_ENABLED: bool = False
-    OPEN_ONETRICKS_ON_DRAFT_END: bool = True
 
     # SPEC-06 E7: below this total games (all matchups for a candidate
     # champion combined), the sample is too thin to score during live draft.

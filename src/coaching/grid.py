@@ -13,6 +13,7 @@ from statistics import mean, stdev
 from typing import Callable, Dict, List, Optional
 
 from ..config_constants import coaching_config
+from ..draft.loadout import LANE_TO_ONETRICKS_ROLE, fetch_page
 from .metrics import METRICS
 
 # Poids par rôle : 2 = métrique principale (●●), 1 = secondaire (●). Grille
@@ -145,13 +146,11 @@ _ONETRICKS_METRICS: Dict[str, Callable[[dict], Optional[float]]] = {
     "gold_diff_15": lambda g: g["gameRoles"]["gd15"],
     "xp_diff_15": lambda g: g["gameRoles"]["exp15"],
 }
-# Rôle OneTricks (`gameRoles.playerRole`) de chaque lane interne.
-_ONETRICKS_ROLES = {"middle": "mid", "bottom": "bot"}
 
 
 def objective_from_history(history: List[dict], lane: str, source: str) -> Dict[str, Reference]:
     """Références par métrique, sur les parties du rôle joué. Parties mal formées ignorées."""
-    role = _ONETRICKS_ROLES.get(lane, lane)
+    role = LANE_TO_ONETRICKS_ROLE.get(lane, lane)  # même nommage que `gameRoles.playerRole`
     games = [g for g in history if (g.get("gameRoles") or {}).get("playerRole") == role]
     refs: Dict[str, Reference] = {}
     for metric, extract in _ONETRICKS_METRICS.items():
@@ -176,8 +175,6 @@ def onetricks_objective(champion: str, lane: str) -> Dict[str, Reference]:
     """Objectif OneTricks de (champion, lane), une requête par session. {} en cas d'échec."""
     key = (champion, lane)
     if key not in _objectives:
-        from ..draft.loadout import fetch_page  # réseau : importé à l'usage
-
         page = fetch_page(champion, lane)
         history = (page or {}).get("matchHistory") or []
         refs = objective_from_history(history, lane, f"OneTricks {champion}")

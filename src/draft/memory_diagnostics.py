@@ -6,9 +6,7 @@ verbatim, aucun changement de comportement.
 
 import logging
 import os
-import subprocess
 from pathlib import Path
-from typing import Optional
 
 # Dedicated logger for memory diagnostics. Writes to logs/draft_monitor_memory.log
 # so the RSS trace survives the frequent console clears during a draft session.
@@ -35,18 +33,15 @@ def _get_memory_logger() -> logging.Logger:
     return _mem_logger
 
 
-def log_memory_usage(
-    loop_count: int, onetricks_proc: Optional[subprocess.Popen], force: bool = False
-) -> None:
+def log_memory_usage(loop_count: int, force: bool = False) -> None:
     """Record the process RSS to logs/draft_monitor_memory.log periodically.
 
     This is a lightweight diagnostic to determine whether the monitor's own
     Python process grows over a long session (a leak to bisect) or stays flat
-    (pointing at an external cause such as accumulating browser tabs).
+    (pointing at an external cause).
 
     Args:
         loop_count: Current monitor loop iteration count.
-        onetricks_proc: The OneTricks browser subprocess, if any.
         force: If True, log immediately regardless of the interval.
     """
     if not force and loop_count % MEMORY_LOG_INTERVAL != 0:
@@ -55,12 +50,7 @@ def log_memory_usage(
         import psutil
 
         rss_mb = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
-        _get_memory_logger().info(
-            "iteration=%d rss=%.1fMB onetricks_window=%s",
-            loop_count,
-            rss_mb,
-            "open" if onetricks_proc and onetricks_proc.poll() is None else "none",
-        )
+        _get_memory_logger().info("iteration=%d rss=%.1fMB", loop_count, rss_mb)
     except Exception:
         # Diagnostics must never interrupt monitoring.
         pass

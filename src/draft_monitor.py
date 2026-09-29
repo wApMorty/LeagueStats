@@ -1,6 +1,5 @@
 import time
 import json
-import subprocess
 import os
 import queue
 import threading
@@ -20,7 +19,6 @@ from .analysis.game_eval import GameEvaluator
 from .analysis.shrink import shrink_is_measured
 from .draft.search import CandidatePool, DraftSearch
 from .draft.state_parser import DraftStateParser
-from .draft.onetricks import OneTricksWindow
 from .draft.automation import HoverAutomation
 from .draft.pool_selection import PoolSelector
 from .draft.ban_advice import BanAdvisor
@@ -42,7 +40,6 @@ class DraftMonitor:
         auto_hover: bool = False,
         auto_accept_queue: bool = False,
         auto_ban_hover: bool = False,
-        open_onetricks: bool = None,
         preselected_pool_name: Optional[str] = None,
     ):
         self.lcu = LCUClient(verbose=verbose)
@@ -71,11 +68,6 @@ class DraftMonitor:
         self.auto_hover = auto_hover
         self.auto_accept_queue = auto_accept_queue
         self.auto_ban_hover = auto_ban_hover
-        self.open_onetricks = (
-            open_onetricks
-            if open_onetricks is not None
-            else draft_config.OPEN_ONETRICKS_ON_DRAFT_END
-        )
         # SPEC-12 : moteur du Live Coach. Depuis SPEC-12, c'est le SEUL modèle
         # du Live Coach — le DraftScorer par delta qui vivait ici n'avait plus
         # d'appelant (supprimé avec le curseur synergie/matchup). Les autres
@@ -100,7 +92,6 @@ class DraftMonitor:
             verbose=verbose,
         )
         self.state_parser = DraftStateParser(self.lcu, self._get_display_name, verbose=verbose)
-        self.onetricks = OneTricksWindow(self)
         self.hover = HoverAutomation(self)
         self.pool_selector = PoolSelector(self)
         self.ban_advisor = BanAdvisor(self)
@@ -132,11 +123,6 @@ class DraftMonitor:
         self._last_outcome_trigger_phase: Optional[str] = None
         self._post_game_until = 0.0  # time.time() deadline, 0 = closed
         self._next_post_game_attempt = 0.0
-
-        # OneTricks browser window recycling: keep a single handle so each new
-        # draft replaces the previous window instead of stacking tabs/processes
-        # (otherwise Brave accumulates one tab per game → system OOM on long sessions).
-        self._onetricks_proc: Optional[subprocess.Popen] = None
 
         # Memory diagnostics: count poll-loop iterations to log RSS periodically.
         self._loop_count = 0
@@ -187,8 +173,6 @@ class DraftMonitor:
             print("   [AUTO-ACCEPT] Acceptation automatique de la queue ACTIVÉE")
         if self.auto_ban_hover:
             print("   [AUTO-BAN-HOVER] Survol automatique des bans ACTIVÉ")
-        if self.open_onetricks:
-            print("   [ONETRICKS] Ouverture de la page du champion en fin de draft ACTIVÉE")
         print(
             "   Tapez 'r <champion> <lane>' + Entrée pour forcer un rôle (ex. r Pantheon support)"
         )
@@ -216,25 +200,13 @@ class DraftMonitor:
         finally:
             self.cleanup()
 
-    def _onetricks_profile_dir(self) -> str:
-        """Return the dedicated, reused Brave profile dir for the OneTricks window."""
-        return self.onetricks.profile_dir()
-
-    def _close_onetricks_window(self) -> None:
-        """Terminate the previously opened OneTricks window, if any."""
-        self.onetricks.close_window()
-
-    def _open_champion_page_on_onetricks(self):
-        """Open the player's champion page on OneTriks.gg, recycling a single window."""
-        self.onetricks.open_champion_page()
-
     def stop_monitoring(self):
         """Stop monitoring."""
         self.is_monitoring = False
 
     def _log_memory_usage(self, force: bool = False) -> None:
         """Record the process RSS to logs/draft_monitor_memory.log periodically."""
-        log_memory_usage(self._loop_count, self._onetricks_proc, force=force)
+        log_memory_usage(self._loop_count, force=force)
 
     def _monitor_loop(self):
         """Main monitoring loop."""
@@ -422,8 +394,6 @@ class DraftMonitor:
 
     def cleanup(self):
         """Clean up resources."""
-        # Close the recycled OneTricks window so it doesn't outlive the monitor.
-        self._close_onetricks_window()
         if self.lcu:
             self.lcu.disconnect()
         if self.assistant:

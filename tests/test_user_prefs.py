@@ -15,7 +15,6 @@ class TestSaveLoadRoundTrip:
             auto_hover=True,
             auto_accept_queue=False,
             auto_ban_hover=True,
-            open_onetricks=True,
             pool_name="GRIND",
         )
 
@@ -61,7 +60,8 @@ class TestLoadEdgeCases:
 
     def test_a_file_written_before_the_synergy_cursor_removal_still_loads(self, tmp_path):
         """Le fichier de préférences des utilisateurs existants contient encore
-        `synergy_weight`, supprimé avec le curseur synergie/matchup. Une clé
+        `synergy_weight`, supprimé avec le curseur synergie/matchup, et
+        `open_onetricks`, supprimé avec la fenêtre OneTricks (4.0.0). Une clé
         inconnue doit être ignorée, pas faire échouer le chargement — sinon
         chaque utilisateur se voit reposer toutes les questions après la mise
         à jour."""
@@ -87,6 +87,7 @@ class TestLoadEdgeCases:
         assert loaded.auto_hover is True
         assert loaded.pool_name == "GRIND"
         assert not hasattr(loaded, "synergy_weight")
+        assert not hasattr(loaded, "open_onetricks")
 
 
 class TestSaveErrorHandling:

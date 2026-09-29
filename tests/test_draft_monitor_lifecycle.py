@@ -236,7 +236,6 @@ class TestAnalyzeCompleteDraft:
 
     def test_full_draft_triggers_the_final_analysis(self, monitor, capsys):
         state = self._full_state()
-        monitor.open_onetricks = False
 
         with patch.object(monitor, "_calculate_final_scores") as final:
             monitor._analyze_complete_draft(state)
@@ -246,24 +245,6 @@ class TestAnalyzeCompleteDraft:
         assert "[DRAFT TERMINÉ] Tous les champions verrouillés - Analyse finale !" in (
             capsys.readouterr().out
         )
-
-    def test_onetricks_page_opens_when_enabled(self, monitor):
-        monitor.open_onetricks = True
-
-        with patch.object(monitor, "_calculate_final_scores"):
-            with patch.object(monitor, "_open_champion_page_on_onetricks") as onetricks:
-                monitor._analyze_complete_draft(self._full_state())
-
-        onetricks.assert_called_once_with()
-
-    def test_onetricks_page_stays_closed_when_disabled(self, monitor):
-        monitor.open_onetricks = False
-
-        with patch.object(monitor, "_calculate_final_scores"):
-            with patch.object(monitor, "_open_champion_page_on_onetricks") as onetricks:
-                monitor._analyze_complete_draft(self._full_state())
-
-        onetricks.assert_not_called()
 
     def test_incomplete_draft_is_a_silent_no_op(self, monitor, capsys):
         """Fewer than 5 picks per side: nothing runs, nothing is flagged."""

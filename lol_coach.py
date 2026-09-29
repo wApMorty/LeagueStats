@@ -58,16 +58,6 @@ def main():
         help="Enable automatic ban hovering during ban phases",
     )
     parser.add_argument(
-        "--open-onetricks",
-        action="store_true",
-        help="Open champion page on Onetricks.gg when draft completes",
-    )
-    parser.add_argument(
-        "--no-onetricks",
-        action="store_true",
-        help="Disable opening champion page on Onetricks.gg (overrides config default)",
-    )
-    parser.add_argument(
         "--no-clear",
         action="store_true",
         help="Disable console clearing (useful for debugging or capturing logs)",
@@ -89,20 +79,11 @@ def main():
         if not check_dependencies() or not check_database():
             sys.exit(1)
 
-        # Determine open_onetricks setting from command line args
-        if args.no_onetricks:
-            open_onetricks = False
-        elif args.open_onetricks:
-            open_onetricks = True
-        else:
-            open_onetricks = None  # Use config default
-
         run_draft_coach(
             args.verbose,
             auto_hover=args.auto_hover,
             auto_accept_queue=args.auto_accept_queue,
             auto_ban_hover=args.auto_ban_hover,
-            open_onetricks=open_onetricks,
         )
         return
 
@@ -139,7 +120,6 @@ def main():
                         f"hover={'oui' if saved_prefs.auto_hover else 'non'}, "
                         f"accept={'oui' if saved_prefs.auto_accept_queue else 'non'}, "
                         f"ban-hover={'oui' if saved_prefs.auto_ban_hover else 'non'}, "
-                        f"onetricks={'oui' if saved_prefs.open_onetricks else 'non'}, "
                         f"pool={saved_prefs.pool_name or 'aucune'}"
                     )
                     resume_choice = (
@@ -151,7 +131,6 @@ def main():
                     auto_hover = saved_prefs.auto_hover
                     auto_accept_queue = saved_prefs.auto_accept_queue
                     auto_ban_hover = saved_prefs.auto_ban_hover
-                    open_onetricks = saved_prefs.open_onetricks
                     pool_name = saved_prefs.pool_name
                 else:
                     # Ask about auto-features
@@ -173,15 +152,6 @@ def main():
                         input("Activer le survol automatique des bans ? (o/N) : ").strip().lower()
                     )
                     auto_ban_hover = ban_hover_choice == "o"
-
-                    onetricks_choice = (
-                        input(
-                            "Ouvrir la page du champion sur Onetricks.gg en fin de draft ? (O/n) : "
-                        )
-                        .strip()
-                        .lower()
-                    )
-                    open_onetricks = onetricks_choice != "n"  # Oui par défaut sauf 'n' explicite
                     pool_name = None  # sélection interactive par run_draft_coach
 
                 run_draft_coach(
@@ -189,7 +159,6 @@ def main():
                     auto_hover=auto_hover,
                     auto_accept_queue=auto_accept_queue,
                     auto_ban_hover=auto_ban_hover,
-                    open_onetricks=open_onetricks,
                     pool_name=pool_name,
                 )
 

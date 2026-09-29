@@ -22,7 +22,6 @@ class UserPrefs:
     auto_hover: bool = False
     auto_accept_queue: bool = False
     auto_ban_hover: bool = False
-    open_onetricks: bool = True
     pool_name: Optional[str] = None
 
 
@@ -40,8 +39,9 @@ def load_user_prefs() -> Optional[UserPrefs]:
 
     Les clés inconnues sont ignorées : un fichier écrit par une version
     antérieure (qui contenait ``synergy_weight``, supprimé avec le curseur
-    synergie/matchup) se recharge donc sans erreur, et la clé disparaît d'elle-
-    même à la prochaine sauvegarde.
+    synergie/matchup, ou ``open_onetricks``, supprimé avec la fenêtre
+    OneTricks en 4.0.0) se recharge donc sans erreur, et la clé disparaît
+    d'elle-même à la prochaine sauvegarde.
     """
     path = get_user_prefs_path()
     if not os.path.exists(path):
@@ -54,7 +54,6 @@ def load_user_prefs() -> Optional[UserPrefs]:
             auto_hover=bool(data["auto_hover"]),
             auto_accept_queue=bool(data["auto_accept_queue"]),
             auto_ban_hover=bool(data["auto_ban_hover"]),
-            open_onetricks=bool(data["open_onetricks"]),
             pool_name=data.get("pool_name"),
         )
     except (OSError, ValueError, TypeError, KeyError, json.JSONDecodeError):

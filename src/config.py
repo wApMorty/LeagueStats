@@ -56,11 +56,6 @@ class Config:
     # Firefox settings
     FIREFOX_PATH: str = os.getenv("FIREFOX_PATH", r"C:\Program Files\Mozilla Firefox\firefox.exe")
 
-    # Brave settings
-    BRAVE_PATH: str = os.getenv(
-        "BRAVE_PATH", r"C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe"
-    )
-
     # Scraping settings
     # "14" = 14 derniers jours (évite effets de bord lors de sortie de patch + pas besoin de mettre à jour)
     CURRENT_PATCH: str = "14"
@@ -84,26 +79,6 @@ class Config:
 
         raise FileNotFoundError(
             "Firefox executable not found. Please install Firefox or set FIREFOX_PATH environment variable."
-        )
-
-    @classmethod
-    def get_brave_path(cls) -> str:
-        """Get Brave browser path with fallback options."""
-        paths = [
-            os.getenv("BRAVE_PATH"),
-            r"C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe",
-            r"C:\Program Files (x86)\BraveSoftware\Brave-Browser\Application\brave.exe",
-            r"C:\Users\{}\AppData\Local\BraveSoftware\Brave-Browser\Application\brave.exe".format(
-                os.environ.get("USERNAME", "")
-            ),
-        ]
-
-        for path in paths:
-            if path and os.path.exists(path):
-                return path
-
-        raise FileNotFoundError(
-            "Brave browser executable not found. Please install Brave or set BRAVE_PATH environment variable."
         )
 
 

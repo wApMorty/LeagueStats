@@ -76,7 +76,6 @@ INSTALLATION:
 PREREQUIS:
 - League of Legends installe
 - Firefox installe (scraping des statistiques)
-- Brave installe (optionnel : page OneTricks en fin de draft)
 
 UTILISATION:
 - Double-cliquer sur LeagueStatsCoach.exe

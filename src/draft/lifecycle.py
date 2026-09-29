@@ -206,10 +206,6 @@ class MonitorLifecycle:
                 # Mark analysis as done
                 self.m.has_analyzed_final_draft = True
 
-                # Open champion page on OneTriks.gg if enabled
-                if self.m.open_onetricks:
-                    self.m._open_champion_page_on_onetricks()
-
         except Exception as e:
             print(f"[ERREUR] Échec de l'analyse du draft complet: {e}")
             if self.m.verbose:
