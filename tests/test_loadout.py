@@ -274,6 +274,34 @@ class TestAdaptToMatchup:
         assert adapt_to_matchup(load(GENERAL), duel) is None
 
 
+class TestMatchupItems:
+    """Situationnels : les items que le duel sur-représente passent en tête."""
+
+    def test_unlisted_item_enters_ahead_of_a_less_significant_one(self):
+        general, duel = load(GENERAL), load(DUEL)
+        # Kraken Slayer 5,9 % -> 20 % ; Randuin's, non publié (majorant 2,3 %) -> 20 %.
+        stats(duel)["popularItems"] = [["6672", 0.2], ["3143", 0.2]]
+        build, subs = adapt_to_matchup(general, duel)
+        assert dict(build.item_blocks)["Situationnels"][:2] == (3143, 6672)
+        randuin = next(sub for sub in subs if sub.new == (3143,))
+        assert not randuin.general_listed
+        assert randuin.general_share == pytest.approx(0.023, abs=0.001)
+
+    def test_noise_keeps_the_general_order(self):
+        general, duel = load(GENERAL), load(DUEL)
+        stats(duel)["popularItems"] = [["6672", 0.1]]  # 4 parties sur 40, p ~ 0.2
+        build, subs = adapt_to_matchup(general, duel)
+        assert subs[-1].category != "Situationnels"
+        assert build.item_blocks == pick_build(general).item_blocks
+
+    def test_general_page_without_popular_items(self):
+        general, duel = load(GENERAL), load(DUEL)
+        stats(general).pop("popularItems")
+        stats(duel)["popularItems"] = [["6672", 0.5]]
+        build, _ = adapt_to_matchup(general, duel)
+        assert dict(build.item_blocks)["Situationnels"] == ()
+
+
 class TestRuneSlots:
     """§3.2.2 : la règle des items, emplacement par emplacement de la page."""
 

@@ -131,7 +131,11 @@ def get_page(champion: str, lane: Optional[str], opponent: Optional[str] = None)
     return _pages[key]
 
 
-def _item_blocks(stats: dict, chosen: Dict[str, Tuple[Tuple[int, ...], float]]) -> tuple:
+def _item_blocks(
+    stats: dict,
+    chosen: Dict[str, Tuple[Tuple[int, ...], float]],
+    matchup_items: Tuple[int, ...] = (),
+) -> tuple:
     """Blocs du set, du choix le plus joué aux alternatives, façon Coachless.
 
     ``chosen`` : option retenue et sa popularité, par catégorie de
@@ -139,6 +143,7 @@ def _item_blocks(stats: dict, chosen: Dict[str, Tuple[Tuple[int, ...], float]]) 
     listés ; le départ garde ses doublons (deux potions). Pas de bloc des cores
     alternatifs : leurs items sont parmi les plus joués, et les y lister les
     retirait des situationnels (Death's Dance d'Ambessa, 2026-09-25).
+    ``matchup_items`` : items que le duel sur-représente, en tête des situationnels.
     """
     (start, start_share), (core, core_share), (boots, boots_share) = (
         chosen[category] for category, _ in _ITEM_CHOICES
@@ -154,7 +159,11 @@ def _item_blocks(stats: dict, chosen: Dict[str, Tuple[Tuple[int, ...], float]]) 
         (f"Core ({core_share:.0%})", core, None),
         (f"Bottes ({boots_share:.0%})", boots + tuple(ids("boots")), None),
         ("Composants", ids("componentBuildPaths"), None),
-        ("Situationnels", ids("popularItems"), draft_config.LOADOUT_SITUATIONAL_ITEMS),
+        (
+            "Situationnels",
+            [*matchup_items, *ids("popularItems")],
+            draft_config.LOADOUT_SITUATIONAL_ITEMS,
+        ),
     ):
         kept = [item for item in dict.fromkeys(items) if item not in seen][:limit]
         seen.update(kept)
@@ -251,6 +260,29 @@ def _significant(
     duel_shares = {_option(raw): share for raw, share in duel["firstItemStats"]["all"]["all"][key]}
     chosen = _option(general_options[0][0])
     return _best_option(category, chosen, shares, duel_shares, ceiling, duel_games)
+
+
+def _matchup_items(general: dict, duel: dict, duel_games: int) -> List[Substitution]:
+    """Items que le duel sur-représente significativement, du plus significatif au moins.
+
+    Chaque item est testé seul : ``popularItems`` donne la part des parties
+    où il est acheté, pas un choix exclusif. Un item non publié en général est
+    majoré par le moins acheté des items publiés.
+    """
+    general_items = general["firstItemStats"]["all"]["all"].get("popularItems") or []
+    shares = {_option(raw): share for raw, share in general_items}
+    if not shares:
+        return []
+    ceiling = max(min(shares.values()), 1.0 / int(general["patchStats"]["all"]))
+    found = []
+    for raw, share in duel["firstItemStats"]["all"]["all"].get("popularItems") or []:
+        item = _option(raw)
+        p0 = shares.get(item, ceiling)
+        p_value = binomial_tail(duel_games, p0, round(share * duel_games))
+        if p_value < draft_config.LOADOUT_MATCHUP_ALPHA:
+            sub = Substitution("Situationnels", (), item, share, p0, item in shares, duel_games)
+            found.append((p_value, sub))
+    return [sub for _, sub in sorted(found, key=lambda pair: pair[0])]
 
 
 def _rune_table(page: dict) -> Dict[int, Tuple[int, int, str]]:
@@ -370,7 +402,11 @@ def adapt_to_matchup(general: dict, duel: dict) -> Optional[Tuple[Build, List[Su
                 )
             else:
                 chosen[sub.category] = (sub.new, sub.duel_share)
-        return replace(build, item_blocks=_item_blocks(general_stats, chosen)), substitutions
+        matchup = _matchup_items(general, duel, duel_games)
+        blocks = _item_blocks(general_stats, chosen, tuple(sub.new[0] for sub in matchup))
+        # Seuls ceux qui atterrissent en situationnels changent le set (pas un item du core).
+        substitutions += [sub for sub in matchup if sub.new[0] in blocks[-1][1]]
+        return replace(build, item_blocks=blocks), substitutions
     except (KeyError, IndexError, TypeError, ValueError, ZeroDivisionError):
         return None
 

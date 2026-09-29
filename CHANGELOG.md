@@ -6,6 +6,12 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### 🐛 Fix
 
+- **Les items situationnels tiennent compte du duel** (SPEC-15 §3.2.3) — le test
+  de sur-représentation ne portait que sur départ, core et bottes : les items
+  légendaires gardaient l'ordre de la page générale. Chaque item que le duel
+  fait acheter significativement plus souvent (α = `LOADOUT_MATCHUP_ALPHA`)
+  passe en tête des Situationnels, et apparaît en console avec sa part.
+
 - **`calibrate_model.py` retrouve les parties du modèle courant** — il filtrait
   sur `spec13-v1+lane-restante`, un suffixe que SPEC-11 ajoutait dès 30
   parties labellisées, alors que SPEC-12 journalise `MODEL_VERSION` seul : le

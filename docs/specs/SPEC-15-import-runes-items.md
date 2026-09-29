@@ -305,6 +305,20 @@ Jinx contre Draven (fixtures, 40 parties) :
 
 Sur la page du 2026-09-25, l'arbre secondaire passe aussi (62,7 % contre 41,8 %).
 
+#### 3.2.3 Items situationnels (@pj35, 2026-09-29)
+
+Les items légendaires (`popularItems`) passent le même test que §3.2.1, **item par item** :
+`popularItems` donne la part des parties où chaque item est acheté, pas un choix exclusif.
+
+- Un item absent de la page générale prend comme majorant le moins acheté des items publiés
+  (jamais sous `1 / parties générales`) ; il n'y a pas de masse restante, les parts ne
+  somment pas à 1.
+- Les items significatifs passent **en tête** du bloc Situationnels, du plus petit p au plus
+  grand ; le reste garde l'ordre général. Rien ne bouge sur du bruit (tri complet par p et bloc
+  « Contre {adversaire} » écartés).
+- Seuls ceux qui atterrissent en Situationnels sont signalés en console : un item déjà dans le
+  core (Runaan's contre Draven, 87 % contre 71 %, p = 0,012) ne change rien au set.
+
 ### 3.3 Écritures LCU
 
 | Quoi | Appel | Règle |
