@@ -19,7 +19,7 @@ boucle du Live Coach.
 import json
 import sqlite3
 from datetime import datetime, timezone
-from typing import Callable, Dict
+from typing import Callable, Dict, Optional
 
 from ..config_constants import coaching_config
 from ..draft.final_analysis import _to_points as to_points
@@ -106,13 +106,24 @@ class GameCapture:
         """Capture les parties SoloQ/Flex de l'historique absentes de la base."""
         lcu, db = self.m.lcu, self.m.assistant.db
         captured_ids = db.get_captured_game_ids()
+        matches = {m["game_id"]: m for m in lcu.get_recent_matches(coaching_config.HISTORY_DEPTH)}
+        # Seule la liste de l'historique a ~5 min de retard : le détail et la
+        # timeline d'une partie de l'écran de fin sont servis tout de suite
+        # (mesuré le 2026-09-30). Sans ça, le rapport arrivait pendant, voire
+        # après, la partie suivante.
+        for game_id in self._eog_by_game:
+            matches.setdefault(game_id, None)
         count = 0
-        for match in lcu.get_recent_matches(coaching_config.HISTORY_DEPTH):
-            game_id = match["game_id"]
-            if match["queue_id"] not in coaching_config.QUEUE_IDS or game_id in captured_ids:
+        for game_id, match in matches.items():
+            if game_id in captured_ids or (
+                match and match["queue_id"] not in coaching_config.QUEUE_IDS
+            ):
                 continue
             game = lcu.get_game_detail(game_id)
             if not game or not game.get("participants"):
+                continue
+            match = match or self._match_from_detail(game)
+            if not match or match["queue_id"] not in coaching_config.QUEUE_IDS:
                 continue
             duration_s = game.get("gameDuration") or 0
             timeline = lcu.get_game_timeline(game_id)
@@ -138,6 +149,27 @@ class GameCapture:
         if count:
             print(f"[DATA] Coach de gameplay : {count} partie(s) capturée(s)")
         return count
+
+    def _match_from_detail(self, game: dict) -> Optional[dict]:
+        """Les champs de get_recent_matches utiles à la capture, depuis le
+        détail ; le joueur est retrouvé par le puuid de l'écran de fin."""
+        eog = json.loads(self._eog_by_game.get(game["gameId"], "{}"))
+        puuid = (eog.get("localPlayer") or {}).get("puuid")
+        participant_id = next(
+            (
+                identity["participantId"]
+                for identity in game.get("participantIdentities") or []
+                if puuid and (identity.get("player") or {}).get("puuid") == puuid
+            ),
+            None,
+        )
+        if participant_id is None:
+            return None  # la liste de l'historique prendra le relais
+        return {
+            "game_creation_ms": game["gameCreation"],
+            "queue_id": game.get("queueId"),
+            "participant_id": participant_id,
+        }
 
     def _safely(self, step: Callable[[], object]) -> None:
         try:

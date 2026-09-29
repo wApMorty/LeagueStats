@@ -4,6 +4,14 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### 🐛 Fix
+
+- **Rapport du coach de gameplay en retard d'une partie** — la capture attendait
+  que la partie apparaisse dans la liste de l'historique (~5 min de retard), et
+  le rapport tombait pendant, voire après, la partie suivante. La partie de
+  l'écran de fin est désormais lue directement (`games/{id}` et sa timeline
+  sont servis tout de suite) : le rapport suit le résultat et les LP.
+
 ## [4.0.0] - 2026-09-29
 
 Version majeure : une migration Alembic est requise (`python -m alembic upgrade
