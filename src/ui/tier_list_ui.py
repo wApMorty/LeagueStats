@@ -17,18 +17,37 @@ def run_champion_analysis():
     print("\nOptions disponibles :")
     print("1. Générer une tier list    - Créer des tier lists blind pick ou counter pick")
     print("2. Coach de draft tournoi   - Coaching manuel pour tournois externes")
-    print("3. Retour au menu principal")
+    print("3. Bilan de gameplay        - Progrès, schémas et axes de travail (SPEC-19)")
+    print("4. Retour au menu principal")
 
-    choice = input("\nChoisissez une option (1-3) : ").strip()
+    choice = input("\nChoisissez une option (1-4) : ").strip()
 
     if choice == "1":
         run_tier_list_generator()
     elif choice == "2":
         run_tournament_draft_coach()
     elif choice == "3":
+        run_gameplay_review()
+    elif choice == "4":
         return
     else:
         print("[ERROR] Option invalide")
+
+
+def run_gameplay_review():
+    """Bilan du coach de gameplay, depuis les parties déjà analysées par le Live Coach."""
+    from src.coaching.report import review
+    from src.config import config
+    from src.db import Database
+
+    db = Database(config.DATABASE_PATH)
+    db.connect()
+    try:
+        print("\n".join(review(db)))
+    except Exception as e:
+        print(f"[ERROR] Bilan impossible ({e}). Base migrée ? `python -m alembic upgrade head`")
+    finally:
+        db.close()
 
 
 def run_tier_list_generator():

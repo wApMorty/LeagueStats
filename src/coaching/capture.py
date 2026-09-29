@@ -9,6 +9,9 @@ L'écran de fin (`raw_eog`) disparaît dès la draft suivante, bien avant que
 l'historique ait la partie : il est mis de côté en mémoire à chaque passage,
 puis rangé avec la partie. Seule source fiable du poste de chaque joueur.
 
+Chaque passage enchaîne sur l'analyse des parties nouvellement capturées
+(findings.py) : rapport de fin de partie en direct, synthèse au démarrage.
+
 Best-effort, comme src/draft/outcome_tracker.py : rien ici n'interrompt la
 boucle du Live Coach.
 """
@@ -19,7 +22,9 @@ from datetime import datetime, timezone
 from typing import Callable, Dict
 
 from ..config_constants import coaching_config
-from . import ranked
+from ..draft.final_analysis import _to_points as to_points
+from ..repositories.coaching import CoachingRepository
+from . import findings, goals, ranked, report
 
 # Jetons de session du chat d'après-partie : jamais stockés.
 EOG_SECRET_KEYS = ("mucJwtDto", "multiUserChatPassword")
@@ -37,12 +42,57 @@ class GameCapture:
         """Rattrapage des parties jouées app fermée, et photo du classement."""
         self._safely(self.capture_recent)
         self._safely(lambda: ranked.snapshot_current(self.m.lcu, self.m.assistant.db))
+        self._safely(lambda: self.analyze(live=False))
 
     def on_post_game(self) -> None:
         """Un passage de la fenêtre d'après-partie."""
         self._safely(self.remember_end_of_game)
         self._safely(lambda: ranked.snapshot_after_game(self.m.lcu, self.m.assistant.db))
         self._safely(self.capture_recent)
+        self._safely(lambda: self.analyze(live=True))
+
+    def analyze(self, live: bool) -> None:
+        """Analyse les parties capturées (tâches 34 à 38).
+
+        En direct, chaque partie a son rapport ; au démarrage (rattrapage, ou
+        recalcul après un changement de grille), une ligne de synthèse suffit.
+        """
+        db = self.m.assistant.db
+        repo = CoachingRepository(db)
+        analyses = findings.analyze_pending(db)
+        for analysis in analyses:
+            lines = goals.judge(repo, analysis)
+            if live:
+                lines = self._game_report(analysis) + lines
+            for line in lines:
+                print(line)
+        if not analyses:
+            return
+        if not live:
+            print(f"[DATA] Coach de gameplay : {len(analyses)} partie(s) analysée(s)")
+        proposal = goals.propose(repo, analyses[-1].role) if analyses[-1].role else None
+        if proposal:
+            print(proposal)
+        total = sum(repo.player_roles().values())
+        every = coaching_config.REVIEW_EVERY
+        if live and total // every > (total - len(analyses)) // every:
+            print("\n".join(report.review(db)))
+
+    def _game_report(self, analysis) -> list:
+        db = self.m.assistant.db
+
+        def name_of(champion_id: int) -> str:
+            return db.get_champion_by_id(champion_id) or f"Champion{champion_id}"
+
+        duel = None
+        evaluator = getattr(self.m, "evaluator", None)
+        if evaluator and analysis.role and analysis.opponent_champion_id:
+            me = (name_of(analysis.champion_id), analysis.role)
+            them = (name_of(analysis.opponent_champion_id), analysis.role)
+            if evaluator.has_matchup_data(me, them):
+                duel = to_points(evaluator.matchup_logit(me, them))
+        predicted = CoachingRepository(db).predicted_probability(analysis.game_id)
+        return [""] + report.game_report(analysis, name_of, predicted, duel)
 
     def remember_end_of_game(self) -> None:
         """Met de côté l'écran de fin d'une partie classée, sans ses secrets."""

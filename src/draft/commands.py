@@ -14,7 +14,10 @@ monitor itself (tests read/write them directly on the instance).
 import queue
 import threading
 
+from ..coaching.goals import set_goal
+from ..coaching.report import review
 from ..config_constants import scraping_config
+from ..repositories.coaching import CoachingRepository
 from .state import DraftState
 
 
@@ -63,6 +66,9 @@ class CommandListener:
             if stripped.lower().startswith("outcome"):
                 # Never affects the draft display, so it doesn't set `applied`.
                 self.handle_outcome_command(stripped)
+                continue
+            if stripped.lower().split()[:1] in (["bilan"], ["axe"]):
+                self.handle_coaching_command(stripped)  # SPEC-19, hors draft
                 continue
             if self.handle_correction_command(line, state):
                 applied = True
@@ -139,3 +145,25 @@ class CommandListener:
 
         # One outcome update per game, whether it succeeded or not.
         self.m._last_prediction_id = None
+
+    def handle_coaching_command(self, line: str) -> None:
+        """'bilan' ou 'axe <métrique>' (coach de gameplay, SPEC-19 §7.3-7.4).
+
+        L'axe porte sur le poste le plus joué. Best-effort : ne lève jamais.
+        """
+        parts = line.split()
+        try:
+            db = self.m.assistant.db
+            if parts[0].lower() == "bilan":
+                print("\n".join(review(db)))
+                return
+            if len(parts) != 2:
+                print("[AXE] Format attendu : axe <métrique>, ex. axe deaths_before_14")
+                return
+            roles = CoachingRepository(db).player_roles()
+            if not roles:
+                print("[AXE] Aucune partie analysée pour l'instant")
+                return
+            print(set_goal(CoachingRepository(db), parts[1], max(roles, key=roles.get)))
+        except Exception as e:
+            print(f"[WARNING] Commande du coach de gameplay impossible : {e}")

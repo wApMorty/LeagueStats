@@ -195,6 +195,9 @@ class DraftMonitor:
         print(
             "   Tapez 'outcome win' ou 'outcome loss' + Entrée après la partie pour logger le résultat"
         )
+        print(
+            "   Tapez 'bilan' pour le bilan du coach de gameplay, 'axe <métrique>' pour fixer un axe"
+        )
         print("   (Ctrl+C pour arrêter)")
 
         self._start_command_listener()

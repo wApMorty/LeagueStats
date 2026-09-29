@@ -22,6 +22,7 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 from ..analysis.game_eval import Placed
 from ..analysis.probability import sigmoid
+from ..coaching.goals import draft_reminder
 from ..config_constants import analysis_config, draft_config, scraping_config
 from ..utils.console import clear_console
 
@@ -279,5 +280,17 @@ class FinalDraftAnalyzer:
             print(f"  Évaluation : Désavantage de draft ({draft_diff:.2f}% de retard)")
         else:
             print(f"  Évaluation : Désavantage de draft majeur ({draft_diff:.2f}% de retard)")
+
+        # SPEC-19 §7.3 : rappel des axes de travail du coach de gameplay.
+        try:
+            reminders = draft_reminder(self.m.assistant.db)
+        except Exception as e:
+            reminders = []
+            if self.m.verbose:
+                print(f"[WARNING] Axes de travail illisibles : {e}")
+        if reminders:
+            print()
+            for line in reminders:
+                print(line)
 
         print("\n" + "=" * 80)

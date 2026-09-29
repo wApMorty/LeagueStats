@@ -80,8 +80,8 @@ class TestParseMatchStatisticsDispatch:
 
 
 class TestRunChampionAnalysisDispatch:
-    """run_champion_analysis() (menu 4) routes to the tier list generator
-    or the tournament coach."""
+    """run_champion_analysis() (menu 4) routes to the tier list generator,
+    the tournament coach or the gameplay review."""
 
     def test_choice_1_routes_to_tier_list_generator(self, monkeypatch):
         inputs = iter(["1"])
@@ -103,11 +103,22 @@ class TestRunChampionAnalysisDispatch:
 
         called.assert_called_once()
 
-    def test_choice_3_returns_without_calling_anything(self, monkeypatch):
+    def test_choice_3_routes_to_gameplay_review(self, monkeypatch):
         inputs = iter(["3"])
+        monkeypatch.setattr("builtins.input", lambda *_a: next(inputs))
+        called = MagicMock()
+        monkeypatch.setattr(tier_list_ui, "run_gameplay_review", called)
+
+        tier_list_ui.run_champion_analysis()
+
+        called.assert_called_once()
+
+    def test_choice_4_returns_without_calling_anything(self, monkeypatch):
+        inputs = iter(["4"])
         monkeypatch.setattr("builtins.input", lambda *_a: next(inputs))
         monkeypatch.setattr(tier_list_ui, "run_tier_list_generator", MagicMock())
         monkeypatch.setattr(tier_list_ui, "run_tournament_draft_coach", MagicMock())
+        monkeypatch.setattr(tier_list_ui, "run_gameplay_review", MagicMock())
 
         tier_list_ui.run_champion_analysis()  # must not raise
 
