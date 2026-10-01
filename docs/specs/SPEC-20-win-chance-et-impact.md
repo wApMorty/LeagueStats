@@ -39,7 +39,7 @@ Trois usages, dans cet ordre :
 | Variables du modèle | **Uniquement celles présentes dans les deux sources** (timeline LCU et Live Client), pour que le même modèle tourne après la partie et en jeu (§4.1). |
 | Modèle | **À valider** : régression logistique en Python pur (stdlib), comme le reste de `src/analysis/`. Pas de numpy ni scikit-learn tant que la logistique tient la calibration. |
 | Stockage du brut | **À valider** : base SQLite séparée `data/crawl.db`, JSON compressé (`zlib`, stdlib). ~160 Ko de JSON par partie (détail + timeline), ~15 Ko compressé : 5 000 parties ≈ 75 Mo, hors de `db.db` (29 Mo). |
-| Débit de collecte | **À valider** : ~1 requête/s, lancée à la demande (menu, script), jamais pendant une draft ou une partie. |
+| Collecte | **Automatique et continue (@pj35, 2026-10-01)**, en tâche de fond du Live Coach, sans action du joueur (§3.1). Débit ~1 requête/s à valider. |
 
 ## 3. Données : sondage du 2026-10-01
 
@@ -55,6 +55,25 @@ partie du joueur :
 Trois historiques ont donné 57 parties distinctes. Chaque partie ouvre 9 historiques de 20
 parties, **au MMR du joueur** par construction. Aucun bridage observé sur ces ~35 requêtes ;
 le comportement sur la durée reste à mesurer (phase 1).
+
+### 3.1 Collecte continue
+
+La dérive de patch impose de toute façon de renouveler les données : la collecte tourne en
+continu, pas en lots.
+
+- **Déclencheur** : chaque fin de partie capturée (SPEC-19), dans la fenêtre d'après-partie
+  déjà en place. Les 9 autres joueurs de la partie passent **en tête** de file : ce sont les
+  plus frais, et au MMR du moment.
+- **Hors de ces moments**, la file se vide au fil de l'eau tant que le Live Coach tourne (lobby,
+  file d'attente, partie en cours), **en pause pendant la draft** pour laisser le LCU au Live
+  Coach.
+- **Profondeur** : joueurs de tes parties (profondeur 1), puis leurs adversaires (profondeur 2) ;
+  au-delà, on s'éloigne de ton MMR. Limite en configuration.
+- **Ordre de grandeur** : une partie ouvre 9 historiques de 20 parties, soit ~100 parties
+  classées nouvelles après dédoublonnage ; ~2 min à 1 requête/s. À 5 parties par jour, ~500
+  parties par jour, 5 000 en une dizaine de jours.
+- **Purge** : les parties de plus de `WINPROB_PATCH_WINDOW` patchs sont supprimées (~15 Ko
+  compressé par partie, ~7,5 Mo par jour).
 
 La timeline (SPEC-19 §3.4) donne une image par minute (or, XP, niveau, CS, position des 10) et
 les événements `CHAMPION_KILL`, `BUILDING_KILL`, `ELITE_MONSTER_KILL`, horodatés à la
@@ -147,7 +166,7 @@ recalculable, pas une donnée produit — **à valider**) :
 | Table | Contenu |
 |---|---|
 | `crawl_games` | `game_id` (PK), `queue_id`, `game_version`, `game_creation_utc`, `duration_s`, `blue_win`, `raw` (détail + timeline, JSON compressé, identités retirées sauf `puuid`) |
-| `crawl_frontier` | `puuid` (PK), `discovered_utc`, `visited_utc` (NULL si à visiter) |
+| `crawl_frontier` | `puuid` (PK), `depth` (1 : joueur de tes parties), `priority`, `discovered_utc`, `visited_utc` (NULL si à visiter) |
 
 **`data/db.db`**, migration Alembic en phase 3 : `game_impact` (`game_id`, `participant_id`,
 `event_time_ms`, `event_type`, `delta_p`, `model_version`), pour les parties du joueur seulement.
@@ -167,7 +186,9 @@ Les lectures LCU vont dans `src/lcu_match_history.py` (mixin existant).
 
 ## 9. Risques
 
-- **Bridage ou réaction de Riot** au crawl : débit bas, à la demande, arrêt au premier 429.
+- **Bridage ou réaction de Riot** au crawl : débit bas, pause au premier 429.
+- **Collecte pendant la partie** : charge réseau et CPU minime à 1 requête/s, mais à vérifier
+  en phase 1 (FPS, ping). Si un effet se voit, pause aussi en jeu.
 - **Biais d'échantillon** : de proche en proche depuis tes parties, la collecte reste à ton
   MMR, ce qui est voulu, mais surreprésente tes adversaires récurrents. Mesurer la diversité des
   `puuid`.
@@ -179,8 +200,8 @@ Les lectures LCU vont dans `src/lcu_match_history.py` (mixin existant).
 
 | # | Tâche | Phase | Pts | Dépend de |
 |---|---|---|---|---|
-| 39 | `crawl.py` + lectures LCU tierces, `data/crawl.db`, commande ou script de collecte | 1 | 3 | — |
-| 40 | Collecte d'~5 000 parties, mesure du débit et du bridage, consignés ici | 1 | 1 | 39 |
+| 39 | `crawl.py` + lectures LCU tierces, `data/crawl.db`, file priorisée, branchement sur l'après-partie et la boucle du Live Coach (pause en draft), purge par patch | 1 | 5 | — |
+| 40 | Une semaine de collecte réelle : volume, débit, bridage, diversité des `puuid`, consignés ici | 1 | 1 | 39 |
 | 41 | `state.py` : état depuis la timeline LCU, testé sur les fixtures de SPEC-19 | 2 | 3 | — |
 | 42 | `model.py` : logistique, validation par blocs de parties, calibration par tranche de temps, comparaison avec et sans l'or | 2 | 5 | 40, 41 |
 | 43 | `impact.py` : ΔP et attribution, migration `game_impact` | 3 | 5 | 42 |
@@ -191,8 +212,9 @@ Les lectures LCU vont dans `src/lcu_match_history.py` (mixin existant).
 
 ## 11. Critères d'acceptation
 
-1. La collecte reprend là où elle s'est arrêtée, respecte le débit configuré, s'arrête au
-   premier 429, et ne tourne jamais pendant une draft ou une partie.
+1. La collecte démarre seule à chaque fin de partie, reprend là où elle s'est arrêtée,
+   respecte le débit configuré, se met en pause pendant la draft et au premier 429 (reprise
+   après un délai en configuration).
 2. Le modèle est évalué sur des parties absentes de l'entraînement. **Brier ≤ 0,20 et écart de
    calibration ≤ 5 points par décile** sur les images après 10 min (seuils à confirmer avant la
    mesure, jamais après).

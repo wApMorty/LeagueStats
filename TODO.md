@@ -97,11 +97,11 @@ les LP sont suivis depuis le LCU. Découpage détaillé en SPEC-19 §11 (tâches
 parties tierces collectées via le LCU (sondé le 2026-10-01 : historiques et timelines tiers
 servis), impact de chaque événement attribué aux joueurs, puis overlay en jeu (Live Client API).
 Répond à la confusion cause/effet des constats de SPEC-19. Ordre validé par @pj35, arbitrages
-§2 à valider. Découpage en SPEC-20 §10 (tâches 39 à 47, ~26 pts) :
+§2 à valider. Découpage en SPEC-20 §10 (tâches 39 à 47, ~28 pts) :
 
 | Phase | Contenu | Pts | État |
 |---|---|---|---|
-| 1 | Collecte LCU de proche en proche (`data/crawl.db`), ~5 000 parties | 4 | ⬜ |
+| 1 | Collecte LCU continue en tâche de fond du Live Coach (`data/crawl.db`), une semaine de mesure | 6 | ⬜ |
 | 2 | État de partie, modèle logistique, calibration | 8 | ⬜ |
 | 3 | Impact par événement, rapport de fin de partie | 7 | ⬜ |
 | 4 | Impact dans le bilan et les schémas de SPEC-19 | 3 | ⬜ |
