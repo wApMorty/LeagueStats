@@ -118,6 +118,22 @@ Le modèle est filtré par patch (`gameVersion`), réentraîné quand le patch c
   tranche de temps.
 - **Seuil d'acceptation** fixé avant la mesure (§11) ; en dessous, pas de phase 3.
 
+### 4.4 Réentraînement (@pj35, 2026-10-02)
+
+Vérifié **après chaque partie**, les sessions pouvant être longues : dans la fenêtre
+d'après-partie, une fois l'impact de la partie calculé avec le modèle en place. Jamais en draft
+ni en partie.
+
+- **Déclencheur** : au moins `WINPROB_RETRAIN_MIN_NEW_GAMES` nouvelles parties depuis le dernier
+  entraînement. En dessous, un nouveau modèle ne différerait que par le bruit.
+- **Champion contre challenger** : le nouveau modèle n'est adopté que s'il fait au moins aussi
+  bien que le modèle en place (Brier, calibration) sur un **jeu de validation commun** : les
+  parties les plus récentes, jamais utilisées pour l'entraînement. Sinon il est jeté, et la
+  raison est journalisée.
+- **Fenêtre d'entraînement** : les `WINPROB_PATCH_WINDOW` derniers patchs.
+- **Traçabilité** : chaque modèle reçoit un `model_version`. Les impacts déjà calculés restent
+  figés avec la version qui les a produits (même logique que les `z` de SPEC-19).
+
 ## 5. Impact (phase 3)
 
 Pour chaque événement de la timeline : P juste avant, P juste après (état mis à jour par
@@ -204,6 +220,7 @@ Les lectures LCU vont dans `src/lcu_match_history.py` (mixin existant).
 | 40 | Une semaine de collecte réelle : volume, débit, bridage, diversité des `puuid`, consignés ici | 1 | 1 | 39 |
 | 41 | `state.py` : état depuis la timeline LCU, testé sur les fixtures de SPEC-19 | 2 | 3 | — |
 | 42 | `model.py` : logistique, validation par blocs de parties, calibration par tranche de temps, comparaison avec et sans l'or | 2 | 5 | 40, 41 |
+| 42b | Réentraînement après chaque partie, champion contre challenger (§4.4) | 2 | 2 | 42 |
 | 43 | `impact.py` : ΔP et attribution, migration `game_impact` | 3 | 5 | 42 |
 | 44 | Rapport de fin de partie : impact, tournants, courbe | 3 | 2 | 43 |
 | 45 | Impact dans le bilan et les schémas de SPEC-19 | 4 | 3 | 43 |
