@@ -115,6 +115,10 @@ class DraftMonitor:
         # "outcome win"/"outcome loss" command. None = nothing to update.
         self._last_prediction_id: Optional[int] = None
 
+        # Réglage de calibration proposé, en attente d'un « o »/« n » (voir
+        # calibration_notice.build_proposal et CommandListener).
+        self._pending_calibration = None
+
         # SPEC-08 §2.6a: last gameflow phase seen among
         # draft_config.OUTCOME_TRIGGER_PHASES (None outside them). Entering
         # the first of them opens the post-game window (outcome, SPEC-19

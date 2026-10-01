@@ -6,6 +6,7 @@ node_modules
 # masquait aussi les vrais fichiers de config qu'on voudrait committer)
 champion_pools.json
 user_prefs.json
+calibration.json
 
 *.db
 *.log

@@ -4,8 +4,19 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### ✨ Feature
+
+- **Calibration appliquée par un simple « o/n »** — le Live Coach propose un réglage
+  de `K_MATCHUP`/`K_SYNERGY` et un nouveau `MODEL_VERSION` (`+calN`), puis les écrit dans
+  `calibration.json` (ignoré par git, lu à l'import de `config_constants`) et les applique
+  tout de suite. Garde-fou : au moins 100 parties, et un intervalle de confiance bootstrap
+  du facteur d'échelle qui exclut 1,0 sans toucher 0.
+
 ### 🐛 Fix
 
+- **`suggest_scale` sous-convergeait** — la montée de gradient s'arrêtait à ~40 % du chemin
+  (logits petits) : 0,586 suggéré sur 53 parties là où l'optimum est -0,10, c'est-à-dire
+  aucun signal. Remplacée par un Newton amorti ; le diagnostic affiche aussi l'intervalle.
 - **Rapport du coach de gameplay en retard d'une partie** — la capture attendait
   que la partie apparaisse dans la liste de l'historique (~5 min de retard), et
   le rapport tombait pendant, voire après, la partie suivante. La partie de

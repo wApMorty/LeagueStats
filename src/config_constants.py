@@ -200,6 +200,14 @@ class AnalysisConfig:
     # ce qui répéterait un rappel quasi identique après chaque game.
     AUTO_CALIBRATION_CHECK_INTERVAL: int = 20
 
+    # Garde-fou de la proposition « Appliquer ? o/n » (src/draft/calibration_
+    # notice.py) : pas avant ce nombre de parties, et seulement si l'intervalle
+    # de confiance bootstrap du facteur d'échelle exclut 1,0 sans toucher 0
+    # (à 53 parties, l'IC90 allait de -0,16 à 1,36 : du bruit).
+    CALIBRATION_APPLY_MIN_ROWS: int = 100
+    CALIBRATION_CI_CONFIDENCE: float = 0.90
+    CALIBRATION_CI_RESAMPLES: int = 200
+
     # SPEC-11 (étage b, "1 ply glouton") : le terme de risque de
     # src/analysis/one_ply_lookahead.py moyenne les LOOKAHEAD_TOP_K pires
     # delta2 plausibles restants (parmi ceux qui passent filter_valid_
@@ -520,3 +528,9 @@ xpath_config = XPathConfig()
 pool_stats_config = PoolStatisticsConfig()
 synergy_config = SynergyConfig()
 data_quality_config = DataQualityConfig()
+
+# Calibration appliquée par l'utilisateur (« Appliquer ? o/n » du Live Coach) :
+# K_MATCHUP, K_SYNERGY et MODEL_VERSION viennent de calibration.json s'il existe.
+from .calibration_overrides import apply_overrides  # noqa: E402
+
+apply_overrides(analysis_config)

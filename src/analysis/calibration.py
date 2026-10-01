@@ -9,6 +9,7 @@ numpy/scipy/sklearn on a 2-parameter logistic regression).
 """
 
 import math
+import random
 from typing import Dict, List, Optional, Sequence, Tuple
 
 Row = Tuple[float, int]  # (predicted_probability, outcome)
@@ -67,27 +68,62 @@ def _sigmoid(x: float) -> float:
     return 1.0 / (1.0 + math.exp(-x))
 
 
-def suggest_scale(rows: List[Row], learning_rate: float = 0.1, iterations: int = 500) -> float:
+def suggest_scale(rows: List[Row], iterations: int = 50) -> float:
     """Hand-rolled 1-parameter logistic recalibration (Platt scaling, no
     intercept -- our model is already centered at logit=0 for an even draft):
     finds the scale `s` maximizing the log-likelihood of the observed
     outcomes under `P = sigmoid(s * logit(predicted_probability))`.
 
-    Plain gradient ascent in pure Python -- no numpy/scipy/sklearn, per
-    SPEC-05 section 8 ("la régression logistique de calibration se fait sur
+    Newton's method in pure Python -- no numpy/scipy/sklearn, per SPEC-05
+    section 8 ("la régression logistique de calibration se fait sur
     2 paramètres, à la main ... aucune dépendance nouvelle"). `s < 1` means
     the model is currently too confident (predictions too far from 50%);
-    `s > 1` means it's too timid.
+    `s > 1` means it's too timid; `s <= 0` means no usable signal.
+
+    L'ancienne montée de gradient (500 pas, taux 0,1) s'arrêtait à ~40 % du
+    chemin : les logits d'un modèle quasi centré sont petits (|x| < 0,8), donc
+    le gradient aussi. Elle rendait 0,586 là où l'optimum était -0,10.
     """
     logits = [_logit(p) for p, _ in rows]
     outcomes = [o for _, o in rows]
-    n = len(rows)
+
+    def log_likelihood(scale: float) -> float:
+        total = 0.0
+        for x, y in zip(logits, outcomes):
+            p = min(max(_sigmoid(scale * x), 1e-12), 1 - 1e-12)
+            total += math.log(p if y else 1 - p)
+        return total
 
     scale = 1.0
     for _ in range(iterations):
-        gradient = sum((y - _sigmoid(scale * x)) * x for x, y in zip(logits, outcomes)) / n
-        scale += learning_rate * gradient
+        probs = [_sigmoid(scale * x) for x in logits]
+        gradient = sum((y - p) * x for x, y, p in zip(logits, outcomes, probs))
+        hessian = sum(p * (1 - p) * x * x for x, p in zip(logits, probs))
+        if hessian < 1e-12:
+            break
+        # Pas de Newton amorti : sur des logits saturés (0,9 gagnant une fois
+        # sur deux) le pas plein oscille et diverge. On le divise par deux
+        # tant qu'il ne fait pas monter la vraisemblance.
+        step = gradient / hessian
+        current = log_likelihood(scale)
+        while abs(step) > 1e-9 and log_likelihood(scale + step) < current:
+            step /= 2
+        scale += step
+        if abs(step) < 1e-9:
+            break
     return scale
+
+
+def scale_interval(
+    rows: List[Row], confidence: float, resamples: int, seed: int = 0
+) -> Tuple[float, float]:
+    """Intervalle de confiance bootstrap de `suggest_scale` : refait l'ajustement
+    sur `resamples` tirages avec remise. Graine fixe, pour que deux affichages
+    du même diagnostic donnent le même intervalle."""
+    rng = random.Random(seed)
+    scales = sorted(suggest_scale([rng.choice(rows) for _ in rows]) for _ in range(resamples))
+    tail = (1 - confidence) / 2
+    return scales[int(tail * (resamples - 1))], scales[int((1 - tail) * (resamples - 1))]
 
 
 def auc(scored: Sequence[Tuple[float, int]]) -> float:

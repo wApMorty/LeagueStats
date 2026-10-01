@@ -241,6 +241,10 @@ class OutcomeTracker:
             summary = calibration_notice.format_summary(self.m.assistant.db, model_version)
             if summary:
                 print("\n" + summary)
+            proposal = calibration_notice.build_proposal(self.m.assistant.db, model_version)
+            if proposal:
+                self.m._pending_calibration = proposal
+                print(calibration_notice.format_proposal(proposal))
         except Exception as e:
             if getattr(self.m, "verbose", False):
                 print(f"[WARNING] Échec du diagnostic de calibration automatique: {e}")

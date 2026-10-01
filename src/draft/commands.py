@@ -18,6 +18,7 @@ from ..coaching.goals import set_goal
 from ..coaching.report import review
 from ..config_constants import scraping_config
 from ..repositories.coaching import CoachingRepository
+from . import calibration_notice
 from .state import DraftState
 
 
@@ -63,6 +64,9 @@ class CommandListener:
             except queue.Empty:
                 break
             stripped = line.strip()
+            if getattr(self.m, "_pending_calibration", None) and stripped.lower() in ("o", "n"):
+                self.handle_calibration_answer(stripped.lower() == "o")
+                continue
             if stripped.lower().startswith("outcome"):
                 # Never affects the draft display, so it doesn't set `applied`.
                 self.handle_outcome_command(stripped)
@@ -145,6 +149,23 @@ class CommandListener:
 
         # One outcome update per game, whether it succeeded or not.
         self.m._last_prediction_id = None
+
+    def handle_calibration_answer(self, accepted: bool) -> None:
+        """Réponse `o`/`n` à la proposition de calibration (voir
+        calibration_notice.build_proposal) : `o` écrit calibration.json et
+        change MODEL_VERSION, `n` la jette (elle sera reproposée au prochain
+        diagnostic si elle tient toujours)."""
+        proposal, self.m._pending_calibration = self.m._pending_calibration, None
+        if not accepted:
+            print("[CALIBRATE] Réglage refusé, rien n'est modifié")
+        elif calibration_notice.apply_proposal(proposal):
+            print(
+                f"[CALIBRATE] Réglage appliqué (calibration.json) : K_MATCHUP "
+                f"{proposal.k_matchup:.2f}, K_SYNERGY {proposal.k_synergy:.2f}, "
+                f"MODEL_VERSION {proposal.model_version!r}"
+            )
+        else:
+            print("[CALIBRATE] Écriture de calibration.json impossible, rien n'est modifié")
 
     def handle_coaching_command(self, line: str) -> None:
         """'bilan' ou 'axe <métrique>' (coach de gameplay, SPEC-19 §7.3-7.4).
