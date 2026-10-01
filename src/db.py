@@ -428,6 +428,12 @@ class Database:
     def get_captured_game_ids(self) -> Set[int]:
         return self._game_records.get_captured_game_ids()
 
+    def get_recent_games(self, limit: int) -> list:
+        return self._game_records.get_recent_games(limit)
+
+    def get_raw_game(self, game_id: int) -> Optional[str]:
+        return self._game_records.get_raw_game(game_id)
+
     def insert_game_record(self, **fields) -> bool:
         return self._game_records.insert_game_record(**fields)
 

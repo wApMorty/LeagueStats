@@ -72,6 +72,31 @@ class _MatchHistoryMixin:
                 continue
         return matches
 
+    def get_player_games(self, puuid: str) -> Optional[List[Dict[str, Any]]]:
+        """The 20 latest games of ANY player, newest first (SPEC-20 §3, probed
+        2026-10-01): [{"game_id", "game_creation_ms", "queue_id"}].
+
+        None when the history is unavailable (check `last_status_code`),
+        [] when it is served but empty or oddly shaped.
+        """
+        response = self._make_request(
+            f"/lol-match-history/v1/products/lol/{puuid}/matches?begIndex=0&endIndex=19"
+        )
+        if response is None:
+            return None
+        games = (response.get("games") or {}).get("games")
+        if not isinstance(games, list):
+            return []
+        return [
+            {
+                "game_id": g["gameId"],
+                "game_creation_ms": g["gameCreation"],
+                "queue_id": g.get("queueId"),
+            }
+            for g in games
+            if isinstance(g, dict) and "gameId" in g and "gameCreation" in g
+        ]
+
     def get_match_participants(self, game_id: int) -> Dict[int, List[int]]:
         """All 10 champion picks of one game, grouped by team: {100: [...],
         200: [...]}.

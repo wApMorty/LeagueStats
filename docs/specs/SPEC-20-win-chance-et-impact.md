@@ -40,6 +40,8 @@ Trois usages, dans cet ordre :
 | Modèle | **À valider** : régression logistique en Python pur (stdlib), comme le reste de `src/analysis/`. Pas de numpy ni scikit-learn tant que la logistique tient la calibration. |
 | Stockage du brut | **À valider** : base SQLite séparée `data/crawl.db`, JSON compressé (`zlib`, stdlib). ~160 Ko de JSON par partie (détail + timeline), ~15 Ko compressé : 5 000 parties ≈ 75 Mo, hors de `db.db` (29 Mo). |
 | Collecte | **Automatique et continue (@pj35, 2026-10-01)**, en tâche de fond du Live Coach, sans action du joueur (§3.1). Débit ~1 requête/s à valider. |
+| Ordonnancement | **Validé (@pj35, 2026-10-02)** : approche A, un pas de collecte par tick de la boucle du monitor, sans thread (la pause en draft va de soi). |
+| Stockage du brut | **Validé (@pj35, 2026-10-02)** : `data/crawl.db` séparé, hors Alembic, JSON `zlib`. |
 
 ## 3. Données : sondage du 2026-10-01
 
@@ -181,7 +183,7 @@ recalculable, pas une donnée produit — **à valider**) :
 
 | Table | Contenu |
 |---|---|
-| `crawl_games` | `game_id` (PK), `queue_id`, `game_version`, `game_creation_utc`, `duration_s`, `blue_win`, `raw` (détail + timeline, JSON compressé, identités retirées sauf `puuid`) |
+| `crawl_games` | `game_id` (PK), `queue_id`, `game_version`, `game_creation_utc`, `duration_s`, `blue_win`, `depth`, `raw` (détail + timeline, JSON compressé, identités retirées sauf `puuid`). `raw` NULL : découverte dans un historique, à lire ; `raw` vide : détail indisponible, ne pas relire. Réalisé en phase 1 (tâche 39) |
 | `crawl_frontier` | `puuid` (PK), `depth` (1 : joueur de tes parties), `priority`, `discovered_utc`, `visited_utc` (NULL si à visiter) |
 
 **`data/db.db`**, migration Alembic en phase 3 : `game_impact` (`game_id`, `participant_id`,

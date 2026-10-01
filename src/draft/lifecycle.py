@@ -81,6 +81,10 @@ class MonitorLifecycle:
                         self.m._last_outcome_trigger_phase = None
 
                 self.retry_post_game()
+                # SPEC-20 : collecte de fond, jamais en draft (retour plus haut) ni
+                # pendant l'acceptation de la file.
+                if (gameflow or {}).get("phase") != "ReadyCheck":
+                    self.m.crawler.step()
                 return
 
             # Get current champion select data
@@ -128,6 +132,7 @@ class MonitorLifecycle:
         self.m._next_post_game_attempt = now + draft_config.POST_GAME_RETRY_INTERVAL
         self.m._resolve_pending_outcomes()
         self.m.game_capture.on_post_game()
+        self.m.crawler.seed()  # SPEC-20 : les joueurs de la partie passent en tête de file
 
     def handle_ready_check(self) -> None:
         """Handle ready check (queue found) and auto-accept if enabled."""

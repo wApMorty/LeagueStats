@@ -101,7 +101,7 @@ Répond à la confusion cause/effet des constats de SPEC-19. Ordre validé par @
 
 | Phase | Contenu | Pts | État |
 |---|---|---|---|
-| 1 | Collecte LCU continue en tâche de fond du Live Coach (`data/crawl.db`), une semaine de mesure | 6 | ⬜ |
+| 1 | Collecte LCU continue en tâche de fond du Live Coach (`data/crawl.db`), une semaine de mesure | 6 | 🟡 tâche 39 faite (2026-10-02), reste la semaine de mesure (tâche 40) |
 | 2 | État de partie, modèle logistique, calibration, réentraînement après chaque partie | 10 | ⬜ |
 | 3 | Impact par événement, rapport de fin de partie | 7 | ⬜ |
 | 4 | Impact dans le bilan et les schémas de SPEC-19 | 3 | ⬜ |

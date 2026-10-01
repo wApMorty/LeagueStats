@@ -40,6 +40,7 @@ class LCUClient(_MatchHistoryMixin):
         self.session = requests.Session()
         self.session.verify = False  # Ignore self-signed SSL cert
         self.verbose = verbose
+        self.last_status_code: Optional[int] = None
 
     def find_lcu_credentials(self) -> Optional[LCUCredentials]:
         """
@@ -192,6 +193,7 @@ class LCUClient(_MatchHistoryMixin):
         Returns:
             Response JSON or None if error
         """
+        self.last_status_code = None  # SPEC-20 : 429 distinct de 404 ; None = pas de réponse
         if not self.credentials:
             return None
 
@@ -199,18 +201,12 @@ class LCUClient(_MatchHistoryMixin):
         headers = {"Authorization": self.credentials.auth_header}
 
         try:
-            if method == "GET":
-                response = self.session.get(url, headers=headers, timeout=5)
-            elif method == "POST":
-                response = self.session.post(url, headers=headers, json=data, timeout=5)
-            elif method == "PATCH":
-                response = self.session.patch(url, headers=headers, json=data, timeout=5)
-            elif method == "PUT":
-                response = self.session.put(url, headers=headers, json=data, timeout=5)
-            elif method == "DELETE":
-                response = self.session.delete(url, headers=headers, timeout=5)
-            else:
+            if method not in ("GET", "POST", "PATCH", "PUT", "DELETE"):
                 return None
+            response = getattr(self.session, method.lower())(
+                url, headers=headers, json=data, timeout=5
+            )
+            self.last_status_code = response.status_code
 
             if 200 <= response.status_code < 300:  # 201 Created, 204 No Content
                 try:

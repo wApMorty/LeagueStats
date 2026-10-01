@@ -11,6 +11,7 @@ from .utils.console import clear_console
 from .constants import TOP_SOLOQ_POOL, CHAMPIONS_BY_ROLE
 from .config_constants import analysis_config, draft_config
 from .coaching.capture import GameCapture
+from .winprob.crawl import Crawler
 from .draft.state import ChampionAction, DraftState
 from .draft import phases
 from .draft import display
@@ -101,6 +102,7 @@ class DraftMonitor:
         self.lifecycle = MonitorLifecycle(self)
         self.outcome_tracker = OutcomeTracker(self)
         self.game_capture = GameCapture(self)  # SPEC-19
+        self.crawler = Crawler(self)  # SPEC-20 : collecte de parties tierces
         self.loadout = LoadoutImporter(self)  # SPEC-15
         self.last_recommendation = None  # Track last recommendation to avoid spam
         self.last_ban_recommendation = None  # Track last ban recommendation to avoid spam
@@ -145,6 +147,7 @@ class DraftMonitor:
         # time. Best-effort: never raises, never blocks startup.
         self._resolve_pending_outcomes(limit=draft_config.OUTCOME_BACKFILL_LIMIT)
         self.game_capture.on_startup()  # SPEC-19: same catch-up, same guarantees
+        self.crawler.seed()
 
         # Load champion ID mappings
         self._load_champion_mappings()

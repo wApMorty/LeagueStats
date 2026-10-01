@@ -18,6 +18,22 @@ class GameRecordsRepository:
         cursor.execute("SELECT game_id FROM game_records")
         return {row[0] for row in cursor.fetchall()}
 
+    def get_recent_games(self, limit: int) -> list:
+        """(game_id, player_participant_id) des `limit` dernières parties, sans le brut."""
+        cursor = self.db.connection.cursor()
+        cursor.execute(
+            "SELECT game_id, player_participant_id FROM game_records "
+            "ORDER BY game_creation_utc DESC LIMIT ?",
+            (limit,),
+        )
+        return cursor.fetchall()
+
+    def get_raw_game(self, game_id: int) -> Optional[str]:
+        cursor = self.db.connection.cursor()
+        cursor.execute("SELECT raw_game FROM game_records WHERE game_id = ?", (game_id,))
+        row = cursor.fetchone()
+        return row[0] if row else None
+
     def insert_game_record(
         self,
         game_id: int,
