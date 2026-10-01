@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS crawl_games (
     duration_s INTEGER,
     blue_win INTEGER,
     depth INTEGER NOT NULL,
+    read_utc TEXT,
     raw BLOB  -- NULL : à lire ; vide : indisponible ; sinon zlib(JSON)
 );
 CREATE TABLE IF NOT EXISTS crawl_frontier (
@@ -101,9 +102,26 @@ class Crawler:
         if self._clock() >= self._next_at:
             self._safely(self._step)
 
+    def report(self) -> None:
+        """Une ligne d'avancement, une fois par fin de partie (SPEC-20 tâche 40)."""
+        self._safely(lambda: print(self.progress()))
+
     def seed(self) -> None:
         """Amorce la file avec les joueurs de tes dernières parties, et purge."""
         self._safely(self._seed)
+
+    def progress(self) -> str:
+        def count(table: str, where: str) -> int:
+            return self._db().execute(f"SELECT COUNT(*) FROM {table} WHERE {where}").fetchone()[0]
+
+        read = count("crawl_games", "length(raw) > 0")
+        recent = count("crawl_games", "read_utc >= datetime('now', '-1 day')")
+        pending = count("crawl_games", "raw IS NULL")
+        players = count("crawl_frontier", "visited_utc IS NULL")
+        return (
+            f"[DATA] Collecte : {read} parties lues (+{recent} en 24 h), "
+            f"{pending} à lire, {players} joueurs en attente"
+        )
 
     # ---------- travail ----------
 
@@ -154,12 +172,13 @@ class Crawler:
             return
         blue = next((t for t in game.get("teams") or [] if t.get("teamId") == 100), {})
         db.execute(
-            "UPDATE crawl_games SET game_version = ?, duration_s = ?, blue_win = ?, raw = ? "
+            "UPDATE crawl_games SET game_version = ?, duration_s = ?, blue_win = ?, read_utc = ?, raw = ? "
             "WHERE game_id = ?",
             (
                 game.get("gameVersion"),
                 game.get("gameDuration"),
                 int(blue["win"] == "Win") if blue else None,
+                _now(),
                 pack(game, timeline if timeline and timeline.get("frames") else None),
                 game_id,
             ),
@@ -255,6 +274,15 @@ class Crawler:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             self._conn = sqlite3.connect(self.path)
             self._conn.executescript(SCHEMA)
+            # Bases créées avant `read_utc` (commit 8c80f03) : colonne ajoutée, les parties
+            # déjà lues datent de la veille au plus, donc comptées dans les dernières 24 h.
+            columns = [row[1] for row in self._conn.execute("PRAGMA table_info(crawl_games)")]
+            if "read_utc" not in columns:
+                self._conn.execute("ALTER TABLE crawl_games ADD COLUMN read_utc TEXT")
+                self._conn.execute(
+                    "UPDATE crawl_games SET read_utc = ? WHERE length(raw) > 0", (_now(),)
+                )
+                self._conn.commit()
         return self._conn
 
     def _safely(self, work: Callable[[], None]) -> None:

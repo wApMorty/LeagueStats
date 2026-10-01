@@ -350,3 +350,53 @@ class TestLifecycleWiring:
         monitor._resolve_pending_outcomes = Mock()
         monitor.lifecycle.retry_post_game()
         monitor.crawler.seed.assert_called_once_with()
+
+
+class TestProgress:
+    def test_progress_line_counts_games_and_players(self, crawler, db, lcu, clock, capsys):
+        _capture_own_game(db)
+        crawler.seed()
+        lcu.histories = {"a": [_entry(10), _entry(11)], "b": []}
+        lcu.games = {10: _game(10, ["a", "x"])}  # 11 : détail indisponible
+        _drain(crawler, clock, steps=4)  # a, b, 10, 11 : x (profondeur 2) reste en attente
+        crawler.report()
+        assert (
+            "[DATA] Collecte : 1 parties lues (+1 en 24 h), 0 à lire, 1 joueurs en attente"
+            in capsys.readouterr().out
+        )
+
+    def test_report_prints_once_when_the_post_game_window_opens(self):
+        from src.draft_monitor import DraftMonitor
+
+        with patch("src.draft_monitor.Assistant", return_value=Mock()):
+            with patch("src.draft_monitor.LCUClient", return_value=Mock()):
+                monitor = DraftMonitor(verbose=False, auto_hover=False)
+        monitor.crawler = Mock()
+        monitor.lcu.is_in_ready_check.return_value = False
+        monitor.lcu.is_in_champion_select.return_value = False
+        monitor.lcu.get_gameflow_session.return_value = {"phase": "EndOfGame"}
+        for _ in range(3):  # trois ticks dans la même phase de fin de partie
+            monitor._monitor_loop()
+        monitor.crawler.report.assert_called_once_with()
+
+
+class TestSchemaMigration:
+    def test_a_crawl_db_created_before_read_utc_keeps_working(self, db, lcu, clock, tmp_path):
+        import sqlite3
+
+        path = tmp_path / "crawl.db"
+        old = sqlite3.connect(path)
+        old.executescript(
+            "CREATE TABLE crawl_games (game_id INTEGER PRIMARY KEY, queue_id INTEGER, "
+            "game_version TEXT, game_creation_utc TEXT NOT NULL, duration_s INTEGER, "
+            "blue_win INTEGER, depth INTEGER NOT NULL, raw BLOB);"
+            "INSERT INTO crawl_games (game_id, game_creation_utc, depth, raw) "
+            "VALUES (1, '2026-10-01 20:00:00', 1, x'01'), (2, '2026-10-01 20:00:00', 1, NULL);"
+        )
+        old.commit()
+        old.close()
+        monitor = SimpleNamespace(lcu=lcu, assistant=SimpleNamespace(db=db), verbose=True)
+        crawler = Crawler(monitor, path=path, clock=clock)
+        lcu.games = {2: _game(2, ["a"])}
+        crawler.step()
+        assert "2 parties lues (+2 en 24 h), 0 à lire" in crawler.progress()

@@ -76,6 +76,7 @@ class MonitorLifecycle:
                                 time.time() + draft_config.POST_GAME_RETRY_WINDOW
                             )
                             self.m._next_post_game_attempt = 0.0
+                            self.m.crawler.report()  # SPEC-20 : avancement, une fois par partie
                         self.m._last_outcome_trigger_phase = current_phase
                     else:
                         self.m._last_outcome_trigger_phase = None
