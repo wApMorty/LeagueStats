@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-09-29 (SPEC-19 phases 2 à 4 livrées, recette en partie réelle à faire)
+**Mis à jour** : 2026-10-01 (SPEC-20 rédigée : win chance et impact)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -90,6 +90,22 @@ les LP sont suivis depuis le LCU. Découpage détaillé en SPEC-19 §11 (tâches
 | 4 | Récurrence, tendances, axes de travail, bilan (commandes `bilan`, `axe`, menu 4) | 11 | ✅ 2026-09-29 |
 | — | Recette en partie réelle : rapport de fin de partie, rappel d'axe en draft | 1 | ⬜ |
 | — | Refaire l'exploration vers 50 parties (`scripts/explore_gameplay.py`), réviser la grille et `GRID_VERSION` | 1 | ⬜ |
+
+### Lot suivant — SPEC-20, win chance et impact (🟡 rédigée le 2026-10-01)
+
+[SPEC-20](docs/specs/SPEC-20-win-chance-et-impact.md) : modèle de win chance entraîné sur des
+parties tierces collectées via le LCU (sondé le 2026-10-01 : historiques et timelines tiers
+servis), impact de chaque événement attribué aux joueurs, puis overlay en jeu (Live Client API).
+Répond à la confusion cause/effet des constats de SPEC-19. Ordre validé par @pj35, arbitrages
+§2 à valider. Découpage en SPEC-20 §10 (tâches 39 à 47, ~26 pts) :
+
+| Phase | Contenu | Pts | État |
+|---|---|---|---|
+| 1 | Collecte LCU de proche en proche (`data/crawl.db`), ~5 000 parties | 4 | ⬜ |
+| 2 | État de partie, modèle logistique, calibration | 8 | ⬜ |
+| 3 | Impact par événement, rapport de fin de partie | 7 | ⬜ |
+| 4 | Impact dans le bilan et les schémas de SPEC-19 | 3 | ⬜ |
+| 5 | Live Client API et overlay en jeu | 4 | ⬜ |
 
 ### Hors sprint — SPEC-18 phase A ✅ (2026-09-24)
 
