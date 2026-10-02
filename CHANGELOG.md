@@ -11,7 +11,8 @@ All notable changes to LeagueStats Coach will be documented in this file.
   de tes parties puis de leurs adversaires, et range détail + timeline (JSON `zlib`, puuid
   seul) dans `data/crawl.db`, base séparée et purgeable. Jamais en draft ni pendant le ready
   check ; pause de 15 min au premier 429 (`LCUClient.last_status_code`, qui distingue enfin
-  un 429 d'un 404). Une ligne d'avancement s'affiche à chaque fin de partie. Aucune action
+  un 429 d'un 404). On ne garde que le dernier patch (le précédent en secours sous 5 000
+  parties), plafonné à 100 000 parties. Une ligne d'avancement s'affiche à chaque fin de partie. Aucune action
   requise.
 - **Calibration appliquée par un simple « o/n »** — le Live Coach propose un réglage
   de `K_MATCHUP`/`K_SYNERGY` et un nouveau `MODEL_VERSION` (`+calN`), puis les écrit dans

@@ -93,6 +93,11 @@ class Crawler:
         self._next_at = 0.0
         self._conn: Optional[sqlite3.Connection] = None
         self._seeded: set = set()
+        # Date de création en dessous de laquelle les parties sont déjà purgées (patch ou
+        # plafond) : inutile de les redécouvrir, lire et purger en boucle.
+        # ponytail: en mémoire, un redémarrage relit au plus CRAWL_PURGE_EVERY parties périmées.
+        self._floor = ""
+        self._reads = 0
         self._warned = False
 
     # ---------- API pour la boucle du Live Coach ----------
@@ -145,7 +150,7 @@ class Crawler:
         if self._throttled(1) or (games is None and self.m.lcu.last_status_code is None):
             return  # 429, ou client injoignable : on réessaiera
         db = self._db()
-        oldest = _utc((time.time() - cfg.CRAWL_MAX_AGE_DAYS * 86400) * 1000)
+        oldest = max(_utc((time.time() - cfg.CRAWL_MAX_AGE_DAYS * 86400) * 1000), self._floor)
         for g in games or []:
             created = _utc(g["game_creation_ms"])
             if g["queue_id"] in coaching_config.QUEUE_IDS and created >= oldest:
@@ -190,6 +195,9 @@ class Crawler:
                 if puuid:
                     self._add_player(puuid, depth + 1, priority)
         db.commit()
+        self._reads += 1
+        if self._reads % cfg.CRAWL_PURGE_EVERY == 0:
+            self._purge()
 
     def _seed(self) -> None:
         db = self.m.assistant.db
@@ -242,19 +250,47 @@ class Crawler:
         )
 
     def _purge(self) -> None:
-        """Parties plus vieilles que la fenêtre d'âge, puis hors des derniers patchs."""
+        """Supprime les parties trop vieilles, hors des patchs conservés, puis au-delà
+        du plafond (les plus anciennes d'abord)."""
         db = self._db()
         oldest = _utc((time.time() - cfg.CRAWL_MAX_AGE_DAYS * 86400) * 1000)
         db.execute("DELETE FROM crawl_games WHERE game_creation_utc < ?", (oldest,))
-        versions = [
-            v
-            for (v,) in db.execute("SELECT DISTINCT game_version FROM crawl_games").fetchall()
-            if _patch(v)
-        ]
-        keep = sorted({_patch(v) for v in versions}, reverse=True)[: cfg.WINPROB_PATCH_WINDOW]
-        for version in versions:
-            if _patch(version) not in keep:
-                db.execute("DELETE FROM crawl_games WHERE game_version = ?", (version,))
+
+        per_patch: dict = {}
+        for version, n in db.execute(
+            "SELECT game_version, COUNT(*) FROM crawl_games "
+            "WHERE game_version IS NOT NULL GROUP BY game_version"
+        ).fetchall():
+            if _patch(version):
+                per_patch[_patch(version)] = per_patch.get(_patch(version), 0) + n
+        keep, total = set(), 0
+        for patch in sorted(per_patch, reverse=True):
+            if len(keep) >= cfg.WINPROB_PATCH_WINDOW and total >= cfg.WINPROB_MIN_PATCH_GAMES:
+                break
+            keep.add(patch)
+            total += per_patch[patch]
+        trimmed = 0
+        for version in db.execute(
+            "SELECT DISTINCT game_version FROM crawl_games WHERE game_version IS NOT NULL"
+        ).fetchall():
+            if _patch(version[0]) and _patch(version[0]) not in keep:
+                trimmed += db.execute(
+                    "DELETE FROM crawl_games WHERE game_version = ?", version
+                ).rowcount
+        trimmed += db.execute(
+            "DELETE FROM crawl_games WHERE game_id IN (SELECT game_id FROM crawl_games "
+            "WHERE raw IS NOT NULL ORDER BY game_creation_utc DESC LIMIT -1 OFFSET ?)",
+            (cfg.CRAWL_MAX_GAMES,),
+        ).rowcount
+        if trimmed:
+            (first,) = db.execute(
+                "SELECT MIN(game_creation_utc) FROM crawl_games WHERE length(raw) > 0"
+            ).fetchone()
+            self._floor = max(self._floor, first or "")
+            db.execute(
+                "DELETE FROM crawl_games WHERE raw IS NULL AND game_creation_utc < ?",
+                (self._floor,),
+            )
         db.commit()
 
     # ---------- infrastructure ----------

@@ -274,17 +274,66 @@ class TestRateAndPause:
 
 
 class TestPurge:
-    def test_only_the_latest_patches_are_kept(self, crawler, db):
+    def _store(self, crawler, versions, per_version=1):
         conn = crawler._db()
-        for i, version in enumerate(["16.16.1", "16.17.1", "16.18.1", "16.19.1", "16.19.2"]):
+        game_id = conn.execute("SELECT COALESCE(MAX(game_id), 0) FROM crawl_games").fetchone()[0]
+        for version in versions:
+            for _ in range(per_version):
+                game_id += 1
+                conn.execute(
+                    "INSERT INTO crawl_games (game_id, game_version, game_creation_utc, depth, raw) "
+                    "VALUES (?, ?, datetime('now'), 1, x'01')",
+                    (game_id, version),
+                )
+
+    def _versions(self, crawler):
+        return {r[0] for r in _rows(crawler, "SELECT game_version FROM crawl_games")}
+
+    def test_only_the_latest_patch_is_kept_once_it_has_enough_games(self, crawler, monkeypatch):
+        monkeypatch.setattr("src.winprob.crawl.cfg.WINPROB_MIN_PATCH_GAMES", 2)
+        self._store(crawler, ["16.18.1", "16.19.1", "16.19.2"])  # 16.19 : 2 parties, assez
+        crawler._purge()
+        assert self._versions(crawler) == {"16.19.1", "16.19.2"}
+
+    def test_the_previous_patch_stays_while_the_latest_is_too_thin(self, crawler, monkeypatch):
+        monkeypatch.setattr("src.winprob.crawl.cfg.WINPROB_MIN_PATCH_GAMES", 3)
+        self._store(crawler, ["16.17.1", "16.18.1", "16.19.1", "16.19.2"])  # 16.19 : 2 < 3
+        crawler._purge()
+        assert self._versions(crawler) == {"16.18.1", "16.19.1", "16.19.2"}
+
+    def test_the_game_cap_drops_the_oldest_and_raises_the_discovery_floor(
+        self, crawler, lcu, monkeypatch
+    ):
+        monkeypatch.setattr("src.winprob.crawl.cfg.CRAWL_MAX_GAMES", 2)
+        conn = crawler._db()
+        for game_id, days_ago in [(1, 3), (2, 2), (3, 1)]:
             conn.execute(
                 "INSERT INTO crawl_games (game_id, game_version, game_creation_utc, depth, raw) "
-                "VALUES (?, ?, datetime('now'), 1, x'01')",
-                (i, version),
+                "VALUES (?, '16.19.1', datetime('now', ?), 1, x'01')",
+                (game_id, f"-{days_ago} day"),
             )
         crawler._purge()
-        kept = {r[0] for r in _rows(crawler, "SELECT game_version FROM crawl_games")}
-        assert kept == {"16.17.1", "16.18.1", "16.19.1", "16.19.2"}  # 3 patchs : 16.17 à 16.19
+        assert {r[0] for r in _rows(crawler, "SELECT game_id FROM crawl_games")} == {2, 3}
+
+        # une partie plus vieille que la plus ancienne conservée n'est plus redécouverte
+        lcu.histories = {"a": [_entry(10, created=NOW_MS - 3 * 24 * HOUR), _entry(11)]}
+        conn.execute(
+            "INSERT INTO crawl_frontier (puuid, depth, priority, discovered_utc) "
+            "VALUES ('a', 1, 1, 'x')"
+        )
+        crawler.step()
+        pending = _rows(crawler, "SELECT game_id FROM crawl_games WHERE raw IS NULL")
+        assert pending == [(11,)]
+
+    def test_purge_runs_every_n_games_read(self, crawler, db, lcu, clock, monkeypatch):
+        monkeypatch.setattr("src.winprob.crawl.cfg.CRAWL_PURGE_EVERY", 2)
+        _capture_own_game(db)
+        crawler.seed()
+        crawler._purge = Mock()
+        lcu.histories = {"a": [_entry(10), _entry(11), _entry(12)], "b": []}
+        lcu.games = {i: _game(i, ["a"]) for i in (10, 11, 12)}
+        _drain(crawler, clock)
+        assert crawler._purge.call_count == 1  # 3 parties lues : une purge, à la 2e
 
 
 class TestLCUClientStatus:

@@ -74,8 +74,11 @@ continu, pas en lots.
 - **Ordre de grandeur** : une partie ouvre 9 historiques de 20 parties, soit ~100 parties
   classées nouvelles après dédoublonnage ; ~2 min à 1 requête/s. À 5 parties par jour, ~500
   parties par jour, 5 000 en une dizaine de jours.
-- **Purge** : les parties de plus de `WINPROB_PATCH_WINDOW` patchs sont supprimées (~15 Ko
-  compressé par partie, ~7,5 Mo par jour).
+- **Purge** : on ne garde que le dernier patch (`WINPROB_PATCH_WINDOW` = 1, @pj35, 2026-10-02 : la
+  collecte tient ~2 000 parties/h), complété par le précédent tant que le dernier compte moins de
+  `WINPROB_MIN_PATCH_GAMES` parties (5 000). Plafond de `CRAWL_MAX_GAMES` parties lues (100 000,
+  ~1,6 Go, à réduire à l'usage), les plus anciennes supprimées d'abord. Mesuré le 2026-10-02 :
+  ~34 parties/min, ~16 Ko par partie.
 
 La timeline (SPEC-19 §3.4) donne une image par minute (or, XP, niveau, CS, position des 10) et
 les événements `CHAMPION_KILL`, `BUILDING_KILL`, `ELITE_MONSTER_KILL`, horodatés à la
