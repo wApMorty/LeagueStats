@@ -102,7 +102,7 @@ Répond à la confusion cause/effet des constats de SPEC-19. Ordre validé par @
 | Phase | Contenu | Pts | État |
 |---|---|---|---|
 | 1 | Collecte LCU continue en tâche de fond du Live Coach (`data/crawl.db`), une semaine de mesure | 6 | 🟡 tâche 39 faite (2026-10-02), reste la semaine de mesure (tâche 40) |
-| 2 | État de partie, modèle logistique, calibration, réentraînement déclenché par les données | 10 | 🟡 tâches 41 et 42 faites (2026-10-02), 42 à remesurer sur plus de parties (écart 5,2 pts sur 900 parties, seuil 5 : refusé), reste 42b |
+| 2 | État de partie, modèle logistique, calibration, réentraînement déclenché par les données | 10 | 🟡 tâches 41, 42 et 42b faites (2026-10-02) ; 42 à remesurer sur plus de parties (écart 5,2 pts sur 900 parties, seuil 5 : refusé) ; reste à brancher le réentraînement au Live Coach (processus détaché, `.exe` figé à trancher) |
 | 3 | Impact par événement, rapport de fin de partie | 7 | ⬜ |
 | 4 | Impact dans le bilan et les schémas de SPEC-19 | 3 | ⬜ |
 | 5 | Live Client API et overlay en jeu | 4 | ⬜ |

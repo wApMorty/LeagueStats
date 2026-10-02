@@ -6,6 +6,11 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Feature
 
+- **Réentraînement de la win chance, champion contre challenger (SPEC-20 tâche 42b)** —
+  `python -m src.winprob.retrain [--force]` réentraîne sur un nouveau patch de 5 000 parties ou une
+  base grossie de 20 % (au moins 10 000 parties), et n'adopte le nouveau modèle que s'il fait au
+  moins aussi bien sur les parties les plus récentes. Journal dans `winprob_model.log`. Pas encore
+  lancé par le Live Coach.
 - **Modèle de win chance (SPEC-20 tâche 42)** — régression logistique en Python pur
   (`src/winprob/model.py`, `python -m src.winprob.train [--save]`) : Brier 0,157 en validation
   croisée par parties, l'or n'apporte que 0,002. Sur les 20 % de parties les plus récentes, l'écart

@@ -89,5 +89,10 @@ class WinProbConfig:
     WINPROB_BRIER_MAX: float = 0.20
     WINPROB_GAP_MAX: float = 0.05
 
+    # Réentraînement (§4.4) : un nouveau patch de WINPROB_MIN_PATCH_GAMES parties, ou une
+    # base grossie d'au moins ce ratio et de ce nombre de parties depuis le dernier modèle.
+    WINPROB_RETRAIN_GROWTH: float = 0.2
+    WINPROB_RETRAIN_MIN_NEW_GAMES: int = 10_000
+
 
 winprob_config = WinProbConfig()

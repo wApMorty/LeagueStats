@@ -8,7 +8,7 @@ hessienne sous-échantillonnée, sur variables centrées-réduites.
 import hashlib
 import json
 import math
-from typing import List, Sequence, Tuple
+from typing import List, Optional, Sequence, Tuple
 
 from ..analysis.calibration import brier_score
 from ..config_winprob import winprob_config as cfg
@@ -49,12 +49,18 @@ def _solve(a: List[List[float]], b: List[float]) -> List[float]:
 
 class WinModel:
     def __init__(
-        self, inputs: Sequence[str], mean: List[float], scale: List[float], weights: List[float]
+        self,
+        inputs: Sequence[str],
+        mean: List[float],
+        scale: List[float],
+        weights: List[float],
+        meta: Optional[dict] = None,
     ):
         self.inputs = tuple(inputs)
         self.mean, self.scale, self.weights = mean, scale, weights  # weights : dernier = biais
         digest = hashlib.sha1(json.dumps([self.inputs, weights]).encode()).hexdigest()
         self.version = f"wp-{digest[:8]}"
+        self.meta = meta  # parties, patch et date de l'entraînement (retrain.py)
 
     def _z(self, state: dict) -> List[float]:
         x = expand(state, self.inputs)
@@ -67,13 +73,19 @@ class WinModel:
 
     def to_json(self) -> str:
         return json.dumps(
-            {"inputs": self.inputs, "mean": self.mean, "scale": self.scale, "weights": self.weights}
+            {
+                "inputs": self.inputs,
+                "mean": self.mean,
+                "scale": self.scale,
+                "weights": self.weights,
+                "meta": self.meta,
+            }
         )
 
     @classmethod
     def from_json(cls, text: str) -> "WinModel":
         d = json.loads(text)
-        return cls(d["inputs"], d["mean"], d["scale"], d["weights"])
+        return cls(d["inputs"], d["mean"], d["scale"], d["weights"], d.get("meta"))
 
 
 def fit(states: Sequence[dict], wins: Sequence[int], inputs: Sequence[str] = INPUTS) -> WinModel:
