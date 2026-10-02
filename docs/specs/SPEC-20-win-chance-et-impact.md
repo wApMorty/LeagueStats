@@ -137,10 +137,18 @@ Seuils du §11.2 inchangés (fixés avant la mesure). Images après 10 min.
 - Le coût d'exclure l'or est de **0,002 de Brier** : le choix du §4.1 tient.
 - L'arbre boosté ne bat pas la logistique : la condition de réouverture du §13 n'est pas remplie.
 - Validation temporelle (`python -m src.winprob.train`, les 20 % de parties les plus récentes,
-  ~900 parties, toutes en 16.19) : sans l'or **Brier 0,161, écart 5,2 pts, refusé** ; avec l'or
-  0,158 et 4,8 pts. Le défaut tient aux déciles 55-77 % (surestimés de 4 à 5 points). Avec ~900
-  parties, dont les ~28 images sont corrélées, le bruit d'un décile est de 2 à 4 points : à
-  **remesurer** quand la collecte aura grossi (tâche 40). Tant que le critère est refusé, pas de phase 3 (§4.3).
+  toutes en 16.19) : sur ~900 parties, sans l'or **Brier 0,161, écart 5,2 pts, refusé** (déciles
+  55-77 % surestimés de 4 à 5 points). Les ~28 images d'une partie sont corrélées : le bruit
+  d'un décile est de 2 à 4 points à cette taille.
+- Validation croisée à 5 blocs contigus de parties, prédictions **poolées** (§4.3,
+  `cross_validate`), 4 873 parties : sans l'or **Brier 0,1555, écart 2,5 pts, accepté** ; avec l'or
+  0,1524 et 2,4 pts. Pris isolément, les 5 blocs vont de 2,8 à 6,0 pts d'écart pour le même
+  modèle : le refus du 20 % récent était du bruit d'échantillon.
+- Remesure à 5 300 parties : le découpage temporel donne Brier 0,1585 et **3,3 pts (accepté)**,
+  la validation croisée poolée 0,1554 et 2,3 pts. Critère du §11.2 tenu ; la phase 3 est ouverte.
+  Le choix de la validation poolée comme mesure d'acceptation a été fait après le refus du
+  premier découpage (le §4.3 prévoit pourtant la validation croisée par blocs) : **à confirmer
+  par @pj35**.
 
 ### 4.4 Réentraînement (@pj35, 2026-10-02)
 

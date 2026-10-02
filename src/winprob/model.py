@@ -8,7 +8,7 @@ hessienne sous-échantillonnée, sur variables centrées-réduites.
 import hashlib
 import json
 import math
-from typing import List, Optional, Sequence, Tuple
+from typing import Iterable, List, Optional, Sequence, Tuple
 
 from ..analysis.calibration import brier_score
 from ..config_winprob import winprob_config as cfg
@@ -125,12 +125,11 @@ def fit(states: Sequence[dict], wins: Sequence[int], inputs: Sequence[str] = INP
     return WinModel(inputs, mean, scale, w)
 
 
-def evaluate(model: WinModel, states: Sequence[dict], wins: Sequence[int]) -> dict:
-    """Brier et écart de calibration par décile, images après `WINPROB_EVAL_AFTER_MIN`."""
+def score(predictions: Iterable[Tuple[float, int, float]]) -> dict:
+    """Brier et écart de calibration par décile sur des (probabilité, issue, minute),
+    images après `WINPROB_EVAL_AFTER_MIN`."""
     rows: List[Tuple[float, int]] = sorted(
-        (model.predict(s), y)
-        for s, y in zip(states, wins)
-        if s["time_min"] >= cfg.WINPROB_EVAL_AFTER_MIN
+        (p, y) for p, y, minute in predictions if minute >= cfg.WINPROB_EVAL_AFTER_MIN
     )
     n = len(rows)
     gaps = []
@@ -145,3 +144,7 @@ def evaluate(model: WinModel, states: Sequence[dict], wins: Sequence[int]) -> di
         "max_gap": max(gaps),
         "accepted": brier <= cfg.WINPROB_BRIER_MAX and max(gaps) <= cfg.WINPROB_GAP_MAX,
     }
+
+
+def evaluate(model: WinModel, states: Sequence[dict], wins: Sequence[int]) -> dict:
+    return score((model.predict(s), y, s["time_min"]) for s, y in zip(states, wins))

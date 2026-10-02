@@ -80,3 +80,19 @@ def test_load_splits_by_game_with_newest_in_validation(tmp_path):
     frames = len(TIMELINE["frames"])
     assert len(train_x) == 8 * frames and len(val_x) == 2 * frames  # 20 % de 10 parties
     assert set(train_y) == set(val_y) == {1}  # la fixture est une victoire bleue
+
+
+def test_cross_validate_pools_every_game_once(tmp_path):
+    db = sqlite3.connect(tmp_path / "crawl.db")
+    db.executescript(SCHEMA)
+    raw = pack(GAME, TIMELINE)
+    for i in range(10):
+        db.execute(
+            "INSERT INTO crawl_games (game_id, queue_id, game_creation_utc, depth, raw) VALUES (?, 420, ?, 1, ?)",
+            (i, f"2026-10-{i + 1:02d}", raw),
+        )
+    db.commit()
+    db.close()
+    result = train.cross_validate(tmp_path / "crawl.db", folds=5)
+    after_10_min = sum(1 for f in TIMELINE["frames"] if f["timestamp"] >= 600_000)
+    assert result["images"] == 10 * after_10_min

@@ -13,8 +13,8 @@ All notable changes to LeagueStats Coach will be documented in this file.
   lancé par le Live Coach.
 - **Modèle de win chance (SPEC-20 tâche 42)** — régression logistique en Python pur
   (`src/winprob/model.py`, `python -m src.winprob.train [--save]`) : Brier 0,157 en validation
-  croisée par parties, l'or n'apporte que 0,002. Sur les 20 % de parties les plus récentes, l'écart
-  de calibration est de 5,2 points (seuil 5) : à remesurer avec plus de parties. Pas encore branché.
+  croisée par parties, l'or n'apporte que 0,002. Écart de calibration de 2,3 points par décile
+  (seuil 5) en validation croisée poolée. Pas encore branché.
 - **État de partie pour la win chance (SPEC-20 tâche 41)** — `src/winprob/state.py` rejoue une
   timeline LCU et en tire, par image et après chaque événement, les différences bleu − rouge
   (kills, tours, drakes, Nashor, niveaux, CS, joueurs morts). Vérifié sur 1 500 parties du crawl.
