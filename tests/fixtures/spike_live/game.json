@@ -1,0 +1,44 @@
+{
+"participants": [
+{
+"participantId": 1,
+"teamId": 100
+},
+{
+"participantId": 2,
+"teamId": 100
+},
+{
+"participantId": 3,
+"teamId": 100
+},
+{
+"participantId": 4,
+"teamId": 100
+},
+{
+"participantId": 5,
+"teamId": 100
+},
+{
+"participantId": 6,
+"teamId": 200
+},
+{
+"participantId": 7,
+"teamId": 200
+},
+{
+"participantId": 8,
+"teamId": 200
+},
+{
+"participantId": 9,
+"teamId": 200
+},
+{
+"participantId": 10,
+"teamId": 200
+}
+]
+}

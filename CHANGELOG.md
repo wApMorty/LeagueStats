@@ -6,6 +6,12 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Feature
 
+- **Overlay de win chance en jeu (SPEC-20 tâches 46 et 47)** — `python -m src.winprob.overlay`
+  affiche, dans une fenêtre transparente traversée par les clics, la win chance de ton équipe et
+  sa variation sur la dernière minute, lues toutes les secondes dans la Live Client API (jeu en
+  mode fenêtré sans bordure). Processus à part : le Live Coach n'est pas modifié. Le spike a montré
+  que `creepScore` est arrondi à la dizaine : les CS sont sortis du modèle (Brier 0,1526 contre
+  0,1516). Un modèle déjà entraîné doit être refait : `python -m src.winprob.retrain --force`.
 - **Impact dans le bilan (SPEC-20 tâche 45)** — le bilan du coach gagne une section : impact moyen
   par partie sur les 10 dernières (et les 5 dernières contre les 5 d'avant dès 10 parties), puis par
   type d'événement (« Morts en solo : -6 pts en moyenne, 1,2 par partie »). Les kills sont

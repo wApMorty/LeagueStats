@@ -98,5 +98,15 @@ class WinProbConfig:
     # objectif, à l'image la plus proche (à la minute près), est compté présent.
     WINPROB_PRESENCE_RADIUS: float = 2500.0
 
+    # Overlay en jeu (§6) : sondage de la Live Client API, position et taille de la fenêtre
+    # (pixels depuis le coin haut gauche de l'écran), sondages sans réponse avant de conclure
+    # que la partie est finie, fenêtre de la variation affichée.
+    OVERLAY_POLL_S: float = 1.0
+    OVERLAY_X: int = 20
+    OVERLAY_Y: int = 120
+    OVERLAY_FONT_SIZE: int = 20
+    OVERLAY_GRACE_POLLS: int = 10
+    OVERLAY_TREND_S: float = 60.0
+
 
 winprob_config = WinProbConfig()

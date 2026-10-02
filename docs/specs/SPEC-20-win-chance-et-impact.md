@@ -98,7 +98,7 @@ dans la Live Client API :
 | Tours, inhibiteurs | `BUILDING_KILL` | événements `TurretKilled`, `InhibKilled` |
 | Drakes (nombre, soul), Héraut, larves, Nashor (buff actif) | `ELITE_MONSTER_KILL` | événements `DragonKill`, `HeraldKill`, `BaronKill` |
 | Somme des niveaux | images | `level` |
-| Somme des CS | images | `scores.creepScore` |
+| Somme des CS | images | `scores.creepScore` (hors modèle : voir §6 bis) |
 | Joueurs morts et durée restante | déduits des kills et du niveau | `isDead`, `respawnTimer` |
 
 L'**or** est absent de la Live Client API pour les adversaires. Il est exclu du modèle :
@@ -206,6 +206,29 @@ courbe de la partie (sparkline console en attendant la GUI).
 - Polling de `https://127.0.0.1:2999/liveclientdata/allgamedata` toutes les secondes,
   best-effort (aucune erreur n'interrompt le Live Coach).
 - Position et taille en configuration.
+
+### 6 bis Spike du 2026-10-02 (tâche 46, partie de 27 min, 325 instantanés toutes les 5 s)
+
+- **Servi pour les 10 joueurs** : `team` (ORDER/CHAOS), `level`, `scores` (`kills`, `deaths`,
+  `assists`, `creepScore`, `wardScore`), `isDead`, `respawnTimer` (exact, là où la timeline le
+  déduit), `position`. **Pas d'or** pour les adversaires (`currentGold` n'existe que dans
+  `activePlayer`).
+- **Événements** : `ChampionKill` (`KillerName`, `VictimName`, `Assisters`), `TurretKilled` et
+  `InhibKilled` (nom du bâtiment, `Turret_TOrder_…` : le propriétaire est dans le nom),
+  `DragonKill` (`DragonType`, `Stolen`), `HeraldKill`, `HordeKill`, `BaronKill`, plus `Ace`,
+  `Multikill`, `FirstBlood`, `FirstBrick`, `GameStart`, `GameEnd` (`Result`). Les tueurs peuvent
+  être des sbires (`Minion_T100L2S…`) : pour un bâtiment, l'équipe vient de son nom.
+- **`creepScore` n'est pas utilisable** : arrondi à la dizaine inférieure (64 CS → 60) et la
+  forêt n'est comptée que partiellement (un jungler à 75 CS en affiche 20, un autre à 52 en
+  affiche 50). Les CS sont donc **sortis du modèle** (§4.1) : le même modèle sert après la partie
+  et en jeu. Coût mesuré : Brier 0,1516 → 0,1526. Niveaux et morts restent.
+- **Validé sur la partie réelle** : 22 images de la timeline LCU comparées à l'instantané le plus
+  proche : tours, inhibiteurs, drakes, Héraut, larves, Nashor et âme identiques ; kills et morts
+  ne diffèrent que d'une image au plus (écart de datation).
+- **Choix de lancement** : l'overlay (`python -m src.winprob.overlay`) est un **processus à part**,
+  pas un fil du Live Coach (la solution du début de §6 aurait fait passer toute la boucle du
+  Live Coach dans un thread). Même fenêtre, même file, aucun changement dans le Live Coach ;
+  l'intégration en un seul processus reste possible si tu la préfères : **à confirmer par @pj35**.
 
 ## 7. Lien avec SPEC-19
 

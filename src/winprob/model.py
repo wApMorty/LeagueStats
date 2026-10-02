@@ -14,8 +14,10 @@ from ..analysis.calibration import brier_score
 from ..config_winprob import winprob_config as cfg
 from .state import FEATURES
 
-# Variables du modèle : tout sauf le temps, qui n'entre que par les produits.
-INPUTS = tuple(name for name in FEATURES if name != "time_min")
+# Variables du modèle : tout sauf le temps, qui n'entre que par les produits, et les CS :
+# `creepScore` de la Live Client API est arrondi à la dizaine et ignore une partie du jeu en
+# forêt (spike du 2026-10-02), et le modèle ne perd que 0,001 de Brier sans eux.
+INPUTS = tuple(name for name in FEATURES if name not in ("time_min", "cs"))
 TIME_SCALE_MIN = 30.0
 
 

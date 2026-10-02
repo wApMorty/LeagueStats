@@ -1,0 +1,797 @@
+{
+"gameData": {
+"gameTime": 1221.501220703125
+},
+"allPlayers": [
+{
+"team": "ORDER",
+"level": 13,
+"isDead": true,
+"respawnTimer": 13.573516845703125,
+"scores": {
+"creepScore": 150,
+"kills": 1
+},
+"summonerName": "anon-0",
+"riotId": "anon-0#EUW",
+"riotIdGameName": "anon-0"
+},
+{
+"team": "ORDER",
+"level": 13,
+"isDead": false,
+"respawnTimer": 0.0,
+"scores": {
+"creepScore": 50,
+"kills": 4
+},
+"summonerName": "anon-2",
+"riotId": "anon-2#EUW",
+"riotIdGameName": "anon-2"
+},
+{
+"team": "ORDER",
+"level": 15,
+"isDead": false,
+"respawnTimer": 0.0,
+"scores": {
+"creepScore": 240,
+"kills": 10
+},
+"summonerName": "anon-4",
+"riotId": "anon-4#EUW",
+"riotIdGameName": "anon-4"
+},
+{
+"team": "ORDER",
+"level": 12,
+"isDead": false,
+"respawnTimer": 0.0,
+"scores": {
+"creepScore": 140,
+"kills": 5
+},
+"summonerName": "anon-6",
+"riotId": "anon-6#EUW",
+"riotIdGameName": "anon-6"
+},
+{
+"team": "ORDER",
+"level": 9,
+"isDead": false,
+"respawnTimer": 0.0,
+"scores": {
+"creepScore": 0,
+"kills": 0
+},
+"summonerName": "anon-7",
+"riotId": "anon-7#EUW",
+"riotIdGameName": "anon-7"
+},
+{
+"team": "CHAOS",
+"level": 15,
+"isDead": false,
+"respawnTimer": 0.0,
+"scores": {
+"creepScore": 170,
+"kills": 6
+},
+"summonerName": "anon-9",
+"riotId": "anon-9#EUW",
+"riotIdGameName": "anon-9"
+},
+{
+"team": "CHAOS",
+"level": 12,
+"isDead": false,
+"respawnTimer": 0.0,
+"scores": {
+"creepScore": 110,
+"kills": 5
+},
+"summonerName": "anon-11",
+"riotId": "anon-11#EUW",
+"riotIdGameName": "anon-11"
+},
+{
+"team": "CHAOS",
+"level": 14,
+"isDead": false,
+"respawnTimer": 0.0,
+"scores": {
+"creepScore": 130,
+"kills": 11
+},
+"summonerName": "anon-13",
+"riotId": "anon-13#EUW",
+"riotIdGameName": "anon-13"
+},
+{
+"team": "CHAOS",
+"level": 11,
+"isDead": false,
+"respawnTimer": 0.0,
+"scores": {
+"creepScore": 170,
+"kills": 5
+},
+"summonerName": "anon-15",
+"riotId": "anon-15#EUW",
+"riotIdGameName": "anon-15"
+},
+{
+"team": "CHAOS",
+"level": 10,
+"isDead": false,
+"respawnTimer": 0.0,
+"scores": {
+"creepScore": 20,
+"kills": 4
+},
+"summonerName": "anon-17",
+"riotId": "anon-17#EUW",
+"riotIdGameName": "anon-17"
+}
+],
+"events": {
+"Events": [
+{
+"Assisters": [
+"anon-7"
+],
+"EventID": 2,
+"EventName": "ChampionKill",
+"EventTime": 68.74219512939453,
+"KillerName": "anon-6",
+"VictimName": "anon-15"
+},
+{
+"Assisters": [
+"anon-7"
+],
+"EventID": 4,
+"EventName": "ChampionKill",
+"EventTime": 84.4753646850586,
+"KillerName": "anon-6",
+"VictimName": "anon-17"
+},
+{
+"Assisters": [
+"anon-15"
+],
+"EventID": 5,
+"EventName": "ChampionKill",
+"EventTime": 138.9444122314453,
+"KillerName": "anon-17",
+"VictimName": "anon-7"
+},
+{
+"Assisters": [
+"anon-15"
+],
+"EventID": 6,
+"EventName": "ChampionKill",
+"EventTime": 139.42727661132812,
+"KillerName": "anon-17",
+"VictimName": "anon-6"
+},
+{
+"Assisters": [
+"anon-17"
+],
+"EventID": 8,
+"EventName": "ChampionKill",
+"EventTime": 223.33096313476562,
+"KillerName": "anon-15",
+"VictimName": "anon-6"
+},
+{
+"Assisters": [],
+"EventID": 9,
+"EventName": "ChampionKill",
+"EventTime": 245.25640869140625,
+"KillerName": "anon-17",
+"VictimName": "anon-7"
+},
+{
+"Assisters": [
+"anon-15"
+],
+"EventID": 10,
+"EventName": "ChampionKill",
+"EventTime": 257.0208435058594,
+"KillerName": "anon-17",
+"VictimName": "anon-2"
+},
+{
+"Assisters": [
+"anon-11"
+],
+"EventID": 11,
+"EventName": "ChampionKill",
+"EventTime": 291.4678955078125,
+"KillerName": "anon-9",
+"VictimName": "anon-0"
+},
+{
+"Assisters": [],
+"EventID": 12,
+"EventName": "ChampionKill",
+"EventTime": 299.12310791015625,
+"KillerName": "anon-4",
+"VictimName": "anon-13"
+},
+{
+"Assisters": [],
+"EventID": 13,
+"EventName": "ChampionKill",
+"EventTime": 330.9161682128906,
+"KillerName": "anon-11",
+"VictimName": "anon-4"
+},
+{
+"Assisters": [
+"anon-11",
+"anon-15",
+"anon-17"
+],
+"EventID": 14,
+"EventName": "ChampionKill",
+"EventTime": 378.0404052734375,
+"KillerName": "anon-13",
+"VictimName": "anon-7"
+},
+{
+"Assisters": [
+"anon-17"
+],
+"EventID": 15,
+"EventName": "ChampionKill",
+"EventTime": 378.9492492675781,
+"KillerName": "anon-13",
+"VictimName": "anon-6"
+},
+{
+"Assisters": [
+"anon-11",
+"anon-15",
+"anon-17"
+],
+"EventID": 17,
+"EventName": "ChampionKill",
+"EventTime": 378.9492492675781,
+"KillerName": "anon-13",
+"VictimName": "anon-2"
+},
+{
+"Assisters": [],
+"EventID": 19,
+"EventName": "ChampionKill",
+"EventTime": 399.0833435058594,
+"KillerName": "anon-9",
+"VictimName": "anon-4"
+},
+{
+"Assisters": [],
+"EventID": 20,
+"EventName": "ChampionKill",
+"EventTime": 451.6920471191406,
+"KillerName": "anon-9",
+"VictimName": "anon-0"
+},
+{
+"Assisters": [
+"anon-15",
+"anon-17"
+],
+"EventID": 21,
+"EventName": "ChampionKill",
+"EventTime": 454.829833984375,
+"KillerName": "anon-11",
+"VictimName": "anon-7"
+},
+{
+"Assisters": [],
+"EventID": 22,
+"EventName": "ChampionKill",
+"EventTime": 498.1533508300781,
+"KillerName": "anon-4",
+"VictimName": "anon-13"
+},
+{
+"Assisters": [
+"anon-0"
+],
+"EventID": 23,
+"EventName": "ChampionKill",
+"EventTime": 499.22174072265625,
+"KillerName": "anon-2",
+"VictimName": "anon-9"
+},
+{
+"Assisters": [],
+"DragonType": "Air",
+"EventID": 24,
+"EventName": "DragonKill",
+"EventTime": 510.93194580078125,
+"KillerName": "anon-11",
+"Stolen": "False"
+},
+{
+"Assisters": [
+"anon-17"
+],
+"EventID": 25,
+"EventName": "ChampionKill",
+"EventTime": 525.83251953125,
+"KillerName": "anon-15",
+"VictimName": "anon-6"
+},
+{
+"Assisters": [
+"anon-17"
+],
+"EventID": 26,
+"EventName": "TurretKilled",
+"EventTime": 531.1781005859375,
+"KillerName": "anon-15",
+"TurretKilled": "Turret_TOrder_L0_P3_3795288474_0"
+},
+{
+"Assisters": [
+"anon-2"
+],
+"EventID": 28,
+"EventName": "ChampionKill",
+"EventTime": 576.6389770507812,
+"KillerName": "anon-6",
+"VictimName": "anon-13"
+},
+{
+"Assisters": [],
+"EventID": 29,
+"EventName": "HordeKill",
+"EventTime": 592.1137084960938,
+"KillerName": "anon-11",
+"Stolen": "False"
+},
+{
+"Assisters": [
+"anon-17"
+],
+"EventID": 30,
+"EventName": "ChampionKill",
+"EventTime": 600.0272216796875,
+"KillerName": "anon-15",
+"VictimName": "anon-7"
+},
+{
+"Assisters": [
+"anon-7"
+],
+"EventID": 31,
+"EventName": "ChampionKill",
+"EventTime": 600.0928955078125,
+"KillerName": "anon-4",
+"VictimName": "anon-17"
+},
+{
+"Assisters": [],
+"EventID": 32,
+"EventName": "HordeKill",
+"EventTime": 602.5975341796875,
+"KillerName": "anon-11",
+"Stolen": "False"
+},
+{
+"Assisters": [],
+"EventID": 33,
+"EventName": "ChampionKill",
+"EventTime": 606.0819091796875,
+"KillerName": "anon-4",
+"VictimName": "anon-15"
+},
+{
+"Assisters": [],
+"EventID": 35,
+"EventName": "HordeKill",
+"EventTime": 609.0216064453125,
+"KillerName": "anon-11",
+"Stolen": "False"
+},
+{
+"Assisters": [],
+"EventID": 36,
+"EventName": "ChampionKill",
+"EventTime": 617.5807495117188,
+"KillerName": "anon-13",
+"VictimName": "anon-6"
+},
+{
+"Assisters": [
+"anon-2"
+],
+"EventID": 37,
+"EventName": "ChampionKill",
+"EventTime": 619.0646362304688,
+"KillerName": "anon-4",
+"VictimName": "anon-11"
+},
+{
+"Assisters": [],
+"EventID": 38,
+"EventName": "ChampionKill",
+"EventTime": 671.6058959960938,
+"KillerName": "anon-4",
+"VictimName": "anon-17"
+},
+{
+"Assisters": [],
+"EventID": 39,
+"EventName": "ChampionKill",
+"EventTime": 675.0302124023438,
+"KillerName": "anon-11",
+"VictimName": "anon-0"
+},
+{
+"Assisters": [
+"anon-0"
+],
+"EventID": 40,
+"EventName": "ChampionKill",
+"EventTime": 683.3452758789062,
+"KillerName": "anon-2",
+"VictimName": "anon-11"
+},
+{
+"Assisters": [],
+"EventID": 41,
+"EventName": "ChampionKill",
+"EventTime": 685.463623046875,
+"KillerName": "anon-13",
+"VictimName": "anon-6"
+},
+{
+"Assisters": [],
+"EventID": 42,
+"EventName": "ChampionKill",
+"EventTime": 689.2527465820312,
+"KillerName": "anon-4",
+"VictimName": "anon-15"
+},
+{
+"Assisters": [
+"anon-4"
+],
+"EventID": 43,
+"EventName": "TurretKilled",
+"EventTime": 699.3092041015625,
+"KillerName": "anon-7",
+"TurretKilled": "Turret_TChaos_L1_P3_225anon-232041_0"
+},
+{
+"Assisters": [],
+"EventID": 44,
+"EventName": "TurretKilled",
+"EventTime": 708.9273071289062,
+"KillerName": "anon-9",
+"TurretKilled": "Turret_TOrder_L2_P3_1509986696_0"
+},
+{
+"Assisters": [
+"anon-13",
+"anon-17"
+],
+"EventID": 45,
+"EventName": "ChampionKill",
+"EventTime": 757.1871948242188,
+"KillerName": "anon-11",
+"VictimName": "anon-4"
+},
+{
+"Assisters": [
+"anon-13",
+"anon-17"
+],
+"EventID": 46,
+"EventName": "ChampionKill",
+"EventTime": 770.7579345703125,
+"KillerName": "anon-11",
+"VictimName": "anon-2"
+},
+{
+"Assisters": [
+"anon-13",
+"anon-15",
+"anon-17"
+],
+"DragonType": "Hextech",
+"EventID": 47,
+"EventName": "DragonKill",
+"EventTime": 823.8656005859375,
+"KillerName": "anon-11",
+"Stolen": "False"
+},
+{
+"Assisters": [
+"anon-11",
+"anon-15",
+"anon-17"
+],
+"EventID": 48,
+"EventName": "ChampionKill",
+"EventTime": 832.5316162109375,
+"KillerName": "anon-13",
+"VictimName": "anon-2"
+},
+{
+"Assisters": [
+"anon-0",
+"anon-2",
+"anon-7"
+],
+"EventID": 49,
+"EventName": "ChampionKill",
+"EventTime": 835.6220092773438,
+"KillerName": "anon-4",
+"VictimName": "anon-17"
+},
+{
+"Assisters": [],
+"EventID": 50,
+"EventName": "TurretKilled",
+"EventTime": 868.8374633789062,
+"KillerName": "anon-4",
+"TurretKilled": "Turret_TChaos_L0_P3_511845594_0"
+},
+{
+"Assisters": [
+"anon-4"
+],
+"EventID": 51,
+"EventName": "ChampionKill",
+"EventTime": 901.6959228515625,
+"KillerName": "anon-0",
+"VictimName": "anon-17"
+},
+{
+"Assisters": [
+"anon-13",
+"anon-17"
+],
+"EventID": 52,
+"EventName": "ChampionKill",
+"EventTime": 903.3696899414062,
+"KillerName": "anon-9",
+"VictimName": "anon-4"
+},
+{
+"Assisters": [
+"anon-6"
+],
+"EventID": 53,
+"EventName": "ChampionKill",
+"EventTime": 923.2360229492188,
+"KillerName": "anon-2",
+"VictimName": "anon-11"
+},
+{
+"Assisters": [
+"anon-11"
+],
+"EventID": 54,
+"EventName": "ChampionKill",
+"EventTime": 927.7462158203125,
+"KillerName": "anon-13",
+"VictimName": "anon-2"
+},
+{
+"Assisters": [],
+"EventID": 55,
+"EventName": "TurretKilled",
+"EventTime": 946.4512329101562,
+"KillerName": "anon-9",
+"TurretKilled": "Turret_TOrder_L0_P2_3812066093_0"
+},
+{
+"Assisters": [],
+"EventID": 56,
+"EventName": "ChampionKill",
+"EventTime": 988.1514282226562,
+"KillerName": "anon-13",
+"VictimName": "anon-0"
+},
+{
+"Assisters": [
+"anon-15",
+"anon-17"
+],
+"EventID": 57,
+"EventName": "HeraldKill",
+"EventTime": 993.8648071289062,
+"KillerName": "anon-11",
+"Stolen": "False"
+},
+{
+"Assisters": [
+"anon-7"
+],
+"EventID": 58,
+"EventName": "ChampionKill",
+"EventTime": 1002.8178100585938,
+"KillerName": "anon-4",
+"VictimName": "anon-9"
+},
+{
+"Assisters": [],
+"EventID": 59,
+"EventName": "ChampionKill",
+"EventTime": 1017.4017333984375,
+"KillerName": "anon-2",
+"VictimName": "anon-13"
+},
+{
+"Assisters": [
+"anon-15",
+"anon-17"
+],
+"EventID": 60,
+"EventName": "TurretKilled",
+"EventTime": 1017.63037109375,
+"KillerName": "anon-11",
+"TurretKilled": "Turret_TOrder_L1_P3_1242677625_0"
+},
+{
+"Assisters": [
+"anon-11",
+"anon-17"
+],
+"EventID": 61,
+"EventName": "ChampionKill",
+"EventTime": 1021.7962036132812,
+"KillerName": "anon-15",
+"VictimName": "anon-6"
+},
+{
+"Assisters": [],
+"EventID": 62,
+"EventName": "TurretKilled",
+"EventTime": 1028.157470703125,
+"KillerName": "anon-4",
+"TurretKilled": "Turret_TChaos_L0_P2_528623213_0"
+},
+{
+"Assisters": [
+"anon-9",
+"anon-15",
+"anon-17"
+],
+"EventID": 63,
+"EventName": "ChampionKill",
+"EventTime": 1091.3670654296875,
+"KillerName": "anon-13",
+"VictimName": "anon-7"
+},
+{
+"Assisters": [
+"anon-13",
+"anon-15",
+"anon-17"
+],
+"EventID": 64,
+"EventName": "ChampionKill",
+"EventTime": 1093.33837890625,
+"KillerName": "anon-9",
+"VictimName": "anon-0"
+},
+{
+"Assisters": [
+"anon-6",
+"anon-7"
+],
+"EventID": 65,
+"EventName": "ChampionKill",
+"EventTime": 1101.3289794921875,
+"KillerName": "anon-4",
+"VictimName": "anon-17"
+},
+{
+"Assisters": [
+"anon-9",
+"anon-11",
+"anon-15",
+"anon-17"
+],
+"EventID": 66,
+"EventName": "ChampionKill",
+"EventTime": 1102.852783203125,
+"KillerName": "anon-13",
+"VictimName": "anon-4"
+},
+{
+"Assisters": [
+"anon-17"
+],
+"EventID": 67,
+"EventName": "TurretKilled",
+"EventTime": 1112.56591796875,
+"KillerName": "anon-11",
+"TurretKilled": "Turret_TOrder_L1_P2_1225900006_0"
+},
+{
+"Assisters": [
+"anon-0",
+"anon-11",
+"anon-15"
+],
+"DragonType": "Earth",
+"EventID": 68,
+"EventName": "DragonKill",
+"EventTime": 1144.19873046875,
+"KillerName": "anon-2",
+"Stolen": "True"
+},
+{
+"Assisters": [
+"anon-0",
+"anon-2"
+],
+"EventID": 69,
+"EventName": "ChampionKill",
+"EventTime": 1148.532470703125,
+"KillerName": "anon-6",
+"VictimName": "anon-11"
+},
+{
+"Assisters": [
+"anon-9",
+"anon-11"
+],
+"EventID": 70,
+"EventName": "ChampionKill",
+"EventTime": 1152.1649169921875,
+"KillerName": "anon-15",
+"VictimName": "anon-2"
+},
+{
+"Assisters": [],
+"EventID": 71,
+"EventName": "TurretKilled",
+"EventTime": 1152.739990234375,
+"KillerName": "anon-13",
+"TurretKilled": "Turret_TOrder_L2_P2_1526764315_0"
+},
+{
+"Assisters": [
+"anon-0",
+"anon-2",
+"anon-7"
+],
+"EventID": 72,
+"EventName": "ChampionKill",
+"EventTime": 1155.2763671875,
+"KillerName": "anon-6",
+"VictimName": "anon-15"
+},
+{
+"Assisters": [
+"anon-15"
+],
+"EventID": 74,
+"EventName": "ChampionKill",
+"EventTime": 1162.48681640625,
+"KillerName": "anon-9",
+"VictimName": "anon-6"
+},
+{
+"Assisters": [],
+"EventID": 75,
+"EventName": "ChampionKill",
+"EventTime": 1193.412353515625,
+"KillerName": "anon-13",
+"VictimName": "anon-0"
+}
+]
+}
+}

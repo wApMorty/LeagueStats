@@ -27,9 +27,20 @@ SNAPSHOT = {
 
 
 def test_anonymize_hides_every_form_of_every_name():
-    text = anonymize(json.dumps(SNAPSHOT), SNAPSHOT)
+    text = json.dumps(anonymize(SNAPSHOT))
     assert "Paul" not in text and "Ennemi" not in text and "EUW" not in text
     assert json.loads(text)["gameData"]["gameTime"] == 612.5
+
+
+def test_anonymize_never_corrupts_numbers_with_a_short_name():
+    snapshot = {
+        "gameData": {"gameTime": 106.58219},
+        "allPlayers": [{"summonerName": "1", "riotId": "1#EUW", "scores": {"kills": 21}}],
+    }
+    anonymized = anonymize(snapshot)
+    assert anonymized["gameData"]["gameTime"] == 106.58219
+    assert anonymized["allPlayers"][0]["scores"] == {"kills": 21}
+    assert anonymized["allPlayers"][0]["summonerName"].startswith("anon-")
 
 
 def test_describe_lists_fields_per_event_type():

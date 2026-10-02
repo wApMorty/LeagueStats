@@ -23,7 +23,6 @@ USAGE:
 
 import argparse
 import json
-import re
 import ssl
 import sys
 import time
@@ -47,14 +46,25 @@ def fetch() -> dict:
         return json.load(response)
 
 
-def anonymize(text: str, snapshot: dict) -> str:
-    """Remplace chaque nom de joueur (toutes les formes) par `anon-N`, y compris dans les événements."""
-    names = []
+def anonymize(snapshot: dict) -> dict:
+    """Copie du snapshot où chaque chaîne égale à un nom de joueur (toutes les formes) devient `anon-N`.
+
+    Sur la structure et non sur le texte : un pseudo comme « 1 » ne doit pas corrompre un
+    nombre. Seules les chaînes entières sont remplacées.
+    """
+    names = set()
     for player in snapshot.get("allPlayers", []):
-        names += [player.get(key) for key in IDENTITY_KEYS]
-    for i, name in enumerate(sorted({n for n in names if n}, key=len, reverse=True)):
-        text = re.sub(re.escape(name), f"anon-{i}", text)
-    return text
+        names |= {player.get(key) for key in IDENTITY_KEYS}
+    aliases = {name: f"anon-{i}" for i, name in enumerate(sorted(n for n in names if n))}
+
+    def walk(value):
+        if isinstance(value, dict):
+            return {key: walk(v) for key, v in value.items()}
+        if isinstance(value, list):
+            return [walk(v) for v in value]
+        return aliases.get(value, value) if isinstance(value, str) else value
+
+    return walk(snapshot)
 
 
 def describe(snapshot: dict, seen: dict) -> None:
@@ -92,7 +102,7 @@ def main() -> None:
             continue
         game_time = snapshot.get("gameData", {}).get("gameTime", 0)
         path = OUTPUT_DIR / f"snapshot_{int(game_time):05d}.json"
-        path.write_text(anonymize(json.dumps(snapshot, indent=1), snapshot), encoding="utf-8")
+        path.write_text(json.dumps(anonymize(snapshot), indent=1), encoding="utf-8")
         describe(snapshot, seen)
         taken += 1
         print(f"[{game_time / 60:5.1f} min] {path.name}")
