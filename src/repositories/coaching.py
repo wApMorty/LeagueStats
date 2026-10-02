@@ -139,6 +139,49 @@ class CoachingRepository:
             "SELECT captured_utc, queue, tier, division, lp FROM rank_snapshots ORDER BY id"
         )
 
+    # ---------- impact sur la win chance (SPEC-20) ----------
+
+    def games_without_impact(self) -> List[dict]:
+        """Parties capturées avec une timeline et sans impact, de la plus ancienne à la plus récente."""
+        rows = self._rows("""
+            SELECT game_id, player_participant_id, raw_game, raw_timeline FROM game_records
+            WHERE raw_timeline IS NOT NULL
+              AND game_id NOT IN (SELECT DISTINCT game_id FROM game_impact)
+            ORDER BY game_creation_utc
+            """)
+        return [dict(zip(("game_id", "player_pid", "game", "timeline"), row)) for row in rows]
+
+    def save_impact(self, game_id: int, model_version: str, rows: Sequence[dict]) -> None:
+        """Remplace les impacts de la partie par ceux de `rows` (sortie de `winprob.impact`)."""
+        cursor = self.db.connection.cursor()
+        cursor.execute("DELETE FROM game_impact WHERE game_id = ?", (game_id,))
+        cursor.executemany(
+            "INSERT INTO game_impact VALUES (?, ?, ?, ?, ?, ?)",
+            [
+                (
+                    game_id,
+                    r["participant_id"],
+                    r["event_time_ms"],
+                    r["event_type"],
+                    r["delta_p"],
+                    model_version,
+                )
+                for r in rows
+            ],
+        )
+        self.db.connection.commit()
+
+    def impact_rows(self, game_id: int, participant_id: Optional[int] = None) -> List[dict]:
+        """Impacts d'une partie, dans l'ordre des événements (un participant au choix)."""
+        keys = ("participant_id", "event_time_ms", "event_type", "delta_p", "model_version")
+        rows = self._rows(
+            "SELECT participant_id, event_time_ms, event_type, delta_p, model_version "
+            "FROM game_impact WHERE game_id = ? AND (? IS NULL OR participant_id = ?) "
+            "ORDER BY event_time_ms, participant_id",
+            (game_id, participant_id, participant_id),
+        )
+        return [dict(zip(keys, row)) for row in rows]
+
     # ---------- axes de travail ----------
 
     def goals(self, status: Optional[str] = "active") -> List[dict]:

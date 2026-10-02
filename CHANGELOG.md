@@ -6,6 +6,19 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Feature
 
+- **Rapport d'impact de fin de partie (SPEC-20 tâche 44)** — après chaque partie capturée, le Live
+  Coach affiche ton impact cumulé en points de win chance, tes 3 événements les plus coûteux et
+  les 3 plus rentables (« -12 pts, mort solo à 2:16 », « mort à 10:21, tour perdu derrière »),
+  la courbe de ton équipe et le résidu non attribué. Les impacts sont rangés dans `game_impact`
+  (rattrapage au démarrage pour les parties déjà capturées). Il faut un modèle entraîné :
+  `python -m src.winprob.retrain --force` (ensuite, réentraînement à la demande).
+- **Impact de chaque événement sur la win chance (SPEC-20 tâche 43)** — `src/winprob/impact.py`
+  calcule ΔP (même instant, avant/après l'événement) et l'attribue aux joueurs : la victime
+  porte la baisse, tueur et assistants se partagent la hausse, un objectif va aux joueurs
+  présents. La variation entre deux événements (temps, farm) n'est pas attribuée, elle est
+  renvoyée en résidu par équipe. Table `game_impact`, une ligne par joueur et événement, avec la
+  version du modèle. **Action requise** : `python -m alembic upgrade head` (migration
+  `c8f3a1d95e26`). 
 - **Réentraînement de la win chance, champion contre challenger (SPEC-20 tâche 42b)** —
   `python -m src.winprob.retrain [--force]` réentraîne sur un nouveau patch de 5 000 parties ou une
   base grossie de 20 % (au moins 10 000 parties), et n'adopte le nouveau modèle que s'il fait au

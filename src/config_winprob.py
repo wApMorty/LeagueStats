@@ -94,5 +94,9 @@ class WinProbConfig:
     WINPROB_RETRAIN_GROWTH: float = 0.2
     WINPROB_RETRAIN_MIN_NEW_GAMES: int = 10_000
 
+    # Impact (§5) : un coéquipier à cette distance (unités de carte, sur 15 000) d'un
+    # objectif, à l'image la plus proche (à la minute près), est compté présent.
+    WINPROB_PRESENCE_RADIUS: float = 2500.0
+
 
 winprob_config = WinProbConfig()

@@ -159,6 +159,21 @@ def walk(game: dict, timeline: dict) -> Iterator[tuple]:
         yield frame["timestamp"], None, replay.state(frame["timestamp"])
 
 
+def transitions(game: dict, timeline: dict) -> Iterator[tuple]:
+    """`(événement, état juste avant, état juste après)` pour chaque événement suivi.
+
+    Les deux états portent le même instant : seul l'événement les distingue, ce qui isole
+    son effet de la simple fuite du temps (SPEC-20 §5).
+    """
+    replay = _Replay({p["participantId"]: p["teamId"] for p in game["participants"]})
+    for frame in timeline["frames"]:
+        for e in frame["events"]:
+            before = replay.state(e["timestamp"])
+            if replay.event(e):
+                yield e, before, replay.state(e["timestamp"])
+        replay.frame(frame)
+
+
 def frame_states(game: dict, timeline: dict) -> list:
     """Un état par image (une par minute) : les lignes d'entraînement du modèle."""
     return [state for _, event, state in walk(game, timeline) if event is None]

@@ -24,6 +24,7 @@ from typing import Callable, Dict, Optional
 from ..config_constants import coaching_config
 from ..draft.final_analysis import _to_points as to_points
 from ..repositories.coaching import CoachingRepository
+from ..winprob.pending import compute_pending
 from . import findings, goals, ranked, report
 
 # Jetons de session du chat d'après-partie : jamais stockés.
@@ -43,6 +44,7 @@ class GameCapture:
         self._safely(self.capture_recent)
         self._safely(lambda: ranked.snapshot_current(self.m.lcu, self.m.assistant.db))
         self._safely(lambda: self.analyze(live=False))
+        self._safely(lambda: self.impact(live=False))
 
     def on_post_game(self) -> None:
         """Un passage de la fenêtre d'après-partie."""
@@ -50,6 +52,7 @@ class GameCapture:
         self._safely(lambda: ranked.snapshot_after_game(self.m.lcu, self.m.assistant.db))
         self._safely(self.capture_recent)
         self._safely(lambda: self.analyze(live=True))
+        self._safely(lambda: self.impact(live=True))
 
     def analyze(self, live: bool) -> None:
         """Analyse les parties capturées (tâches 34 à 38).
@@ -77,6 +80,12 @@ class GameCapture:
         every = coaching_config.REVIEW_EVERY
         if live and total // every > (total - len(analyses)) // every:
             print("\n".join(report.review(db)))
+
+    def impact(self, live: bool) -> None:
+        """Impact sur la win chance des parties capturées (SPEC-20) ; en direct, le rapport de la dernière."""
+        reports = compute_pending(self.m.assistant.db)
+        if live and reports:
+            print("\n".join([""] + reports[-1][1]))
 
     def _game_report(self, analysis) -> list:
         db = self.m.assistant.db

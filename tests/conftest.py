@@ -237,6 +237,16 @@ def temp_db(tmp_path):
             PRIMARY KEY (goal_id, game_id)
         )
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS game_impact (
+            game_id INTEGER NOT NULL,
+            participant_id INTEGER NOT NULL,
+            event_time_ms INTEGER NOT NULL,
+            event_type TEXT NOT NULL,
+            delta_p REAL NOT NULL,
+            model_version TEXT NOT NULL
+        )
+    """)
 
     conn.commit()
     conn.close()
