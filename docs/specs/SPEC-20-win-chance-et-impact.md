@@ -125,12 +125,22 @@ Le modèle est filtré par patch (`gameVersion`), réentraîné quand le patch c
 
 ### 4.4 Réentraînement (@pj35, 2026-10-02)
 
-Vérifié **après chaque partie**, les sessions pouvant être longues : dans la fenêtre
-d'après-partie, une fois l'impact de la partie calculé avec le modèle en place. Jamais en draft
-ni en partie.
+**Pas après chaque partie** (@pj35, 2026-10-02) : la collecte (§3.1) ajoute ~2 000 parties par
+heure quelle que soit l'activité du joueur, donc une partie de plus dans la base ne change rien et
+le calcul serait fait pour rien. Le déclencheur suit les **données**, pas les parties du joueur.
+**À valider** : proposition ci-dessous.
 
-- **Déclencheur** : au moins `WINPROB_RETRAIN_MIN_NEW_GAMES` nouvelles parties depuis le dernier
-  entraînement. En dessous, un nouveau modèle ne différerait que par le bruit.
+- **Déclencheur** : le premier de ces deux cas, vérifié au démarrage et dans la fenêtre
+  d'après-partie, jamais en draft ni en partie :
+  1. un **nouveau patch** dont les parties lues atteignent `WINPROB_MIN_PATCH_GAMES` (la dérive de
+     patch est la vraie raison de réentraîner) ;
+  2. la base d'entraînement a grossi d'au moins `WINPROB_RETRAIN_GROWTH` (20 %, au moins
+     `WINPROB_RETRAIN_MIN_NEW_GAMES` = 10 000 parties) depuis le dernier entraînement. En
+     dessous, un nouveau modèle ne différerait que par le bruit.
+  Une commande manuelle (`entrainer`) force le calcul.
+- **Hors de la boucle** : l'entraînement en Python pur peut durer des minutes ; il tourne dans un
+  processus détaché, jamais dans le tick du Live Coach. Le modèle en place sert jusqu'à son
+  remplacement.
 - **Champion contre challenger** : le nouveau modèle n'est adopté que s'il fait au moins aussi
   bien que le modèle en place (Brier, calibration) sur un **jeu de validation commun** : les
   parties les plus récentes, jamais utilisées pour l'entraînement. Sinon il est jeté, et la
@@ -225,7 +235,7 @@ Les lectures LCU vont dans `src/lcu_match_history.py` (mixin existant).
 | 40 | Une semaine de collecte réelle : volume, débit, bridage, diversité des `puuid`, consignés ici | 1 | 1 | 39 |
 | 41 | `state.py` : état depuis la timeline LCU, testé sur les fixtures de SPEC-19 | 2 | 3 | — |
 | 42 | `model.py` : logistique, validation par blocs de parties, calibration par tranche de temps, comparaison avec et sans l'or | 2 | 5 | 40, 41 |
-| 42b | Réentraînement après chaque partie, champion contre challenger (§4.4) | 2 | 2 | 42 |
+| 42b | Réentraînement déclenché par les données, champion contre challenger (§4.4) | 2 | 2 | 42 |
 | 43 | `impact.py` : ΔP et attribution, migration `game_impact` | 3 | 5 | 42 |
 | 44 | Rapport de fin de partie : impact, tournants, courbe | 3 | 2 | 43 |
 | 45 | Impact dans le bilan et les schémas de SPEC-19 | 4 | 3 | 43 |
@@ -253,3 +263,26 @@ Les lectures LCU vont dans `src/lcu_match_history.py` (mixin existant).
 - Conseils en jeu (« va au drake ») : seul le pourcentage est affiché.
 - Vision et placement, faute de données.
 - GUI (feature candidate 5 du TODO) : la courbe passe en console d'abord.
+
+## 13. Évolutions possibles (notées le 2026-10-02, non planifiées)
+
+Pistes pour dépasser la logistique une fois la phase 2 mesurée. Le brut complet étant stocké (§8),
+toutes se calculent sans recollecter.
+
+| Piste | Ce qu'elle apporte | Coût |
+|---|---|---|
+| **Arbre boosté** (LightGBM, XGBoost) | Interactions entre variables sans les écrire à la main (tour + drake + écart de kills + temps). Souvent aussi bon qu'un réseau sur des données tabulaires, pour moins de réglages | Dépendance lourde pour entraîner ; l'inférence reste simple (arbres exportés en JSON, évalués en Python pur) |
+| **Réseau de neurones** | Identité des champions (embeddings), positions, séquences d'événements ; ce que la logistique exploite mal | Plus de données (la composition seule demande des dizaines de milliers de parties), PyTorch ou équivalent, calibration en plus |
+| **Logistique enrichie** | Or (timeline seule, pour l'après-partie), interactions choisies à la main | Quasi nul |
+
+**Projet adjacent** (@pj35 y est ouvert) : l'entraînement sort de l'application, dans un dépôt ou un
+dossier à part avec ses dépendances (numpy, scikit-learn ou PyTorch). Il lit `data/crawl.db` et
+exporte un fichier de poids ou d'arbres ; l'application ne fait que l'**inférence**, en Python pur,
+sans alourdir le `.exe`. Les contrats à figer : format d'export, `model_version`, et les variables
+d'état de `state.py` (§4.1), qui doivent rester identiques entre l'entraînement et le jeu.
+
+**Conditions d'adoption** : un modèle plus riche ne remplace la logistique que s'il la bat
+nettement sur le jeu de validation commun (Brier, calibration par tranche de temps, §4.3 et §4.4),
+et qu'il reste **calibré** : l'attribution d'impact (§5) lit des écarts de probabilité, qu'un score
+mal calibré rend faux. Ordre : logistique (phase 2) → mesure du coût de l'exclusion de l'or →
+arbre boosté → réseau seulement si l'arbre plafonne.

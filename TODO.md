@@ -102,7 +102,7 @@ Répond à la confusion cause/effet des constats de SPEC-19. Ordre validé par @
 | Phase | Contenu | Pts | État |
 |---|---|---|---|
 | 1 | Collecte LCU continue en tâche de fond du Live Coach (`data/crawl.db`), une semaine de mesure | 6 | 🟡 tâche 39 faite (2026-10-02), reste la semaine de mesure (tâche 40) |
-| 2 | État de partie, modèle logistique, calibration, réentraînement après chaque partie | 10 | ⬜ |
+| 2 | État de partie, modèle logistique, calibration, réentraînement déclenché par les données | 10 | ⬜ |
 | 3 | Impact par événement, rapport de fin de partie | 7 | ⬜ |
 | 4 | Impact dans le bilan et les schémas de SPEC-19 | 3 | ⬜ |
 | 5 | Live Client API et overlay en jeu | 4 | ⬜ |
@@ -121,6 +121,7 @@ rétréci. Le modèle de prédiction ne change pas (approche C, @pj35).
 | Recherche parallèle à la racine (`multiprocessing`, phase 2) | SPEC-17 §5 | Après le sprint 3, si le bench montre une profondeur < 5 en premier pick, ou si le premier pick reste mal conseillé à l'usage |
 | Recherche en tâche de fond pendant le chrono de pick (« pondering ») | SPEC-17 §7 | Après le sprint 3, si la profondeur reste le facteur limitant ; chantier d'UI (sortir `rank()` de la boucle du monitor) |
 | Force intrinsèque dans `GameEvaluator` (SPEC-05 §3.3, jamais implémentée) | SPEC-18 §3 | `scripts/compare_intrinsic_strength.py` donne une borne basse d'IC > 0 (au 2026-09-24 : +0,019 d'AUC, IC [−0,053 ; +0,090] sur 72 parties) |
+| Modèle de win chance plus riche (arbre boosté, puis réseau de neurones), entraînement éventuellement dans un projet adjacent | SPEC-20 §13 | La logistique de la phase 2 est mesurée (Brier, calibration, coût de l'exclusion de l'or) et laisse une marge |
 | Moteur d'optimisation, phase A (shrinkage mesuré du WPA) | SPEC-16 §2 | Coachless donne son autorisation écrite : le spike (SPEC-15 §2.1.1, 2026-09-24) confirme un WPA par composant avec échantillons, mais les CGU interdisent l'accès direct à l'API |
 
 **Abandonné** (ADR-003) : la table `build_snapshots`, l'étape de collecte du pipeline, l'alerte
