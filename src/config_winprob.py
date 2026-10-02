@@ -40,5 +40,32 @@ class WinProbConfig:
     # Purge toutes les N parties lues (elle a lieu aussi à chaque seed()).
     CRAWL_PURGE_EVERY: int = 500
 
+    # État de partie (SPEC-20 §4.1, state.py). Durées des buffs en secondes ;
+    # l'âme se gagne au 4e dragon ; temps de réapparition de base par niveau
+    # (1 à 18, wiki League of Legends, approximation).
+    BARON_BUFF_S: float = 180.0
+    ELDER_BUFF_S: float = 150.0
+    SOUL_DRAGONS: int = 4
+    RESPAWN_BASE_S: tuple = (
+        10,
+        10,
+        12,
+        12,
+        14,
+        16,
+        20,
+        25,
+        28,
+        32.5,
+        35,
+        37.5,
+        40,
+        42.5,
+        45,
+        47.5,
+        50,
+        52.5,
+    )
+
 
 winprob_config = WinProbConfig()

@@ -6,6 +6,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Feature
 
+- **État de partie pour la win chance (SPEC-20 tâche 41)** — `src/winprob/state.py` rejoue une
+  timeline LCU et en tire, par image et après chaque événement, les différences bleu − rouge
+  (kills, tours, drakes, Nashor, niveaux, CS, joueurs morts). Vérifié sur 1 500 parties du crawl.
+  Pas encore branché : le modèle (tâche 42) l'utilisera.
 - **Collecte de parties tierces en tâche de fond (SPEC-20 phase 1)** — le Live Coach lit,
   à raison d'une unité de travail par tick et ~1 requête/s, les historiques LCU des joueurs
   de tes parties puis de leurs adversaires, et range détail + timeline (JSON `zlib`, puuid
