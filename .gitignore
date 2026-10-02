@@ -9,6 +9,7 @@ user_prefs.json
 calibration.json
 
 *.db
+*.db-journal
 *.log
 .claude
 CLAUDE.MD
@@ -33,3 +34,4 @@ tmpclaude-*-cwd
 outputs/
 
 NUL
+winprob_model.json

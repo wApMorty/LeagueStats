@@ -123,6 +123,25 @@ Le modèle est filtré par patch (`gameVersion`), réentraîné quand le patch c
   tranche de temps.
 - **Seuil d'acceptation** fixé avant la mesure (§11) ; en dessous, pas de phase 3.
 
+### 4.3 bis Mesure du 2026-10-02 (tâche 42, 4 320 parties du crawl, patchs 16.16 à 16.19)
+
+Seuils du §11.2 inchangés (fixés avant la mesure). Images après 10 min.
+
+| Variante | Brier | Écart max par décile |
+|---|---|---|
+| **Retenue** : variables + variables × temps (`model.py`), validation croisée à 5 blocs de parties | 0,157 (AUC 0,853) | 1,9 pt |
+| Idem, tranches de temps au lieu de `× t` | 0,157 | 1,7 pt |
+| Idem, avec l'or | 0,154 | 2,3 pts |
+| Arbre boosté (scikit-learn, 200 arbres) | 0,158 | — |
+
+- Le coût d'exclure l'or est de **0,002 de Brier** : le choix du §4.1 tient.
+- L'arbre boosté ne bat pas la logistique : la condition de réouverture du §13 n'est pas remplie.
+- Validation temporelle (`python -m src.winprob.train`, les 20 % de parties les plus récentes,
+  ~900 parties, toutes en 16.19) : sans l'or **Brier 0,161, écart 5,2 pts, refusé** ; avec l'or
+  0,158 et 4,8 pts. Le défaut tient aux déciles 55-77 % (surestimés de 4 à 5 points). Avec ~900
+  parties, dont les ~28 images sont corrélées, le bruit d'un décile est de 2 à 4 points : à
+  **remesurer** quand la collecte aura grossi (tâche 40). Tant que le critère est refusé, pas de phase 3 (§4.3).
+
 ### 4.4 Réentraînement (@pj35, 2026-10-02)
 
 **Pas après chaque partie** (@pj35, 2026-10-02) : la collecte (§3.1) ajoute ~2 000 parties par

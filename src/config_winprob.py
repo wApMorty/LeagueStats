@@ -67,5 +67,27 @@ class WinProbConfig:
         52.5,
     )
 
+    # Modèle de win chance (SPEC-20 §4, model.py et train.py).
+    WINPROB_MODEL_FILENAME: str = "winprob_model.json"
+
+    # Parties les plus récentes mises de côté pour valider, jamais entraînées (§4.4).
+    WINPROB_VALIDATION_FRACTION: float = 0.2
+
+    # Images tirées au hasard, au plus, pour l'entraînement et pour la validation :
+    # la logistique n'a qu'une trentaine de poids, au-delà le Python pur ne gagne rien.
+    WINPROB_MAX_ROWS: int = 300_000
+
+    # Régularisation L2 (par rapport à la perte moyenne) sur les variables
+    # centrées-réduites, légère : le jeu compte des dizaines de milliers d'images ; lignes servant à
+    # estimer la hessienne de Newton ; itérations au plus.
+    WINPROB_L2: float = 1e-4
+    WINPROB_HESSIAN_ROWS: int = 20_000
+    WINPROB_ITERATIONS: int = 15
+
+    # Critères d'acceptation (SPEC-20 §11.2), mesurés sur les images après N minutes.
+    WINPROB_EVAL_AFTER_MIN: float = 10.0
+    WINPROB_BRIER_MAX: float = 0.20
+    WINPROB_GAP_MAX: float = 0.05
+
 
 winprob_config = WinProbConfig()
