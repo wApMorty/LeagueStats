@@ -46,3 +46,48 @@ def test_solo_death_is_flagged_with_the_objective_lost_right_after():
     assert solo
     text = " ".join(_report(10))
     assert "mort solo" in text
+
+
+def _row(game_id, kind, delta):
+    return {"game_id": game_id, "event_type": kind, "delta_p": delta}
+
+
+def test_review_ranks_costs_and_compares_halves():
+    from src.winprob.report import impact_review
+
+    rows = []
+    for game_id in range(10, 0, -1):  # 10 parties, de la plus récente à la plus ancienne
+        recent = game_id > 5
+        rows += [
+            _row(game_id, "death_solo", -0.06),
+            _row(game_id, "kill", 0.04 if recent else 0.02),
+        ]
+    lines = impact_review(rows)
+    assert "sur 10 partie(s)" in lines[0] and "-3 pts" in lines[0]  # 10 × (-0,06 + 0,03) / 10
+    assert "dernières 5 parties : -2 pts, les 5 d'avant : -4 pts" in lines[1]
+    assert lines[2].lstrip().startswith("Morts en solo") and "-6 pts en moyenne" in lines[2]
+    assert lines[3].lstrip().startswith("Kills")
+
+
+def test_review_is_empty_without_impact():
+    from src.winprob.report import impact_review
+
+    assert impact_review([]) == []
+
+
+def test_player_impact_feeds_the_bilan(db, tmp_path):
+    from tests.test_winprob_pending import _model_file, _store
+    from src.coaching.report import review
+    from src.repositories.coaching import CoachingRepository
+    from src.winprob.pending import compute_pending
+
+    _store(db)
+    db.connection.cursor().execute(
+        "INSERT INTO game_metrics (game_id, participant_id, metric, is_player, role, value) "
+        "VALUES (1, 4, 'cs_per_min', 1, 'middle', 7.0)"
+    )
+    db.connection.commit()
+    compute_pending(db, _model_file(tmp_path))
+    rows = CoachingRepository(db).player_impact(10)
+    assert rows and all(r["game_id"] == 1 for r in rows)
+    assert any("Impact sur la win chance" in line for line in review(db))

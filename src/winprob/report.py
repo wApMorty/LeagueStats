@@ -1,9 +1,12 @@
 """Rapport d'impact de fin de partie (SPEC-20 §5, tâche 44) : cumul du joueur, ses trois
 événements les plus coûteux et les plus rentables, courbe de win chance."""
 
+from collections import defaultdict
+from statistics import mean
 from typing import Dict, List
 
-from .impact import event_kind, scoring_team
+from ..config_constants import coaching_config
+from .impact import KILL_TYPES, event_kind, scoring_team
 from .model import WinModel
 from .state import BLUE, _other, frame_states
 
@@ -78,7 +81,9 @@ def impact_report(model: WinModel, game: dict, timeline: dict, pid: int, result:
         ),
     ):
         for r in rows[:TOP]:
-            e = by_key[(r["event_time_ms"], r["event_type"])]
+            e = by_key[
+                (r["event_time_ms"], "kill" if r["event_type"] in KILL_TYPES else r["event_type"])
+            ]
             lines.append(
                 f"  {title} : {_pts(r['delta_p'])} pts, {_describe(e, pid, teams, events)}"
             )
@@ -97,3 +102,46 @@ def _tracked(e: dict) -> bool:
     except KeyError:
         return False
     return True
+
+
+TYPE_LABELS = {
+    "death_solo": "Morts en solo",
+    "death": "Morts avec assistance adverse",
+    "kill": "Kills",
+    "assist": "Assistances",
+    **{kind: label.capitalize() for kind, label in LABELS.items()},
+}
+
+
+def impact_review(rows: List[dict]) -> List[str]:
+    """Section du bilan (SPEC-20 §7) : impact par partie et par type d'événement, depuis
+    `CoachingRepository.player_impact` (plus récentes d'abord)."""
+    games: Dict[int, float] = defaultdict(float)
+    by_type: Dict[str, List[float]] = defaultdict(list)
+    for r in rows:
+        games[r["game_id"]] += r["delta_p"]
+        by_type[r["event_type"]].append(r["delta_p"])
+    if not games:
+        return []
+    totals = list(games.values())  # ordre d'insertion : de la plus récente à la plus ancienne
+    n = len(totals)
+    lines = [
+        f"\n  Impact sur la win chance, sur {n} partie(s) : {_pts(mean(totals))} pts par partie "
+        "en moyenne (tes événements, hors temps, farm et niveaux)"
+    ]
+    half = n // 2
+    if half >= coaching_config.MIN_TREND_SAMPLE:
+        lines.append(
+            f"    dernières {half} parties : {_pts(mean(totals[:half]))} pts, "
+            f"les {half} d'avant : {_pts(mean(totals[half : 2 * half]))} pts"
+        )
+    per_game = {t: sum(v) / n for t, v in by_type.items()}
+    ranked = sorted(per_game, key=per_game.get)
+    for kind in [t for t in ranked if per_game[t] < 0][:TOP] + [
+        t for t in ranked[::-1] if per_game[t] > 0
+    ][:2]:
+        lines.append(
+            f"    {TYPE_LABELS.get(kind, kind):<30} {_pts(mean(by_type[kind]))} pts en moyenne, "
+            f"{len(by_type[kind]) / n:.1f} par partie ({_pts(per_game[kind])} pts par partie)"
+        )
+    return lines

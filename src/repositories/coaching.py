@@ -182,6 +182,24 @@ class CoachingRepository:
         )
         return [dict(zip(keys, row)) for row in rows]
 
+    def player_impact(self, limit: int) -> List[dict]:
+        """Impacts du joueur sur ses `limit` dernières parties avec impact, de la plus récente à la plus ancienne."""
+        keys = ("game_id", "event_type", "delta_p")
+        rows = self._rows(
+            """
+            SELECT i.game_id, i.event_type, i.delta_p
+            FROM game_impact i JOIN game_records g
+              ON g.game_id = i.game_id AND i.participant_id = g.player_participant_id
+            WHERE i.game_id IN (
+                SELECT DISTINCT i2.game_id FROM game_impact i2 JOIN game_records g2
+                  ON g2.game_id = i2.game_id
+                ORDER BY g2.game_creation_utc DESC LIMIT ?)
+            ORDER BY g.game_creation_utc DESC, i.event_time_ms
+            """,
+            (limit,),
+        )
+        return [dict(zip(keys, row)) for row in rows]
+
     # ---------- axes de travail ----------
 
     def goals(self, status: Optional[str] = "active") -> List[dict]:

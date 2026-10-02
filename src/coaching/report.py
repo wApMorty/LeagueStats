@@ -4,6 +4,7 @@ from typing import Callable, List, Optional
 
 from ..config_constants import coaching_config
 from ..repositories.coaching import CoachingRepository
+from ..winprob.report import impact_review
 from .findings import Finding, GameAnalysis
 from .goals import describe, propose
 from .grid import Reference
@@ -119,6 +120,8 @@ def review(db) -> List[str]:
             f"\n  Profil : norme en construction (il faut {coaching_config.MIN_NORM_SAMPLE} "
             "parties par poste)"
         )
+
+    lines += impact_review(repo.player_impact(coaching_config.RECURRENCE_WINDOW))
 
     proposal = propose(repo, role)
     lines.append("\n  Axes de travail :")

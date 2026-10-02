@@ -22,6 +22,10 @@ _MONSTERS = {"BARON_NASHOR": "baron", "RIFTHERALD": "herald", "HORDE": "grubs"}
 _BUILDINGS = {"TOWER_BUILDING": "tower", "INHIBITOR_BUILDING": "inhibitor"}
 
 
+# Un kill est rangé sous le rôle du joueur : mort (seul ou non), kill ou assistance.
+KILL_TYPES = ("kill", "assist", "death", "death_solo")
+
+
 def event_kind(e: dict) -> str:
     """Nom court de l'événement suivi : kill, tower, inhibitor, dragon, elder, baron, herald, grubs."""
     if e["type"] == "CHAMPION_KILL":
@@ -70,13 +74,13 @@ def impacts(model: WinModel, game: dict, timeline: dict) -> dict:
         end = p_after
         kind, ts = event_kind(e), e["timestamp"]
 
-        def give(pid: int, team: int, share: float) -> None:
+        def give(pid: int, team: int, share: float, label: str = kind) -> None:
             delta = p_after - p_before
             rows.append(
                 {
                     "participant_id": pid,
                     "event_time_ms": ts,
-                    "event_type": kind,
+                    "event_type": label,
                     "delta_p": share * (delta if team == BLUE else -delta),
                 }
             )
@@ -85,7 +89,8 @@ def impacts(model: WinModel, game: dict, timeline: dict) -> dict:
         killer = [e["killerId"]] if e["killerId"] in teams else []
         if kind == "kill":
             victim = e["victimId"]
-            give(victim, teams[victim], 1.0)
+            solo = bool(killer) and not assists  # même définition que `solo_deaths` (SPEC-19)
+            give(victim, teams[victim], 1.0, "death_solo" if solo else "death")
             gainers = [p for p in killer + assists if teams[p] != teams[victim]]
             team = _other(teams[victim])
         else:
@@ -95,7 +100,12 @@ def impacts(model: WinModel, game: dict, timeline: dict) -> dict:
             mates = [p for p, t in teams.items() if t == team]
             gainers = sorted(set(killer + assists + _present(timeline, e, mates)) & set(mates))
         for pid in gainers:
-            give(pid, team, 1 / len(gainers))
+            give(
+                pid,
+                team,
+                1 / len(gainers),
+                "assist" if kind == "kill" and pid != e["killerId"] else kind,
+            )
     return {"rows": rows, "teams": _team_summary(rows, teams, start, end)}
 
 

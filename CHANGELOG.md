@@ -6,6 +6,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Feature
 
+- **Impact dans le bilan (SPEC-20 tâche 45)** — le bilan du coach gagne une section : impact moyen
+  par partie sur les 10 dernières (et les 5 dernières contre les 5 d'avant dès 10 parties), puis par
+  type d'événement (« Morts en solo : -6 pts en moyenne, 1,2 par partie »). Les kills sont
+  rangés dans `game_impact` sous le rôle du joueur : `death_solo`, `death`, `kill`, `assist`.
 - **Rapport d'impact de fin de partie (SPEC-20 tâche 44)** — après chaque partie capturée, le Live
   Coach affiche ton impact cumulé en points de win chance, tes 3 événements les plus coûteux et
   les 3 plus rentables (« -12 pts, mort solo à 2:16 », « mort à 10:21, tour perdu derrière »),
