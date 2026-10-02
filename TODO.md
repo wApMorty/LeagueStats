@@ -105,7 +105,7 @@ Répond à la confusion cause/effet des constats de SPEC-19. Ordre validé par @
 | 2 | État de partie, modèle logistique, calibration, réentraînement déclenché par les données | 10 | 🟡 tâches 41, 42 et 42b faites (2026-10-02) ; critère du §11.2 tenu à 5 300 parties (Brier 0,155, écart 2,3 pts en validation croisée poolée, 3,3 pts en découpage temporel ; protocole à confirmer, SPEC-20 §4.3 bis) ; reste à brancher le réentraînement au Live Coach (processus détaché, `.exe` figé à trancher) |
 | 3 | Impact par événement, rapport de fin de partie | 7 | ✅ tâches 43 et 44 (2026-10-02, `impact.py`, `report.py`, migration `c8f3a1d95e26`) ; reste la recette en partie réelle |
 | 4 | Impact dans le bilan et les schémas de SPEC-19 | 3 | ✅ tâche 45 (2026-10-02, section du bilan : impact par partie et par type d'événement) ; révision de la grille de SPEC-19 à rouvrir sur données |
-| 5 | Live Client API et overlay en jeu | 4 | ⬜ |
+| 5 | Live Client API et overlay en jeu | 4 | 🟡 tâche 46 : script `scripts/spike_live_client.py` prêt (2026-10-02), à lancer en partie ; reste 47 |
 
 ### Hors sprint — SPEC-18 phase A ✅ (2026-09-24)
 
