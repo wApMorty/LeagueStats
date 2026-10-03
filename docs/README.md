@@ -8,9 +8,9 @@ Documentation complète du projet League Stats Coach.
 
 ### **État du Projet & Direction**
 - [../TODO.md](../TODO.md) - **Backlog actuel** : priorités en cours, dette de code, features candidates
-- [specs/](specs/README.md) - **Specs d'implémentation en cours** : lot 2026-09 (`SPEC-08` boucle de mesure, `SPEC-09` ignorance visible, `SPEC-10` couverture du chemin critique)
+- [specs/](specs/README.md) - **Specs d'implémentation** (`SPEC-08` à `SPEC-20`), rédigées avec `/spec`, implémentées avec `/implement`
 - [ROADMAP_2026.md](ROADMAP_2026.md) - Décisions stratégiques tranchées le 2026-06-11 (SQLite only, outil perso, pas de Playwright) — toujours en vigueur
-- [archive/](archive/) - Cycles d'audit/backlog/specs **entièrement exécutés**, conservés pour l'historique : `AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`, `DRAFT_SITES_INTEGRATION_RESEARCH.md`
+- [archive/](archive/) - Cycles d'audit/backlog/specs **entièrement exécutés**, conservés pour l'historique : `AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`, `DRAFT_SITES_INTEGRATION_RESEARCH.md`, `AUTO_UPDATE_SETUP.md` (automatisation suspendue), `LOG_ROTATION.md`, `SECURITY_FIXES.md`
 
 ### **Architecture & Structure**
 - [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) - Structure générale du projet et organisation des fichiers
@@ -19,8 +19,6 @@ Documentation complète du projet League Stats Coach.
 - [DATABASE_STRUCTURE.md](DATABASE_STRUCTURE.md) - Gestion de la base de données, chemins, et packaging PyInstaller
 - [BUILD_AND_TEST.md](BUILD_AND_TEST.md) - Build PyInstaller et exécution des tests
 - [CI_CD_SETUP.md](CI_CD_SETUP.md) - Pipeline GitHub Actions
-- [AUTO_UPDATE_SETUP.md](AUTO_UPDATE_SETUP.md) - Mise à jour automatique (Task Scheduler)
-- [LOG_ROTATION.md](LOG_ROTATION.md) - Rotation des logs
 - [alembic_guide.md](alembic_guide.md) - Commandes de migration Alembic
 
 ### **Scraping**
@@ -29,7 +27,6 @@ Documentation complète du projet League Stats Coach.
 
 ### **Features & Améliorations**
 - [TOURNAMENT_COACH_IMPROVEMENTS.md](TOURNAMENT_COACH_IMPROVEMENTS.md) - Refonte complète du Tournament Coach (Oct 2025)
-- [SECURITY_FIXES.md](SECURITY_FIXES.md) - Corrections de sécurité appliquées
 
 ### **Guide Développeur**
 - [../CLAUDE.md](../CLAUDE.md) - Instructions pour Claude Code et historique des décisions de design

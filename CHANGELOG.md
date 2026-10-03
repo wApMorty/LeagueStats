@@ -1473,7 +1473,7 @@ classements reposent sur des mesures au lieu de scores bruités.
   tier lists. Écrit `last_recompute_utc` dans `db_meta` (distinct de
   `last_update_utc`, puisque les données sources n'ont pas été rafraîchies).
 
-## [Unreleased] - 2026-07-25
+## [0.x] - 2026-07-25
 
 ### 🗑️ Suppressions (audit de sur-ingénierie)
 
@@ -1533,7 +1533,7 @@ Aucun changement de comportement fonctionnel.
   `xfail(strict=True)` dans `tests/test_regression_get_synergy_delta2.py`. **Non corrigée**
   ici : cette passe ne change aucun comportement d'analyse.
 
-## [Unreleased]
+## [0.x] - 2026-07-23
 
 ### 🐛 Fix — Pools Système dynamiques & homogénéisation lane (issue #41, 2026-07-23)
 

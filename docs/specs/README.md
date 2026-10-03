@@ -67,44 +67,20 @@ Specs issues de notes de features au fil de l'eau, chacune indépendante sauf me
 
 ## Règles communes à toutes les specs
 
-Reprises de `CLAUDE.md` et de l'état réel du projet. Elles s'appliquent à **toute** implémentation issue de ces specs.
+Les règles de développement (workflow, tests, SQL, constantes, gitmoji) vivent dans `CLAUDE.md` et
+`.claude/rules/`, pas ici. Une spec se rédige avec `/spec` (gabarit : `.claude/skills/spec/template.md`)
+et s'implémente avec `/implement SPEC-NN tâches a-b`.
 
-### Avant de commencer
+Conventions propres aux specs :
 
-```bash
-git checkout -b feature/<nom> origin/master   # toujours depuis master, jamais depuis une autre feature
-```
-
-### Pendant
-
-1. **Commits atomiques** avec Gitmoji : `✨ Feature:`, `🐛 Fix:`, `♻️ Refactor:`, `✅ Test:`, `⚡ Perf:`, `🗃️ Database:`, `📝 Docs:`
-2. **Aucune valeur métier en dur** — tout seuil, poids ou constante va dans `src/config_constants.py`, avec un commentaire expliquant d'où vient sa valeur.
-3. **Requêtes SQL paramétrées** exclusivement (`cursor.execute(sql, (param,))`).
-4. **Type hints** sur toute fonction publique, docstring sur toute classe et méthode publique.
-5. **Aucun fichier > 500 lignes** — le projet vient de solder cette dette, ne pas la recontracter. `src/lcu_client.py` est à 493 lignes : toute logique substantielle va dans un module dédié.
-6. **Pas d'emoji dans les sorties console** — la console Windows en cp1252 lève `UnicodeEncodeError` sur sortie redirigée. Utiliser `[OK]`, `[ALERTE]`, `[INFO]`, `[ERREUR]`, `[DATA]` (convention de `src/data_freshness.py`).
-7. **Best-effort dans la boucle de draft** — aucun ajout ne doit pouvoir lever une exception qui interrompt le monitoring en pleine partie.
-
-### Avant de proposer le travail
-
-```bash
-pytest tests/ -v                      # 990 tests doivent passer, plus les nouveaux
-python -m black src/ tests/ scripts/  # formatage obligatoire (black 26.3.1, cf. requirements-dev.txt)
-python -m pylint src/ --fail-under=8.0
-```
-
-Puis mettre à jour `CHANGELOG.md` (section `[Unreleased]`) et **attendre la validation de @pj35 avant tout merge**.
-
-### Tests
-
-- **Tout comportement nouveau** est couvert par un test unitaire dans `tests/`.
-- **Tout bug corrigé** reçoit un test de régression dans `tests/regression/`, nommé `test_regression_<sujet>.py`, avec en docstring : symptôme, cause racine, correctif, prévention (modèle : `tests/regression/test_regression_live_coach_lane_filter.py`).
-- Les tests sont **hermétiques** : jamais d'accès à `data/db.db`, jamais d'écriture dans `logs/` réels, jamais d'appel à un vrai client League of Legends. Utiliser la fixture `temp_db` de `tests/conftest.py`, `tmp_path`, ou `monkeypatch.setattr("src.config.config.DATABASE_PATH", ...)`.
+- Chaque spec se termine par des **critères d'acceptation** numérotés, chacun vérifiable par une commande
+  ou une lecture : c'est ce que `/implement` et l'agent `spec-verifier` contrôlent.
+- Le découpage en tâches (numéro global, points Fibonacci, dépendances) vit dans la spec **et** dans `TODO.md`.
+- Un arbitrage non tranché est marqué « à valider » ; `/implement` s'arrête devant lui.
 
 ### Contexte produit à ne pas perdre de vue
 
 - **Outil mono-utilisateur**, local, SQLite uniquement. Pas de backend, pas de multi-utilisateurs, pas d'i18n (décisions tranchées, `../ROADMAP_2026.md` §2 et §4).
 - La mise à jour des données est **manuelle** (menu 3, ou `python scripts/update_all.py`) — l'automatisation nocturne est suspendue par choix.
-- Base de production au 2026-09-05 : 173 champions, 25 105 matchups et 20 401 synergies sur 5 lanes, 283 combos (champion, lane).
 - Source de données : LoLalytics, scrapé en Selenium/Firefox. Le DOM change sans préavis — voir `../runbook_scraping.md`.
 - Le tier de référence est **Master+** (`config.LOLALYTICS_TIER`) : les volumétries valent ~40 % de l'ancien Diamond+, ce qui explique les seuils de games actuels.
