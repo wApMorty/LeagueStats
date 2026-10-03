@@ -1,366 +1,51 @@
-# 🤖 CLAUDE.md - Instructions pour Assistant IA
+# LeagueStats Coach
 
-**Projet**: LeagueStats Coach
-**Version**: 4.1.0
-**Mainteneur**: @pj35
-**Dernière mise à jour**: 2026-09-25
+Outil perso d'analyse et de coaching de draft pour League of Legends (173 champions, ~25 000 matchups par rôle). Python 3.13, SQLite + Alembic, Selenium, PyInstaller. Mainteneur : @pj35.
+<!-- Version : src/__init__.py. Règles scopées : .claude/rules/. Procédures : .claude/skills/. -->
 
----
+## Commandes
 
-## 📋 Table des Matières
-
-1. [Contexte du Projet](#contexte-du-projet)
-2. [Workflow de Développement](#workflow-de-développement)
-3. [Standards de Code](#standards-de-code)
-4. [Conventions Git](#conventions-git)
-5. [Process de Code Review](#process-de-code-review)
-6. [Fichiers Importants](#fichiers-importants)
-7. [Commandes Utiles](#commandes-utiles)
-
----
-
-## 🧭 Méthode de Travail
-
-L'assistant travaille directement avec les outils disponibles (Read, Edit, Write, Bash, Grep, Glob). Pas de workflow d'agents intermédiaires obligatoire, mais possible de spawn des agents Sonnet 5 Effort Medium pour paralléliser l'implémentation.
-
-### Proposer des Approches
-
-Pour toute décision architecturale non triviale, **toujours proposer 2-3 approches** avec trade-offs avant d'implémenter, et **attendre la validation** de l'utilisateur.
-
----
-
-## 🎯 Contexte du Projet
-
-### Vue d'Ensemble
-
-LeagueStats Coach est un outil d'analyse et de coaching pour League of Legends qui aide les joueurs à optimiser leurs choix de champions en draft. Le projet analyse 173 champions et ~25 000 matchups (par rôle) pour générer des tier lists et recommandations.
-
----
-
-## 🔀 Workflow de Développement
-
-### 1. Avant de Commencer une Tâche
-
-Travail direct sur `master`, à jour (`git pull origin master`). Une branche
-(`feature/…` ou `fix/…`, créée depuis `origin/master`) reste possible pour un
-chantier long ou expérimental, mais n'est plus obligatoire (@pj35, 2026-09-24).
-
-### 2. Pendant le Développement
-
-**Commits fréquents et atomiques**:
-- ✅ Commit après chaque modification logique cohérente
-- ✅ Messages de commit descriptifs et explicites
-- ✅ Ne jamais regrouper plusieurs changements non liés
-
-### 3. Avant de Pousser sur master (Checklist Obligatoire)
-
-**A. Tests pour les nouvelles fonctionnalités**:
 ```bash
-# 1. Écrire tests pour TOUTE nouvelle fonctionnalité
-# 2. Lancer TOUS les tests du projet
-pytest tests/ -v
-
-# 3. Compiler tous les fichiers Python
-python -m py_compile src/**/*.py scripts/**/*.py
+python lol_coach.py                              # point d'entrée (menus)
+python -m pytest tests/ -v                       # suite complète
+python -m black src/ tests/ scripts/             # formatage (aussi appliqué par un hook après chaque édition .py)
+python -m alembic upgrade head                   # migrations
+python scripts/update_all.py                     # pipeline de données (scrape ~45 min)
+python build_app.py                              # exe PyInstaller
 ```
 
-**B. Formatage du code avec Black**:
-```bash
-# 1. Appliquer le formatage Black à TOUS les fichiers modifiés
-python -m black src/ tests/ scripts/
+## Décisions tranchées (ne pas rouvrir)
 
-# 2. Vérifier que le formatage est conforme
-python -m black --check --diff src/ tests/ scripts/
-```
+- SQLite seul, outil mono-utilisateur : pas de backend distant (Neon, FastAPI décommissionnés).
+- Cloudflare ne bloque plus : pas de Playwright. Détails dans `docs/ROADMAP_2026.md`.
+- Pas de mise à jour automatique nocturne : les mises à jour sont manuelles.
 
-**C. Mise à jour documentation**:
-- Mettre à jour CHANGELOG.md
-- Mettre à jour README.md si nécessaire
-- Mettre à jour docs/ si nécessaire
+## Code
 
-### 4. Code Review Process
+- Toute valeur de réglage vit dans `src/config_constants.py` (seuils, délais, tailles), pas dans le code.
+- SQL toujours paramétré (`?`), jamais de f-string.
+- Type hints et docstring sur les fonctions publiques ; Black (ligne 100) fait foi pour le style.
+- Un bug corrigé = un test de régression dans `tests/regression/`, vérifié rouge avant le fix, vert après, commités ensemble.
+- Une « 1 error » en fin de suite pytest = Live Coach ouvert qui a touché `data/db.db` ou `logs/` (voir `.claude/rules/tests.md`), pas un bug du test.
 
-**IMPORTANT**: Toujours demander validation avant de pousser sur master
+## Workflow
 
-**Étapes**:
-1. ✅ **Checklist "Avant de Pousser sur master" complétée**
-2. ✅ Créer un résumé des changements pour l'utilisateur
-3. ✅ **ATTENDRE VALIDATION** de l'utilisateur
-4. ✅ Pousser uniquement après approbation
+- Travail direct sur `master` à jour. Une branche reste possible pour un chantier long.
+- Commits atomiques, format `<gitmoji> Type: description` (✨ Feature, 🐛 Fix, ♻️ Refactor, ✅ Test, 📝 Docs, 🔧 Chore, ⚡ Perf, 🔒 Security, 🎨 Style, 🚀 Deploy, 🗃️ Database). Pas de ligne `Co-Authored-By`.
+- IMPORTANT : ne jamais pousser sans validation explicite de @pj35. Avant un push, lancer `/ship`.
+- Décision d'architecture non triviale : proposer 2-3 approches avec leurs compromis et attendre le choix de @pj35.
+- Release : la proposer sans attendre à la fin d'une spec ou d'un sprint du `TODO.md`, ou dès 8 entrées sous `[Unreleased]` ; la procédure est `/release`.
 
-### 5. Releases régulières
+## Comportement attendu
 
-Objectif (@pj35, 2026-09-25) : un `[Unreleased]` court entre deux versions. La 2.0.0
-en a accumulé ~50 entrées sur 169 commits, parce qu'aucune règle ne déclenchait de
-release.
+- Continue jusqu'à ce que tout ce qui est demandé soit fait ; ne t'arrête que si tu es bloqué ou avant une action risquée.
+- Quand le travail demandé est fait et vérifié, arrête-toi et rapporte. N'ajoute ni fonctionnalité, ni test, ni doc, ni refactor non demandés ; propose-les à la fin.
+- Avant de dire « terminé » sur du code exécutable, lance un vrai check qui exerce le changement (pytest ciblé puis suite complète). Un `py_compile` seul ne compte pas.
+- Pas de revue par sous-agents sauf demande ; `/code-review` à la demande de @pj35.
+- Fin de tâche : 3 à 6 lignes (fait, chiffre clé, question). Le détail va dans le CHANGELOG ou le commit.
 
-**Quand proposer une release** (l'assistant la propose d'office, sans attendre la
-demande) :
-- à la fin de chaque spec ou sprint du `TODO.md` → **mineure** (`2.x.0`) ;
-- dès que `[Unreleased]` compte **8 entrées** ;
-- des correctifs seuls, déjà poussés et en attente depuis une semaine → **patch** (`2.0.x`).
+## Où chercher
 
-**Numéro (SemVer)** :
-- **majeure** : une fonctionnalité retirée, ou une action requise de l'utilisateur
-  (migration Alembic, scrape complet) ;
-- **mineure** : une nouvelle fonctionnalité, sans rien d'incompatible ;
-- **patch** : des corrections seulement.
-
-**Étapes** :
-1. Numéro de version dans `src/__init__.py`, `README.md` et `CLAUDE.md` (en-tête et pied).
-2. `CHANGELOG.md` : renommer `[Unreleased]` en `[X.Y.Z] - AAAA-MM-JJ`, avec un
-   résumé de 2-3 lignes en tête, puis ouvrir un nouveau `[Unreleased]` vide.
-3. Commit `🚀 Deploy: version X.Y.Z`, puis tag annoté `vX.Y.Z`.
-4. `python build_app.py`, puis lancer l'exe de `LeagueStatsCoach_Release/`
-   (`echo 7 | ./LeagueStatsCoach.exe`) pour vérifier qu'il démarre.
-5. **Après validation** : `git push origin master` et `git push origin vX.Y.Z`.
-
----
-
-## 📝 Standards de Code
-
-### Style Python
-
-**Général**:
-- PEP 8 compliance
-- **Black formatting**: Appliquer `python -m black` sur TOUT code modifié avant commit
-- Type hints sur toutes les fonctions publiques
-- Docstrings pour classes et méthodes publiques
-- Maximum 500 lignes par fichier
-
-**Imports**:
-```python
-# Standard library
-import os
-import sys
-from typing import List, Optional
-
-# Third-party
-import sqlite3
-from selenium import webdriver
-
-# Local imports
-from .config import config
-from .config_constants import analysis_config
-```
-
-### Configuration
-
-**IMPORTANT**: Toujours utiliser `config_constants.py` pour les valeurs hardcodées
-
-```python
-# ❌ MAUVAIS - Hardcodé
-if games >= 100:
-    ...
-
-# ✅ BON - Config centralisée
-from .config_constants import analysis_config
-if games >= analysis_config.MIN_GAMES_THRESHOLD:
-    ...
-```
-
-### Sécurité
-
-**CRITIQUE**: Toujours utiliser des requêtes paramétrées
-
-```python
-# ❌ MAUVAIS - SQL Injection
-cursor.execute(f"SELECT * FROM champions WHERE name = '{name}'")
-
-# ✅ BON - Requête paramétrée
-cursor.execute("SELECT * FROM champions WHERE name = ?", (name,))
-```
-
-### Tests
-
-**Framework**: pytest + pytest-cov + pytest-mock
-**Couverture**: seuil 45% sur tout `src/` (mesure honnête, était 70% sur `src/analysis` seul avant SPEC-07 E1) ; ~62% mesuré actuellement
-
-**Structure**:
-```
-tests/
-├── __init__.py
-├── conftest.py
-├── regression/              # Tests de régression (bugs fixes)
-└── test_*.py
-```
-
-### Tests de Régression (Bug Fix Tests)
-
-**RÈGLE CRITIQUE**: Pour chaque bug remonté par l'utilisateur et corrigé, **TOUJOURS** créer un test automatisé qui vérifie que ce bug ne revient jamais.
-
-**Workflow**:
-1. ✅ L'utilisateur remonte un bug avec message d'erreur/logs
-2. ✅ Analyser et corriger le bug
-3. ✅ **OBLIGATOIRE**: Créer un test de régression qui reproduit le bug
-4. ✅ Vérifier que le test échoue AVANT le fix
-5. ✅ Vérifier que le test passe APRÈS le fix
-6. ✅ Committer le fix ET le test ensemble
-
----
-
-## 🔀 Conventions Git
-
-### Branches
-
-**Format**: `feature/descriptive-name` ou `fix/bug-description`
-
-**Exemples**:
-- `feature/refactor-monolithic-files`
-- `feature/database-migrations`
-- `feature/parallel-scraping`
-- `fix/sql-injection-vulnerabilities`
-
-### Commits avec Gitmoji
-
-**Format**: `<gitmoji> Type: Description courte`
-
-**Types et Gitmojis**:
-- ✨ `Feature:` - Nouvelle fonctionnalité
-- ♻️ `Refactor:` - Refactoring sans changement de comportement
-- 🐛 `Fix:` - Correction de bug
-- ✅ `Test:` - Ajout/modification de tests
-- 📝 `Docs:` - Documentation
-- ⚡ `Perf:` - Amélioration performance
-- 🔧 `Chore:` - Maintenance (deps, config, etc.)
-- 🔒 `Security:` - Corrections sécurité
-- 🎨 `Style:` - Formatage, style code
-- 🚀 `Deploy:` - Déploiement, build
-- 🗃️ `Database:` - Migrations, schéma BD
-
-**Exemples**:
-```bash
-git commit -m "♻️ Refactor: Extract UI logic to src/ui/ modules"
-git commit -m "✨ Feature: Add database migrations with Alembic"
-git commit -m "🐛 Fix: SQL injection in get_champion_id()"
-git commit -m "✅ Test: Add unit tests for scoring algorithms"
-git commit -m "🗃️ Database: Add Alembic migration for role column"
-```
-
----
-
-## ✅ Process de Code Review (Pull Request GitHub)
-
-### Workflow Pull Request
-
-**Optionnel** : seulement pour un chantier mené sur une branche. Par défaut, la
-revue se fait en conversation, puis push direct sur master (§ Code Review Process).
-
-**Commandes**:
-```bash
-# 1. Push feature branch
-git push -u origin feature/task-name
-
-# 2. Créer Pull Request avec gh CLI
-gh pr create --title "🎯 Tâche #X: Titre de la tâche" \
-             --body-file .github/PULL_REQUEST_TEMPLATE.md \
-             --assignee @pj35 \
-             --label "enhancement"
-
-# 3. Après validation GitHub
-gh pr merge --squash
-
-# 4. Pull changes
-git checkout master
-git pull origin master
-git branch -d feature/task-name
-```
-
-### Template de Pull Request
-
-**📋 Voir `.github/PULL_REQUEST_TEMPLATE.md` pour le template complet**
-
-### Validation GitHub
-
-**L'assistant NE mergera JAMAIS sans**:
-- ✅ Approbation explicite de l'utilisateur
-- ✅ Aucun "Request changes" en attente
-- ✅ Validation utilisateur claire
-
----
-
-## 📂 Fichiers Importants
-
-### Documentation
-
-- `CLAUDE.md` - **CE FICHIER** - Instructions pour assistant IA
-- `docs/alembic_guide.md` - Guide complet commandes Alembic
-- `.github/PULL_REQUEST_TEMPLATE.md` - Template PR
-- `TODO.md` - Backlog Agile avec scores Fibonacci
-- `CHANGELOG.md` - Historique versions
-
-### Configuration
-
-- `src/config.py` - Configuration principale
-- `src/config_constants.py` - Constantes centralisées
-
-### Code Principal
-
-**Modules d'analyse et UI**:
-- `src/analysis/` - Algorithmes d'analyse et de scoring
-- `src/draft/` - Logique du Live Coach (extraite de `draft_monitor.py`, SPEC-07 E10)
-- `src/ui/` - Interface utilisateur modulaire (un module par menu/domaine)
-
-**Web Scraping**:
-- `src/parallel_parser.py` - Scraping parallèle
-- `src/cloudflare_detector.py` - Détection pages Cloudflare (conservé fonctionnel bien que Cloudflare n'oppose plus de challenge, cf. `docs/ROADMAP_2026.md`)
-
-**Autres modules**:
-- `src/db.py` - Database layer
-- `src/draft_monitor.py` - Façade du Live Coach (délègue à `src/draft/`)
-- `src/pipeline.py` - Orchestrateur unique du pipeline de données (scrape → contrôle de complétude → recalcul scores/bans → notification)
-
-### Tests
-
-- `tests/` - Framework pytest, couverture mesurée sur tout `src/` (seuil 45%, ~62% actuel)
-- `tests/regression/` - Tests de régression bugs
-
-### Database Migrations (Alembic)
-
-**📖 Voir `docs/alembic_guide.md` pour le guide complet des commandes Alembic**
-
-**Commandes essentielles**:
-```bash
-# Check current version
-python -m alembic current
-
-# Upgrade to latest
-python -m alembic upgrade head
-
-# Create new migration
-python -m alembic revision -m "Description"
-```
-
----
-
-## 🚨 Règles Critiques
-
-### TOUJOURS
-
-1. ✅ **Commits atomiques** et fréquents
-2. ✅ **Tests pour nouvelles fonctionnalités**
-3. ✅ **Test de régression** pour chaque bug corrigé (OBLIGATOIRE)
-4. ✅ **Tous les tests passent** avant push (`pytest tests/ -v`)
-5. ✅ **Formatage Black appliqué** avant push (`python -m black src/ tests/`)
-6. ✅ **Code review** AVANT tout push sur master
-7. ✅ **Validation utilisateur** explicite requise avant push sur master
-8. ✅ **Requêtes SQL paramétrées** (sécurité)
-9. ✅ **config_constants.py** pour valeurs hardcodées
-10. ✅ **Proposer 2-3 approches** pour toute décision architecturale non triviale
-11. ✅ **Proposer une release** à la fin d'une spec ou d'un sprint, ou quand `[Unreleased]` atteint 8 entrées (§ Releases régulières)
-
-### JAMAIS
-
-1. ❌ Pousser sur master sans validation utilisateur
-2. ❌ Valeurs hardcodées dans le code
-3. ❌ Interpolation string dans SQL
-4. ❌ Fichiers >500 lignes
-5. ❌ Code non testé en production
-6. ❌ Breaking changes sans migration
-7. ❌ Commit en Co-Author. Tu n'es qu'un outil, je suis pleinement responsable du code.
-
----
-
-**Dernière mise à jour**: 2026-09-25
-**Maintenu par**: Claude Code (Sonnet 5)
-**Pour**: @pj35 - LeagueStats Coach v4.1.0
+- `TODO.md` backlog et sprints ; `docs/specs/` specs ; `docs/adr/` décisions ; `docs/alembic_guide.md` migrations.
+- `CHANGELOG.md` : une entrée sous `[Unreleased]` par changement visible.
+- `docs/PROJECT_STRUCTURE.md` pour l'arborescence (`src/analysis`, `src/draft`, `src/ui`, `src/pipeline.py`).
