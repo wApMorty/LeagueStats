@@ -4,6 +4,14 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+## [4.1.0] - 2026-10-03
+
+Win chance et impact (SPEC-20) : un modèle de win chance entraîné sur des parties tierces
+collectées via le LCU, l'impact de chaque événement attribué aux joueurs (rapport de fin de
+partie, section du bilan) et un overlay de win chance en jeu. Actions requises à la mise à jour :
+`python -m alembic upgrade head` (table `game_impact`), puis
+`python -m src.winprob.retrain --force` pour entraîner le modèle.
+
 ### ✨ Feature
 
 - **Overlay de win chance en jeu (SPEC-20 tâches 46 et 47)** — `python -m src.winprob.overlay`
