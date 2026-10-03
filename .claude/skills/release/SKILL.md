@@ -4,7 +4,7 @@ description: Publier une version de LeagueStats Coach (numéro SemVer, CHANGELOG
 disable-model-invocation: true
 ---
 
-Entrées de `[Unreleased]` : !`awk '/^## \[Unreleased\]/{f=1;next} /^## \[/{f=0} f' CHANGELOG.md`
+Entrées de `[Unreleased]` : !`awk '/^## \[/{f=(++n==1)} f' CHANGELOG.md`
 
 Quand proposer une release : fin d'une spec ou d'un sprint du `TODO.md` (mineure), `[Unreleased]` à 8 entrées, ou correctifs seuls en attente depuis une semaine (patch).
 
