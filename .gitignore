@@ -11,11 +11,12 @@ calibration.json
 *.db
 *.db-journal
 *.log
-.claude
-CLAUDE.MD
+.claude/settings.local.json
+.claude/worktrees/
 build
 dist
 *Release
+!.claude/skills/release/
 *.zip
 *.spec
 
