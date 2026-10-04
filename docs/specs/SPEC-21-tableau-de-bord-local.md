@@ -448,3 +448,24 @@ l'ancrage Win+Flèche marche mal à cause de Komorebi, sans conséquence. À gar
 tâche 68 : sous Komorebi, la fenêtre peut être replacée par le gestionnaire ; le bouton Agrandir
 (zone utile) reste valable, et un vrai plein écran (touche dédiée) peut s'ajouter si @pj35 le
 veut.
+
+## 9. Mesures de la coque (tâche 68, 2026-10-04)
+
+Sondes sur la fenêtre réelle de la tâche 68 (échelle 100 %, zone utile 0,46 à 1920×986), événements
+`pointer*` synthétiques envoyés aux poignées HTML, rectangle de la fenêtre relevé à chaque pas. Les
+sondes ont été interrompues à la demande de @pj35 (le curseur partait en pleine partie) : toutes les poignées
+ne sont pas couvertes.
+
+| Geste | Résultat |
+|---|---|
+| Poignées gauche (`w`), haut (`n`), angles haut-gauche, haut-droit, bas-gauche | variation de taille exacte, **bord opposé fixe à chaque pas** (un seul `SetWindowPos`, `resize(fix_point=...)`) : pas de saut. Le risque du §2 est levé. |
+| Poignée droite (`e`) | exacte, bord gauche fixe |
+| Poignées bas (`s`) et angle bas-droit (`se`) | non rejouées ici ; même `fix_point` par défaut que `e`, angle bas-droit déjà mesuré au spike |
+| Agrandir (bouton et double-clic sur la barre) puis Restaurer | rectangle exactement égal à la zone utile (0, 46, 1920, 1032 en bord), retour exact à la taille d'avant |
+| Navigation htmx (`hx-boost`), titre, historique | l'écran change sans rechargement, titre à jour, un seul `#view` |
+| Page d'erreur 503 (base occupée) échangée dans `#view` | affichée (réglage `responseHandling` de htmx) |
+| Pastille « Client LoL fermé » | rafraîchie toutes les 5 s |
+
+**Non vérifié** : le jeton de session sur une requête htmx `POST` (le serveur n'a pas vu la requête dans la
+sonde interrompue) ; à contrôler à la recette.
+

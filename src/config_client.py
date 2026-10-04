@@ -19,6 +19,17 @@ class ClientConfig:
     SERVER_START_TIMEOUT_S: float = 10.0
     SERVER_STOP_TIMEOUT_S: float = 5.0
 
+    # Fenêtre sans bordure (SPEC-21 §2 et §8). Le fond évite l'éclair blanc avant la première image.
+    WINDOW_TITLE: str = "LeagueStats"
+    WINDOW_SIZE: Tuple[int, int] = (1280, 800)
+    WINDOW_MIN_SIZE: Tuple[int, int] = (960, 600)
+    WINDOW_BACKGROUND: str = "#0b0d12"
+
+    # État du client LoL (sonde légère, mise en cache) et rafraîchissement de la pastille.
+    LCU_PROBE_ENDPOINT: str = "/lol-gameflow/v1/gameflow-phase"
+    LCU_PROBE_TTL_S: float = 3.0
+    LCU_STATE_POLL_S: int = 5
+
     # Lecture pendant que le Live Coach écrit : attente d'un verrou avant d'abandonner.
     DB_READ_TIMEOUT_S: float = 5.0
 

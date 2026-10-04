@@ -1,0 +1,82 @@
+/* Coque du client LeagueStats (SPEC-21 tâche 68).
+   Les jetons de couleur et de motion ci-dessous sont provisoires : la tâche 69 les remplace par
+   le système de thèmes et de motion (SPEC-21 §4.3). */
+:root {
+  color-scheme: dark;
+  --bg: #0b0d12;
+  --surface: #11141b;
+  --line: #1d2230;
+  --text: #e6e9f0;
+  --muted: #8b93a7;
+  --accent: #3b6cff;
+  --ok: #3ecf8e;
+  --alert: #e5484d;
+  --bar-h: 36px;
+  --d-rapide: 140ms;
+  --d-normal: 260ms;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+  font: 14px/1.5 "Segoe UI", system-ui, sans-serif; overflow: hidden; }
+a { color: var(--accent); }
+h1 { margin: 0 0 12px; font-size: 22px; font-weight: 600; }
+.muted { color: var(--muted); }
+
+/* Barre de titre dessinée en HTML (fenêtre sans bordure) */
+.titlebar { position: fixed; inset: 0 0 auto 0; height: var(--bar-h); display: flex;
+  align-items: center; background: var(--surface); border-bottom: 1px solid var(--line);
+  z-index: 10; user-select: none; }
+.titlebar-drag { flex: 1; height: 100%; display: flex; align-items: center; padding-left: 14px; }
+.brand { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.titlebar-buttons { display: flex; height: 100%; }
+.tb-btn { width: 46px; height: 100%; border: 0; background: transparent; color: var(--text);
+  display: grid; place-items: center; cursor: default;
+  transition: background-color var(--d-rapide) var(--ease), color var(--d-rapide) var(--ease); }
+.tb-btn svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.2; }
+.tb-btn:hover { background: var(--line); }
+.tb-btn:active { background: var(--accent); }
+.tb-close:hover { background: var(--alert); }
+.no-chrome .titlebar-drag, .no-chrome .titlebar-buttons, .no-chrome .resize-handle { display: none; }
+.no-chrome .titlebar { justify-content: flex-end; }
+
+/* Pastille d'état du client LoL */
+.chip { display: inline-flex; align-items: center; gap: 6px; margin-right: 10px; padding: 2px 10px;
+  border-radius: 999px; font-size: 12px; color: var(--muted); background: var(--bg);
+  border: 1px solid var(--line); }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--alert);
+  transition: background-color var(--d-normal) var(--ease); }
+.chip-ok { color: var(--text); }
+.chip-ok .dot { background: var(--ok); }
+
+/* Navigation et page : seules `page` et `nav` ont un nom de transition (View Transitions) */
+.view { position: fixed; inset: var(--bar-h) 0 0 0; display: flex; }
+.nav { width: 200px; flex: none; padding: 12px 8px; background: var(--surface);
+  border-right: 1px solid var(--line); view-transition-name: nav; }
+.nav a { display: block; padding: 8px 12px; border-radius: 8px; color: var(--muted);
+  text-decoration: none; transition: background-color var(--d-rapide) var(--ease),
+    color var(--d-rapide) var(--ease); }
+.nav a:hover { background: var(--line); color: var(--text); }
+.nav a[aria-current="page"] { background: var(--line); color: var(--text); }
+.page { flex: 1; min-width: 0; overflow: auto; padding: 24px 28px; view-transition-name: page; }
+
+::view-transition-old(page) { animation: page-out var(--d-rapide) var(--ease) both; }
+::view-transition-new(page) { animation: page-in var(--d-normal) var(--ease) both; }
+@keyframes page-out { to { opacity: 0; transform: translateY(-4px); } }
+@keyframes page-in { from { opacity: 0; transform: translateY(8px); } }
+/* Repli sans View Transitions : fondu à l'apparition de la page */
+@supports not (view-transition-name: none) {
+  .page { animation: page-in var(--d-normal) var(--ease) both; }
+}
+
+/* Poignées de redimensionnement (les 4 côtés et les 4 coins) */
+.resize-handle { position: fixed; z-index: 100; }
+.resize-handle[data-edge="n"] { top: 0; left: 10px; right: 10px; height: 5px; cursor: ns-resize; }
+.resize-handle[data-edge="s"] { bottom: 0; left: 10px; right: 10px; height: 5px; cursor: ns-resize; }
+.resize-handle[data-edge="e"] { right: 0; top: 10px; bottom: 10px; width: 5px; cursor: ew-resize; }
+.resize-handle[data-edge="w"] { left: 0; top: 10px; bottom: 10px; width: 5px; cursor: ew-resize; }
+.resize-handle[data-edge="ne"] { top: 0; right: 0; width: 10px; height: 10px; cursor: nesw-resize; }
+.resize-handle[data-edge="nw"] { top: 0; left: 0; width: 10px; height: 10px; cursor: nwse-resize; }
+.resize-handle[data-edge="se"] { bottom: 0; right: 0; width: 10px; height: 10px; cursor: nwse-resize; }
+.resize-handle[data-edge="sw"] { bottom: 0; left: 0; width: 10px; height: 10px; cursor: nesw-resize; }

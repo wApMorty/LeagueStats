@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="fr" class="no-chrome">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}LeagueStats{% endblock %}</title>
+<meta name="session-token" content="{{ token }}">
+<meta name="token-header" content="{{ token_header }}">
+{#- Les pages d'erreur doivent s'afficher : htmx 2 n'échange pas les 4xx/5xx par défaut. -#}
+<meta name="htmx-config" content='{"historyCacheSize":0,"allowEval":false,"allowScriptTags":false,"responseHandling":[{"code":"204","swap":false},{"code":"[23]..","swap":true},{"code":"[45]..","swap":true,"error":true},{"code":"...","swap":false}]}'>
+<link rel="stylesheet" href="/static/style.css">
+{#- htmx 2.0.4, sha256 e209dda5c8235479f3166defc7750e1dbcd5a5c1808b7792fc2e6733768fb447 -#}
+<script src="/static/htmx.min.js" defer></script>
+<script src="/static/shell.js" defer></script>
+</head>
+<body>
+<header class="titlebar">
+  <div class="titlebar-drag pywebview-drag-region" id="titlebar-drag">
+    <span class="brand">LeagueStats</span>
+  </div>
+  {% include "partials/client_state.html" %}
+  <div class="titlebar-buttons">
+    <button class="tb-btn" id="tb-min" type="button" title="Réduire" aria-label="Réduire">
+      <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6h8"/></svg>
+    </button>
+    <button class="tb-btn" id="tb-max" type="button" title="Agrandir" aria-label="Agrandir">
+      <svg viewBox="0 0 12 12" aria-hidden="true"><rect x="2.5" y="2.5" width="7" height="7"/></svg>
+    </button>
+    <button class="tb-btn tb-close" id="tb-close" type="button" title="Fermer" aria-label="Fermer">
+      <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7"/></svg>
+    </button>
+  </div>
+</header>
+
+<div id="view" class="view" hx-boost="true" hx-target="#view" hx-select="#view"
+     hx-swap="outerHTML transition:true">
+  <nav class="nav" aria-label="Sections">
+    {% for key, label, href in sections %}
+    <a href="{{ href }}"{% if key == active %} aria-current="page"{% endif %}>{{ label }}</a>
+    {% endfor %}
+  </nav>
+  <main class="page">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+
+{#- Poignées de redimensionnement : la fenêtre sans bordure n'a aucun redimensionnement natif. -#}
+{% for edge in ("n", "s", "e", "w", "ne", "nw", "se", "sw") %}
+<div class="resize-handle" data-edge="{{ edge }}"></div>
+{% endfor %}
+</body>
+</html>

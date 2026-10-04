@@ -1,0 +1,4 @@
+<span id="client-state" class="chip {{ 'chip-ok' if lcu_open else 'chip-closed' }}" role="status"
+      hx-get="/etat/client" hx-trigger="every {{ poll_s }}s" hx-target="this" hx-swap="outerHTML">
+  <span class="dot"></span>Client LoL {{ "connecté" if lcu_open else "fermé" }}
+</span>

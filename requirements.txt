@@ -29,6 +29,9 @@ windows-toasts>=1.0.0,<2.0.0; sys_platform == 'win32'
 # Client LeagueStats (SPEC-21) : serveur local de l'interface
 fastapi>=0.128.0,<1.0.0
 uvicorn>=0.40.0,<1.0.0
+jinja2>=3.1.6,<4.0.0
+# Fenêtre native (WebView2) : Windows seulement, comme windows-toasts
+pywebview>=6.2.1,<7.0.0; sys_platform == 'win32'
 
 # Build tool (optional - only needed for creating executable)
 # pyinstaller>=6.0.0,<7.0.0
