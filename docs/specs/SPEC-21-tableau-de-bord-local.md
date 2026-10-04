@@ -2,7 +2,8 @@
 
 **Statut** : 🟡 **Réécrite le 2026-10-04** (la version « tableau de bord en lecture seule » est
 remplacée). Forme, périmètre, ordre, temps réel et niveau d'écriture validés par @pj35 (§2). Tâche 48 (spike) faite le
-2026-10-04, mesures en §8. Reste à valider : les thèmes et la direction du motion design (§2, §4.3), les écritures du coaching et
+2026-10-04, mesures en §8. Tâches 49 (socle), 68 (coque, mesures en §9) et 70 (bus, SSE, WebSocket LCU) faites le
+2026-10-04 ; port libre choisi par l'OS validé. Reste à valider : les thèmes et la direction du motion design (§2, §4.3), les écritures du coaching et
 le point d'entrée.
 
 **Origine** : feature candidate 5 du `TODO.md` (ex-tâche #6, `ROADMAP_2026.md` Horizon 3),

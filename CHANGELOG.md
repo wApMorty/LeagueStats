@@ -4,6 +4,18 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### ✨ Feature
+
+- **Client LeagueStats, socle, coque et temps réel (SPEC-21 tâches 49, 68 et 70)** — nouveau paquet
+  `src/client/` : serveur FastAPI local en fil daemon sur un port libre de `127.0.0.1`, garde `Host`/`Origin`
+  et jeton de session sur toute écriture et sur le flux SSE, base ouverte en lecture seule à chaque
+  requête, fenêtre `pywebview` sans bordure (barre de titre et poignées de redimensionnement en HTML,
+  Agrandir sur la zone utile), navigation et transitions de page par htmx, pastille « Client LoL
+  connecté/fermé », page « base occupée », bus d'événements et client WebSocket du LCU. Pas encore
+  lancé depuis le menu (tâche 55) : rien ne change à l'usage. Nouvelles dépendances :
+  `pip install -r requirements.txt` (`fastapi`, `uvicorn`, `jinja2`, `sse-starlette`, `websockets`,
+  `pywebview`).
+
 ### 🔧 Chore
 
 - **Configuration Claude Code versionnée et allégée** — `CLAUDE.md` passe de 366 à 51 lignes (commandes, décisions, pièges et comportement attendu de Sonnet 5.5) ; les procédures de push et de release deviennent les skills `/ship` et `/release`, les règles base de données et tests des règles scopées (`.claude/rules/`). Un hook formate chaque `.py` édité avec Black ; `git push` demande confirmation, les push forcés, `reset --hard` et `clean` sont refusés, et la ligne `Co-Authored-By` n'est plus ajoutée. `.claude/` n'est plus ignoré (seul `settings.local.json` l'est) ; les 11 sous-agents d'orchestration sont remplacés par deux agents ciblés (`test-runner`, `spec-verifier`). Nouveaux skills `/spec` (rédiger une spec et mettre à jour le TODO) et `/implement` (exécuter des tâches d'une spec, un commit par tâche, sans push). La règle « 500 lignes par fichier » est abandonnée faute d'application (`config_constants.py` en compte 536).
