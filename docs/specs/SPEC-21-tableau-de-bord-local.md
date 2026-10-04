@@ -2,8 +2,8 @@
 
 **Statut** : 🟡 **Réécrite le 2026-10-04** (la version « tableau de bord en lecture seule » est
 remplacée). Forme, périmètre, ordre, temps réel et niveau d'écriture validés par @pj35 (§2). Reste
-à valider : les thèmes et la direction du motion design (§2, §4.3), le cadre de la fenêtre, les
-écritures du coaching et le point d'entrée.
+à valider : les thèmes et la direction du motion design (§2, §4.3), les écritures du coaching et
+le point d'entrée.
 
 **Origine** : feature candidate 5 du `TODO.md` (ex-tâche #6, `ROADMAP_2026.md` Horizon 3),
 repriorisée le 2026-09-26. Reformulée par @pj35 le 2026-10-04 : « bien plus qu'un rapport HTML en
@@ -87,7 +87,7 @@ post-game revus avec le Live Coach, le tout animé avec soin.
 | Customisation | **Validé pour ce lot : thème seul** (couleurs, police, densité, clair/sombre, mémorisés dans les préférences). Mise en page déplaçable et réglages du moteur depuis l'interface : **à rouvrir** (§7) ; la structure en composants ne les interdit pas. |
 | Motion design | **Objectif de premier rang (@pj35, 2026-10-04)** : système de motion dédié (§4.3), pas de décor ajouté en fin de chantier. Les thèmes et leur direction artistique se discutent avec @pj35 **avant** la tâche 69 : **À valider**. |
 | Bibliothèque d'animation | **À valider** : défaut proposé, CSS + Web Animations API + View Transitions (zéro dépendance) ; un moteur de ressorts (Motion, vendu dans `static/`) seulement si le spike (tâche 48) le justifie. |
-| Cadre de la fenêtre | **À valider** : défaut proposé, fenêtre standard au lot 1 ; barre de titre maison (`frameless=True`) à trancher au spike, elle impose de réécrire déplacement, redimensionnement et boutons. |
+| Cadre de la fenêtre | **Validé (@pj35, 2026-10-04) : sans bordure comme cible** (`frameless=True`), barre de titre et boutons Réduire/Agrandir/Fermer dessinés en HTML et animés, appelant `minimize()`, `maximize()`, `restore()`, `destroy()`. Le spike (tâche 48) vérifie sur le poste de @pj35 quatre points : déplacement limité à la barre de titre, redimensionnement par les bords (poignées HTML + `resize()`/`move()`), agrandissement qui respecte la barre des tâches, ombre et coins sous Windows 11 (l'ancrage et le survol de Agrandir sont probablement perdus). Si l'un ne se contourne pas proprement : repli sur la fenêtre standard à barre de titre sombre, sans autre perte. |
 | Écritures du coaching dans la base | **À valider** : défaut proposé, oui, via une connexion d'écriture distincte et les repositories existants (fixer ou clore un axe, `outcome`) ; la lecture reste en `mode=ro`. Cela lève la règle « lecture seule » de la version précédente. |
 | Point d'entrée | **À valider** : défaut proposé, `python lol_coach.py --client` et option 7 du menu ; démarrage d'office du client plus tard. |
 | Port | **À valider** : défaut proposé, port libre choisi par l'OS (la fenêtre locale n'a pas besoin d'un port connu), affiché en `[INFO]`. |
@@ -144,7 +144,7 @@ tant que la console sert de secours.
 |---|---|
 | `src/config_client.py` | `ClientConfig` : fenêtre (taille, minimum), fenêtres d'affichage, durées et courbes du motion (§4.3), noms de thèmes ; réexporté par `config_constants.py` comme `config_coaching.py`. |
 | `server.py` | `start(db_path) -> str` : `uvicorn.Server` en fil daemon, idempotent, best-effort (échec : `[ALERTE]`, retour `None`, jamais d'exception vers le menu) ; `stop()` pour les tests. |
-| `window.py` | Création de la fenêtre `pywebview`, repli `webbrowser.open()` si WebView2 manque. |
+| `window.py` | Création de la fenêtre `pywebview` sans bordure, API exposée à la page (réduire, agrandir, restaurer, fermer, déplacer, redimensionner), repli fenêtre standard puis `webbrowser.open()` si WebView2 manque. |
 | `app.py` | `create_app(db_path, bus, lcu) -> FastAPI` (fabrique) ; routes par section ; `/events` (SSE) ; fragments HTMX. |
 | `db.py` | `read_only(db_path)` : `sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=5)` **par requête**, enveloppée dans un objet portant `.connection`. Ni index créé ni message imprimé. `writable(db_path)` pour les seules écritures du coaching (§2). |
 | `bus.py` | `EventBus` : `publish(topic, payload)` jamais bloquant (file bornée, abandon du plus ancien), `subscribe(topics)` pour le SSE. |
@@ -287,9 +287,9 @@ d'exécution est celui des lots.
 
 | # | Tâche | Pts | Dépend de |
 |---|---|---|---|
-| 48 | **Spike d'empaquetage et de fluidité** : fenêtre `pywebview` servie par `uvicorn` depuis l'exe, une animation de test ; `hiddenimports` et `datas` trouvés ; taille, délai de démarrage et temps d'image mesurés et consignés (§8) ; tranche cadre de fenêtre et bibliothèque d'animation | 5 | — |
+| 48 | **Spike d'empaquetage et de fluidité** : fenêtre `pywebview` servie par `uvicorn` depuis l'exe, une animation de test ; `hiddenimports` et `datas` trouvés ; taille, délai de démarrage et temps d'image mesurés et consignés (§8) ; vérifie les quatre points de la fenêtre sans bordure (§2) et tranche la bibliothèque d'animation | 5 | — |
 | 49 | Socle : `config_client.py`, `db.py` (lecture seule), `server.py` (fil, idempotent, best-effort), `app.py` (fabrique), jeton de session et contrôle `Host`/`Origin` + tests | 5 | 48 |
-| 68 | Coque : `window.py`, `base.html`, navigation par sections, transitions de page, états « client LoL fermé » et « base occupée » | 5 | 49 |
+| 68 | Coque : `window.py`, barre de titre maison (déplacement, poignées de redimensionnement, boutons animés), `base.html`, navigation par sections, transitions de page, états « client LoL fermé » et « base occupée » | 5 | 49 |
 | 69 | Thème et motion : jetons, `motion.js` (primitives §4.3), banc `/_motion`, `prefers-reduced-motion`, deux thèmes (sombre, clair) arrêtés avec @pj35 | 5 | 68 |
 | 70 | Bus et temps réel : `bus.py`, route SSE, `lcu_events.py` (WebSocket LCU, reconnexion), faux serveur de test | 5 | 49 |
 | 50 | `charts.py` : `line_chart`, `reliability_chart`, `bar_chart`, échelles, axes, accessibilité, tracé animable + tests sur le SVG | 5 | 69 |
@@ -394,5 +394,5 @@ Total : 55 + 20 + 13 + 21 = **109 pts**. Chaque lot se clôt par une recette de 
 
 À consigner : taille de l'exe avant (75 064 370 octets le 2026-10-03) et après, délai de démarrage
 jusqu'à la première page affichée, temps d'image (médiane, p95) d'une animation de test dans
-WebView2, `hiddenimports` et `datas` retenus, décisions sur le cadre de fenêtre et la bibliothèque
+WebView2, `hiddenimports` et `datas` retenus, résultat des quatre vérifications de la fenêtre sans bordure (et repli éventuel) et décision sur la bibliothèque
 d'animation.

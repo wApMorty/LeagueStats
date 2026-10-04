@@ -114,7 +114,7 @@ Répond à la confusion cause/effet des constats de SPEC-19. Ordre validé par @
 le LCU : navigation (profil, historique, collection, lobby/file, social en lecture seule), section
 **Coaching** complète, draft interactive et post-game avec le Live Coach, **motion design poussé**
 (thèmes à discuter avec @pj35). WebSocket LCU pour le client, polling du Live Coach inchangé. Forme,
-périmètre, ordre, temps réel et niveau d'écriture validés le 2026-10-04 ; thèmes, cadre de fenêtre,
+périmètre, ordre, temps réel et niveau d'écriture validés le 2026-10-04 ; thèmes,
 écritures du coaching et point d'entrée à valider. Six lots utilisables seuls, SPEC-21 §5
 (25 tâches, 109 pts) :
 
