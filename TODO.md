@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-10-04 (SPEC-22 rédigée : attribution complète de l'impact)
+**Mis à jour** : 2026-10-04 (SPEC-23 rédigée : débit de la collecte)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -143,6 +143,25 @@ Découpage en SPEC-22 §5 (tâches 57 à 61, 16 pts) :
 | 59 | `WinModel.logit_parts`, segments par joueur, lignes `levels` et `respawn` | 5 | 58 | ⬜ |
 | 60 | Convention versionnée dans `model_version`, `raw_eog`, recalcul des 45 parties | 3 | 59 | ⬜ |
 | 61 | Rapport, bilan, libellés, mesure finale, `CHANGELOG.md` | 3 | 60 | ⬜ |
+
+### Lot suivant — SPEC-23, débit de la collecte (🟡 rédigée le 2026-10-04)
+
+[SPEC-23](docs/specs/SPEC-23-debit-collecte-concurrent.md) : la collecte de SPEC-20 passe par le LCU, pas
+par l'API publique : les 30 000 req/10 min (50 req/s) ne la bornent pas, c'est un plafond de référence.
+Mesuré à ~2 req/s au pic (3 364 parties/h), une unité de travail par tick. Pool de threads (requêtes
+seules, écritures dans la boucle), spike par paliers sur une copie de `crawl.db` (arrêt sur latence,
+erreurs ou premier 429), débit réduit en partie, croisière une fois `CRAWL_TARGET_GAMES` atteint.
+Architecture et critère d'arrêt validés par @pj35 le 2026-10-04 ; cible et croisière à valider.
+Découpage en SPEC-23 §5 (tâches 62 à 67, 16 pts) :
+
+| # | Tâche | Pts | Dépend de | État |
+|---|---|---|---|---|
+| 62 | `LCUClient.last_status_code` thread-local, session de collecte à pool dimensionné | 2 | — | ⬜ |
+| 63 | `Crawler` : exécuteur, jetons, en vol, 429, mesures ; constantes ; tests | 5 | 62 | ⬜ |
+| 64 | Débit en partie et croisière : `step(phase)`, `_target_reached()` | 3 | 63 | ⬜ |
+| 65 | `scripts/bench_crawl_rate.py` (copie temporaire, paliers, critères d'arrêt) | 3 | 63 | ⬜ |
+| 66 | Spike réel par @pj35 (client ouvert, Live Coach fermé), `CRAWL_RATE_RPS` fixé | 2 | 64, 65 | ⬜ |
+| 67 | Docs : SPEC-20 §2/§3.1/§9, `CHANGELOG.md`, statuts | 1 | 66 | ⬜ |
 
 ### Hors sprint — SPEC-18 phase A ✅ (2026-09-24)
 
