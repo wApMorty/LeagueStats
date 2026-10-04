@@ -10,6 +10,9 @@ from typing import Dict
 # 500 lignes), réexportées ici.
 from .config_coaching import coaching_config  # noqa: F401
 
+# SPEC-21 : constantes du client LeagueStats, même schéma.
+from .config_client import client_config  # noqa: F401
+
 # SPEC-04 B3: LCU `assignedPosition` values -> `lane` column values.
 # The LCU calls the support role "utility"; LoLalytics (and the `lane`
 # column) call it "support". An empty string means the queue doesn't

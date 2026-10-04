@@ -122,7 +122,7 @@ périmètre, ordre, temps réel et niveau d'écriture validés le 2026-10-04 ; t
 |---|---|---|---|---|
 | **Lot 1 — Socle, thème, motion, Coaching** | | | | |
 | 48 | Spike d'empaquetage et de fluidité : fenêtre `pywebview` depuis l'exe, taille, démarrage, temps d'image | 5 | — | ✅ 2026-10-04 : exe +7,2 Mo (82,3 Mo), démarrage 2,0 à 2,5 s, p95 6,2 ms par image, sans bordure confirmée (SPEC-21 §8) ; prise en main par @pj35 faite ; une première exécution d'un exe neuf n'a pas affiché la page (non reproduite), à surveiller à la recette |
-| 49 | Socle : config, connexion lecture seule, serveur en thread, fabrique d'app, jeton de session | 5 | 48 | ⬜ |
+| 49 | Socle : config, connexion lecture seule, serveur en thread, fabrique d'app, jeton de session | 5 | 48 | ✅ 2026-10-04 : 25 tests ; port libre choisi par l'OS (validé) ; `fastapi`/`uvicorn` déclarés dès maintenant pour que la CI reste verte (le reste des dépendances à leur tâche) ; `writable()` laissé à la tâche 71 (écritures du coaching à valider) |
 | 68 | Coque : fenêtre, navigation, transitions de page, états « client fermé » | 5 | 49 | ⬜ |
 | 69 | Thème et motion : jetons, primitives, banc `/_motion`, deux thèmes | 5 | 68 | ⬜ |
 | 70 | Bus, SSE et WebSocket LCU | 5 | 49 | ⬜ |
