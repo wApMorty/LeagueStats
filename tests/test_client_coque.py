@@ -211,6 +211,13 @@ def test_agrandir_en_pixels_logiques_a_150_pourcent(monkeypatch):
     assert api._window.calls == [("resize", 1280, 800), ("move", 120, 90)]
 
 
+@pytest.mark.skipif(sys.platform != "win32", reason="Win32")
+def test_ecran_inconnu_sans_fenetre_de_ce_titre():
+    assert window._screen_state("LeagueStats-titre-inexistant-0f3a") is None
+    # une fenêtre d'un autre processus portant ce titre exact n'est pas la nôtre
+    assert window._screen_state("Program Manager") is None
+
+
 def test_agrandir_sans_ecran_connu_retombe_sur_le_natif(monkeypatch):
     monkeypatch.setattr(window, "_screen_state", lambda title: None)
     api = make_api()

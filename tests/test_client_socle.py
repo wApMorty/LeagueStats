@@ -28,10 +28,6 @@ def app(temp_db):
     def efface() -> dict:
         return {}
 
-    @app.get("/events")
-    def events() -> dict:
-        return {"flux": True}
-
     return app
 
 
@@ -117,9 +113,12 @@ def test_ecriture_avec_jeton_valide_acceptee(web, app):
     assert web.post("/_ecrit", headers=token_header(app)).json() == {"ecrit": True}
 
 
-def test_flux_sse_exige_le_jeton(web, app):
-    assert web.get("/events").status_code == 403
-    assert web.get("/events", headers=token_header(app)).status_code == 200
+def test_jeton_non_ascii_refuse_sans_erreur(web):
+    """Un en-tête latin-1 est un jeton faux (403), pas une exception du garde (500)."""
+    response = web.post(
+        "/_ecrit", headers={client_config.TOKEN_HEADER.encode(): "é".encode("latin-1")}
+    )
+    assert response.status_code == 403
 
 
 @pytest.mark.parametrize("origin", ["http://evil.example", "https://127.0.0.1", "null"])

@@ -7,6 +7,7 @@ les bords gauche et haut passe par `resize(fix_point=...)`, un seul `SetWindowPo
 """
 
 import ctypes
+import os
 import sys
 import webbrowser
 from ctypes import wintypes
@@ -30,17 +31,29 @@ def _screen_state(title: str) -> Optional[Tuple[Rect, Rect, float]]:
     if sys.platform != "win32":
         return None
     user32 = ctypes.WinDLL("user32", use_last_error=True)
-    user32.FindWindowW.restype = wintypes.HWND
-    user32.FindWindowW.argtypes = [wintypes.LPCWSTR, wintypes.LPCWSTR]
+    user32.FindWindowExW.restype = wintypes.HWND
+    user32.FindWindowExW.argtypes = [
+        wintypes.HWND,
+        wintypes.HWND,
+        wintypes.LPCWSTR,
+        wintypes.LPCWSTR,
+    ]
+    user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
     user32.GetWindowRect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
     user32.MonitorFromWindow.restype = wintypes.HANDLE
     user32.MonitorFromWindow.argtypes = [wintypes.HWND, wintypes.DWORD]
     user32.GetMonitorInfoW.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
     user32.GetDpiForWindow.restype = wintypes.UINT
     user32.GetDpiForWindow.argtypes = [wintypes.HWND]
-    hwnd = user32.FindWindowW(None, title)
-    if not hwnd:
-        return None
+    hwnd = None
+    while True:  # le titre peut aussi être celui d'un dossier « LeagueStats » dans l'Explorateur
+        hwnd = user32.FindWindowExW(None, hwnd, None, title)
+        if not hwnd:
+            return None
+        owner = wintypes.DWORD()
+        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(owner))
+        if owner.value == os.getpid():
+            break
 
     class MonitorInfo(ctypes.Structure):  # pylint: disable=too-few-public-methods
         _fields_ = [

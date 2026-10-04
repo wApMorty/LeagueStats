@@ -77,6 +77,10 @@ def create_app(db_path: Union[str, Path], bus: Any = None, lcu: Any = None) -> F
         )
         return templates.TemplateResponse(request, name, context, status_code=status_code)
 
+    async def in_thread(function, *args, **kwargs):
+        """`render` sonde le LCU (requête synchrone) : hors de la boucle d'événements."""
+        return await anyio.to_thread.run_sync(lambda: function(*args, **kwargs))
+
     @app.middleware("http")
     async def guard(request: Request, call_next):
         if not _host_allowed(request.headers.get("host", "")):
@@ -90,7 +94,7 @@ def create_app(db_path: Union[str, Path], bus: Any = None, lcu: Any = None) -> F
         )
         if needs_token:
             sent = request.headers.get(client_config.TOKEN_HEADER, "")
-            if not secrets.compare_digest(sent, app.state.session_token):
+            if not secrets.compare_digest(sent.encode(), app.state.session_token.encode()):
                 return _refuse("jeton de session absent ou invalide")
         return await call_next(request)
 
@@ -98,7 +102,8 @@ def create_app(db_path: Union[str, Path], bus: Any = None, lcu: Any = None) -> F
     async def db_error(request: Request, exc: sqlite3.OperationalError):
         if "locked" not in str(exc):
             return await server_error(request, exc)
-        return render(
+        return await in_thread(
+            render,
             request,
             "erreur.html",
             503,
@@ -108,7 +113,8 @@ def create_app(db_path: Union[str, Path], bus: Any = None, lcu: Any = None) -> F
 
     @app.exception_handler(Exception)
     async def server_error(request: Request, exc: Exception):
-        return render(
+        return await in_thread(
+            render,
             request,
             "erreur.html",
             500,

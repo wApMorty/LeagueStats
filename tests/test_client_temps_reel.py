@@ -67,7 +67,9 @@ def test_bus_publier_ne_leve_jamais_meme_si_un_abonne_casse():
             raise RuntimeError("abonné cassé")
 
     bus._subscriptions.append(Casse())
-    bus.publish("t", 1)  # le monitoring de draft ne doit jamais s'arrêter ici
+    with bus.subscribe() as sain:
+        bus.publish("t", 1)  # le monitoring de draft ne doit jamais s'arrêter ici
+        assert sain.get(0.1) == ("t", 1)  # et l'abonné sain reçoit quand même
 
 
 def test_bus_fermer_un_abonnement_le_retire():

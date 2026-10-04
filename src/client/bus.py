@@ -32,7 +32,10 @@ class Subscription:
             try:
                 self._queue.put_nowait(event)
             except queue.Full:
-                self._queue.get_nowait()
+                try:
+                    self._queue.get_nowait()
+                except queue.Empty:  # le lecteur vient de la vider
+                    pass
                 self._queue.put_nowait(event)
 
     def get(self, timeout: float) -> Optional[Event]:
@@ -64,10 +67,13 @@ class EventBus:
         try:
             with self._lock:
                 targets = [s for s in self._subscriptions if s.accepts(topic)]
-            for subscription in targets:
-                subscription.put((topic, payload))
         except Exception:  # pylint: disable=broad-exception-caught
-            pass
+            return
+        for subscription in targets:  # un abonné en panne n'en prive pas les autres
+            try:
+                subscription.put((topic, payload))
+            except Exception:  # pylint: disable=broad-exception-caught
+                pass
 
     def subscribe(self, topics: Optional[Iterable[str]] = None) -> Subscription:
         """Abonnement aux `topics` (tous si None) ; à fermer, ou à utiliser dans un `with`."""
