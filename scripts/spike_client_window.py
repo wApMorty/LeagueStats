@@ -279,8 +279,10 @@ def probe_window(window, out: dict, shot: Path) -> None:
 
 
 def run_auto(window, state: dict, out_path: Path, launch_epoch: float | None) -> None:
+    animations = ctypes.c_int(-1)  # SPI_GETCLIENTAREAANIMATION : 0 = animations Windows coupées
+    ctypes.windll.user32.SystemParametersInfoW(0x1042, 0, ctypes.byref(animations), 0)
     result = {"python": sys.version.split()[0], "frozen": bool(getattr(sys, "frozen", False)),
-              "pid": os.getpid()}  # fmt: skip
+              "pid": os.getpid(), "windows_animations": animations.value}  # fmt: skip
     started = time.time()
     try:
         while not state.get("ready_epoch") and time.time() - started < AUTO_TIMEOUT_S:
