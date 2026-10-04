@@ -1,15 +1,18 @@
 """Fabrique de l'application FastAPI du client (SPEC-21 §4.2, §4.7)."""
 
+import json
 import secrets
 import sqlite3
 from pathlib import Path
 from typing import Any, Optional, Union
 from urllib.parse import urlsplit
 
+import anyio
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from sse_starlette.sse import EventSourceResponse
 
 from ..config import get_resource_path
 from ..config_client import client_config
@@ -124,5 +127,23 @@ def create_app(db_path: Union[str, Path], bus: Any = None, lcu: Any = None) -> F
     @app.get("/etat/client", response_class=HTMLResponse)
     def etat_client(request: Request):
         return render(request, "partials/client_state.html")
+
+    @app.get("/events")
+    async def events(request: Request):
+        """Flux SSE du bus : un événement par message, nommé d'après son sujet (`?topic=` répété)."""
+        if bus is None:
+            return JSONResponse({"detail": "bus absent (mode console)"}, status_code=404)
+        topics = request.query_params.getlist("topic") or None
+
+        async def stream():
+            with bus.subscribe(topics) as subscription:
+                while True:
+                    item = await anyio.to_thread.run_sync(
+                        subscription.get, client_config.SSE_POLL_S, abandon_on_cancel=True
+                    )
+                    if item is not None:
+                        yield {"event": item[0], "data": json.dumps(item[1], default=str)}
+
+        return EventSourceResponse(stream(), ping=client_config.SSE_PING_S)
 
     return app

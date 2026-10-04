@@ -30,6 +30,30 @@ class ClientConfig:
     LCU_PROBE_TTL_S: float = 3.0
     LCU_STATE_POLL_S: int = 5
 
+    # Bus interne : file par abonné (le plus ancien message est abandonné quand elle déborde),
+    # sondage de la file par le flux SSE (sert aussi à constater la déconnexion), battement SSE.
+    BUS_QUEUE_SIZE: int = 256
+    SSE_POLL_S: float = 1.0
+    SSE_PING_S: int = 15
+    # Un flux SSE ouvert retiendrait l'arrêt du serveur : délai avant de le couper.
+    SERVER_GRACEFUL_SHUTDOWN_S: int = 2
+
+    # WebSocket LCU (SPEC-21 §4.2) : événements suivis (préfixes d'URI), abonnement, et reconnexion
+    # exponentielle bornée.
+    LCU_EVENT_PREFIXES: Tuple[str, ...] = (
+        "/lol-gameflow",
+        "/lol-lobby",
+        "/lol-matchmaking",
+        "/lol-champ-select",
+        "/lol-chat",
+        "/lol-end-of-game",
+        "/lol-ranked",
+    )
+    LCU_WS_SUBSCRIBE_EVENT: str = "OnJsonApiEvent"
+    LCU_WS_BACKOFF_MIN_S: float = 1.0
+    LCU_WS_BACKOFF_MAX_S: float = 30.0
+    LCU_WS_STOP_TIMEOUT_S: float = 5.0
+
     # Lecture pendant que le Live Coach écrit : attente d'un verrou avant d'abandonner.
     DB_READ_TIMEOUT_S: float = 5.0
 

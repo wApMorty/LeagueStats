@@ -42,6 +42,7 @@ def start(db_path: Union[str, Path], bus: Any = None, lcu: Any = None) -> Option
                 port=client_config.PORT,
                 log_level="warning",
                 log_config=None,
+                timeout_graceful_shutdown=client_config.SERVER_GRACEFUL_SHUTDOWN_S,
             )
             server = uvicorn.Server(config)
             thread = threading.Thread(target=_run, args=(server,), daemon=True)
