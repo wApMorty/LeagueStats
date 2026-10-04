@@ -1,8 +1,8 @@
 # SPEC-21 — Client LeagueStats : l'interface enhanced du client LoL
 
 **Statut** : 🟡 **Réécrite le 2026-10-04** (la version « tableau de bord en lecture seule » est
-remplacée). Forme, périmètre, ordre, temps réel et niveau d'écriture validés par @pj35 (§2). Reste
-à valider : les thèmes et la direction du motion design (§2, §4.3), les écritures du coaching et
+remplacée). Forme, périmètre, ordre, temps réel et niveau d'écriture validés par @pj35 (§2). Tâche 48 (spike) faite le
+2026-10-04, mesures en §8. Reste à valider : les thèmes et la direction du motion design (§2, §4.3), les écritures du coaching et
 le point d'entrée.
 
 **Origine** : feature candidate 5 du `TODO.md` (ex-tâche #6, `ROADMAP_2026.md` Horizon 3),
@@ -86,8 +86,8 @@ post-game revus avec le Live Coach, le tout animé avec soin.
 | Écriture sur le LCU | **Validé** : lobby, file et draft en écriture ; social en **lecture seule** (ni message, ni invitation). |
 | Customisation | **Validé pour ce lot : thème seul** (couleurs, police, densité, clair/sombre, mémorisés dans les préférences). Mise en page déplaçable et réglages du moteur depuis l'interface : **à rouvrir** (§7) ; la structure en composants ne les interdit pas. |
 | Motion design | **Objectif de premier rang (@pj35, 2026-10-04)** : système de motion dédié (§4.3), pas de décor ajouté en fin de chantier. Les thèmes et leur direction artistique se discutent avec @pj35 **avant** la tâche 69 : **À valider**. |
-| Bibliothèque d'animation | **À valider** : défaut proposé, CSS + Web Animations API + View Transitions (zéro dépendance) ; un moteur de ressorts (Motion, vendu dans `static/`) seulement si le spike (tâche 48) le justifie. |
-| Cadre de la fenêtre | **Validé (@pj35, 2026-10-04) : sans bordure comme cible** (`frameless=True`), barre de titre et boutons Réduire/Agrandir/Fermer dessinés en HTML et animés, appelant `minimize()`, `maximize()`, `restore()`, `destroy()`. Le spike (tâche 48) vérifie sur le poste de @pj35 quatre points : déplacement limité à la barre de titre, redimensionnement par les bords (poignées HTML + `resize()`/`move()`), agrandissement qui respecte la barre des tâches, ombre et coins sous Windows 11 (l'ancrage et le survol de Agrandir sont probablement perdus). Si l'un ne se contourne pas proprement : repli sur la fenêtre standard à barre de titre sombre, sans autre perte. |
+| Bibliothèque d'animation | **Tranché par le spike (tâche 48, 2026-10-04)** : CSS + Web Animations API + View Transitions, zéro dépendance. WebView2 est un Chromium 154 qui expose les View Transitions ; 80 cartes animées plus un tracé SVG tiennent un p95 de 6,2 ms par image (§8). Un moteur de ressorts n'est justifié par aucune mesure ; à rouvrir seulement si un effet précis l'exige. |
+| Cadre de la fenêtre | **Validé (@pj35, 2026-10-04) : sans bordure** (`frameless=True`), barre de titre et boutons Réduire/Agrandir/Fermer dessinés en HTML et animés. **Confirmé par le spike** sur le poste de @pj35 (§8) : déplacement par la barre de titre exact, redimensionnement par poignées HTML exact (aller-retour JS vers Python : 0,7 ms), coins arrondis et bordure fournis par Windows 11. **Deux écarts à traiter en tâche 68** : le bouton Agrandir ne doit pas appeler `maximize()` (la fenêtre recouvre la barre des tâches), il place la fenêtre sur la zone utile de l'écran ; et il n'y a aucun redimensionnement natif par les bords (poignées HTML sur les quatre côtés et quatre coins). L'ancrage Win+Flèche est perdu (sans effet au test, à confirmer à la main). |
 | Écritures du coaching dans la base | **À valider** : défaut proposé, oui, via une connexion d'écriture distincte et les repositories existants (fixer ou clore un axe, `outcome`) ; la lecture reste en `mode=ro`. Cela lève la règle « lecture seule » de la version précédente. |
 | Point d'entrée | **À valider** : défaut proposé, `python lol_coach.py --client` et option 7 du menu ; démarrage d'office du client plus tard. |
 | Port | **À valider** : défaut proposé, port libre choisi par l'OS (la fenêtre locale n'a pas besoin d'un port connu), affiché en `[INFO]`. |
@@ -168,7 +168,7 @@ Le motion est un **système**, pas des effets : tout passe par des jetons.
   trouvée.
 - **Contraintes de performance** : animer uniquement `transform` et `opacity` (compositeur) ;
   budget 16,7 ms par image mesuré au spike et sur le banc ; aucune animation ne bloque une
-  interaction (annulable, jamais modale) ; **`prefers-reduced-motion`** respecté (durées
+  interaction (annulable, jamais modale) ; **`prefers-reduced-motion`** respecté **avec un réglage de remplacement dans le client** (Système / Complet / Réduit, mémorisé dans `user_prefs.json`) : sur le poste de @pj35, Windows a les animations désactivées (`SPI_GETCLIENTAREAANIMATION` = 0) et WebView2 annonce `reduce` (§8) ; un client qui suivrait aveuglément le système n'animerait rien. Défaut proposé : Complet (**à valider**). Durées
   quasi nulles, jamais d'effet seul porteur d'information).
 - **Où le motion compte** : l'entrée dans la draft (picks qui se posent, rôles qui se résolvent,
   recommandation qui change), la file trouvée, la révélation du post-game (courbe de win chance
@@ -290,7 +290,7 @@ d'exécution est celui des lots.
 | 48 | **Spike d'empaquetage et de fluidité** : fenêtre `pywebview` servie par `uvicorn` depuis l'exe, une animation de test ; `hiddenimports` et `datas` trouvés ; taille, délai de démarrage et temps d'image mesurés et consignés (§8) ; vérifie les quatre points de la fenêtre sans bordure (§2) et tranche la bibliothèque d'animation | 5 | — |
 | 49 | Socle : `config_client.py`, `db.py` (lecture seule), `server.py` (fil, idempotent, best-effort), `app.py` (fabrique), jeton de session et contrôle `Host`/`Origin` + tests | 5 | 48 |
 | 68 | Coque : `window.py`, barre de titre maison (déplacement, poignées de redimensionnement, boutons animés), `base.html`, navigation par sections, transitions de page, états « client LoL fermé » et « base occupée » | 5 | 49 |
-| 69 | Thème et motion : jetons, `motion.js` (primitives §4.3), banc `/_motion`, `prefers-reduced-motion`, deux thèmes (sombre, clair) arrêtés avec @pj35 | 5 | 68 |
+| 69 | Thème et motion : jetons, `motion.js` (primitives §4.3), banc `/_motion`, `prefers-reduced-motion` et réglage de remplacement (Système / Complet / Réduit), deux thèmes (sombre, clair) arrêtés avec @pj35 | 5 | 68 |
 | 70 | Bus et temps réel : `bus.py`, route SSE, `lcu_events.py` (WebSocket LCU, reconnexion), faux serveur de test | 5 | 49 |
 | 50 | `charts.py` : `line_chart`, `reliability_chart`, `bar_chart`, échelles, axes, accessibilité, tracé animable + tests sur le SVG | 5 | 69 |
 | 51 | Écran Rang : `data.rank_series()`, ignorance visible + tests | 3 | 50 |
@@ -390,9 +390,58 @@ Total : 55 + 20 + 13 + 21 = **109 pts**. Chaque lot se clôt par une recette de 
 - ❌ **Automatiser le jeu** : le client agit sur la draft, le lobby et la file à la demande de
   @pj35 ; rien dans la partie elle-même.
 
-## 8. Mesures du spike (tâche 48)
+## 8. Mesures du spike (tâche 48, 2026-10-04)
 
-À consigner : taille de l'exe avant (75 064 370 octets le 2026-10-03) et après, délai de démarrage
-jusqu'à la première page affichée, temps d'image (médiane, p95) d'une animation de test dans
-WebView2, `hiddenimports` et `datas` retenus, résultat des quatre vérifications de la fenêtre sans bordure (et repli éventuel) et décision sur la bibliothèque
-d'animation.
+Poste de @pj35 (Windows 11, écran 1920×1080 à ~164 Hz, Python 3.13.15, `pywebview 6.2.1`,
+`pythonnet 3.2.0`, WebView2 = Chromium/Edge 154). Prototype : `scripts/spike_client_window.py` et
+`scripts/spike_client_page.html` ; `python scripts/spike_client_window.py --auto --out r.json`
+rejoue les mesures, sans argument il ouvre la fenêtre pour la manipuler à la main.
+
+**Empaquetage** (PyInstaller 6.15, onefile, fenêtré)
+
+| Mesure | Résultat |
+|---|---|
+| Exe du spike seul (FastAPI, uvicorn, pywebview, pythonnet, Pillow, psutil) | 43,99 Mo |
+| Exe du produit avec les nouvelles dépendances (même `.spec`, `hiddenimports` des seuls paquets nouveaux) | **82 294 510 octets**, contre 75 064 370 le 2026-10-03 : **+7,2 Mo** (le `db.db` embarqué, 33,9 Mo aujourd'hui, a pu grossir entre-temps) |
+| `hiddenimports` | **Aucun** pour `uvicorn` ni `pywebview` : les hooks de `pyinstaller-hooks-contrib` suffisent. Il n'en faudra que si `lol_coach.py` n'importe pas encore ces paquets au moment du build (tâche 56). |
+| `datas` | `--add-data page.html;.` ; le gabarit se lit par `sys._MEIPASS` dans l'exe, `scripts/` sinon (même schéma que `config.get_resource_path()`). |
+| `uvicorn` sans console | `log_config=None` obligatoire : `sys.stdout` vaut `None` dans un exe fenêtré et le logging d'`uvicorn` plante. |
+| Chemins | Un `--specpath` sur un autre disque que les sources fait échouer PyInstaller (`relpath`) ; les `.spec` du projet restent sur `D:`. |
+
+**Démarrage jusqu'à la première image** : source 1,8 s ; exe 2,0 à 2,5 s (6 exécutions : 2,01 à 2,18 s sauf une à
+2,50 s ; exe jamais lancé : 2,18 s). **Une première exécution d'un exe fraîchement
+construit n'a jamais affiché la page** (40 s d'attente, non reproduite sur 6 exécutions dont un
+autre exe neuf) : à surveiller à la recette.
+
+**Temps d'image** (deux scènes de 3 s, ~495 images chacune)
+
+| Scène | Médiane | p95 | p99 | Max | Images > 16,7 ms |
+|---|---|---|---|---|---|
+| 80 cartes en `transform` + `opacity` (source) | 6,1 ms | 6,2 ms | 6,2 ms | 18,2 ms | 1 (la première) |
+| Tracé SVG (`stroke-dashoffset`) + compteur à chaque image (source) | 6,1 ms | 6,1 ms | 6,2 ms | 6,3 ms | 0 |
+| Mêmes scènes dans l'exe | 6,1 ms | 6,2 ms | 6,2 ms | 12,1 ms | 0 |
+
+Critère 11 tenu sur ces scènes (p95 ≤ 16,7 ms). Transition de page (View Transitions) : 260 à 327 ms,
+durée de l'animation par défaut. Aller-retour JS vers Python (`pywebview.api`) : 0,7 ms.
+
+**Fenêtre sans bordure** (mesurée sur la fenêtre réelle, glissements de souris synthétiques)
+
+| Point | Résultat |
+|---|---|
+| Style Windows | ni `WS_CAPTION` ni `WS_THICKFRAME` ; `WM_NCHITTEST` répond « client » partout, y compris sur les bords : **aucun redimensionnement natif** |
+| Déplacement par la barre de titre (`pywebview-drag-region`, `easy_drag=False`) | glissement de +150/+100 px : la fenêtre bouge de +150/+100 exactement |
+| Redimensionnement par une poignée HTML d'angle | glissement de +100/+60 : taille +100/+60 exactement |
+| `maximize()` natif | rectangle 1920×1080, **recouvre la barre des tâches** (zone utile : 46 à 1032) |
+| Placement sur la zone utile (`resize` + `move`) | rectangle exactement égal à la zone utile ; retour à la taille précédente exact |
+| Coins et bordure | coins arrondis et bordure fine fournis par Windows 11 (`shadow=True`, défaut de `pywebview`) |
+| Ancrage Win+Flèche gauche | sans effet, la fenêtre n'a pas bougé |
+
+Décision : **la fenêtre sans bordure est retenue**, avec les deux écarts de §2 à traiter en tâche 68.
+Repli (fenêtre standard, option `--standard` du prototype) non nécessaire.
+
+**Animations de Windows** : `prefers-reduced-motion: reduce` est vrai dans WebView2 sur ce poste
+(`SPI_GETCLIENTAREAANIMATION` = 0). D'où le réglage de remplacement de §4.3.
+
+**Reste à faire par @pj35** : `python scripts/spike_client_window.py`, manipuler la fenêtre à la
+main (déplacement, poignée d'angle, boutons) et confirmer l'ancrage Win+Flèche et le rendu sur un
+second écran s'il y en a un.

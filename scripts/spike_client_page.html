@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Spike SPEC-21 tâche 48</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #0b0d12; color: #e6e9f0;
+    font: 14px/1.4 "Segoe UI", system-ui, sans-serif; overflow: hidden; user-select: none; }
+  #bar { position: fixed; inset: 0 0 auto 0; height: 36px; display: flex; align-items: center;
+    background: #11141b; border-bottom: 1px solid #1d2230; z-index: 10; }
+  #title { flex: 1; padding-left: 14px; height: 100%; display: flex; align-items: center;
+    letter-spacing: .08em; font-size: 12px; color: #8b93a7; }
+  .btn { width: 46px; height: 100%; border: 0; background: transparent; color: #c5cadb;
+    font-size: 13px; transition: background-color 120ms; }
+  .btn:hover { background: #1d2230; }
+  .btn.close:hover { background: #c42b1c; color: #fff; }
+  #stage { position: fixed; inset: 36px 0 0 0; }
+  .card { position: absolute; width: 90px; height: 60px; border-radius: 10px;
+    background: linear-gradient(135deg, #3b6cff, #8a4dff); will-change: transform, opacity; }
+  #scene2 { position: absolute; inset: 0; display: none; }
+  #scene2 svg { width: 100%; height: 100%; }
+  #count { position: absolute; left: 24px; top: 24px; font-size: 64px; font-weight: 600;
+    font-variant-numeric: tabular-nums; }
+  #hud { position: absolute; right: 18px; bottom: 14px; font-size: 12px; color: #8b93a7;
+    text-align: right; white-space: pre; }
+  .edge { position: fixed; z-index: 20; }
+  #eR { right: 0; top: 36px; bottom: 6px; width: 6px; cursor: ew-resize; }
+  #eB { left: 0; right: 6px; bottom: 0; height: 6px; cursor: ns-resize; }
+  #eC { right: 0; bottom: 0; width: 10px; height: 10px; cursor: nwse-resize; }
+</style>
+</head>
+<body>
+<div id="bar">
+  <div id="title" class="pywebview-drag-region">LEAGUESTATS — SPIKE</div>
+  <button class="btn" id="bMin" title="Réduire">&#x2013;</button>
+  <button class="btn" id="bMax" title="Agrandir">&#x25A1;</button>
+  <button class="btn close" id="bClose" title="Fermer">&#x2715;</button>
+</div>
+<div id="stage">
+  <div id="scene1"></div>
+  <div id="scene2">
+    <svg viewBox="0 0 1000 400" preserveAspectRatio="none"><path id="curve" fill="none"
+      stroke="#3b6cff" stroke-width="3" vector-effect="non-scaling-stroke"/></svg>
+  </div>
+  <div id="count">0</div>
+  <div id="hud"></div>
+</div>
+<div class="edge" id="eR"></div><div class="edge" id="eB"></div><div class="edge" id="eC"></div>
+<script>
+const SCENE_MS = 3000, CARDS = 80, PINGS = 50;
+const hud = document.getElementById("hud");
+const api = () => window.pywebview && window.pywebview.api;
+const post = (path, body) => fetch(path, {method: "POST", headers: {"content-type": "application/json"},
+  body: JSON.stringify(body)});
+
+document.getElementById("bMin").onclick = () => api().minimize();
+document.getElementById("bMax").onclick = () => api().toggle_maximize();
+document.getElementById("bClose").onclick = () => api().close();
+
+// Redimensionnement par poignées HTML : le coût d'un aller-retour JS -> Python décide du fluide.
+function handle(el, dx, dy) {
+  el.addEventListener("mousedown", (e) => {
+    const w0 = innerWidth, h0 = innerHeight, x0 = e.screenX, y0 = e.screenY;
+    const move = (m) => api().resize_to(w0 + dx * (m.screenX - x0), h0 + dy * (m.screenY - y0));
+    const up = () => { removeEventListener("mousemove", move); removeEventListener("mouseup", up); };
+    addEventListener("mousemove", move); addEventListener("mouseup", up);
+  });
+}
+handle(document.getElementById("eR"), 1, 0);
+handle(document.getElementById("eB"), 0, 1);
+handle(document.getElementById("eC"), 1, 1);
+
+function stats(deltas) {
+  const s = [...deltas].sort((a, b) => a - b), q = (p) => s[Math.min(s.length - 1, Math.floor(p * s.length))];
+  return {n: s.length, median: q(.5), p95: q(.95), p99: q(.99), max: s[s.length - 1],
+    over_16_7: s.filter((d) => d > 16.7).length, over_20: s.filter((d) => d > 20).length};
+}
+
+function frames(ms, onFrame) {
+  return new Promise((resolve) => {
+    const deltas = []; let last = performance.now(); const t0 = last;
+    const tick = (now) => {
+      deltas.push(now - last); last = now; onFrame && onFrame(now - t0);
+      if (now - t0 < ms) requestAnimationFrame(tick); else resolve(deltas.slice(1));
+    };
+    requestAnimationFrame(tick);
+  });
+}
+
+async function run() {
+  requestAnimationFrame(() => post("/ready", {}));
+  await new Promise((r) => (api() ? r() : addEventListener("pywebviewready", r)));
+  const result = {user_agent: navigator.userAgent, dpr: devicePixelRatio,
+    view_transitions: typeof document.startViewTransition === "function",
+    reduced_motion_query: matchMedia("(prefers-reduced-motion: reduce)").matches};
+
+  // Aller-retour JS -> Python (coût d'un redimensionnement piloté par la page).
+  const t = performance.now();
+  for (let i = 0; i < PINGS; i++) await api().ping();
+  result.api_roundtrip_ms = (performance.now() - t) / PINGS;
+
+  // Scène 1 : 80 cartes, transform + opacity seulement (compositeur).
+  const scene1 = document.getElementById("scene1");
+  for (let i = 0; i < CARDS; i++) {
+    const c = document.createElement("div"); c.className = "card";
+    c.style.left = (40 + (i % 10) * 110) + "px"; c.style.top = (40 + Math.floor(i / 10) * 80) + "px";
+    scene1.appendChild(c);
+    c.animate([{transform: "translateY(0) scale(1)", opacity: .35},
+               {transform: "translateY(24px) scale(1.12)", opacity: 1}],
+      {duration: 900, delay: i * 25, iterations: Infinity, direction: "alternate",
+       easing: "cubic-bezier(.22,1,.36,1)"});
+  }
+  result.scene_cards = stats(await frames(SCENE_MS));
+
+  // Scène 2 : tracé de courbe SVG (stroke-dashoffset) + compteur mis à jour à chaque image.
+  scene1.style.display = "none";
+  document.getElementById("scene2").style.display = "block";
+  const pts = []; for (let i = 0; i <= 400; i++) pts.push([i * 2.5, 200 + 120 * Math.sin(i / 17) * Math.cos(i / 53)]);
+  const path = document.getElementById("curve");
+  path.setAttribute("d", "M" + pts.map((p) => p.join(",")).join(" L"));
+  const len = path.getTotalLength(); path.style.strokeDasharray = len;
+  const count = document.getElementById("count");
+  result.scene_curve = stats(await frames(SCENE_MS, (t) => {
+    path.style.strokeDashoffset = len * (1 - Math.min(1, t / (SCENE_MS * .8)));
+    count.textContent = Math.round(t * 1.7);
+  }));
+
+  // Transition de page (View Transitions API), si disponible.
+  if (result.view_transitions) {
+    const t0 = performance.now();
+    const vt = document.startViewTransition(() => { document.getElementById("scene2").style.display = "none"; });
+    await vt.finished; result.view_transition_ms = performance.now() - t0;
+  }
+  hud.textContent = "médiane " + result.scene_cards.median.toFixed(1) + " ms | p95 " +
+    result.scene_cards.p95.toFixed(1) + " ms\nping API " + result.api_roundtrip_ms.toFixed(1) + " ms";
+  await post("/metrics", result);
+}
+run().catch((e) => post("/metrics", {error: String(e)}));
+</script>
+</body>
+</html>
