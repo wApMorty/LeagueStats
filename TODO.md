@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-10-01 (SPEC-20 rédigée : win chance et impact)
+**Mis à jour** : 2026-10-04 (SPEC-22 rédigée : attribution complète de l'impact)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -126,6 +126,23 @@ et port à valider. Découpage en SPEC-21 §5 (tâches 48 à 56, 33 pts) :
 | 54 | Écran Calibration : diagramme de fiabilité, Brier, version du modèle | 3 | 50 | ⬜ |
 | 55 | Lancement : option 7 du menu (Quitter en 8), navigateur, repli de port | 3 | 49 | ⬜ |
 | 56 | Empaquetage final : dépendances, `.spec`, CI, exe vérifié, docs | 3 | 51–55 | ⬜ |
+
+### Lot suivant — SPEC-22, attribution complète de l'impact (🟡 rédigée le 2026-10-04)
+
+[SPEC-22](docs/specs/SPEC-22-attribution-complete-impact.md) : le « −20 pts non attribué » du rapport
+d'impact vient à −23 pts des objectifs perdus, que personne ne porte (mesuré sur 45 parties) ;
+l'impact cumulé du joueur est biaisé vers le haut d'autant. Objectifs perdus débités aux absents,
+niveaux face à l'adversaire de lane, récupération après respawn ; le modèle de SPEC-20 reste
+unique. Vision, placement et vague hors périmètre (@pj35, 2026-10-04). Conventions du §2 à valider.
+Découpage en SPEC-22 §5 (tâches 57 à 61, 16 pts) :
+
+| # | Tâche | Pts | Dépend de | État |
+|---|---|---|---|---|
+| 57 | `scripts/bench_impact_residual.py` : base de référence du résidu (−20,3 / 25,1 pts) | 2 | — | ⬜ |
+| 58 | Objectifs perdus : lignes `lost_*` aux coéquipiers absents | 3 | 57 | ⬜ |
+| 59 | `WinModel.logit_parts`, segments par joueur, lignes `levels` et `respawn` | 5 | 58 | ⬜ |
+| 60 | Convention versionnée dans `model_version`, `raw_eog`, recalcul des 45 parties | 3 | 59 | ⬜ |
+| 61 | Rapport, bilan, libellés, mesure finale, `CHANGELOG.md` | 3 | 60 | ⬜ |
 
 ### Hors sprint — SPEC-18 phase A ✅ (2026-09-24)
 
