@@ -107,6 +107,26 @@ Répond à la confusion cause/effet des constats de SPEC-19. Ordre validé par @
 | 4 | Impact dans le bilan et les schémas de SPEC-19 | 3 | ✅ tâche 45 (2026-10-02, section du bilan : impact par partie et par type d'événement) ; révision de la grille de SPEC-19 à rouvrir sur données |
 | 5 | Live Client API et overlay en jeu | 4 | ✅ tâches 46 et 47 (2026-10-02, `live.py`, `overlay.py`) ; reste la recette en partie réelle de l'overlay |
 
+### Lot suivant — SPEC-21, tableau de bord local (🟡 rédigée le 2026-10-04)
+
+[SPEC-21](docs/specs/SPEC-21-tableau-de-bord-local.md) : GUI légère en lecture seule, FastAPI + Jinja2
++ HTMX servis en thread par l'app (option 7 du menu), graphiques SVG rendus côté serveur. Quatre
+écrans : courbe de LP, progression par métrique, parties (win chance et impact), calibration du
+modèle. Architecture, écrans et cycle de vie validés par @pj35 le 2026-10-04 ; démarrage d'office
+et port à valider. Découpage en SPEC-21 §5 (tâches 48 à 56, 33 pts) :
+
+| # | Tâche | Pts | Dépend de | État |
+|---|---|---|---|---|
+| 48 | Spike d'empaquetage : page « bonjour » servie depuis l'exe, taille et démarrage mesurés | 3 | — | ⬜ |
+| 49 | Socle : config, connexion lecture seule, serveur en thread, fabrique d'app, gabarit de base, route `/` | 5 | 48 | ⬜ |
+| 50 | `charts.py` : graphiques SVG purs (lignes, fiabilité, barres) | 3 | 49 | ⬜ |
+| 51 | Écran Rang : courbe de LP par file | 3 | 50 | ⬜ |
+| 52 | Écran Progression : séries de métriques, verdicts, schémas | 5 | 50 | ⬜ |
+| 53 | Écran Parties : courbe de win chance, impact par événement | 5 | 50 | ⬜ |
+| 54 | Écran Calibration : diagramme de fiabilité, Brier, version du modèle | 3 | 50 | ⬜ |
+| 55 | Lancement : option 7 du menu (Quitter en 8), navigateur, repli de port | 3 | 49 | ⬜ |
+| 56 | Empaquetage final : dépendances, `.spec`, CI, exe vérifié, docs | 3 | 51–55 | ⬜ |
+
 ### Hors sprint — SPEC-18 phase A ✅ (2026-09-24)
 
 [SPEC-18](docs/specs/SPEC-18-force-intrinseque.md) remplace l'ancienne tâche « shrink de
@@ -229,7 +249,7 @@ encore mesurer la qualité.*
    avant d'engager.
 5. **GUI légère locale** (FastAPI + HTMX/React servi en localhost) — ex-Tâche #6 re-scopée,
    réutilise les algorithmes en l'état.
-   **À reprioriser** (@pj35, 2026-09-26) : le suivi de progression de SPEC-19 (courbes par
+   **Engagée le 2026-10-04 : [SPEC-21](docs/specs/SPEC-21-tableau-de-bord-local.md).** Repriorisée par @pj35 le 2026-09-26 : le suivi de progression de SPEC-19 (courbes par
    métrique, axes de travail) est son premier vrai besoin.
 6. **Depuis `docs/TOURNAMENT_COACH_IMPROVEMENTS.md`** : chargement de draft depuis JSON,
    comparaison multi-drafts, templates de composition, simulation IA vs IA, base de drafts
