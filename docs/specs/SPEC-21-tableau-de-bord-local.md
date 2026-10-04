@@ -87,7 +87,7 @@ post-game revus avec le Live Coach, le tout animé avec soin.
 | Customisation | **Validé pour ce lot : thème seul** (couleurs, police, densité, clair/sombre, mémorisés dans les préférences). Mise en page déplaçable et réglages du moteur depuis l'interface : **à rouvrir** (§7) ; la structure en composants ne les interdit pas. |
 | Motion design | **Objectif de premier rang (@pj35, 2026-10-04)** : système de motion dédié (§4.3), pas de décor ajouté en fin de chantier. Les thèmes et leur direction artistique se discutent avec @pj35 **avant** la tâche 69 : **À valider**. |
 | Bibliothèque d'animation | **Tranché par le spike (tâche 48, 2026-10-04)** : CSS + Web Animations API + View Transitions, zéro dépendance. WebView2 est un Chromium 154 qui expose les View Transitions ; 80 cartes animées plus un tracé SVG tiennent un p95 de 6,2 ms par image (§8). Un moteur de ressorts n'est justifié par aucune mesure ; à rouvrir seulement si un effet précis l'exige. |
-| Cadre de la fenêtre | **Validé (@pj35, 2026-10-04) : sans bordure** (`frameless=True`), barre de titre et boutons Réduire/Agrandir/Fermer dessinés en HTML et animés. **Confirmé par le spike** sur le poste de @pj35 (§8) : déplacement par la barre de titre exact, redimensionnement par la poignée d'angle bas-droit exact (aller-retour JS vers Python : 0,7 ms), coins arrondis et bordure fournis par Windows 11. **Deux écarts à traiter en tâche 68** : le bouton Agrandir ne doit pas appeler `maximize()` (la fenêtre recouvre la barre des tâches), il place la fenêtre sur la zone utile de l'écran ; et il n'y a aucun redimensionnement natif par les bords (poignées HTML sur les quatre côtés et quatre coins ; **seuls le coin bas-droit et les bords droit et bas ont été essayés** : gauche et haut exigent `resize()` puis `move()` synchronisés, risque de saut, à mesurer en tâche 68). L'ancrage Win+Flèche est perdu (sans effet au test, à confirmer à la main). |
+| Cadre de la fenêtre | **Validé (@pj35, 2026-10-04) : sans bordure** (`frameless=True`), barre de titre et boutons Réduire/Agrandir/Fermer dessinés en HTML et animés. **Confirmé par le spike** sur le poste de @pj35 (§8) : déplacement par la barre de titre exact, redimensionnement par la poignée d'angle bas-droit exact (aller-retour JS vers Python : 0,7 ms), coins arrondis et bordure fournis par Windows 11. **Deux écarts à traiter en tâche 68** : le bouton Agrandir ne doit pas appeler `maximize()` (la fenêtre recouvre la barre des tâches), il place la fenêtre sur la zone utile de l'écran ; et il n'y a aucun redimensionnement natif par les bords (poignées HTML sur les quatre côtés et quatre coins ; **seuls le coin bas-droit et les bords droit et bas ont été essayés** : gauche et haut exigent `resize()` puis `move()` synchronisés, risque de saut, à mesurer en tâche 68). L'ancrage Win+Flèche est sans objet : @pj35 utilise Komorebi (gestionnaire de fenêtres en mosaïque, dont les barres expliquent la zone utile de 46 à 1032 px), et prévoit un usage surtout en plein écran ; il n'est pas critique (2026-10-04). |
 | Écritures du coaching dans la base | **À valider** : défaut proposé, oui, via une connexion d'écriture distincte et les repositories existants (fixer ou clore un axe, `outcome`) ; la lecture reste en `mode=ro`. Cela lève la règle « lecture seule » de la version précédente. |
 | Point d'entrée | **À valider** : défaut proposé, `python lol_coach.py --client` et option 7 du menu ; démarrage d'office du client plus tard. |
 | Port | **À valider** : défaut proposé, port libre choisi par l'OS (la fenêtre locale n'a pas besoin d'un port connu), affiché en `[INFO]`. |
@@ -435,7 +435,7 @@ durée de l'animation par défaut. Aller-retour JS vers Python (`pywebview.api`)
 | `maximize()` natif | rectangle 1920×1080, **recouvre la barre des tâches** (zone utile : 46 à 1032) |
 | Placement sur la zone utile (`resize` + `move`) | rectangle exactement égal à la zone utile ; retour à la taille précédente exact |
 | Coins et bordure | coins arrondis et bordure fine fournis par Windows 11 (`shadow=True`, défaut de `pywebview`) |
-| Ancrage Win+Flèche gauche | sans effet, la fenêtre n'a pas bougé |
+| Ancrage Win+Flèche gauche | sans effet ; non critique : @pj35 utilise Komorebi, qui gère l'ancrage, et vise un usage en plein écran |
 
 Décision : **la fenêtre sans bordure est retenue**, avec les deux écarts de §2 à traiter en tâche 68.
 Repli (fenêtre standard, option `--standard` du prototype) non nécessaire.
@@ -443,6 +443,8 @@ Repli (fenêtre standard, option `--standard` du prototype) non nécessaire.
 **Animations de Windows** : `prefers-reduced-motion: reduce` est vrai dans WebView2 sur ce poste
 (`SPI_GETCLIENTAREAANIMATION` = 0, relevé par `windows_animations` du JSON). D'où le réglage de remplacement de §4.3.
 
-**Reste à faire par @pj35** : `python scripts/spike_client_window.py`, manipuler la fenêtre à la
-main (déplacement, poignée d'angle, boutons) et confirmer l'ancrage Win+Flèche et le rendu sur un
-second écran s'il y en a un.
+**Prise en main par @pj35 (2026-10-04)** : faite. Déplacement, poignée d'angle et boutons conviennent ;
+l'ancrage Win+Flèche marche mal à cause de Komorebi, sans conséquence. À garder en tête pour la
+tâche 68 : sous Komorebi, la fenêtre peut être replacée par le gestionnaire ; le bouton Agrandir
+(zone utile) reste valable, et un vrai plein écran (touche dédiée) peut s'ajouter si @pj35 le
+veut.
