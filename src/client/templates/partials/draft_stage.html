@@ -81,7 +81,7 @@
   {% if s.me %}
   <div class="d-me" data-key="me" data-sig="{{ s.me|sig }}" title="{{ s.me.name }}">
     <div class="d-shock" data-shock></div><div class="d-shock d-shock-b" data-shock></div>
-    <div class="d-portrait d-portrait-me" data-pop data-delay="{{ 1000 if v.intro else 0 }}">{% if s.me.img %}<img data-me src="{{ s.me.img }}" alt="" style="opacity: {{ s.me.opacity }}">{% endif %}</div>
+    <div class="d-portrait d-portrait-me"{% if v.intro %} data-pop data-delay="1000"{% endif %}><img data-me{% if s.me.img %} src="{{ s.me.img }}"{% endif %} alt="" style="opacity: {{ s.me.opacity }}"></div>
     {% if not s.me.locked %}<svg class="d-dashring d-dashring-me" data-spin="8" viewBox="0 0 128 128" aria-hidden="true"><circle cx="64" cy="64" r="62"/></svg>{% endif %}
     {% if s.me.locked %}<svg class="d-lock" data-seal viewBox="-20 -20 40 40" aria-hidden="true"><circle r="18"/><path d="M0,-11 L6.47,8.9 L-10.46,-3.4 L10.46,-3.4 L-6.47,8.9 Z"/></svg>{% endif %}
     <div class="d-me-caption"><div class="d-kicker">Toi · {{ s.me.role }}</div><div class="d-name d-name-me">{{ s.me.name }}</div><div class="d-sub">{{ s.me.state }}</div></div>

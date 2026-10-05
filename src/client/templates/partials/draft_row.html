@@ -2,5 +2,9 @@
     Chaque enfant est synchronisé par clé ; la ligne de conseil est toujours là. -#}
 {% if v.phase == 'ban' %}
 {% include "partials/draft_row_ban.html" %}
+{% elif v.phase in ('pick_turn', 'pick_wait') %}
+{% include "partials/draft_row_pick.html" %}
+{% else %}
+{% include "partials/draft_row_locked.html" %}
 {% endif %}
 <div class="d-advice" data-key="advice" data-sig="{{ v.advice|sig }}"><span>« {{ v.advice }} »</span></div>

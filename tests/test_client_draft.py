@@ -461,3 +461,78 @@ def test_js_servi_sans_erreur_de_syntaxe():
         subprocess.run([node, "--check", str(path)], capture_output=True).returncode
         == 0
     )
+# ---------- phase de picks (tâche 88) ----------
+
+
+def test_recommandations_cartes_win_ecart_et_suite(client, bus):
+    bus.publish("draft", pick_snapshot(versus="Tryndamere"))
+    html = client.get("/draft/stage").text
+    assert "Recommandations · Top contre Tryndamere" in html
+    assert html.count('class="d-card"') == 2
+    assert "54,82 %" in html and "+3,1 pts" in html and "1,2k games" in html
+    assert "53,07 %" in html and "860 games" in html
+    assert "Suite attendue : Alistar (Support)" in html and "Suite attendue : —" in html
+    assert 'data-champ="266"' in html and 'src="/assets/champion/Aatrox.png"' in html
+    assert 'class="d-act d-act-lock" data-act="lock" disabled>' in html
+
+
+def test_ecart_negatif_en_rose_avec_vrai_signe_moins(client, bus):
+    snapshot = pick_snapshot()
+    snapshot["recommendations"][1]["delta"] = -1.3
+    bus.publish("draft", snapshot)
+    html = client.get("/draft/stage").text
+    assert "−1,3 pts" in html and '<div class="d-card-delta">−1,3 pts</div>' in html
+    assert '<div class="d-card-delta up">+3,1 pts</div>' in html
+
+
+def test_sous_titre_profondeur_et_champions_ecartes(client, bus):
+    bus.publish("draft", pick_snapshot(pool_name="GRIND"))
+    html = client.get("/draft/stage").text
+    assert "Pool GRIND · profondeur atteinte : 2 pick(s) anticipé(s)" in html
+    assert "sans données exploitables en Top : Ambessa (38 games)" in html
+
+
+def test_sans_recommandation_le_message_remplace_les_cartes(client, bus):
+    bus.publish("draft", pick_snapshot(recommendations=[], skipped=[]))
+    html = client.get("/draft/stage").text
+    assert (
+        "Aucune recommandation pour le moment" in html and 'class="d-card"' not in html
+    )
+
+
+def test_pas_mon_tour_les_cartes_restent_mais_pas_de_survol_serveur(client, bus):
+    bus.publish("draft", pick_snapshot(my_turn=False))
+    html = client.get("/draft/stage").text
+    assert (
+        'class="d-card"' in html and "Phase de picks — en attente de ton tour" in html
+    )
+    assert state_of(html)["my_turn"] is False
+
+
+def test_verrouille_la_rangee_devient_la_selection_de_skin(client, bus):
+    snapshot = pick_snapshot()
+    snapshot["allies"][0].update(
+        champion_id=266, champion="Aatrox", hover_id=0, hover=None
+    )
+    bus.publish("draft", snapshot)
+    html = client.get("/draft/stage").text
+    assert (
+        "Aatrox scellé" in html
+        and 'data-act="lock"' not in html
+        and 'class="d-card"' not in html
+    )
+    assert state_of(html)["locked_id"] == 266
+
+
+def test_mon_portrait_est_toujours_la_pour_l_apercu_et_ne_rejoue_pas_son_apparition(
+    client, bus
+):
+    bus.publish("draft", ban_snapshot())
+    fragment = client.get("/draft/stage").text
+    assert "<img data-me" in fragment
+    assert 'data-pop data-delay="1000"' not in fragment
+    assert 'data-pop data-delay="1000"' in client.get("/draft").text
+
+
+def test_le_sceau_du_verrouillage_a_sa_cible_de_secousse(client):
+    assert "data-quake" in client.get("/draft").text

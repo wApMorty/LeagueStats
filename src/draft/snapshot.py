@@ -86,6 +86,7 @@ class DraftSnapshot:
     acting_cell: Optional[int] = None
     local_cell: Optional[int] = None
     local_role: Optional[str] = None
+    versus: Optional[str] = None  # l'adversaire de ma lane, s'il est connu
     time_left_ms: Optional[int] = None
     time_total_ms: Optional[int] = None
     my_ban: Optional[SnapshotBan] = None  # posé
@@ -163,6 +164,7 @@ def build_snapshot(
         acting_cell=state.current_actor,
         local_cell=state.local_player_cell_id,
         local_role=state.ally_positions.get(state.local_player_cell_id),
+        versus=analysis.direct_counter,
         time_left_ms=state.time_left_ms,
         time_total_ms=state.time_total_ms,
         my_ban=SnapshotBan(state.my_ban_id, name(state.my_ban_id), ALLY)

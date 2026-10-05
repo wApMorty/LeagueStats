@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from ..config_client import client_config
 from ..config_constants import scraping_config
+from ..utils.display import format_games_count
 
 ROLE_LABELS = {
     "top": "Top",
@@ -339,9 +340,24 @@ def stage_view(
         "bans": [b["champion_id"] for b in bans],
         "names": {str(r["champion_id"]): r["name"] for r in recs + bans if r["champion_id"]},
     }
+    role = ROLE_LABELS.get(snapshot.get("local_role"), "")
+    versus = snapshot.get("versus")
+    skipped = snapshot["skipped"]
+    parts = [f"Pool {snapshot['pool_name']}"] if snapshot.get("pool_name") else []
+    if snapshot["recommendations"]:
+        parts.append(f"profondeur atteinte : {snapshot['depth']} pick(s) anticipé(s)")
+    if skipped:
+        where = f" en {role}" if role else ""
+        listed = ", ".join(f"{s['champion']} ({format_games_count(s['games'])} games)" for s in skipped)
+        parts.append(f"sans données exploitables{where} : {listed}")
     return {
         "empty": False,
         "intro": intro,
+        "rec_title": "Recommandations"
+        + (f" · {role}" if role else "")
+        + (f" contre {versus}" if versus else ""),
+        "rec_sub": " · ".join(parts),
+        "rec_empty": "Aucune recommandation pour le moment : un pick adverse ou le grimoire en donnera.",
         "phase": phase,
         "title": PHASE_TITLES[phase],
         "advice": PHASE_ADVICE[phase],

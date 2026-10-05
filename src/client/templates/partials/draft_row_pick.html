@@ -1,0 +1,34 @@
+{#- Phase de picks : les recommandations du classement, « Verrouiller X » (libellé posé par draft.js
+    d'après la sélection) ; une carte survolée = un survol dans le client. -#}
+<div class="d-row-head" data-key="row-head" data-sig="{{ [v.phase, v.rec_title, v.rec_sub]|sig }}">
+  <div class="d-row-titles">
+    <span class="d-row-title">{{ v.rec_title }}</span>
+    <span class="d-row-sub">{{ v.rec_sub }}</span>
+  </div>
+  <div class="d-row-actions">
+    <button type="button" class="d-act d-act-lock" data-act="lock" disabled>Verrouiller</button>
+  </div>
+</div>
+<div class="d-cards d-cards-pick" data-key="cards" data-sig="{{ v.recs|sig }}">
+  {% for c in v.recs %}
+  <div class="d-card" data-rise data-tilt data-delay="{{ c.delay if v.intro else 0 }}" data-champ="{{ c.champion_id or '' }}"
+       style="--hc: {{ c.hue }}" role="button" tabindex="0">
+    <span class="d-card-line" aria-hidden="true"></span>
+    <span class="d-card-corner d-c1" aria-hidden="true"></span><span class="d-card-corner d-c2" aria-hidden="true"></span>
+    <span class="d-card-corner d-c3" aria-hidden="true"></span><span class="d-card-corner d-c4" aria-hidden="true"></span>
+    <div class="d-card-top">
+      <div class="d-card-portrait">{% if c.img %}<img src="{{ c.img }}" alt="">{% endif %}</div>
+      <div class="d-card-id"><div class="d-card-name">{{ c.name }}</div><div class="d-card-sub">{{ c.games }}</div></div>
+      <div class="d-card-score">
+        <div class="d-card-big">{{ c.win }}</div>
+        {% if c.delta %}<div class="d-card-delta{{ ' up' if c.up }}">{{ c.delta }}</div>{% endif %}
+      </div>
+    </div>
+    <div class="d-card-text">{{ c.line }}</div>
+    <div class="d-card-state" data-state>Survoler</div>
+  </div>
+  {% endfor %}
+  {% if not v.recs %}
+  <div class="d-empty-row">{{ v.rec_empty }}</div>
+  {% endif %}
+</div>

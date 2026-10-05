@@ -5,7 +5,7 @@
 {% block page_class %} page-draft{% endblock %}
 {% block content %}
 <div class="draft" id="draft" data-stage-url="/draft/stage" data-stage-w="{{ stage_size[0] }}" data-stage-h="{{ stage_size[1] }}">
-  <div class="draft-stage" id="draft-stage">
+  <div class="draft-stage" id="draft-stage" data-quake>
     <div id="d-sync" data-sync>{% include "partials/draft_stage.html" %}</div>
     <div id="d-overlays"></div>
   </div>

@@ -55,6 +55,7 @@
     template.innerHTML = html;
     const fresh = [];
     const previousKind = ctx.state?.kind;
+    const wasLocked = ctx.state?.locked_id;
     sync(ctx.sync, template.content, fresh);
     readState();
     const reveal = previousKind === "ban" && ctx.state && ctx.state.kind !== "ban";
@@ -62,6 +63,7 @@
     fresh.forEach(animate);
     if (reveal) revealBans(fresh);
     paintRow();
+    if (ctx.state?.locked_id && !wasLocked) requestAnimationFrame(sealMoment);
     listeners.forEach((listener) => listener(ctx.state, fresh));
   }
 
@@ -121,9 +123,11 @@
     if (!ctx.state) return;
     ctx.received = performance.now();
     const state = ctx.state;
+    // Un survol que je viens de lancer prime quelques secondes sur ce que le client annonçait avant.
+    const holding = ctx.hoverUntil > performance.now();
     if (state.locked_id) ctx.sel = state.locked_id;
-    else if (state.hover_id) ctx.sel = state.hover_id;
-    else if (!ctx.sel || !(String(ctx.sel) in state.win)) ctx.sel = state.recs[0] ?? null;
+    else if (state.hover_id && !(holding && ctx.sel)) ctx.sel = state.hover_id;
+    else if (!ctx.sel) ctx.sel = state.recs[0] ?? null;
     renderBalance();
     tick();
   }
@@ -200,10 +204,11 @@
     { opacity: 1, transform: "none" },
   ];
 
-  /** Sélection et libellés de la rangée : cartes de ban, bouton « Bannir X ». */
+  /** Sélection et libellés de la rangée : cartes de ban et de pick, boutons « Bannir X » et « Verrouiller X ». */
   function paintRow() {
     const state = ctx.state;
     if (!state) return;
+    paintPicks(state);
     if (state.kind !== "ban") ctx.banSel = null;
     else if (state.my_ban_id) ctx.banSel = state.my_ban_id;
     else if (!ctx.banSel) ctx.banSel = state.ban_hover_id || state.bans[0] || null;
@@ -220,6 +225,54 @@
       button.textContent = name ? `Bannir ${name}` : "Bannir";
       button.disabled = !ctx.banSel || !name;
     }
+  }
+
+  function paintPicks(state) {
+    ctx.stage.querySelectorAll(".d-cards-pick .d-card").forEach((card) => {
+      const selected = +card.dataset.champ === ctx.sel;
+      card.classList.toggle("is-sel", selected);
+      card.querySelector("[data-state]").textContent = selected ? (state.locked_id ? "Scellé" : "Survolé") : "Survoler";
+    });
+    const button = ctx.stage.querySelector('[data-act="lock"]');
+    if (button) {
+      const name = state.names[String(ctx.sel)] || ctx.pickName;
+      button.textContent = name ? `Verrouiller ${name}` : "Verrouiller";
+      button.disabled = !state.my_turn || !ctx.sel || !name;
+      button.title = state.my_turn ? "" : "Ce n'est pas encore ton tour";
+    }
+  }
+
+  /** Survole un pick (carte ou grimoire) : aperçu tout de suite, survol dans le client à mon tour. */
+  function hoverPick(id, name, image) {
+    const state = ctx.state;
+    if (!state || state.locked_id || state.kind === "ban" || ctx.sel === id) return;
+    ctx.pickName = name;
+    ctx.hoverUntil = performance.now() + 3000;
+    select(id);
+    paintRow();
+    const portrait = ctx.stage.querySelector("img[data-me]");
+    if (portrait && image) {
+      portrait.src = image;
+      portrait.style.opacity = 0.6;
+    }
+    if (!Motion.opts().reduced && portrait) {
+      Motion.bloom(portrait, Motion.opts());
+      const [x, y] = Motion.center(portrait);
+      const C = Motion.C;
+      Motion.converge(x, y, { n: 26, radius: 340, life: 650, colors: [C.copper, C.gold, C.violet] });
+    }
+    if (state.my_turn) post("/draft/action/hover", { champion_id: id });
+  }
+
+  async function confirmLock() {
+    if (!ctx.sel || !ctx.state?.my_turn) return;
+    await post("/draft/action/lock", { champion_id: ctx.sel }); // le sceau suit quand le client confirme
+  }
+
+  /** Verrouillage confirmé : sceau apposé, impact, 170 étincelles, secousse. */
+  function sealMoment() {
+    const C = Motion.C;
+    Motion.seal(ctx.root, { ...Motion.opts(), target: ctx.stage, colors: [C.copper, C.gold, C.mint, C.white] });
   }
 
   /** Vise un ban (carte ou grimoire) : l'aperçu part dans le client par un survol de ban. */
@@ -350,9 +403,13 @@
     readState();
     paintRow();
     stage.addEventListener("click", (event) => {
-      const card = event.target.closest(".d-cards-ban .d-card");
-      if (card) return aimBan(+card.dataset.champ, card.querySelector(".d-card-name").textContent);
+      const name = (card) => card.querySelector(".d-card-name").textContent;
+      const ban = event.target.closest(".d-cards-ban .d-card");
+      if (ban) return aimBan(+ban.dataset.champ, name(ban));
+      const pick = event.target.closest(".d-cards-pick .d-card");
+      if (pick) return hoverPick(+pick.dataset.champ, name(pick), pick.querySelector("img")?.src);
       if (event.target.closest('[data-act="ban"]')) confirmBan();
+      else if (event.target.closest('[data-act="lock"]')) confirmLock();
     });
     addEventListener("resize", () => ctx.alive() && fit());
     const timer = setInterval(() => {
@@ -380,6 +437,7 @@
     },
     select,
     aimBan,
+    hoverPick,
     post,
     toast,
     refresh,
