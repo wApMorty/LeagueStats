@@ -90,6 +90,11 @@ class Champions:
         champion = self._by_key.get(champion_id)
         return f"/assets/champion/{champion['id']}.png" if champion else None
 
+    def name(self, champion_id: Optional[int]) -> str:
+        """Le nom affiché du champion ; « Champion 123 » quand Data Dragon est injoignable."""
+        champion = self._by_key.get(champion_id)
+        return champion["name"] if champion else f"Champion {champion_id}"
+
 
 def _role_rank(role: Optional[str]) -> int:
     return (

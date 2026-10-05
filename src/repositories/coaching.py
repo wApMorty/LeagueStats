@@ -158,6 +158,65 @@ class CoachingRepository:
             "SELECT captured_utc, queue, tier, division, lp FROM rank_snapshots ORDER BY id"
         )
 
+    # ---------- parties capturées (client, SPEC-21 tâches 53 et 75) ----------
+
+    _GAME_KEYS = ("game_id", "queue_id", "created", "duration_s", "pid", "game")
+
+    def recent_games(self, limit: int) -> List[dict]:
+        """Parties capturées, de la plus récente à la plus ancienne : le brut de la partie (`game`)
+        mais pas sa timeline, dont seule la présence est indiquée (`has_timeline`)."""
+        rows = self._rows(
+            "SELECT game_id, queue_id, game_creation_utc, duration_s, player_participant_id, "
+            "raw_game, raw_timeline IS NOT NULL FROM game_records "
+            "ORDER BY game_creation_utc DESC LIMIT ?",
+            (limit,),
+        )
+        return [
+            dict(zip(self._GAME_KEYS + ("has_timeline",), row[:6] + (bool(row[6]),)))
+            for row in rows
+        ]
+
+    def game_record(self, game_id: int) -> Optional[dict]:
+        """Une partie capturée avec son brut et sa timeline (None si absente), ou None si inconnue."""
+        rows = self._rows(
+            "SELECT game_id, queue_id, game_creation_utc, duration_s, player_participant_id, "
+            "raw_game, raw_timeline FROM game_records WHERE game_id = ?",
+            (game_id,),
+        )
+        return dict(zip(self._GAME_KEYS + ("timeline",), rows[0])) if rows else None
+
+    def latest_game_id(self) -> Optional[int]:
+        rows = self._rows(
+            "SELECT game_id FROM game_records ORDER BY game_creation_utc DESC LIMIT 1"
+        )
+        return rows[0][0] if rows else None
+
+    def game_roles(self, game_id: int) -> Dict[int, str]:
+        """Poste de chaque participant de la partie analysée (vide si elle ne l'est pas)."""
+        rows = self._rows(
+            "SELECT DISTINCT participant_id, role FROM game_metrics "
+            "WHERE game_id = ? AND role IS NOT NULL",
+            (game_id,),
+        )
+        return dict(rows)
+
+    def rank_after_game(self, game_id: int) -> Optional[dict]:
+        """La photo de classement prise à la fin de la partie (variation de LP comprise), si elle existe."""
+        keys = ("queue", "tier", "division", "lp", "lp_delta")
+        rows = self._rows(
+            "SELECT queue, tier, division, lp, lp_delta FROM rank_snapshots WHERE game_id = ?",
+            (game_id,),
+        )
+        return dict(zip(keys, rows[0])) if rows else None
+
+    def prediction(self, game_id: int) -> Optional[dict]:
+        """La prédiction de draft rattachée à la partie : probabilité et version du modèle."""
+        rows = self._rows(
+            "SELECT predicted_probability, model_version FROM predictions WHERE game_id = ?",
+            (game_id,),
+        )
+        return {"probability": rows[0][0], "model_version": rows[0][1]} if rows else None
+
     # ---------- impact sur la win chance (SPEC-20) ----------
 
     def games_without_impact(self) -> List[dict]:

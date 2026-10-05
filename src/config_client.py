@@ -115,6 +115,18 @@ class ClientConfig:
     PROGRESSION_SPARK_SIZE: Tuple[int, int] = (190, 40)
     PROGRESSION_Z_RANGE: float = 2.0
 
+    # Écrans Parties et page d'une partie (SPEC-21 tâche 53) : parties listées, courbe de win chance
+    # (taille du handoff), événements marqués sur la courbe, lignes des « plus coûteux / rentables ».
+    PARTIES_LIMIT: int = 50
+    GAME_QUEUE_NAMES: Dict[int, str] = field(
+        default_factory=lambda: {420: "Classée solo/duo", 440: "Classée flexible"}
+    )
+    GAME_CURVE_SIZE: Tuple[int, int] = (1124, 430)
+    GAME_CURVE_MARGIN: Tuple[int, int, int, int] = (70, 50, 34, 60)
+    GAME_CURVE_X_STEP_MIN: int = 5
+    GAME_MARKS: int = 10
+    GAME_TOP: int = 3
+
     # Live Coach lancé en fil par le client : attente du client LoL (secondes) entre deux essais
     # et délai d'arrêt à la fermeture de la fenêtre.
     LIVE_COACH_RETRY_S: float = 15.0

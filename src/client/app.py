@@ -3,6 +3,7 @@
 import json
 import secrets
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, NamedTuple, Optional, Tuple, Union
 from urllib.parse import urlsplit
@@ -27,9 +28,10 @@ from .draft_loadout import normalize_page, plan as loadout_plan, runes_payload, 
 from . import found
 from .draft_actions import Refusal, role_command, run as run_draft_action
 from .draft_skins import SkinBook, select_skin
-from .draft_view import signature, stage_view
+from .draft_view import Champions, signature, stage_view
 from .lcu_proxy import LcuProxy
 from .lcu_status import LcuProbe
+from .review import game_page, games_view, load_model
 
 
 class NavItem(NamedTuple):
@@ -57,7 +59,7 @@ NAV = (
             NavItem("accueil", "Accueil", "ᚨ", 165, "/"),
             NavItem("rang", "Rang", "ᚱ", 245, "/rang"),
             NavItem("progression", "Progression", "ᛏ", 290, "/progression"),
-            NavItem("parties", "Parties", "ᛗ", 85),
+            NavItem("parties", "Parties", "ᛗ", 85, "/parties"),
             NavItem("calibration", "Calibration", "ᛉ", 345),
         ),
     ),
@@ -232,6 +234,31 @@ def create_app(
         return render(
             request, "progression.html", v=coaching(read, lambda: progression_view({}, [], role))
         )
+
+    @app.get("/parties", response_class=HTMLResponse)
+    def parties(request: Request):
+        champions, now = Champions(app.state.assets), datetime.now(timezone.utc)
+        view = coaching(
+            lambda repo: games_view(repo, champions, now),
+            lambda: {"empty": True, "rows": [], "summary": ""},
+        )
+        return render(request, "parties.html", v=view)
+
+    @app.get("/parties/{game_id}", response_class=HTMLResponse)
+    def partie(request: Request, game_id: int):
+        champions, now = Champions(app.state.assets), datetime.now(timezone.utc)
+        page = coaching(
+            lambda repo: game_page(repo, game_id, champions, load_model(), now), lambda: None
+        )
+        if page is None:
+            return render(
+                request,
+                "erreur.html",
+                404,
+                title="Partie introuvable",
+                detail=f"La partie {game_id} n'est pas dans les parties capturées.",
+            )
+        return render(request, "partie.html", g=page)
 
     def draft_snapshot() -> Optional[dict]:
         return bus.latest("draft") if bus is not None else None

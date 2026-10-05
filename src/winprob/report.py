@@ -3,7 +3,7 @@
 
 from collections import defaultdict
 from statistics import mean
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 from ..config_constants import coaching_config
 from .impact import KILL_TYPES, event_kind, scoring_team
@@ -35,10 +35,20 @@ def _clock(ms: int) -> str:
     return f"{ms // 60000}:{ms // 1000 % 60:02d}"
 
 
+def curve_points(
+    model: WinModel, game: dict, timeline: dict, team: int
+) -> List[Tuple[float, float]]:
+    """`(minute, win chance de team)` à chaque image : les points de la courbe, avant son rendu."""
+    points = []
+    for state in frame_states(game, timeline):
+        probability = model.predict(state)
+        points.append((state["time_min"], probability if team == BLUE else 1 - probability))
+    return points
+
+
 def curve(model: WinModel, game: dict, timeline: dict, team: int) -> str:
     """Win chance de `team` à chaque image, en blocs ▁ à █ (0 % à 100 %)."""
-    probs = [model.predict(s) for s in frame_states(game, timeline)]
-    probs = [p if team == BLUE else 1 - p for p in probs]
+    probs = [p for _, p in curve_points(model, game, timeline, team)]
     return "".join(SPARK[min(int(p * len(SPARK)), len(SPARK) - 1)] for p in probs)
 
 

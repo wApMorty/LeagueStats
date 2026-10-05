@@ -3,8 +3,10 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from src.winprob.impact import impacts
-from src.winprob.report import SPARK, curve, impact_report
+from src.winprob.report import SPARK, curve, curve_points, impact_report
 from tests.test_winprob_impact import _model
 
 FIXTURES = Path(__file__).parent / "fixtures" / "spike_gameplay"
@@ -22,6 +24,24 @@ def test_curve_has_one_block_per_frame_and_flips_with_the_team():
     assert len(blue) == len(red) == len(TIMELINE["frames"])
     assert set(blue + red) <= set(SPARK)
     assert SPARK.index(blue[-1]) > SPARK.index(red[-1])  # bleu gagne cette partie
+
+
+def test_curve_text_is_unchanged_by_the_extraction_of_curve_points():
+    """Sorties relevées avant l'extraction de `curve_points()` (SPEC-21 tâche 53), partie 7998195590."""
+    assert curve(MODEL, GAME, TIMELINE, 100) == "▅▅▅▆▆█████████████████████"
+    assert curve(MODEL, GAME, TIMELINE, 200) == "▅▅▅▃▃▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁"
+
+
+def test_curve_points_gives_minutes_and_the_win_chance_of_the_asked_team():
+    blue, red = curve_points(MODEL, GAME, TIMELINE, 100), curve_points(MODEL, GAME, TIMELINE, 200)
+    assert [m for m, _ in blue] == [m for m, _ in red]
+    assert [m for m, _ in blue][:3] == pytest.approx(
+        [0.0, 1.0, 2.0], abs=0.01
+    )  # une image par minute
+    assert all(0 <= p <= 1 for _, p in blue + red)
+    assert all(
+        abs(b + r - 1) < 1e-12 for (_, b), (_, r) in zip(blue, red)
+    )  # deux camps, un seul match
 
 
 def test_report_for_a_blue_player_lists_costs_and_gains():

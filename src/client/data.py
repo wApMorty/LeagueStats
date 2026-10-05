@@ -46,6 +46,18 @@ def date_fr(moment: datetime) -> str:
     return f"{moment.day} {FR_MONTHS[moment.month - 1]}"
 
 
+def ago(moment: datetime, now: datetime) -> str:
+    """« il y a 2 h » : l'âge d'un événement, à la minute, à l'heure, puis au jour près."""
+    seconds = max(0, int((now - moment).total_seconds()))
+    if seconds < 60:
+        return "à l'instant"
+    if seconds < 3600:
+        return f"il y a {seconds // 60} min"
+    if seconds < 86400:
+        return f"il y a {seconds // 3600} h"
+    return f"il y a {seconds // 86400} j"
+
+
 def plural(count: int, word: str) -> str:
     return f"{count} {word}{'s' if count > 1 else ''}"
 

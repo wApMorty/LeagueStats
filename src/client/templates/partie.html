@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ g.title }} · {{ g.champion }} · LeagueStats{% endblock %}
+{% block page_class %} page-coaching page-game{% endblock %}
+{% block content %}
+<header class="page-head" data-rise="1">
+  <div class="page-titles">
+    <div class="kicker">Partie du {{ g.date }} · {{ g.ago }}</div>
+    <h1 class="game-title {{ 'win' if g.win else 'loss' }}" data-spell="1">{{ g.title }}</h1>
+    <div class="game-context">{{ g.champion }}{% if g.role %} · {{ g.role }}{% endif %}{% if g.opponent %} contre {{ g.opponent }}{% endif %} · {{ g.duration }} · {{ g.queue }}</div>
+  </div>
+  <a href="/parties">‹ Toutes les parties</a>
+</header>
+
+<div class="cols">
+  <div class="main">
+    <section class="panel panel-chart game-curve" data-fade="1" data-delay="100">
+      <div class="game-curve-head"><h2>Chance de victoire</h2>{% if g.predicted %}<span class="muted">Prédite en draft : {{ g.predicted }}</span>{% endif %}</div>
+      {% if g.curve %}
+      {{ g.curve }}
+      {% else %}
+      <p class="empty">{{ g.curve_note }}</p>
+      {% endif %}
+    </section>
+    {% if g.impact.available %}
+    <div class="tops">
+      {% for title, tone, rows in (("Les plus coûteux", "cost", g.impact.costly), ("Les plus rentables", "gain", g.impact.profitable)) %}
+      <section class="top-card top-{{ tone }}" data-rise="1" data-tilt="1" data-delay="{{ 900 + loop.index0 * 100 }}">
+        <div class="queue-name">{{ title }}</div>
+        {% for e in rows %}
+        <div class="top-row">
+          <span class="tab muted">{{ e.time }}</span>
+          <span><b>{{ e.label }}</b>{% if e.who %}<i>{{ e.who }}</i>{% endif %}</span>
+          <span class="top-delta tab" style="color: {{ e.color }}">{{ e.delta_text }}</span>
+        </div>
+        {% else %}
+        <p class="muted">Aucun événement.</p>
+        {% endfor %}
+      </section>
+      {% endfor %}
+    </div>
+    {% elif g.impact_note %}
+    <p class="fine">{{ g.impact_note }}</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

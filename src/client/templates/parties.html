@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Parties · LeagueStats{% endblock %}
+{% block page_class %} page-coaching page-parties{% endblock %}
+{% block content %}
+<header class="page-head" data-rise="1">
+  <div class="page-titles">
+    <div class="kicker">Coaching{% if v.summary %} · {{ v.summary }}{% endif %}</div>
+    <h1 data-spell="1">Parties</h1>
+  </div>
+</header>
+
+{% if v.empty %}
+<p class="empty">Aucune partie capturée pour l'instant : le Live Coach capture chaque partie classée (solo/duo et flexible) au démarrage et à sa fin.</p>
+{% else %}
+<div class="games" role="table" aria-label="Parties capturées">
+  <div class="game-row game-head" role="row">
+    <span role="columnheader">Partie</span><span role="columnheader">Résultat</span><span role="columnheader">KDA</span>
+    <span role="columnheader">Durée</span><span role="columnheader">File</span>
+    <span class="r" role="columnheader">LP</span><span class="r" role="columnheader">Impact</span>
+  </div>
+  {% for r in v.rows %}
+  <a class="game-row game-link" href="{{ r.href }}" role="row" data-row="1" data-delay="{{ [loop.index0 * 30, 600]|min }}">
+    <span class="game-who" role="cell">
+      <span class="portrait {{ 'win' if r.win else 'loss' }}">{% if r.portrait %}<img src="{{ r.portrait }}" alt="">{% endif %}</span>
+      <span><b>{{ r.champion }}</b><i>{{ r.role or "Poste inconnu" }}{% if r.opponent %} contre {{ r.opponent }}{% endif %}</i></span>
+    </span>
+    <span class="game-result {{ 'win' if r.win else 'loss' }}" role="cell">{{ "Victoire" if r.win else "Défaite" }}<i>{{ r.date }} · {{ r.ago }}</i></span>
+    <span class="tab" role="cell">{{ r.kda }}</span>
+    <span class="tab" role="cell">{{ r.duration }}</span>
+    <span role="cell">{{ r.queue }}</span>
+    <span class="r tab" role="cell">{{ r.lp or "—" }}</span>
+    <span class="r tab" role="cell">{{ r.impact or "—" }}</span>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
