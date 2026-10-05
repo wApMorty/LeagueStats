@@ -1297,3 +1297,155 @@ def test_la_colonne_est_vide_cote_serveur_et_appartient_au_script(client, bus):
     bus.publish("draft", pick_snapshot())
     html = client.get("/draft/stage").text
     assert '<aside class="d-loadout"' in html and "Runes &amp; sorts" not in html
+# ---------- éditeur de runes (tâche 92) ----------
+
+import shutil  # noqa: E402
+import subprocess  # noqa: E402
+
+LOGIC = Path(__file__).parent.parent / "src" / "client" / "static" / "rune_logic.js"
+NODE_SCRIPT = """
+const L = require(process.argv[1]);
+const { styles, page, ops } = JSON.parse(require('fs').readFileSync(0, 'utf8'));
+let current = page;
+const log = [];
+for (const [name, ...args] of ops) {
+  current = name === 'setPrimary' || name === 'setSub' || name === 'setKeystone' || name === 'setRow' || name === 'setSubRune'
+    ? L[name](styles, current, ...args) : L[name](current, ...args);
+  log.push(current);
+}
+console.log(JSON.stringify({ log, byRow: L.subsByRow(styles, current) }));
+"""
+
+
+def run_logic(ops, page=None):
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node absent")
+    from src.client.draft_loadout import runes_payload
+
+    styles = runes_payload(tree_from_lcu())["styles"]  # la forme que le navigateur reçoit
+    payload = {"styles": styles, "page": page or good_page(), "ops": ops}
+    done = subprocess.run(
+        [node, "-e", NODE_SCRIPT, str(LOGIC)],
+        input=json.dumps(payload),
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return json.loads(done.stdout)
+
+
+def test_changer_d_arbre_principal_reprend_les_premieres_runes():
+    result = run_logic([["setPrimary", 8100]])
+    page = result["log"][-1]
+    domination = next(s for s in tree_from_lcu() if s["id"] == 8100)
+    assert page["primary"] == 8100
+    assert page["keystone"] == domination["slots"][0]["runes"][0]["id"]
+    assert page["rows"] == [domination["slots"][i]["runes"][0]["id"] for i in (1, 2, 3)]
+    assert (
+        page["sub"] == 8300 and page["subs"] == good_page()["subs"]
+    )  # le secondaire ne bouge pas
+
+
+def test_arbre_principal_pris_au_secondaire_le_deplace_ailleurs():
+    page = run_logic([["setPrimary", 8300]])["log"][-1]
+    assert page["primary"] == 8300 and page["sub"] != 8300
+    sub_tree = next(s for s in tree_from_lcu() if s["id"] == page["sub"])
+    rows = [[r["id"] for r in slot["runes"]] for slot in sub_tree["slots"]]
+    assert [
+        next(i for i, row in enumerate(rows) if rune in row) for rune in page["subs"]
+    ] == [1, 2]
+
+
+def test_choisir_le_meme_arbre_ne_change_rien():
+    page = good_page()
+    log = run_logic([["setPrimary", 8000], ["setSub", 8300], ["setSub", 8000]], page)[
+        "log"
+    ]
+    assert (
+        log[0] == page and log[1] == page and log[2] == page
+    )  # le secondaire ne peut pas être le principal
+
+
+def test_rune_majeure_et_rangees_restent_dans_leur_arbre():
+    page = good_page()
+    log = run_logic(
+        [
+            ["setKeystone", 8010],
+            ["setKeystone", 9111],
+            ["setRow", 0, 9101],
+            ["setRow", 0, 8014],
+        ],
+        page,
+    )["log"]
+    assert log[0]["keystone"] == 8010
+    assert log[1]["keystone"] == 8010  # 9111 n'est pas une rune majeure
+    assert log[2]["rows"][0] == 9101
+    assert log[3]["rows"][0] == 9101  # 8014 est de la rangée 3
+
+
+def test_troisieme_rangee_secondaire_remplace_la_plus_ancienne():
+    # subs = [8321 (rangée 1), 8313 (rangée 2)] ; la rangée 3 (8347) chasse la plus ancienne (8321).
+    page = good_page()
+    page["subs"] = [8321, 8313]
+    result = run_logic([["setSubRune", 8347]], page)
+    assert result["log"][-1]["subs"] == [8313, 8347]
+    assert result["byRow"] == [8313, 8347]  # affichées dans l'ordre des rangées
+
+
+def test_meme_rangee_secondaire_remplace_la_rune_de_cette_rangee():
+    page = good_page()
+    page["subs"] = [8321, 8313]  # rangées 1 et 2
+    result = run_logic([["setSubRune", 8306]], page)  # autre rune de la rangée 1
+    assert sorted(result["log"][-1]["subs"]) == sorted([8306, 8313])
+
+
+def test_rune_secondaire_deja_choisie_ou_hors_arbre_ignoree():
+    page = good_page()
+    log = run_logic([["setSubRune", 8321], ["setSubRune", 8010]], page)["log"]
+    assert log[0] == page and log[1] == page
+
+
+def test_changer_d_arbre_secondaire_remet_les_deux_premieres_rangees():
+    page = run_logic([["setSub", 8200]])["log"][-1]
+    sorcery = next(s for s in tree_from_lcu() if s["id"] == 8200)
+    assert page["sub"] == 8200
+    assert page["subs"] == [
+        sorcery["slots"][1]["runes"][0]["id"],
+        sorcery["slots"][2]["runes"][0]["id"],
+    ]
+
+
+def test_fragment_par_rangee():
+    page = run_logic([["setShard", 1, 5010]])["log"][-1]
+    assert page["shards"] == [5005, 5010, 5011]
+
+
+def test_chaque_page_produite_par_l_editeur_est_valide_pour_le_serveur():
+    from src.client.draft_loadout import validate_page
+
+    ops = [
+        ["setPrimary", 8100],
+        ["setSub", 8200],
+        ["setSubRune", 8236],
+        ["setShard", 0, 5007],
+        ["setKeystone", 8128],
+    ]
+    for page in run_logic(ops)["log"]:
+        validate_page(tree_from_lcu(), page)
+
+
+def test_scripts_de_l_editeur_servis(client):
+    assert client.get("/static/rune_logic.js").status_code == 200
+    html = client.get("/").text
+    assert html.index("rune_logic.js") < html.index("runes.js")
+
+
+def test_rune_logic_js_sans_erreur_de_syntaxe():
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node absent")
+    assert (
+        subprocess.run([node, "--check", str(LOGIC)], capture_output=True).returncode
+        == 0
+    )

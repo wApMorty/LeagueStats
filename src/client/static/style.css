@@ -577,3 +577,46 @@ h1 { margin: 0 0 12px; font: 600 46px/1 var(--font-title); }
 .lo-push:hover { background: oklch(0.8 0.11 55); }
 .lo-restore { height: 48px; padding: 0 16px; border-radius: 24px; border: 1px solid oklch(0.74 0.11 55 / 0.45); background: transparent;
   color: oklch(0.86 0.06 55); font-size: 14px; cursor: pointer; }
+
+/* Éditeur de runes (tâche 92) */
+.ed-overlay { position: absolute; left: 0; top: 0; width: 1480px; bottom: 0; z-index: 6; padding: 30px 44px;
+  display: flex; flex-direction: column; background: oklch(0.13 0.018 170 / 0.97); }
+.ed-fx { position: absolute; left: 340px; top: 75px; width: 800px; height: 800px; overflow: visible; pointer-events: none; }
+.ed-fx circle { fill: none; stroke: oklch(0.74 0.11 55 / 0.12); stroke-width: 1; }
+.ed-fx path { fill: none; stroke: oklch(0.74 0.11 55 / 0.1); stroke-width: 1; }
+.ed-head { position: relative; display: flex; align-items: flex-end; justify-content: space-between; padding-bottom: 16px;
+  border-bottom: 1px solid var(--rule); }
+.ed-titles { display: flex; flex-direction: column; gap: 6px; }
+.ed-kicker { font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: oklch(0.74 0.11 55 / 0.85); }
+.ed-title { font: 600 40px/1 var(--font-title); }
+.ed-buttons { display: flex; gap: 12px; }
+.ed-buttons .g-secondary { height: 44px; padding: 0 20px; border-radius: 22px; }
+.ed-apply { flex: none; height: 44px; padding: 0 22px; border-radius: 22px; }
+.ed-grid { position: relative; margin-top: 22px; display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr) 300px;
+  gap: 44px; flex: 1; min-height: 0; overflow-y: auto; }
+.ed-col { display: flex; flex-direction: column; gap: 14px; }
+.ed-label { font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
+.ed-trees { display: flex; gap: 10px; }
+.ed-tree { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 84px; cursor: pointer; opacity: 0.45; font-size: 12px; }
+.ed-tree.is-on, .ed-tree:hover { opacity: 1; }
+.ed-tree-disc { width: var(--s); height: var(--s); border-radius: 50%; display: grid; place-items: center;
+  background: oklch(0.18 0.02 170); border: 1.5px solid; }
+.ed-tree-disc img { width: 60%; height: 60%; }
+.ed-keys { margin-top: 4px; display: flex; gap: 22px; padding: 14px 0; border-top: 1px solid oklch(0.74 0.11 55 / 0.14);
+  border-bottom: 1px solid oklch(0.74 0.11 55 / 0.14); }
+.ed-row { display: flex; gap: 22px; }
+.ed-subrows { margin-top: 4px; padding-top: 14px; border-top: 1px solid oklch(0.74 0.11 55 / 0.14); display: flex; flex-direction: column; gap: 14px; }
+.ed-subrows .ed-row { gap: 12px; }
+.ed-rune { position: relative; width: var(--s); height: var(--s); flex: none; border-radius: 50%; background: oklch(0.17 0.02 170);
+  border: 1.5px solid var(--c); display: grid; place-items: center; font-size: 11px; color: var(--muted-2); cursor: pointer; opacity: 0.45; }
+.ed-rune.is-on, .ed-rune:hover { opacity: 1; }
+.ed-rune img { position: absolute; inset: 0; width: 100%; height: 100%; padding: 12%; filter: grayscale(1); }
+.ed-rune.is-on img { filter: none; }
+.ed-col-shards { gap: 0; }
+.ed-col-shards .ed-label { margin-bottom: 14px; }
+.ed-shard-row { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-top: 1px solid oklch(0.74 0.11 55 / 0.14); }
+.ed-shard-title { font-size: 12px; color: var(--muted); }
+.ed-shard-options { display: flex; gap: 12px; }
+.ed-shard-options .ed-rune img { padding: 20%; }
+.ed-shard-current { font-size: 13px; }
+.ed-note { margin-top: auto; font-size: 13px; line-height: 1.45; color: var(--muted); text-wrap: pretty; }

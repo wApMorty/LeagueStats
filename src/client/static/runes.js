@@ -299,16 +299,153 @@
     }
   }
 
+  // ---------- éditeur de runes (tâche 92) ----------
+
+  let editor = null; // { element, page, onKey }
+
+  function closeEditor() {
+    if (!editor) return;
+    editor.element.remove();
+    removeEventListener("keydown", editor.onKey);
+    editor = null;
+  }
+
+  const OFF = "oklch(0.74 0.11 55 / 0.25)";
+
+  /** Un disque cliquable de l'éditeur : bordure et lueur de l'arbre quand il est choisi, grisé sinon. */
+  function pick(rune, size, color, selected, key, onpick, ring = 1.5) {
+    return el(
+      "div",
+      {
+        class: `ed-rune${selected ? " is-on" : ""}`,
+        "data-rk": key,
+        role: "button",
+        tabindex: "0",
+        title: rune.name,
+        style: `--s:${size}px;--c:${selected ? color : OFF};${selected ? `box-shadow:0 0 18px ${color}, 0 0 4px ${color}` : ""};border-width:${ring}px`,
+        onclick: onpick,
+      },
+      initials(rune.name),
+      el("img", { src: perk(rune.icon), alt: "" }),
+    );
+  }
+
+  function treeButton(style, selected, size, onpick) {
+    return el(
+      "div",
+      { class: `ed-tree${selected ? " is-on" : ""}`, role: "button", tabindex: "0", onclick: onpick },
+      el("div", { class: "ed-tree-disc", style: `--s:${size}px;border-color:${selected ? style.color : OFF}` }, el("img", { src: perk(style.icon), alt: "" })),
+      el("span", {}, style.name),
+    );
+  }
+
+  function paintEditor(first) {
+    const L = window.RuneLogic;
+    const page = editor.page;
+    const styles = tree.styles;
+    const primary = styleOf(page.primary);
+    const secondary = styleOf(page.sub);
+    const set = (next, key) => {
+      editor.page = next;
+      paintEditor(false);
+      const node = editor.element.querySelector(`[data-rk="${key}"]`);
+      if (node && !Motion.opts().reduced) Motion.bloom(node, Motion.opts());
+    };
+    const left = el(
+      "div",
+      { class: "ed-col" },
+      el("div", { class: "ed-label" }, "Arbre principal"),
+      el("div", { class: "ed-trees" }, styles.map((style) => treeButton(style, style.id === page.primary, 50, () => set(L.setPrimary(styles, page, style.id), `t${style.id}`)))),
+      el("div", { class: "ed-keys" }, primary.slots[0].map((rune) => pick(rune, 74, primary.color, rune.id === page.keystone, `k${rune.id}`, () => set(L.setKeystone(styles, page, rune.id), `k${rune.id}`), 2))),
+      [1, 2, 3].map((row) =>
+        el("div", { class: "ed-row" }, primary.slots[row].map((rune) => pick(rune, 52, primary.color, page.rows[row - 1] === rune.id, `r${rune.id}`, () => set(L.setRow(styles, page, row - 1, rune.id), `r${rune.id}`)))),
+      ),
+    );
+    const middle = el(
+      "div",
+      { class: "ed-col" },
+      el("div", { class: "ed-label" }, "Arbre secondaire · 2 runes de rangées différentes"),
+      el("div", { class: "ed-trees" }, styles.filter((style) => style.id !== page.primary).map((style) => treeButton(style, style.id === page.sub, 46, () => set(L.setSub(styles, page, style.id), `t${style.id}`)))),
+      el(
+        "div",
+        { class: "ed-subrows" },
+        [1, 2, 3].map((row) =>
+          el("div", { class: "ed-row" }, secondary.slots[row].map((rune) => pick(rune, 46, secondary.color, page.subs.includes(rune.id), `s${rune.id}`, () => set(L.setSubRune(styles, page, rune.id), `s${rune.id}`)))),
+        ),
+      ),
+    );
+    const right = el(
+      "div",
+      { class: "ed-col ed-col-shards" },
+      el("div", { class: "ed-label" }, "Fragments"),
+      tree.shards.map((row, index) =>
+        el(
+          "div",
+          { class: "ed-shard-row" },
+          el("span", { class: "ed-shard-title" }, row.title),
+          el("div", { class: "ed-shard-options" }, row.options.map((option, i) => pick(option, 40, "oklch(0.86 0.13 85)", page.shards[index] === option.id, `f${index}-${i}`, () => set(L.setShard(page, index, option.id), `f${index}-${i}`)))),
+          el("span", { class: "ed-shard-current" }, row.options.find((option) => option.id === page.shards[index])?.name ?? "—"),
+        ),
+      ),
+      el("div", { class: "ed-note" }, "La page appliquée remplace l'import OneTricks pour cette draft ; elle part dans le client au clic sur « Envoyer au client »."),
+    );
+    const name = Draft.state?.names?.[String(lo.championId)] ?? "";
+    const head = el(
+      "div",
+      { class: "ed-head" },
+      el("div", { class: "ed-titles" }, el("span", { class: "ed-kicker" }, `Page « ${name}${host().dataset.role ? ` · ${host().dataset.role}` : ""} »`), el("span", { class: "ed-title" }, "Grimoire de runes")),
+      el(
+        "div",
+        { class: "ed-buttons" },
+        el("button", { type: "button", class: "g-secondary", onclick: closeEditor }, "Annuler"),
+        el("button", { type: "button", class: "lo-push ed-apply", onclick: applyEditor }, "Appliquer la page"),
+      ),
+    );
+    const holder = document.createElement("div"); // l'analyse HTML crée de vrais éléments SVG
+    holder.innerHTML =
+      '<svg class="ed-fx" viewBox="-400 -400 800 800" data-spin="220" aria-hidden="true"><circle data-ink="1600" r="390"/><path data-ink="2200" d="M0,-390 L229.2,315.5 L-370.9,-120.5 L370.9,-120.5 L-229.2,315.5 Z"/></svg>';
+    const fx = holder.firstElementChild;
+    editor.element.replaceChildren(fx, head, el("div", { class: "ed-grid" }, left, middle, right));
+    if (first) {
+      Draft.animate(editor.element);
+      if (Motion.opts().reduced) return;
+      editor.element.animate([{ clipPath: "circle(0% at 100% 34%)" }, { clipPath: "circle(160% at 100% 34%)" }], { duration: 760, easing: Motion.E.standard });
+      editor.element.querySelectorAll("[data-rk]").forEach((node, i) =>
+        node.animate([{ opacity: 0, transform: "scale(.5)" }, { opacity: node.classList.contains("is-on") ? 1 : 0.45, transform: "scale(1)" }], { duration: 480, delay: 240 + i * 18, easing: Motion.E.ressort, fill: "backwards" }),
+      );
+    }
+  }
+
+  function applyEditor() {
+    const page = { ...editor.page, subs: window.RuneLogic.subsByRow(tree.styles, editor.page) };
+    closeEditor();
+    applyPage(page);
+  }
+
+  function openEditor() {
+    if (editor || !lo || lo.status !== "ready" || !tree) return;
+    editor = { page: clone(lo.page) };
+    editor.element = el("div", { class: "ed-overlay", "data-editor": true, role: "dialog", "aria-label": "Grimoire de runes" });
+    editor.onKey = (event) => event.key === "Escape" && closeEditor();
+    addEventListener("keydown", editor.onKey);
+    document.getElementById("d-overlays").appendChild(editor.element);
+    paintEditor(true);
+  }
+
   document.addEventListener("click", (event) => {
     if (!lo || lo.status !== "ready") return;
-    if (event.target.closest("[data-open-editor]")) window.RuneEditor?.open(lo, tree, applyPage);
+    if (event.target.closest("[data-open-editor]")) openEditor();
     else if (lo.picker !== null && !event.target.closest(".lo-spells")) {
       lo.picker = null;
       render();
     }
   });
 
-  Draft.onSync((state) => follow(state));
+  // Le verrouillage ou un autre champion rend la page éditée caduque.
+  Draft.onSync((state) => {
+    if (editor && (!lo || state?.locked_id)) closeEditor();
+    follow(state);
+  });
 
   window.Loadout = { get model() { return lo; }, get tree() { return tree; }, applyPage, ensureTree };
 })();
