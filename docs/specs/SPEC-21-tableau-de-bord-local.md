@@ -436,7 +436,7 @@ Les tâches 48, 49, 55, 68, 69, 70 et 84 sont faites (84 : la mesure du p95 rest
 | 73 | ✅ Draft, cadre : gabarit plein écran sans navigation, en-tête, sceaux d'équipe, balance, chrono, consommateur SSE (`fetch` avec jeton), fragments rechargés sur le bus | 5 | 72, 84, 86 |
 | 87 | ✅ Draft, phase de bans : mon ban, aperçu, bans cachés, « Bans conseillés », « Bannir X », tampon, révélation en cascade | 5 | 73, 74, 85 |
 | 88 | ✅ Draft, phase de picks : 4 cartes de recommandation, survol (éclosion, runes), « Verrouiller X », sceau apposé | 5 | 73, 74 |
-| 89 | Draft, grimoire des champions : overlay, recherche sans accents, rôle, pool, tri, indisponibles et raison, barre basse | 5 | 88 |
+| 89 | ✅ Draft, grimoire des champions : overlay, recherche sans accents, rôle, pool, tri, indisponibles et raison, barre basse | 5 | 88 |
 | 90 | Draft, sélection de skin : rangée basse après verrouillage, possession lue dans le LCU, splash en fond, écriture du choix | 3 | 86, 88 |
 | 91 | Draft, colonne loadout : page de runes, sorts (popover, échange), objets, « Envoyer au client », « Rétablir OneTricks », « Modifiée à la main » qui prime sur l'import | 5 | 86, 88 |
 | 92 | Draft, éditeur de runes : overlay circulaire, arbres, secondaire sur deux rangées, fragments, appliquer / annuler | 5 | 91 |

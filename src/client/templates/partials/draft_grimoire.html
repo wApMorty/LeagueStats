@@ -1,0 +1,58 @@
+{#- Grimoire des champions (tâche 89) : overlay de pick et de ban manuel. Les tuiles sont triées par le
+    serveur ; champions.js filtre (recherche sans accents, rôle, pool) et pilote la barre basse. -#}
+{% if g.empty %}
+<div class="g-overlay g-pick" id="d-grid" role="dialog" aria-label="Grimoire des champions">
+  <div class="g-none">Pas de champ select en cours.</div>
+  <button type="button" class="g-close" data-grid-close aria-label="Fermer" title="Fermer (Échap)">×</button>
+</div>
+{% else %}
+<div class="g-overlay g-{{ g.mode }}" id="d-grid" role="dialog" aria-label="Grimoire des champions"
+     data-mode="{{ g.mode }}" data-role="{{ g.default_role }}" data-verb="{{ g.verb }}">
+  <svg class="g-fx" data-spin="240" viewBox="-420 -420 840 840" aria-hidden="true">
+    <circle data-ink="1500" r="410"/><path data-ink="2100" d="M0,-410 L241,331.7 L-389.9,-126.7 L389.9,-126.7 L-241,331.7 Z"/>
+  </svg>
+  <div class="g-head">
+    <div class="g-titles"><span class="g-kicker">{{ g.kicker }}</span><span class="g-title">Grimoire des champions</span></div>
+    <div class="g-tools">
+      <label class="g-search">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5"/></svg>
+        <input type="search" id="g-q" placeholder="Rechercher un champion" autocomplete="off" aria-label="Rechercher un champion">
+      </label>
+      <button type="button" class="g-close" data-grid-close aria-label="Fermer" title="Fermer (Échap)">
+        <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="g-filters">
+    {% for chip in g.chips %}<button type="button" class="g-chip" data-role-chip="{{ chip.key }}" style="--h: {{ chip.hue }}">{{ chip.label }}</button>{% endfor %}
+    <span class="g-sep" aria-hidden="true"></span>
+    <button type="button" class="g-chip g-chip-pool" data-pool-toggle aria-pressed="false"><span class="g-diamond" aria-hidden="true"></span>{{ g.pool_label }}</button>
+    <span class="g-count" id="g-count" aria-live="polite"></span>
+  </div>
+  <div class="g-scroll">
+    <div class="g-grid" id="g-grid">
+      {% for t in g.tiles %}
+      <div class="g-tile{{ ' is-gone' if t.gone }}" data-id="{{ t.id }}" data-search="{{ t.search }}" data-roles="{{ t.roles }}"
+           data-pool="{{ 1 if t.pool else 0 }}" data-gone="{{ t.gone }}" data-name="{{ t.name }}" data-info="{{ t.info }}"
+           title="{{ t.tip }}" role="button" tabindex="0">
+        <div class="g-portrait">
+          <div class="g-disc">{% if t.img %}<img src="{{ t.img }}" alt="" loading="lazy">{% endif %}</div>
+          {% if t.gone %}<span class="g-strike" aria-hidden="true"></span>{% endif %}
+          {% if t.pool %}<span class="g-pool" aria-hidden="true"></span>{% endif %}
+        </div>
+        <span class="g-name">{{ t.name }}</span>
+        <span class="g-meta g-tone-{{ t.tone }}">{{ t.meta }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="g-none" id="g-none" hidden>Aucun champion ne répond à cette recherche.</div>
+  </div>
+  <div class="g-bar">
+    <div class="g-sel-portrait"><img id="g-sel-img" alt=""></div>
+    <div class="g-sel-text"><span class="g-sel-name" id="g-sel-name">Choisis un champion</span><span class="g-sel-info" id="g-sel-info"></span></div>
+    <span class="g-hint">Double-clic pour {{ g.verb }}</span>
+    <button type="button" class="g-secondary" data-grid-close>Fermer</button>
+    <button type="button" class="d-act {{ 'd-act-ban' if g.mode == 'ban' else 'd-act-lock' }}" id="g-act" disabled>{{ g.verb|capitalize }}</button>
+  </div>
+</div>
+{% endif %}

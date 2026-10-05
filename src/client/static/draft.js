@@ -265,8 +265,9 @@
   }
 
   async function confirmLock() {
-    if (!ctx.sel || !ctx.state?.my_turn) return;
-    await post("/draft/action/lock", { champion_id: ctx.sel }); // le sceau suit quand le client confirme
+    if (!ctx.sel || !ctx.state?.my_turn) return false;
+    const done = await post("/draft/action/lock", { champion_id: ctx.sel }); // le sceau suit quand le client confirme
+    return !!done;
   }
 
   /** Verrouillage confirmé : sceau apposé, impact, 170 étincelles, secousse. */
@@ -306,9 +307,10 @@
   }
 
   async function confirmBan() {
-    if (!ctx.banSel) return;
+    if (!ctx.banSel) return false;
     const done = await post("/draft/action/ban", { champion_id: ctx.banSel });
     if (done) banStamp();
+    return !!done;
   }
 
   /** Les picks adverses arrivent après les bans : 700 ms puis 150 ms d'écart (README, « Ban »). */
@@ -410,6 +412,10 @@
       if (pick) return hoverPick(+pick.dataset.champ, name(pick), pick.querySelector("img")?.src);
       if (event.target.closest('[data-act="ban"]')) confirmBan();
       else if (event.target.closest('[data-act="lock"]')) confirmLock();
+      else if (event.target.closest("[data-open-grid]")) window.DraftGrid?.open();
+      else if (event.target.closest(".d-me") && !ctx.state?.locked_id) window.DraftGrid?.open();
+      else if (event.target.closest("[data-ban-me]") && ctx.state?.kind === "ban" && !ctx.state.my_ban_id)
+        window.DraftGrid?.open();
     });
     addEventListener("resize", () => ctx.alive() && fit());
     const timer = setInterval(() => {
@@ -438,6 +444,9 @@
     select,
     aimBan,
     hoverPick,
+    confirmBan,
+    confirmLock,
+    openGrid: () => window.DraftGrid?.open(),
     post,
     toast,
     refresh,

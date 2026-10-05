@@ -259,6 +259,10 @@ class DraftConfig:
     POLL_INTERVAL: float = 1.0  # Check draft state every N seconds
     # SPEC-21 : bans conseillés que le snapshot de draft porte (la console en affiche 3).
     SNAPSHOT_BAN_COUNT: int = 4
+    # SPEC-21 grimoire : menaces lues pour annoter tous les champions en phase de bans, et part
+    # minimale (en %) d'une lane pour qu'un champion y figure.
+    GRIMOIRE_BAN_ROWS: int = 250
+    GRIMOIRE_ROLE_SHARE: float = 5.0
     AUTO_HOVER_DELAY: float = 0.5  # Delay before auto-hovering champion
 
     # Feature toggles

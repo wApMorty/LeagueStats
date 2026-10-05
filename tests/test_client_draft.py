@@ -11,10 +11,13 @@ from src.client import draft_view
 from src.client.app import create_app
 from src.client.assets import Assets
 from src.client.bus import EventBus
+from src.client.draft_grimoire import grimoire_view, plain
 from src.config_client import client_config
 from src.draft.snapshot import (
     DraftSnapshot,
     SnapshotBan,
+    SnapshotBanAdvice,
+    SnapshotChampion,
     SnapshotPlayer,
     SnapshotRecommendation,
     SnapshotSkipped,
@@ -370,6 +373,8 @@ def test_aides_de_format():
 def test_script_servi_et_chargé_par_la_coque(client):
     assert client.get("/static/draft.js").status_code == 200
     assert 'src="/static/draft.js"' in client.get("/").text
+
+
 # ---------- phase de bans (tâche 87) ----------
 
 
@@ -394,13 +399,9 @@ def test_bans_conseilles_cartes_gain_et_justification(client, bus):
     assert "Bans conseillés · menaces pour ton pool" in html and "Pool GRIND" in html
     assert html.count('class="d-card"') == 2
     assert "+2,9" in html and "pts si banni" in html and "+1,2" in html
-    assert (
-        "Ta meilleure réponse : Aatrox (+1,5 pts)" in html and "Garen (−0,4 pts)" in html
-    )
+    assert "Ta meilleure réponse : Aatrox (+1,5 pts)" in html and "Garen (−0,4 pts)" in html
     assert 'data-champ="122"' in html and 'src="/assets/champion/Darius.png"' in html
-    assert (
-        '<button type="button" class="d-act d-act-ban" data-act="ban" disabled>' in html
-    )
+    assert '<button type="button" class="d-act d-act-ban" data-act="ban" disabled>' in html
 
 
 def test_bans_conseilles_etat_du_script(client, bus):
@@ -441,11 +442,7 @@ def test_noms_de_ban_echappes(client, bus):
         ban_snapshot(ban_advice=[asdict(advice("<b>x</b>", 1, 1.0, "<i>y</i>"))]),
     )
     html = client.get("/draft/stage").text
-    assert (
-        "<b>x</b>" not in html
-        and "&lt;b&gt;x&lt;/b&gt;" in html
-        and "<i>y</i>" not in html
-    )
+    assert "<b>x</b>" not in html and "&lt;b&gt;x&lt;/b&gt;" in html and "<i>y</i>" not in html
 
 
 def test_js_servi_sans_erreur_de_syntaxe():
@@ -457,10 +454,9 @@ def test_js_servi_sans_erreur_de_syntaxe():
     if node is None:
         pytest.skip("node absent")
     path = Path(__file__).parent.parent / "src" / "client" / "static" / "draft.js"
-    assert (
-        subprocess.run([node, "--check", str(path)], capture_output=True).returncode
-        == 0
-    )
+    assert subprocess.run([node, "--check", str(path)], capture_output=True).returncode == 0
+
+
 # ---------- phase de picks (tâche 88) ----------
 
 
@@ -495,38 +491,28 @@ def test_sous_titre_profondeur_et_champions_ecartes(client, bus):
 def test_sans_recommandation_le_message_remplace_les_cartes(client, bus):
     bus.publish("draft", pick_snapshot(recommendations=[], skipped=[]))
     html = client.get("/draft/stage").text
-    assert (
-        "Aucune recommandation pour le moment" in html and 'class="d-card"' not in html
-    )
+    assert "Aucune recommandation pour le moment" in html and 'class="d-card"' not in html
 
 
 def test_pas_mon_tour_les_cartes_restent_mais_pas_de_survol_serveur(client, bus):
     bus.publish("draft", pick_snapshot(my_turn=False))
     html = client.get("/draft/stage").text
-    assert (
-        'class="d-card"' in html and "Phase de picks — en attente de ton tour" in html
-    )
+    assert 'class="d-card"' in html and "Phase de picks — en attente de ton tour" in html
     assert state_of(html)["my_turn"] is False
 
 
 def test_verrouille_la_rangee_devient_la_selection_de_skin(client, bus):
     snapshot = pick_snapshot()
-    snapshot["allies"][0].update(
-        champion_id=266, champion="Aatrox", hover_id=0, hover=None
-    )
+    snapshot["allies"][0].update(champion_id=266, champion="Aatrox", hover_id=0, hover=None)
     bus.publish("draft", snapshot)
     html = client.get("/draft/stage").text
     assert (
-        "Aatrox scellé" in html
-        and 'data-act="lock"' not in html
-        and 'class="d-card"' not in html
+        "Aatrox scellé" in html and 'data-act="lock"' not in html and 'class="d-card"' not in html
     )
     assert state_of(html)["locked_id"] == 266
 
 
-def test_mon_portrait_est_toujours_la_pour_l_apercu_et_ne_rejoue_pas_son_apparition(
-    client, bus
-):
+def test_mon_portrait_est_toujours_la_pour_l_apercu_et_ne_rejoue_pas_son_apparition(client, bus):
     bus.publish("draft", ban_snapshot())
     fragment = client.get("/draft/stage").text
     assert "<img data-me" in fragment
@@ -536,3 +522,172 @@ def test_mon_portrait_est_toujours_la_pour_l_apercu_et_ne_rejoue_pas_son_apparit
 
 def test_le_sceau_du_verrouillage_a_sa_cible_de_secousse(client):
     assert "data-quake" in client.get("/draft").text
+
+
+# ---------- grimoire des champions (tâche 89) ----------
+
+
+import re  # noqa: E402
+
+
+def table():
+    return [
+        asdict(row)
+        for row in [
+            SnapshotChampion(266, "Aatrox", ["top"], 0.5482, None),
+            SnapshotChampion(122, "Darius", ["top"], 0.5307, 2.0),
+            SnapshotChampion(64, "LeeSin", ["jungle"], 0.49, None),
+            SnapshotChampion(103, "Ahri", ["middle"], 0.51, None),
+            SnapshotChampion(222, "Jinx", ["bottom"], 0.52, None),
+            SnapshotChampion(12, "Alistar", ["support"], 0.5, None),
+            SnapshotChampion(23, "Tryndamere", ["top"], 0.47, None),
+            SnapshotChampion(777, "Yone", ["top", "middle"], None, None),
+        ]
+    ]
+
+
+def tiles(html):
+    return re.findall(r'<div class="g-tile[^"]*" data-id="(\d+)"', html)
+
+
+def test_recherche_sans_accents_ni_casse():
+    assert plain("Kai'Sa") == "kai'sa" and plain("Renata Glasc") == "renata glasc"
+    assert plain("Nunu & Willump") == "nunu & willump" and plain("Cho'Gath") == "cho'gath"
+    assert plain("Éclat") == "eclat" and plain("MAÎTRE") == "maitre"
+
+
+def test_grimoire_sans_snapshot(client):
+    response = client.get("/draft/champions")
+    assert response.status_code == 200 and "Pas de champ select" in response.text
+
+
+def test_tri_recommandations_puis_pool_puis_alphabetique(client, bus):
+    bus.publish("draft", pick_snapshot(champions=table(), pool=["Yone", "Jinx"]))
+    html = client.get("/draft/champions").text
+    # Aatrox, Darius : recommandés (0) ; Jinx, Yone : pool (1) ; Ahri, Alistar, Lee Sin, Tryndamere : le reste.
+    # Darius (adverse banni), Alistar (allié), Jinx (allié) et Lee Sin / Tryndamere (adverses) restent listés.
+    assert tiles(html) == ["266", "122", "222", "777", "103", "12", "64", "23"]
+
+
+def test_indisponibles_avec_leur_raison(client, bus):
+    bus.publish("draft", pick_snapshot(champions=table(), pool=[]))
+    html = client.get("/draft/champions").text
+    reasons = dict(
+        re.findall(
+            r'data-id="(\d+)" data-search="[^"]*" data-roles="[^"]*"\s+data-pool="\d" data-gone="([^"]*)"',
+            html,
+        )
+    )
+    assert reasons["122"] == "banni"  # ban adverse de Darius
+    assert reasons["777"] == "banni"  # ban allié de Yone
+    assert reasons["12"] == "allié" and reasons["222"] == "allié"
+    assert reasons["23"] == "adverse" and reasons["64"] == "adverse"
+    assert reasons["266"] == "" and reasons["103"] == ""
+    assert html.count("is-gone") == 6 and html.count("g-strike") == 6
+
+
+def test_meta_des_tuiles_en_pick(client, bus):
+    bus.publish("draft", pick_snapshot(champions=table(), pool=["Ahri"]))
+    html = client.get("/draft/champions").text
+    assert '<span class="g-meta g-tone-win">54,8 %</span>' in html
+    assert (
+        'data-info="Victoire prédite 54,8 % · 1,2k games · suite attendue : Alistar (Support)"'
+        in html
+    )
+    assert "Pool GRIND uniquement" in html
+
+
+def test_info_pool_sans_donnees_et_hors_pool(client, bus):
+    snap = pick_snapshot(champions=table(), pool=["Ahri"], recommendations=[], pool_name="GRIND")
+    snap["enemies"] = snap["enemies"][2:]  # libère Lee Sin et Tryndamere
+    snap["allies"] = snap["allies"][:1]
+    snap["ally_bans"], snap["enemy_bans"] = [], []
+    bus.publish("draft", snap)
+    html = client.get("/draft/champions").text
+    assert (
+        "Pool GRIND · sans données exploitables en Top · victoire prédite 51,0 % (modèle seul)"
+        in html
+    )
+    assert "Hors pool · victoire prédite 49,0 % (modèle seul, sans historique perso)" in html
+
+
+def test_mode_ban_gains_et_intentions(client, bus):
+    snap = ban_snapshot(
+        champions=table(),
+        ban_advice=[asdict(SnapshotBanAdvice("Darius", 122, 2.94, "Aatrox", 1.5, 12))],
+        my_ban=asdict(SnapshotBan(777, "Yone", "ally")),
+    )
+    snap["allies"][1].update(hover_id=103, hover="Ahri")
+    snap["allies"][0].update(hover_id=266, hover="Aatrox")
+    bus.publish("draft", snap)
+    html = client.get("/draft/champions").text
+    assert 'class="g-overlay g-ban"' in html and "Double-clic pour bannir" in html
+    assert tiles(html)[0] == "122"  # la menace conseillée en tête
+    assert '<span class="g-meta g-tone-ban">+2,9 pts</span>' in html
+    assert "Gain estimé si banni : +2,9 pts · Ta meilleure réponse : Aatrox (+1,5 pts)" in html
+    assert "Hors des menaces identifiées pour ton pool" in html
+    assert 'data-gone="intention alliée"' in html and 'data-gone="ton intention"' in html
+    assert 'data-gone="banni"' in html  # mon ban
+
+
+def test_puces_de_role_et_role_par_defaut(client, bus):
+    bus.publish("draft", pick_snapshot(champions=table()))
+    html = client.get("/draft/champions").text
+    assert 'data-role="top"' in html
+    for key in ("all", "top", "jungle", "middle", "bottom", "support"):
+        assert f'data-role-chip="{key}"' in html
+    assert re.search(r'data-roles="top middle"', html)  # Yone joue deux rôles
+
+
+def test_noms_de_champions_echappes_dans_le_grimoire(client, bus):
+    rows = table()
+    rows[0]["champion"] = "<img src=x onerror=alert(1)>"
+    bus.publish("draft", pick_snapshot(champions=rows))
+    html = client.get("/draft/champions").text
+    assert "<img src=x" not in html and "&lt;img src=x" in html
+
+
+def test_vue_sans_snapshot():
+    assert grimoire_view(None, None) == {"empty": True}
+
+
+def test_boutons_d_ouverture_et_scripts(client, bus):
+    bus.publish("draft", ban_snapshot())
+    html = client.get("/draft/stage").text
+    assert "data-open-grid" in html and "Tous les champions" in html
+    bus.publish("draft", pick_snapshot())
+    assert "data-open-grid" in client.get("/draft/stage").text
+    assert 'src="/static/champions.js"' in client.get("/").text
+    assert client.get("/static/champions.js").status_code == 200
+
+
+def test_champions_js_sans_erreur_de_syntaxe():
+    import shutil
+    import subprocess
+    from pathlib import Path
+
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node absent")
+    path = Path(__file__).parent.parent / "src" / "client" / "static" / "champions.js"
+    assert subprocess.run([node, "--check", str(path)], capture_output=True).returncode == 0
+
+
+def test_instantane_du_grimoire_construit_par_le_live_coach():
+    """`build_snapshot` annote tous les champions : rôles, victoire prédite, gain de ban."""
+    from unittest.mock import Mock
+
+    from src.draft.snapshot import Analysis, _champion_table
+
+    monitor = Mock()
+    monitor.champion_id_to_name = {1: "Annie", 2: "Zed"}
+    monitor.lane_distributions = {
+        1: {"middle": 80.0, "top": 3.0},
+        2: {"middle": 60.0, "jungle": 20.0},
+    }
+    analysis = Analysis(candidates={1: 0.52})
+    rows = _champion_table(monitor, analysis, {2: 1.4})
+    assert [(r.champion, r.roles, r.win_probability, r.ban_gain) for r in rows] == [
+        ("Annie", ["middle"], 0.52, None),  # 3 % de top : sous le seuil
+        ("Zed", ["middle", "jungle"], None, 1.4),
+    ]

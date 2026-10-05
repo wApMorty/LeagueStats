@@ -79,6 +79,17 @@ class SnapshotBanAdvice:
 
 
 @dataclass
+class SnapshotChampion:
+    """Un champion du grimoire : ses rôles, sa victoire prédite si je le prends, son gain si banni."""
+
+    champion_id: int
+    champion: str
+    roles: List[str] = field(default_factory=list)
+    win_probability: Optional[float] = None  # ma lane, ce champion verrouillé (0 à 1)
+    ban_gain: Optional[float] = None  # points si banni (phase de bans)
+
+
+@dataclass
 class DraftSnapshot:
     phase: str = ""
     kind: Optional[str] = None  # "ban" | "pick" : ce qui se joue maintenant
@@ -102,6 +113,7 @@ class DraftSnapshot:
     # Fin de draft attendue si l'on joue le premier du classement (la position actuelle sans lui).
     projected_probability: Optional[float] = None
     ban_advice: List[SnapshotBanAdvice] = field(default_factory=list)
+    champions: List[SnapshotChampion] = field(default_factory=list)
     pool_name: Optional[str] = None
     pool: List[str] = field(default_factory=list)
     advice: Optional[str] = None
@@ -118,6 +130,7 @@ class Analysis:
     results: Sequence[SearchResult] = ()
     games_by_champion: Dict[str, int] = field(default_factory=dict)
     skipped: List[Tuple[str, int]] = field(default_factory=list)
+    candidates: Dict[int, float] = field(default_factory=dict)  # championId -> victoire si je le prends
 
 
 def _team(
@@ -147,6 +160,29 @@ def _team(
     return players
 
 
+def _champion_table(monitor, analysis: "Analysis", ban_gains: Dict[int, float]) -> List[SnapshotChampion]:
+    """Tous les champions connus, annotés pour le grimoire (rôles de `lane_distributions`)."""
+    distributions = getattr(monitor, "lane_distributions", None) or {}
+    rows = []
+    for champion_id, name in monitor.champion_id_to_name.items():
+        shares = distributions.get(champion_id, {})
+        roles = [
+            lane
+            for lane, share in sorted(shares.items(), key=lambda item: -item[1])
+            if share >= draft_config.GRIMOIRE_ROLE_SHARE
+        ]
+        rows.append(
+            SnapshotChampion(
+                champion_id,
+                name,
+                roles,
+                analysis.candidates.get(champion_id),
+                ban_gains.get(champion_id),
+            )
+        )
+    return sorted(rows, key=lambda row: row.champion.lower())
+
+
 def build_snapshot(
     monitor, state: DraftState, analysis: Analysis, advice: Optional[str]
 ) -> DraftSnapshot:
@@ -157,6 +193,7 @@ def build_snapshot(
     base = analysis.base_probability
     games = analysis.games_by_champion
     ids = {n.lower(): i for i, n in monitor.champion_id_to_name.items()}
+    ban_rows, gains = monitor.ban_advisor.advice(state, draft_config.SNAPSHOT_BAN_COUNT, ids) if is_ban else ([], {})
     return DraftSnapshot(
         phase=state.phase,
         kind="ban" if is_ban else ("pick" if state.phase else None),
@@ -194,9 +231,8 @@ def build_snapshot(
         depth=results[0].depth if results else 0,
         base_probability=base,
         projected_probability=results[0].win_probability if results else base,
-        ban_advice=monitor.ban_advisor.advice(state, draft_config.SNAPSHOT_BAN_COUNT, ids)
-        if is_ban
-        else [],
+        ban_advice=ban_rows,
+        champions=_champion_table(monitor, analysis, gains),
         pool_name=getattr(monitor, "pool_name", None),
         pool=list(getattr(monitor, "current_pool", []) or []),
         advice=advice,

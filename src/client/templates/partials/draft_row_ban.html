@@ -6,6 +6,9 @@
     <span class="d-row-sub">{% if v.pool_name %}Pool {{ v.pool_name }} · {% endif %}gain de victoire estimé si le champion est banni</span>
   </div>
   <div class="d-row-actions">
+    <button type="button" class="d-ghost" data-open-grid>
+      <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5"/></svg>Tous les champions
+    </button>
     {% if v.state.my_ban_id %}
     <span class="d-done" data-banned>{{ v.strips.me.name }} banni</span>
     {% else %}

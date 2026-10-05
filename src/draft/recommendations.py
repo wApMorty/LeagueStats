@@ -164,7 +164,26 @@ class DraftRecommender:
             self._provide(state, analysis)
         except Exception as e:
             print(f"[WARNING] Erreur lors de la génération des recommandations: {e}")
+        self._fill_candidates(state, analysis)
         self._publish(state, analysis)
+
+    def _fill_candidates(self, state: DraftState, analysis: Analysis) -> None:
+        """Victoire prédite si je prenais chacun des champions encore libres, sur ma lane (grimoire)."""
+        try:
+            lane = state.ally_positions.get(state.local_player_cell_id)
+            mine = next((c for c in state.ally_cells if c.cell_id == state.local_player_cell_id), None)
+            if not lane or (mine is not None and mine.champion_id) or self.m._is_ban_phase(state):
+                return
+            allies = self._placed(state.ally_picks, state)
+            enemies = self._placed(state.enemy_picks, state)
+            taken = set(state.get_all_actions())
+            for champion_id, name in self.m.champion_id_to_name.items():
+                if champion_id not in taken:
+                    analysis.candidates[champion_id] = self.m.evaluator.win_probability(
+                        allies + [(name, lane)], enemies
+                    )
+        except Exception:  # pylint: disable=broad-exception-caught
+            analysis.candidates.clear()
 
     @staticmethod
     def _signature(state: DraftState) -> tuple:

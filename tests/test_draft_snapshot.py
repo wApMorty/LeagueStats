@@ -7,6 +7,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from src.client.bus import EventBus
+from src.config_constants import draft_config
 from src.draft.search import PickTurn, SearchResult
 from src.draft.snapshot import TOPIC
 from src.draft.state_parser import DraftStateParser
@@ -271,7 +272,7 @@ def test_bans_conseilles_structures_pendant_la_phase_de_bans(monitor):
         {"champion": "Yone", "champion_id": None, "gain": 1.2, "best_response": "Darius", "best_response_value": -0.4, "matchups": 8},
     ]
     # le snapshot en demande plus que la console (3), qui garde son nombre
-    assert monitor.assistant.get_ban_recommendations.call_args.kwargs["num_bans"] == 4
+    assert monitor.assistant.get_ban_recommendations.call_args.kwargs["num_bans"] == draft_config.GRIMOIRE_BAN_ROWS
 
 
 def test_bans_conseilles_ignores_les_bans_precalcules_indisponibles(monitor):

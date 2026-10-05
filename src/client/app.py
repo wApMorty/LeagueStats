@@ -19,6 +19,7 @@ from ..config_client import client_config
 from ..pool_manager import get_user_data_path
 from ..user_prefs import load_motion, save_motion
 from .assets import PLACEHOLDER, Assets
+from .draft_grimoire import grimoire_view
 from .draft_actions import Refusal, role_command, run as run_draft_action
 from .draft_view import signature, stage_view
 from .lcu_proxy import LcuProxy
@@ -211,6 +212,12 @@ def create_app(
         """Le contenu synchronisé de l'écran, rechargé par le script à chaque snapshot du bus."""
         view = stage_view(draft_snapshot(), app.state.assets)
         return templates.TemplateResponse(request, "partials/draft_stage.html", {"v": view})
+
+    @app.get("/draft/champions", response_class=HTMLResponse)
+    def draft_champions(request: Request):
+        """Le grimoire des champions, ouvert par le script au clic."""
+        view = grimoire_view(draft_snapshot(), app.state.assets)
+        return templates.TemplateResponse(request, "partials/draft_grimoire.html", {"g": view})
 
     @app.post("/draft/action/{name}")
     def draft_action(name: str, champion_id: int):

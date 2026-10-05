@@ -22,9 +22,10 @@ précalculés en base, qui ne connaissent pas l'état live.
 """
 
 import sys
-from typing import List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from ..analysis.pool_value import dominant_lane
+from ..config_constants import draft_config
 from .snapshot import SnapshotBanAdvice
 from .state import DraftState
 
@@ -92,26 +93,32 @@ class BanAdvisor:
 
     def advice(
         self, state: DraftState, limit: int, ids: Optional[dict] = None
-    ) -> List[SnapshotBanAdvice]:
-        """Les bans conseillés, structurés pour le client (SPEC-21 tâche 85). Ne lève jamais."""
+    ) -> Tuple[List[SnapshotBanAdvice], Dict[int, float]]:
+        """Les `limit` bans conseillés, structurés pour le client (SPEC-21 tâche 85), et le gain de
+        chaque menace lue (champion_id -> points) qui annote le grimoire. Ne lève jamais."""
+        ids = ids or {}
         try:
-            return [
+            rows = [
+                row[:5]
+                for row in self._recommendations(state, max(limit, draft_config.GRIMOIRE_BAN_ROWS))
+            ]
+            advice = [
                 SnapshotBanAdvice(
                     champion=enemy,
-                    champion_id=(ids or {}).get(enemy.lower()),
+                    champion_id=ids.get(enemy.lower()),
                     gain=threat,
                     best_response=best_champion,
                     best_response_value=best_value,
                     matchups=matchups,
                 )
-                for enemy, threat, best_value, best_champion, matchups in (
-                    row[:5] for row in self._recommendations(state, limit)
-                )
+                for enemy, threat, best_value, best_champion, matchups in rows[:limit]
             ]
+            gains = {ids[row[0].lower()]: row[1] for row in rows if row[0].lower() in ids}
+            return advice, gains
         except Exception as e:  # pylint: disable=broad-exception-caught
             if self.m.verbose is True:
                 print(f"[WARNING] Bans conseillés indisponibles: {e}")
-            return []
+            return [], {}
 
     def handle_auto_ban_hover(self, state: DraftState) -> None:
         """Handle auto-ban-hover when it's our turn to ban."""
