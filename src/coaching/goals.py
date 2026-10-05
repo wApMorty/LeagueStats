@@ -53,16 +53,22 @@ def set_goal(repo: CoachingRepository, metric: str, role: str, origin: str = "pl
     return f"[AXE] Nouvel axe de travail : {describe(repo.goals()[-1])}"
 
 
-def propose(repo: CoachingRepository, role: str) -> Optional[str]:
-    """Active le schéma négatif le plus net quand une place d'axe est libre."""
+def next_proposal(repo: CoachingRepository, role: str) -> Optional[str]:
+    """Métrique du schéma négatif le plus net quand une place d'axe est libre, sans rien écrire."""
     active = repo.goals()
     if len(active) >= coaching_config.MAX_ACTIVE_GOALS:
         return None
     taken = {goal["metric"] for goal in active}
     for pattern in patterns(repo.player_history(role), role):
         if pattern.polarity == "negative" and pattern.metric not in taken:
-            return set_goal(repo, pattern.metric, role, origin="proposed")
+            return pattern.metric
     return None
+
+
+def propose(repo: CoachingRepository, role: str) -> Optional[str]:
+    """Active le schéma négatif le plus net quand une place d'axe est libre."""
+    metric = next_proposal(repo, role)
+    return set_goal(repo, metric, role, origin="proposed") if metric else None
 
 
 def judge(repo: CoachingRepository, analysis: GameAnalysis) -> List[str]:

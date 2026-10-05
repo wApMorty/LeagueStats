@@ -33,3 +33,19 @@ def read_only(db_path: Union[str, Path]) -> Iterator[DbHandle]:
         yield DbHandle(connection)
     finally:
         connection.close()
+
+
+@contextmanager
+def writable(db_path: Union[str, Path]) -> Iterator[DbHandle]:
+    """Ouvre `db_path` en écriture (jamais créé s'il manque) pour les seules écritures du coaching
+    (SPEC-21 §2 : fixer ou clore un axe) ; les repositories valident leurs écritures eux-mêmes.
+
+    Raises:
+        sqlite3.OperationalError: base absente, ou verrouillée au-delà du délai d'attente.
+    """
+    uri = f"{Path(db_path).resolve().as_uri()}?mode=rw"
+    connection = sqlite3.connect(uri, uri=True, timeout=client_config.DB_READ_TIMEOUT_S)
+    try:
+        yield DbHandle(connection)
+    finally:
+        connection.close()

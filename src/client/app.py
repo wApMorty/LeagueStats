@@ -18,6 +18,8 @@ from sse_starlette.sse import EventSourceResponse
 from ..config import get_resource_path
 from ..config_client import client_config
 from ..pool_manager import get_user_data_path
+from ..coaching.goals import set_goal
+from ..coaching.grid import GRID
 from ..repositories.coaching import CoachingRepository
 from ..user_prefs import load_motion, save_motion
 from .assets import PLACEHOLDER, Assets
@@ -29,7 +31,8 @@ from .data import (
     progression_view,
     rank_view,
 )
-from .db import read_only
+from .db import read_only, writable
+from .home import ORIGINS, axes_view, empty_home, home_view
 from .draft_grimoire import grimoire_view
 from .draft_loadout import normalize_page, plan as loadout_plan, runes_payload, send as send_loadout
 from . import found
@@ -224,7 +227,37 @@ def create_app(
 
     @app.get("/", response_class=HTMLResponse)
     def accueil(request: Request):
-        return render(request, "accueil.html")
+        champions, now = Champions(app.state.assets), datetime.now(timezone.utc)
+        view = coaching(lambda repo: home_view(repo, champions, now), empty_home)
+        return render(request, "accueil.html", v=view)
+
+    def axes_fragment(request: Request, notice: Optional[str] = None) -> HTMLResponse:
+        """Les places d'axe, rechargées après chaque écriture ; le message de celle-ci au-dessus."""
+        view = coaching(lambda repo: axes_view(repo, notice), lambda: None)
+        return templates.TemplateResponse(request, "partials/accueil_axes.html", {"a": view})
+
+    @app.get("/accueil/axes", response_class=HTMLResponse)
+    def accueil_axes(request: Request):
+        return axes_fragment(request)
+
+    @app.post("/accueil/axe", response_class=HTMLResponse)
+    def axe_fixer(request: Request, metric: str, role: str, origin: str = "player"):
+        """Fixe un axe de travail (SPEC-21 §2 : l'une des deux écritures du coaching dans la base)."""
+        if role not in GRID or metric not in GRID[role] or origin not in ORIGINS:
+            return JSONResponse({"detail": "axe invalide"}, status_code=400)
+        with writable(app.state.db_path) as db:
+            message = set_goal(CoachingRepository(db), metric, role, origin)
+        return axes_fragment(request, message.removeprefix("[AXE] "))
+
+    @app.post("/accueil/axe/{goal_id}/clore", response_class=HTMLResponse)
+    def axe_clore(request: Request, goal_id: int):
+        """Clôt un axe actif (statut `dropped`, comme quand le Live Coach en déplace un)."""
+        with writable(app.state.db_path) as db:
+            repo = CoachingRepository(db)
+            if not any(goal["id"] == goal_id for goal in repo.goals()):
+                return JSONResponse({"detail": "axe inconnu ou déjà clos"}, status_code=404)
+            repo.set_goal_status(goal_id, "dropped")
+        return axes_fragment(request, "Axe clos")
 
     @app.get("/rang", response_class=HTMLResponse)
     def rang(request: Request):

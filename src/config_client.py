@@ -130,6 +130,12 @@ class ClientConfig:
     # Écran Calibration (SPEC-21 tâche 54) : taille du diagramme de fiabilité.
     CALIBRATION_CHART_SIZE: Tuple[int, int] = (620, 520)
 
+    # Accueil du coaching (SPEC-21 tâche 71) : parties en portraits, forces et faiblesses du bilan, et
+    # écart (en σ) qui remplit une demi-barre divergente des constats (22 % de la demi-largeur par σ).
+    HOME_LAST_GAMES: int = 10
+    HOME_STRENGTHS: int = 2
+    HOME_FINDING_Z_FULL: float = 2.27
+
     # Live Coach lancé en fil par le client : attente du client LoL (secondes) entre deux essais
     # et délai d'arrêt à la fermeture de la fenêtre.
     LIVE_COACH_RETRY_S: float = 15.0

@@ -1,6 +1,88 @@
 {% extends "base.html" %}
 {% block title %}Coaching · LeagueStats{% endblock %}
+{% block page_class %} page-coaching page-accueil{% endblock %}
 {% block content %}
-<h1>Coaching</h1>
-<p class="muted">Les écrans du coaching (rang, progression, parties, calibration) arrivent avec les tâches suivantes de SPEC-21.</p>
+<svg class="home-ring" data-spin="240" viewBox="-460 -460 920 920" aria-hidden="true">
+  <circle data-trace="2200" r="450" class="ring-a"/>
+  <circle data-trace="2200" data-delay="200" r="410" class="ring-b"/>
+  <path data-trace="2600" data-delay="400" d="M0,-410 L241,331.7 L-389.9,-126.7 L389.9,-126.7 L-241,331.7 Z" class="ring-star"/>
+</svg>
+<header class="page-head" data-rise="1">
+  <div class="page-titles">
+    <div class="kicker">{{ v.kicker }}</div>
+    <h1 data-spell="1">Accueil</h1>
+  </div>
+  <div class="base-status"><span class="dot-ok{{ '' if v.fresh else ' off' }}" data-glow="2400"></span>{{ v.status }}</div>
+</header>
+
+<div class="cols">
+  <div class="main">
+    {% set a = v.axes %}
+    {% include "partials/accueil_axes.html" %}
+
+    <section class="findings">
+      <div class="section-head" data-rise="1" data-delay="400">
+        <h2 class="grad-title grad-mint">Derniers constats</h2>
+        {% if v.findings %}<a href="{{ v.findings.href }}">{{ v.findings.champion }} · {{ "victoire" if v.findings.win else "défaite" }} · {{ v.findings.ended }} ›</a>{% endif %}
+      </div>
+      {% if v.findings %}
+      <div class="finding-grid finding-head"><span>Métrique</span><span class="r">Toi</span><span class="r">Norme · objectif</span><span class="c">Écart à la norme</span><span class="r">σ</span></div>
+      {% for f in v.findings.rows %}
+      <div class="finding-grid" data-rise="1" data-delay="{{ f.delay }}">
+        <span class="finding-label">{{ f.label }}</span>
+        <span class="r you">{{ f.value }}</span>
+        <span class="r ref">{{ f.reference }}</span>
+        <span class="diverge"><i class="diverge-bar {{ 'good' if f.good else 'bad' }}" data-bar="x" data-delay="{{ f.delay }}"
+            style="left: {{ f.left }}%; width: {{ f.width }}%; transform-origin: {{ 'left' if f.good else 'right' }} center"></i></span>
+        <span class="r {{ 'ok' if f.good else 'ko' }}">{{ f.z }}</span>
+      </div>
+      {% endfor %}
+      {% else %}
+      <p class="empty">Pas encore de constat : ils arrivent après une partie classée analysée, quand la norme du poste compte assez de parties.</p>
+      {% endif %}
+    </section>
+  </div>
+
+  <aside class="side">
+    {% if v.rank %}
+    <a class="rank-card queue-card" href="/rang" style="--hue: {{ v.rank.hue }}" data-rise="1" data-tilt="1" data-delay="200">
+      <div class="queue-name">{{ v.rank.name }}</div>
+      <div class="queue-rank">
+        <svg viewBox="-30 -30 60 60" aria-hidden="true"><circle data-trace="1200" data-delay="300" r="27"/><path data-trace="1400" data-delay="600" d="M0,-20 L17,0 L0,20 L-17,0 Z"/><circle class="queue-core" r="4"/></svg>
+        <div><span class="queue-tier">{{ v.rank.tier }}</span><span class="queue-lp"><span data-count="{{ v.rank.lp }}">{{ v.rank.lp }}</span> LP{% if v.rank.note %} · {{ v.rank.note }}{% endif %}</span></div>
+      </div>
+      {% if v.rank.spark %}{{ v.rank.spark }}{% endif %}
+      <div class="rank-link">Voir le rang ›</div>
+    </a>
+    {% endif %}
+
+    <section class="last-games" data-rise="1" data-delay="320">
+      <div class="queue-name">{{ v.last.title }}</div>
+      <div class="last-row">
+        {% for g in v.last.games %}
+        <a class="portrait {{ 'win' if g.win else 'loss' }}" href="{{ g.href }}" title="{{ g.champion }} · {{ 'victoire' if g.win else 'défaite' }}" data-pop="1" data-delay="{{ 500 + loop.index0 * 50 }}">{% if g.portrait %}<img src="{{ g.portrait }}" alt="{{ g.champion }}">{% endif %}</a>
+        {% else %}
+        <span class="muted">Aucune partie capturée.</span>
+        {% endfor %}
+      </div>
+    </section>
+
+    {% if v.review %}
+    <section class="review" data-rise="1" data-delay="440">
+      <h2>Bilan · {{ v.review.label }}</h2>
+      {% if v.review.known %}
+      {% for title, tone, rows in (("Points forts", "good", v.review.strong), ("À travailler", "bad", v.review.weak)) %}
+      <div class="review-block review-{{ tone }}">
+        <span class="queue-name">{{ title }}</span>
+        {% for r in rows %}<div class="review-row"><span>{{ r.label }}</span><b>{{ r.z }}</b></div>{% else %}<div class="muted">Rien d'écarté de la norme.</div>{% endfor %}
+      </div>
+      {% endfor %}
+      {% else %}
+      <p class="muted">Norme en construction : le bilan se calcule quand ce poste compte assez de parties.</p>
+      {% endif %}
+      <a href="/progression?role={{ v.review.role }}">Toute la progression ›</a>
+    </section>
+    {% endif %}
+  </aside>
+</div>
 {% endblock %}

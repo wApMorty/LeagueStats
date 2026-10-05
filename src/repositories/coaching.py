@@ -6,7 +6,7 @@ les modules de src/coaching/ instancient ce repository sur la base ouverte.
 Sans try/except, comme game_records.py : les appelants sont best-effort.
 """
 
-from typing import Dict, List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence, Tuple
 
 
 class CoachingRepository:
@@ -157,6 +157,45 @@ class CoachingRepository:
         return self._rows(
             "SELECT captured_utc, queue, tier, division, lp FROM rank_snapshots ORDER BY id"
         )
+
+    def capture_stats(self) -> Tuple[int, Optional[str]]:
+        """(parties capturées, horodatage UTC de la dernière capture)."""
+        count, latest = self._rows("SELECT COUNT(*), MAX(captured_utc) FROM game_records")[0]
+        return count, latest
+
+    def latest_findings(self) -> Optional[dict]:
+        """Les constats de la dernière partie qui en a : `game_id` et lignes `{metric, polarity, z,
+        reference, value, norm_mean, norm_n, objective_value}`, négatifs d'abord."""
+        games = self._rows(
+            "SELECT f.game_id FROM game_findings f JOIN game_records g ON g.game_id = f.game_id "
+            "ORDER BY g.game_creation_utc DESC LIMIT 1"
+        )
+        return {"game_id": games[0][0], "rows": self.game_findings(games[0][0])} if games else None
+
+    def game_findings(self, game_id: int) -> List[dict]:
+        """Constats d'une partie avec la valeur du joueur et ses références, négatifs d'abord."""
+        keys = (
+            "metric",
+            "polarity",
+            "z",
+            "reference",
+            "value",
+            "norm_mean",
+            "norm_n",
+            "objective_value",
+        )
+        rows = self._rows(
+            """
+            SELECT f.metric, f.polarity, f.z, f.reference, m.value, m.norm_mean, m.norm_n,
+                   m.objective_value
+            FROM game_findings f
+            JOIN game_metrics m ON m.game_id = f.game_id AND m.metric = f.metric AND m.is_player = 1
+            WHERE f.game_id = ?
+            ORDER BY CASE f.polarity WHEN 'negative' THEN 0 ELSE 1 END, f.rank
+            """,
+            (game_id,),
+        )
+        return [dict(zip(keys, row)) for row in rows]
 
     # ---------- parties capturées (client, SPEC-21 tâches 53 et 75) ----------
 

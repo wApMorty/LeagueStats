@@ -1,0 +1,60 @@
+{#- Les places d'axe de l'accueil : rechargées seules après chaque écriture (fixer, clore). -#}
+{% macro choose(a) %}
+{% if a.options %}
+<details class="goal-choose">
+  <summary class="btn-ghost">Choisir une autre métrique</summary>
+  <div class="goal-options">
+    {% for o in a.options %}
+    <button type="button" class="chip-btn" hx-post="/accueil/axe?metric={{ o.metric }}&amp;role={{ a.role }}&amp;origin=player">{{ o.label }}</button>
+    {% endfor %}
+  </div>
+</details>
+{% endif %}
+{% endmacro %}
+{% if a %}
+<section id="axes" class="axes" hx-target="this" hx-select="#axes" hx-swap="outerHTML">
+  <div class="section-head" data-rise="1" data-delay="120">
+    <h2 class="grad-title grad-violet">Axes de travail</h2>
+    <span class="muted">{{ a.note }}</span>
+  </div>
+  {% if a.notice %}<p class="notice" role="status">{{ a.notice }}</p>{% endif %}
+  <div class="goal-grid">
+    {% for c in a.cards %}
+    {% if c.kind == "goal" %}
+    <article class="goal-card" style="--hue: {{ c.hue }}" data-rise="1" data-tilt="1" data-delay="{{ 180 + loop.index0 * 100 }}">
+      <svg class="goal-orbit" data-spin="{{ 90 if loop.first else -90 }}" viewBox="-60 -60 120 120" aria-hidden="true"><circle r="56"/><path d="M0,-56 L32.9,45.3 L-53.3,-17.3 L53.3,-17.3 L-32.9,45.3 Z"/></svg>
+      <div class="queue-name">{{ c.tag }}</div>
+      <div class="goal-label">{{ c.label }}</div>
+      <div class="goal-sub">{{ c.role }} · cible {{ c.target }}</div>
+      <div class="goal-marks">
+        {% for m in c.marks %}
+        <span class="goal-mark {{ 'held' if m else ('miss' if m is false else 'todo') }}" data-pop="1" data-delay="{{ 600 + loop.index0 * 70 }}">{% if m %}✓{% endif %}<span class="sr-only">{{ "tenu" if m else ("non tenu" if m is false else "pas encore jugé") }}</span></span>
+        {% endfor %}
+        <span class="goal-hold">{{ c.hold }}</span>
+      </div>
+      <div class="goal-foot">
+        <span class="muted-2">{{ c.since }}</span>
+        <button type="button" class="btn-ghost" hx-post="/accueil/axe/{{ c.id }}/clore">Clore l'axe</button>
+      </div>
+    </article>
+    {% else %}
+    <article class="goal-card goal-free" style="--hue: {{ c.hue }}" data-rise="1" data-delay="{{ 180 + loop.index0 * 100 }}">
+      <div class="queue-name muted-2">Place libre</div>
+      {% if c.proposal %}
+      <div class="goal-quote">Le coach propose « {{ c.proposal.label }} », ton schéma négatif le plus net.</div>
+      <div class="goal-actions">
+        <button type="button" class="btn-primary" hx-post="/accueil/axe?metric={{ c.proposal.metric }}&amp;role={{ a.role }}&amp;origin=proposed">Fixer cet axe</button>
+        {{ choose(a) }}
+      </div>
+      {% elif a.role %}
+      <div class="goal-quote">Pas de proposition pour l'instant : le coach attend un schéma négatif net (au moins {{ a.minimum }} parties analysées en {{ a.role_label }}).</div>
+      <div class="goal-actions">{{ choose(a) }}</div>
+      {% else %}
+      <div class="goal-quote">Aucune partie analysée : un axe se fixe à partir de ton poste principal.</div>
+      {% endif %}
+    </article>
+    {% endif %}
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
