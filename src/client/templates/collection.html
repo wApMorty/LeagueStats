@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% import "partials/lcu_state.html" as lcu %}
+{% block title %}Collection · LeagueStats{% endblock %}
+{% block page_class %} page-client page-collection{% endblock %}
+{% block content %}
+<header class="page-head" data-rise="1">
+  <div class="page-titles">
+    <div class="kicker">Client{% if v.summary %} · {{ v.summary }}{% endif %}</div>
+    <h1 data-spell="1">Collection</h1>
+  </div>
+  {% if v.tabs %}
+  <nav class="chips" aria-label="Vues de la collection">
+    {% for tab in v.tabs %}
+    <a class="role-chip" href="/collection?vue={{ tab.key }}"{% if tab.active %} aria-current="true"{% endif %} style="--hue: 85">{{ tab.label }}</a>
+    {% endfor %}
+  </nav>
+  {% endif %}
+</header>
+
+{% if v.state %}
+{{ lcu.message(v.state) }}
+{% elif v.view == "champions" %}
+<nav class="chips filter-chips" aria-label="Filtrer par classe" data-fade="1" data-delay="100">
+  <a class="chip-btn{{ ' is-on' if not v.role }}" href="/collection?vue=champions">Tous</a>
+  {% for r in v.roles %}<a class="chip-btn{{ ' is-on' if r.active }}" href="/collection?vue=champions&amp;role={{ r.key }}">{{ r.label }}</a>{% endfor %}
+</nav>
+{% if v.champions %}
+<div class="champ-grid">
+  {% for c in v.champions %}
+  <article class="champ-tile" title="{{ c.roles|join(', ') }}">
+    <span class="champ-face">{% if c.portrait %}<img src="{{ c.portrait }}" alt="" loading="lazy">{% endif %}</span>
+    <b>{{ c.name }}</b>
+    {% if c.free %}<span class="badge badge-warn">Rotation</span>{% endif %}
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<p class="empty">Aucun champion possédé dans cette classe.</p>
+{% endif %}
+{% elif v.view == "runes" %}
+{% if v.pages %}
+<div class="collection-list">
+  {% for p in v.pages %}
+  <article class="panel rune-page{{ ' is-active' if p.active }}" data-rise="1" data-delay="{{ [loop.index0 * 40, 500]|min }}">
+    <span class="rune-key">{% if p.icon %}<img src="{{ p.icon }}" alt="">{% endif %}</span>
+    <div class="rune-text">
+      <b>{{ p.name }}</b>
+      <span class="muted">{{ p.keystone }} · {{ p.primary }} + {{ p.secondary }} · modifiée le {{ p.modified }}</span>
+    </div>
+    {% if p.active %}<span class="badge">Active</span>{% endif %}
+    {% if not p.valid %}<span class="badge badge-warn">Invalide</span>{% endif %}
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<p class="empty">Aucune page de runes dans le client.</p>
+{% endif %}
+{% else %}
+{% if v.sets %}
+<div class="collection-list">
+  {% for s in v.sets %}
+  <article class="panel item-set" data-rise="1" data-delay="{{ [loop.index0 * 40, 500]|min }}">
+    <div class="panel-head">
+      <h2>{{ s.title }}</h2>
+      <span class="muted">{{ s.count }} objet{{ "s" if s.count > 1 }}</span>
+    </div>
+    {% if s.champions %}<div class="set-champs">{% for c in s.champions %}<span class="portrait" title="{{ c.name }}">{% if c.portrait %}<img src="{{ c.portrait }}" alt="{{ c.name }}">{% endif %}</span>{% endfor %}</div>{% endif %}
+    {% for b in s.blocks %}
+    <div class="set-block"><span class="muted">{{ b.type }}</span><span class="items">{% for item in b["items"] %}<img src="/assets/item/{{ item }}.png" alt="">{% endfor %}</span></div>
+    {% endfor %}
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<p class="empty">Aucun set d'objets dans le client.</p>
+{% endif %}
+{% endif %}
+<p class="fine" data-rise="1" data-delay="300">Lecture seule : l'import des pages de runes et des sets d'objets reste celui du Live Coach au verrouillage.</p>
+{% endblock %}

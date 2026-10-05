@@ -1008,3 +1008,23 @@ h2 { margin: 0; font: 600 24px/1 var(--font-title); }
 .items img { width: 32px; height: 32px; border-radius: 4px; border: 1px solid var(--rule); }
 .team-bans { margin-top: 12px; display: flex; align-items: center; gap: 8px; }
 .team-bans .portrait { width: 30px; height: 30px; }
+
+/* Collection (tâche 79) */
+.filter-chips { margin-bottom: 20px; }
+.chip-btn.is-on { border-color: var(--copper); color: var(--ink); background: oklch(0.74 0.11 55 / 0.14); }
+a.chip-btn { display: inline-flex; align-items: center; text-decoration: none; }
+.champ-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 14px; }
+.champ-tile { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 6px; border-radius: var(--r-card);
+  border: 1px solid oklch(0.74 0.11 55 / 0.14); background: var(--surface-2); text-align: center; }
+.champ-tile b { font: 600 17px/1.1 var(--font-title); }
+.champ-face { width: 72px; height: 72px; overflow: hidden; border-radius: 50%; border: 2px solid var(--rule); background: var(--surface); }
+.champ-face img { display: block; width: 116%; height: 116%; margin: -8%; }
+.collection-list { display: flex; flex-direction: column; gap: 14px; }
+.rune-page { display: flex; align-items: center; gap: 18px; padding: 12px 20px; }
+.rune-page.is-active { border-color: oklch(0.82 0.13 165 / 0.5); }
+.rune-key { flex: none; width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--rule); background: var(--surface); }
+.rune-key img { display: block; width: 100%; height: 100%; }
+.rune-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.rune-text b { font: 600 22px/1.1 var(--font-title); }
+.set-champs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.set-block { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 6px 0; border-top: 1px solid oklch(0.74 0.11 55 / 0.08); }

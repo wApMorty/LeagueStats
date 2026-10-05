@@ -41,6 +41,7 @@ from .draft_skins import SkinBook, select_skin
 from .draft_view import Champions, signature, stage_view
 from .lcu_proxy import LcuProxy
 from .lcu_status import LcuProbe
+from .collection import VIEWS, read_collection
 from .historique import read_game, read_history
 from .profil import read_profile
 from .review import game_page, games_view, load_model
@@ -89,7 +90,7 @@ NAV = (
         (
             NavItem("profil", "Profil", "ᛒ", 245, "/profil"),
             NavItem("historique", "Historique", "ᛁ", 55, "/historique"),
-            NavItem("collection", "Collection", "ᚲ", 85),
+            NavItem("collection", "Collection", "ᚲ", 85, "/collection"),
             NavItem("lobby", "Lobby", "ᚹ", 290),
             NavItem("social", "Social", "ᛜ", 165),
         ),
@@ -346,6 +347,14 @@ def create_app(
             request,
             "historique_partie.html",
             lambda: read_game(proxy, game_id, captured_ids(), champions, now),
+        )
+
+    @app.get("/collection", response_class=HTMLResponse)
+    def collection(request: Request, vue: str = "champions", role: Optional[str] = None):
+        champions = Champions(app.state.assets)
+        vue = vue if vue in dict(VIEWS) else "champions"
+        return screen(
+            request, "collection.html", lambda: read_collection(proxy, vue, role, champions)
         )
 
     @app.get("/postgame", response_class=HTMLResponse)
