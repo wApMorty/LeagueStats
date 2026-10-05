@@ -41,6 +41,7 @@ from .draft_skins import SkinBook, select_skin
 from .draft_view import Champions, signature, stage_view
 from .lcu_proxy import LcuProxy
 from .lcu_status import LcuProbe
+from .profil import read_profile
 from .review import game_page, games_view, load_model
 
 
@@ -85,7 +86,7 @@ NAV = (
         "Client",
         245,
         (
-            NavItem("profil", "Profil", "ᛒ", 245),
+            NavItem("profil", "Profil", "ᛒ", 245, "/profil"),
             NavItem("collection", "Collection", "ᚲ", 85),
             NavItem("lobby", "Lobby", "ᚹ", 290),
             NavItem("social", "Social", "ᛜ", 165),
@@ -224,6 +225,18 @@ def create_app(
                 raise
             return empty()
 
+    def screen(request: Request, template: str, read: Callable[[], Optional[dict]], **context: Any):
+        """Un écran lu dans le LCU : « client fermé » ou « indisponible » quand il ne répond pas, jamais
+        une 500 (SPEC-21 §4.7 : une forme inattendue après un patch du client dégrade l'écran)."""
+        view: Optional[dict] = None
+        if probe.is_open():
+            try:
+                view = read()
+            except (KeyError, TypeError, ValueError, IndexError, AttributeError):
+                view = None
+            view = view or {"state": "unavailable"}
+        return render(request, template, v=view or {"state": "closed"}, **context)
+
     @app.get("/sante")
     def sante() -> dict:
         return {"ok": True}
@@ -307,6 +320,10 @@ def create_app(
                 detail=f"La partie {game_id} n'est pas dans les parties capturées.",
             )
         return render(request, "partie.html", g=page, review=False)
+
+    @app.get("/profil", response_class=HTMLResponse)
+    def profil(request: Request):
+        return screen(request, "profil.html", lambda: read_profile(proxy))
 
     @app.get("/postgame", response_class=HTMLResponse)
     def postgame(request: Request):

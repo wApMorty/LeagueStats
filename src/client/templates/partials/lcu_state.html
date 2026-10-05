@@ -1,0 +1,8 @@
+{#- État d'un écran qui lit le client LoL (SPEC-21 §4.7) : fermé, ou ne répond pas à cette lecture. -#}
+{% macro message(state) -%}
+{% if state == "closed" %}
+<p class="empty lcu-closed" role="status">Client LoL fermé : cet écran lit ses données dans le client. Ouvre-le, la page se remplira à la prochaine actualisation.</p>
+{% else %}
+<p class="empty lcu-unavailable" role="status">Le client LoL ne répond pas à cette lecture (un patch a pu changer ses réponses). Réessaie dans un instant.</p>
+{% endif %}
+{%- endmacro %}

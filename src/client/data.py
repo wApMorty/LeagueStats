@@ -72,6 +72,11 @@ def plural(count: int, word: str) -> str:
     return f"{count} {word}{'s' if count > 1 else ''}"
 
 
+def thousands(value: float) -> str:
+    """Entier à la française : espace fine insécable entre les milliers (« 19 265 »)."""
+    return f"{round(value):,}".replace(",", "\u202f")
+
+
 # ---------- rang ----------
 
 # Habillage des deux files (jetons du thème) : dégradé de la courbe, couleur, teinte de la carte.

@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% import "partials/lcu_state.html" as lcu %}
+{% block title %}Profil · LeagueStats{% endblock %}
+{% block page_class %} page-client page-profil{% endblock %}
+{% block content %}
+<header class="page-head" data-rise="1">
+  <div class="page-titles">
+    <div class="kicker">Client{% if v.level %} · niveau {{ v.level }}{% endif %}</div>
+    <h1 data-spell="1">Profil</h1>
+  </div>
+</header>
+
+{% if v.state %}
+{{ lcu.message(v.state) }}
+{% else %}
+<div class="cols">
+  <div class="main">
+    <section class="panel hero" data-fade="1" data-delay="100">
+      <span class="hero-icon"><img src="{{ v.icon }}" alt=""><b>{{ v.level }}</b></span>
+      <div class="hero-text">
+        <div class="hero-name">{{ v.name }}<span class="hero-tag">#{{ v.tag }}</span></div>
+        <div class="muted">{{ v.privacy }} · {{ v.xp.since }} XP dans ce niveau</div>
+        <div class="bar" role="progressbar" aria-valuenow="{{ v.xp.percent }}" aria-valuemin="0" aria-valuemax="100" aria-label="Progression vers le niveau suivant"><i style="width: {{ v.xp.percent }}%"></i></div>
+        <div class="fine">{{ v.xp.percent }} % du niveau suivant · encore {{ v.xp.until }} XP</div>
+      </div>
+    </section>
+
+    <section class="panel" data-rise="1" data-delay="250">
+      <div class="panel-head"><h2>Défis</h2>{% if v.challenges %}<span class="muted">{{ v.challenges.title }}</span>{% endif %}</div>
+      {% if v.challenges %}
+      {% set c = v.challenges %}
+      <div class="kv-row">
+        <div><b>{{ c.level }}</b><span>niveau global</span></div>
+        <div><b>{{ c.score }}</b><span>points</span></div>
+        <div><b>{{ c.percentile }} %</b><span>meilleurs joueurs</span></div>
+        <div><b>{{ c.missing }}</b><span>points avant le palier suivant</span></div>
+      </div>
+      <div class="cats">
+        {% for cat in c.categories %}
+        <div class="cat">
+          <span class="cat-name">{{ cat.name }}<i>{{ cat.level }}</i></span>
+          <div class="bar" role="progressbar" aria-valuenow="{{ cat.percent }}" aria-valuemin="0" aria-valuemax="100" aria-label="{{ cat.name }}"><i style="width: {{ cat.percent }}%"></i></div>
+          <span class="tab muted">{{ cat.current }} / {{ cat.max }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% if c.top %}
+      <div class="tops-3">
+        {% for t in c.top %}
+        <article class="top-challenge">
+          <div class="queue-name">{{ t.level }}</div>
+          <b>{{ t.name }}</b>
+          <p class="fine">{{ t.text }}</p>
+          <span class="tab">{{ t.value }}{% if t.next %} / {{ t.next }}{% endif %} · top {{ t.percentile }} %</span>
+        </article>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% else %}
+      <p class="empty">Défis indisponibles pour l'instant.</p>
+      {% endif %}
+    </section>
+  </div>
+
+  <aside class="side">
+    {% if v.queues is none %}
+    <p class="empty">Rangs indisponibles pour l'instant.</p>
+    {% else %}
+    {% for card in v.queues %}
+    <article class="queue-card" data-rise="1" data-tilt="1" data-delay="{{ 200 + loop.index0 * 120 }}" style="--hue: {{ card.hue }}">
+      <svg class="queue-orbit" data-spin="{{ card.spin }}" viewBox="-60 -60 120 120" aria-hidden="true"><circle r="56"/><path d="M0,-56 L32.9,45.3 L-53.3,-17.3 L53.3,-17.3 L-32.9,45.3 Z"/></svg>
+      <div class="queue-name">{{ card.name }}</div>
+      {% if card.empty %}
+      <p class="muted">{{ card.note }}</p>
+      {% else %}
+      <div class="queue-rank">
+        <svg viewBox="-30 -30 60 60" aria-hidden="true"><circle data-trace="1200" r="27"/><path data-trace="1400" d="M0,-20 L17,0 L0,20 L-17,0 Z"/><circle class="queue-core" r="4"/></svg>
+        <div><span class="queue-tier">{{ card.tier }}</span><span class="queue-lp"><span data-count="{{ card.lp }}">{{ card.lp }}</span> LP</span></div>
+      </div>
+      <div class="queue-stats">
+        {% for value, label in card.stats %}<div><b>{{ value }}</b><span>{{ label }}</span></div>{% endfor %}
+      </div>
+      <div class="queue-note">{{ card.note }}</div>
+      {% endif %}
+    </article>
+    {% endfor %}
+    <p class="fine"><a href="/rang">Voir la courbe de LP</a> (le Live Coach prend une photo après chaque partie classée).</p>
+    {% endif %}
+    {% if v.regalia %}
+    <section class="panel" data-rise="1" data-delay="500">
+      <div class="panel-head"><h2>Régalia</h2></div>
+      {% for label, value in v.regalia %}
+      <div class="kv"><span class="muted">{{ label }}</span><b>{{ value }}</b></div>
+      {% endfor %}
+    </section>
+    {% endif %}
+  </aside>
+</div>
+{% endif %}
+{% endblock %}

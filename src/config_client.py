@@ -136,6 +136,18 @@ class ClientConfig:
     HOME_STRENGTHS: int = 2
     HOME_FINDING_Z_FULL: float = 2.27
 
+    # Profil (SPEC-21 tâche 77) : files affichées (le LCU renvoie aussi celles de TFT), catégories de défis.
+    PROFILE_QUEUES: Tuple[str, ...] = ("RANKED_SOLO_5x5", "RANKED_FLEX_SR")
+    CHALLENGE_CATEGORIES: Dict[str, str] = field(
+        default_factory=lambda: {
+            "COLLECTION": "Collection",
+            "TEAMWORK": "Esprit d'équipe",
+            "EXPERTISE": "Expertise",
+            "VETERANCY": "Ancienneté",
+            "IMAGINATION": "Imagination",
+        }
+    )
+
     # Live Coach lancé en fil par le client : attente du client LoL (secondes) entre deux essais
     # et délai d'arrêt à la fermeture de la fenêtre.
     LIVE_COACH_RETRY_S: float = 15.0

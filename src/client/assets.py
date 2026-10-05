@@ -27,6 +27,7 @@ _KINDS: Dict[str, Tuple[str, "re.Pattern[str]", bool]] = {
     "champion": ("{v}/img/champion/{name}", re.compile(rf"{_SEGMENT}\.png"), True),
     "spell": ("{v}/img/spell/{name}", re.compile(r"Summoner[A-Za-z0-9]+\.png"), True),
     "item": ("{v}/img/item/{name}", re.compile(r"\d+\.png"), True),
+    "profileicon": ("{v}/img/profileicon/{name}", re.compile(r"\d+\.png"), True),
     "perk": ("img/{name}", re.compile(rf"(?:{_SEGMENT}/)*{_SEGMENT}\.png"), False),
     "loading": ("img/champion/loading/{name}", re.compile(r"[A-Za-z0-9]+_\d+\.jpg"), False),
     "splash": ("img/champion/splash/{name}", re.compile(r"[A-Za-z0-9]+_\d+\.jpg"), False),
