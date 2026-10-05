@@ -189,7 +189,7 @@ class DraftRecommender:
     def _signature(state: DraftState) -> tuple:
         """Ce que le client dessine et que la liste des picks ne dit pas : survols, tour, bans."""
         cells = [
-            (c.cell_id, c.champion_id, c.hover_id) for c in state.ally_cells + state.enemy_cells
+            (c.cell_id, c.champion_id, c.hover_id, c.skin_id) for c in state.ally_cells + state.enemy_cells
         ]
         return (
             state.phase,

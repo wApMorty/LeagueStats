@@ -129,6 +129,7 @@ class DraftStateParser:
                         champion_id=player.get("championId", 0),
                         hover_id=hovers.get(cell_id) or player.get("championPickIntent", 0) or 0,
                         position=state.ally_positions.get(cell_id),
+                        skin_id=player.get("selectedSkinId", 0) or 0,
                     )
                 )
 

@@ -48,7 +48,7 @@
 {% set s = v.seals %}
 <div class="d-data" hidden data-key="data" data-sig="{{ v.state|sig }}" data-state='{{ v.state|tojson }}'></div>
 
-<div class="d-splash" data-key="splash" data-sig="splash"><img data-splash alt=""></div>
+<div class="d-splash{{ ' on' if v.skin.splash }}" data-key="splash" data-sig="{{ v.skin.splash }}">{% if v.skin.splash %}<img data-splash src="{{ v.skin.splash }}" alt="">{% endif %}</div>
 
 <div class="d-head" data-key="head" data-sig="head" data-sync>
   <div class="d-head-left" data-key="head-left" data-sig="{{ [v.title, v.phase]|sig }}">

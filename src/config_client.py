@@ -46,6 +46,9 @@ class ClientConfig:
     DRAFT_REC_COUNT: int = 4
     DRAFT_STAGE_SIZE: Tuple[int, int] = (1920, 950)
 
+    # Skins du champion verrouillé : durée de garde de la liste lue dans le LCU.
+    SKINS_TTL_S: float = 60.0
+
     # Live Coach lancé en fil par le client : attente du client LoL (secondes) entre deux essais
     # et délai d'arrêt à la fermeture de la fenêtre.
     LIVE_COACH_RETRY_S: float = 15.0

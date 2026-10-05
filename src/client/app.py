@@ -21,6 +21,7 @@ from ..user_prefs import load_motion, save_motion
 from .assets import PLACEHOLDER, Assets
 from .draft_grimoire import grimoire_view
 from .draft_actions import Refusal, role_command, run as run_draft_action
+from .draft_skins import SkinBook, select_skin
 from .draft_view import signature, stage_view
 from .lcu_proxy import LcuProxy
 from .lcu_status import LcuProbe
@@ -115,6 +116,7 @@ def create_app(
     app.state.session_token = secrets.token_urlsafe(client_config.SESSION_TOKEN_BYTES)
     probe = LcuProbe(lcu)
     proxy = LcuProxy(lcu)
+    skin_book = SkinBook(proxy)
     templates = Jinja2Templates(directory=get_resource_path(f"{CLIENT_DIR}/templates"))
     app.mount(
         "/static", StaticFiles(directory=get_resource_path(f"{CLIENT_DIR}/static")), name="static"
@@ -202,16 +204,34 @@ def create_app(
     def draft_snapshot() -> Optional[dict]:
         return bus.latest("draft") if bus is not None else None
 
+    def locked_skins(snapshot: Optional[dict]):
+        """Les skins du champion que j'ai verrouillé (lus dans le LCU), None sinon ou client fermé."""
+        me = next((p for p in (snapshot or {}).get("allies", []) if p["is_local"]), None)
+        return skin_book.skins(me["champion_id"]) if me and me["champion_id"] else None
+
     @app.get("/draft", response_class=HTMLResponse)
     def draft_page(request: Request):
-        view = stage_view(draft_snapshot(), app.state.assets, intro=True)
+        snapshot = draft_snapshot()
+        view = stage_view(snapshot, app.state.assets, intro=True, skins=locked_skins(snapshot))
         return render(request, "draft.html", v=view, stage_size=client_config.DRAFT_STAGE_SIZE)
 
     @app.get("/draft/stage", response_class=HTMLResponse)
     def draft_stage(request: Request):
         """Le contenu synchronisé de l'écran, rechargé par le script à chaque snapshot du bus."""
-        view = stage_view(draft_snapshot(), app.state.assets)
+        snapshot = draft_snapshot()
+        view = stage_view(snapshot, app.state.assets, skins=locked_skins(snapshot))
         return templates.TemplateResponse(request, "partials/draft_stage.html", {"v": view})
+
+    @app.post("/draft/skin")
+    def draft_skin(skin_id: int):
+        """Écrit le skin choisi dans le champ select ; refusé (409) s'il n'est pas possédé."""
+        me = next((p for p in (draft_snapshot() or {}).get("allies", []) if p["is_local"]), None)
+        try:
+            if not me or not me["champion_id"]:
+                raise Refusal("Verrouille d'abord ton champion")
+            return select_skin(proxy, skin_book, me["champion_id"], skin_id)
+        except Refusal as refusal:
+            return JSONResponse({"detail": str(refusal)}, status_code=409)
 
     @app.get("/draft/champions", response_class=HTMLResponse)
     def draft_champions(request: Request):

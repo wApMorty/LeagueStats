@@ -62,6 +62,7 @@
     if (reveal) staggerReveal(fresh);
     fresh.forEach(animate);
     if (reveal) revealBans(fresh);
+    revealSkins(fresh);
     paintRow();
     if (ctx.state?.locked_id && !wasLocked) requestAnimationFrame(sealMoment);
     listeners.forEach((listener) => listener(ctx.state, fresh));
@@ -126,6 +127,7 @@
     // Un survol que je viens de lancer prime quelques secondes sur ce que le client annonçait avant.
     const holding = ctx.hoverUntil > performance.now();
     if (state.locked_id) ctx.sel = state.locked_id;
+    if (!state.locked_id) ctx.skin = null;
     else if (state.hover_id && !(holding && ctx.sel)) ctx.sel = state.hover_id;
     else if (!ctx.sel) ctx.sel = state.recs[0] ?? null;
     renderBalance();
@@ -209,6 +211,7 @@
     const state = ctx.state;
     if (!state) return;
     paintPicks(state);
+    paintSkins(state);
     if (state.kind !== "ban") ctx.banSel = null;
     else if (state.my_ban_id) ctx.banSel = state.my_ban_id;
     else if (!ctx.banSel) ctx.banSel = state.ban_hover_id || state.bans[0] || null;
@@ -225,6 +228,61 @@
       button.textContent = name ? `Bannir ${name}` : "Bannir";
       button.disabled = !ctx.banSel || !name;
     }
+  }
+
+  // ---------- sélection de skin (tâche 90) ----------
+
+  /** Le skin marqué : mon dernier clic tant que le client ne l'a pas confirmé, sinon celui du client. */
+  function paintSkins(state) {
+    const cards = [...ctx.stage.querySelectorAll(".d-skin")];
+    if (!cards.length) return;
+    if (ctx.skin && state.skin_id === ctx.skin) ctx.skin = null; // confirmé
+    const chosen = ctx.skin && ctx.skinUntil > performance.now() ? ctx.skin : state.skin_id;
+    cards.forEach((card) => card.classList.toggle("is-sel", +card.dataset.skin === chosen));
+    const selected = cards.find((card) => +card.dataset.skin === chosen);
+    const title = document.getElementById("d-skin-title");
+    if (selected && title) title.textContent = `Skin · ${selected.dataset.name}`;
+  }
+
+  /** Les cartes de skin arrivent en tournant, l'une après l'autre. */
+  function revealSkins(fresh) {
+    if (Motion.opts().reduced) return;
+    fresh
+      .flatMap((node) => [...node.querySelectorAll(".d-skin")])
+      .forEach((card, i) =>
+        card.animate(
+          [{ opacity: 0, transform: "translateY(40px) rotateY(70deg)" }, { opacity: 1, transform: "none" }],
+          { duration: 560, delay: 200 + i * 45, easing: Motion.E.entree, fill: "backwards" },
+        ),
+      );
+  }
+
+  /** Choisit un skin possédé : aperçu et splash tout de suite, écriture dans le champ select. */
+  function pickSkin(card) {
+    if (card.dataset.owned !== "1" || !ctx.state?.locked_id) return;
+    const id = +card.dataset.skin;
+    ctx.skin = id;
+    ctx.skinUntil = performance.now() + 3000;
+    paintSkins(ctx.state);
+    const image = card.querySelector("img")?.src.replace("/loading/", "/splash/");
+    const splash = ctx.stage.querySelector(".d-splash");
+    if (splash && image) {
+      let img = splash.querySelector("img");
+      if (!img) splash.appendChild((img = document.createElement("img")));
+      img.src = image;
+      splash.classList.add("on");
+      if (!Motion.opts().reduced)
+        img.animate(
+          [{ opacity: 0, transform: "scale(1.12)", filter: "brightness(2.2) saturate(1.6)" }, { opacity: 1, transform: "scale(1)", filter: "none" }],
+          { duration: 900, easing: Motion.E.entree },
+        );
+    }
+    if (!Motion.opts().reduced) {
+      const [x, y] = Motion.center(card);
+      const C = Motion.C;
+      Motion.burst(x, y, { n: 50, speed: 7, glyphs: 6, ringR: 120, colors: [C.gold, C.copper, C.violet] });
+    }
+    post("/draft/skin", { skin_id: id });
   }
 
   function paintPicks(state) {
@@ -408,6 +466,8 @@
       const name = (card) => card.querySelector(".d-card-name").textContent;
       const ban = event.target.closest(".d-cards-ban .d-card");
       if (ban) return aimBan(+ban.dataset.champ, name(ban));
+      const skin = event.target.closest(".d-skin");
+      if (skin) return pickSkin(skin);
       const pick = event.target.closest(".d-cards-pick .d-card");
       if (pick) return hoverPick(+pick.dataset.champ, name(pick), pick.querySelector("img")?.src);
       if (event.target.closest('[data-act="ban"]')) confirmBan();

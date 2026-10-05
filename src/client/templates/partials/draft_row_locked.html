@@ -1,7 +1,30 @@
-{#- Champion verrouillé : la rangée devient la sélection de skin (tâche 90). -#}
-<div class="d-row-head" data-key="row-head" data-sig="{{ [v.phase, v.seals.me.name if v.seals.me else '']|sig }}">
+{#- Champion verrouillé : la rangée devient la sélection de skin (tâche 90). La possession vient du
+    LCU ; draft.js pose la sélection (`.is-sel`) d'après `state.skin_id` et le dernier clic. -#}
+{% set k = v.skin %}
+<div class="d-row-head" data-key="row-head" data-sig="{{ [v.phase, v.seals.me.name if v.seals.me else '', k.available, k.owned, k.cards|length, k.chosen_id]|sig }}">
   <div class="d-row-titles">
-    <span class="d-row-title">{{ v.seals.me.name if v.seals.me else 'Champion' }} scellé</span>
-    <span class="d-row-sub">Finalisez runes, sorts et skin</span>
+    <span class="d-row-title" id="d-skin-title">Skin · {{ k.chosen_name }}</span>
+    <span class="d-row-sub">
+      {%- if k.available and k.cards -%}
+      {{ k.owned }} skin{{ 's' if k.owned > 1 }} possédé{{ 's' if k.owned > 1 }} sur {{ k.cards|length }} · la sélection part directement dans le client
+      {%- elif k.available -%}
+      Aucun skin listé pour ce champion
+      {%- else -%}
+      Skins indisponibles : le client LoL ne répond pas
+      {%- endif -%}
+    </span>
   </div>
 </div>
+{% if k.cards %}
+<div class="d-skins" data-key="skins" data-sig="{{ k.cards|sig }}">
+  {% for card in k.cards %}
+  <div class="d-skin{{ '' if card.owned else ' is-locked' }}" data-skin="{{ card.id }}" data-owned="{{ 1 if card.owned else 0 }}"
+       data-name="{{ card.name }}" title="{{ card.name }}{{ '' if card.owned else ' · non possédé' }}" role="button" tabindex="0">
+    {% if card.img %}<img src="{{ card.img }}" alt="" loading="lazy">{% endif %}
+    <div class="d-skin-name">{{ card.name }}</div>
+    {% if not card.owned %}<span class="d-skin-lock" aria-hidden="true"><svg viewBox="0 0 12 12"><rect x="2.5" y="5.5" width="7" height="5" rx="1"/><path d="M4 5.5V4a2 2 0 0 1 4 0v1.5"/></svg></span>{% endif %}
+    <span class="d-skin-mark" aria-hidden="true"></span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}

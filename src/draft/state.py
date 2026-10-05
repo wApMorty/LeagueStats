@@ -31,6 +31,7 @@ class Cell:
     champion_id: int = 0  # champion verrouillé (0 : aucun)
     hover_id: int = 0  # champion survolé, pas encore verrouillé (0 : aucun)
     position: Optional[str] = None  # poste assigné par la file (alliés seulement)
+    skin_id: int = 0  # skin choisi (0 : le skin de base)
 
 
 @dataclass

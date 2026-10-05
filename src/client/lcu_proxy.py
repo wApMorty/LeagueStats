@@ -16,6 +16,7 @@ READS: Tuple[Pattern[str], ...] = tuple(
         r"/lol-gameflow/v1/(gameflow-phase|session)",
         r"/lol-champ-select/v1/(session|pickable-champion-ids|bannable-champion-ids)",
         r"/lol-summoner/v1/current-summoner",
+        r"/lol-champions/v1/inventories/\d+/champions/\d+/skins",
     )
 )
 

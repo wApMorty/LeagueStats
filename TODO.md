@@ -139,7 +139,7 @@ SPEC-21 §5 :
 | 87 | Draft, phase de bans | 5 | 73, 74, 85 | ✅ 2026-10-05 : 7 tests ; rangée « Bans conseillés » (gain, justification), cible visée = survol de ban dans le client, « Bannir X » (409 lisible hors phase), tampon magenta, révélation en cascade des bans puis des picks adverses au passage aux picks ; **rendu et animations à voir par @pj35** |
 | 88 | Draft, phase de picks | 5 | 73, 74 | ✅ 2026-10-05 : 8 tests ; 4 cartes (win % à 2 décimales, écart signé, suite attendue), clic = aperçu immédiat + survol dans le client à mon tour (409 lisible sinon), « Verrouiller X », sceau apposé quand le client confirme le lock ; rendu et animations à voir par @pj35 |
 | 89 | Draft, grimoire des champions | 5 | 88 | ✅ 2026-10-05 : 14 tests ; `draft_grimoire.py` + `/draft/champions` + `champions.js` : tri recommandations / pool / alphabétique, recherche sans accents, puces de rôle (mon rôle par défaut), pool, indisponibles avec leur raison, victoire prédite de **tous** les champions libres calculée par le Live Coach sur ma lane (173 champions : 1 ms à chaud, ~0,5 s à froid) et gains de ban de toutes les menaces lues, double-clic = action ; rendu à voir par @pj35 |
-| 90 | Draft, sélection de skin | 3 | 86, 88 | ⬜ |
+| 90 | Draft, sélection de skin | 3 | 86, 88 | ✅ 2026-10-05 : 13 tests (forme LCU relevée sur le client réel : `skins_annie.json`) ; possession lue dans le LCU et gardée 60 s, cartes 104×188 (cadenas et gris si non possédé), splash du skin choisi, `POST /draft/skin` (409 si non possédé ou avant le verrouillage), écriture par `my-selection` ; rendu à voir par @pj35 |
 | 91 | Draft, colonne loadout | 5 | 86, 88 | ⬜ |
 | 92 | Draft, éditeur de runes | 5 | 91 | ⬜ |
 | **Lot 3 — File trouvée et transition de page (8 pts)** | | | | |

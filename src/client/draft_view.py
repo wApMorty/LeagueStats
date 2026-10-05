@@ -82,6 +82,10 @@ class Champions:
     def __init__(self, assets: Any) -> None:
         self._by_key = {c["key"]: c for c in assets.champions()}
 
+    def ddragon_id(self, champion_id: Optional[int]) -> Optional[str]:
+        champion = self._by_key.get(champion_id)
+        return champion["id"] if champion else None
+
     def image(self, champion_id: Optional[int]) -> Optional[str]:
         champion = self._by_key.get(champion_id)
         return f"/assets/champion/{champion['id']}.png" if champion else None
@@ -304,8 +308,39 @@ def _phase(snapshot: Dict[str, Any], me: Optional[Dict[str, Any]]) -> str:
     return "pick_turn" if snapshot.get("my_turn") else "pick_wait"
 
 
+def skin_row(snapshot: Dict[str, Any], champions: Champions, skins: Optional[List[Dict[str, Any]]]) -> Dict[str, Any]:
+    """La sélection de skin du champion verrouillé : cartes, skin choisi, possession (README : « Skins »)."""
+    me = next((p for p in snapshot["allies"] if p["is_local"]), None)
+    champion_id = (me or {}).get("champion_id") or 0
+    ddragon = champions.ddragon_id(champion_id)
+    chosen = (me or {}).get("skin_id") or champion_id * 1000
+    cards = []
+    for skin in skins or []:
+        cards.append(
+            {
+                "id": skin["id"],
+                "num": skin["num"],
+                "name": "Classique" if skin["num"] == 0 or skin["base"] else skin["name"],
+                "owned": skin["owned"],
+                "img": f"/assets/loading/{ddragon}_{skin['num']}.jpg" if ddragon else None,
+            }
+        )
+    current = next((c for c in cards if c["id"] == chosen), cards[0] if cards else None)
+    return {
+        "available": skins is not None,
+        "cards": cards,
+        "chosen_id": chosen,
+        "chosen_name": current["name"] if current else "Classique",
+        "owned": sum(1 for c in cards if c["owned"]),
+        "splash": f"/assets/splash/{ddragon}_{current['num']}.jpg" if ddragon and current else None,
+    }
+
+
 def stage_view(
-    snapshot: Optional[Dict[str, Any]], assets: Any, intro: bool = False
+    snapshot: Optional[Dict[str, Any]],
+    assets: Any,
+    intro: bool = False,
+    skins: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """Tout ce que `partials/draft_stage.html` dessine ; `{"empty": True}` hors champ select."""
     if not snapshot:
@@ -315,6 +350,7 @@ def stage_view(
     phase = _phase(snapshot, sealed["me"])
     recs = recommendations(snapshot, champions)
     bans = ban_cards(snapshot, champions)
+    skin = skin_row(snapshot, champions, skins if phase in ("locked", "final") else None)
     base, projected = snapshot.get("base_probability"), snapshot.get("projected_probability")
     shown = projected if projected is not None else base
     # Ce que le script de l'écran lit à chaque rafraîchissement : le chrono, la balance, la sélection.
@@ -334,6 +370,7 @@ def stage_view(
         },
         "hover_id": (sealed["me"] or {}).get("champion_id") or snapshot_hover(snapshot),
         "locked_id": (sealed["me"] or {}).get("champion_id") or 0,
+        "skin_id": skin["chosen_id"],
         "my_ban_id": (snapshot.get("my_ban") or {}).get("champion_id") or 0,
         "ban_hover_id": (snapshot.get("my_ban_hover") or {}).get("champion_id") or 0,
         "recs": [r["champion_id"] for r in recs],
@@ -364,6 +401,7 @@ def stage_view(
         "role": ROLE_LABELS.get(snapshot.get("local_role"), ""),
         "seals": sealed,
         "strips": ban_strips(snapshot, champions),
+        "skin": skin,
         "recs": recs,
         "ban_cards": bans,
         "skipped": snapshot["skipped"],

@@ -1,6 +1,7 @@
 """Écran de draft du client (SPEC-21 tâche 73) : cadre, sceaux, balance, fragments synchronisables."""
 
 import json
+from pathlib import Path
 from dataclasses import asdict
 from html.parser import HTMLParser
 
@@ -507,7 +508,9 @@ def test_verrouille_la_rangee_devient_la_selection_de_skin(client, bus):
     bus.publish("draft", snapshot)
     html = client.get("/draft/stage").text
     assert (
-        "Aatrox scellé" in html and 'data-act="lock"' not in html and 'class="d-card"' not in html
+        "Skins indisponibles" in html
+        and 'data-act="lock"' not in html
+        and 'class="d-card"' not in html
     )
     assert state_of(html)["locked_id"] == 266
 
@@ -691,3 +694,170 @@ def test_instantane_du_grimoire_construit_par_le_live_coach():
         ("Annie", ["middle"], 0.52, None),  # 3 % de top : sous le seuil
         ("Zed", ["middle", "jungle"], None, 1.4),
     ]
+
+
+# ---------- sélection de skin (tâche 90) ----------
+
+
+def post(client, path, token=True, **params):
+    headers = {client_config.TOKEN_HEADER: client.app.state.session_token} if token else {}
+    return client.post(path, params=params, headers=headers)
+
+
+SKINS_FIXTURE = Path(__file__).parent / "fixtures" / "lcu_forms" / "skins_annie.json"
+
+
+class FauxLcuSkins:
+    """LCU réduit aux skins : forme relevée sur le client réel (fixtures/lcu_forms/skins_annie.json)."""
+
+    def __init__(self, skins=None):
+        self.credentials = object()
+        self.skins = (
+            json.loads(SKINS_FIXTURE.read_text(encoding="utf-8")) if skins is None else skins
+        )
+        self.calls = []
+        self.writes = []
+        self.refuses = False
+
+    def find_lcu_credentials(self):
+        return self.credentials
+
+    def _make_request(self, endpoint, method="GET", data=None):
+        self.calls.append((method, endpoint))
+        if method != "GET":
+            self.writes.append((method, endpoint, data))
+            return None if self.refuses else {}
+        if endpoint == "/lol-summoner/v1/current-summoner":
+            return {"summonerId": 7}
+        if endpoint == "/lol-champions/v1/inventories/7/champions/1/skins":
+            return self.skins
+        return None
+
+
+def annie_snapshot(skin_id=0, **overrides):
+    snapshot = pick_snapshot(**overrides)
+    snapshot["allies"][0].update(
+        champion_id=1, champion="Annie", hover_id=0, hover=None, skin_id=skin_id
+    )
+    return snapshot
+
+
+@pytest.fixture
+def lcu_skins():
+    return FauxLcuSkins()
+
+
+@pytest.fixture
+def skins_client(temp_db, bus, assets, lcu_skins, monkeypatch):
+    monkeypatch.setattr(client_config, "SKINS_TTL_S", 0.0)
+    assets._fetch = lambda url: (
+        json.dumps(
+            {
+                "data": {
+                    **CHAMPIONS["data"],
+                    "Annie": {"key": "1", "id": "Annie", "name": "Annie", "tags": []},
+                }
+            }
+        ).encode()
+        if url.endswith("champion.json")
+        else None
+    )
+    app = create_app(temp_db, bus=bus, lcu=lcu_skins, assets=assets)
+    return TestClient(app, base_url=LOCAL, raise_server_exceptions=False)
+
+
+def test_skins_possedes_et_verrouilles_lus_dans_le_lcu(skins_client, bus):
+    bus.publish("draft", annie_snapshot())
+    html = skins_client.get("/draft/stage").text
+    assert html.count('data-skin="') == 3
+    assert "Skin · Classique" in html and "Classique" in html
+    assert "1 skin possédé sur 3" in html
+    assert html.count("is-locked") == 2 and html.count("d-skin-lock") == 2
+    assert (
+        'src="/assets/loading/Annie_0.jpg"' in html and 'src="/assets/loading/Annie_1.jpg"' in html
+    )
+    assert 'data-skin="1000" data-owned="1"' in html and 'data-skin="1001" data-owned="0"' in html
+
+
+def test_splash_du_skin_choisi(skins_client, bus):
+    bus.publish("draft", annie_snapshot(skin_id=1000))
+    html = skins_client.get("/draft/stage").text
+    assert 'class="d-splash on"' in html and 'src="/assets/splash/Annie_0.jpg"' in html
+    assert state_of(html)["skin_id"] == 1000
+
+
+def test_skin_par_defaut_est_le_skin_de_base(skins_client, bus):
+    bus.publish("draft", annie_snapshot(skin_id=0))
+    assert state_of(skins_client.get("/draft/stage").text)["skin_id"] == 1000
+
+
+def test_pas_de_skins_avant_le_verrouillage(skins_client, bus, lcu_skins):
+    bus.publish("draft", pick_snapshot())
+    html = skins_client.get("/draft/stage").text
+    assert "d-skin" not in html and 'class="d-splash"' in html
+    assert lcu_skins.calls == []  # aucune lecture inutile du LCU
+
+
+def test_client_ferme_skins_indisponibles(skins_client, bus, lcu_skins):
+    lcu_skins.skins = None
+    bus.publish("draft", annie_snapshot())
+    html = skins_client.get("/draft/stage").text
+    assert "Skins indisponibles" in html and "d-skin " not in html
+
+
+def test_ecrire_un_skin_possede(skins_client, bus, lcu_skins):
+    bus.publish("draft", annie_snapshot())
+    response = post(skins_client, "/draft/skin", skin_id=1000)
+    assert response.status_code == 200
+    assert lcu_skins.writes == [
+        ("PATCH", "/lol-champ-select/v1/session/my-selection", {"selectedSkinId": 1000})
+    ]
+
+
+@pytest.mark.parametrize(
+    "skin_id, message",
+    [(1001, "possèdes pas"), (2000, "pas celui de ton champion"), (1999, "inconnu")],
+)
+def test_skin_refuse_sans_ecriture(skins_client, bus, lcu_skins, skin_id, message):
+    bus.publish("draft", annie_snapshot())
+    response = post(skins_client, "/draft/skin", skin_id=skin_id)
+    assert response.status_code == 409 and message in response.json()["detail"]
+    assert lcu_skins.writes == []
+
+
+def test_skin_avant_le_verrouillage_refuse(skins_client, bus, lcu_skins):
+    bus.publish("draft", pick_snapshot())
+    response = post(skins_client, "/draft/skin", skin_id=1000)
+    assert response.status_code == 409 and "Verrouille d'abord" in response.json()["detail"]
+    assert lcu_skins.writes == []
+
+
+def test_skin_sans_jeton_403(skins_client, bus, lcu_skins):
+    bus.publish("draft", annie_snapshot())
+    assert post(skins_client, "/draft/skin", token=False, skin_id=1000).status_code == 403
+    assert lcu_skins.calls == []
+
+
+def test_le_client_refuse_le_skin(skins_client, bus, lcu_skins):
+    bus.publish("draft", annie_snapshot())
+    lcu_skins.refuses = True
+    response = post(skins_client, "/draft/skin", skin_id=1000)
+    assert response.status_code == 409 and "refusé" in response.json()["detail"]
+
+
+def test_liste_des_skins_gardee_entre_deux_rendus(skins_client, bus, lcu_skins, monkeypatch):
+    monkeypatch.setattr(client_config, "SKINS_TTL_S", 60.0)
+    bus.publish("draft", annie_snapshot())
+    skins_client.get("/draft/stage")
+    skins_client.get("/draft/stage")
+    reads = [c for c in lcu_skins.calls if c[1].endswith("/skins")]
+    assert len(reads) == 1
+
+
+def test_skin_choisi_republie_le_snapshot(monkeypatch):
+    from src.draft.recommendations import DraftRecommender
+    from src.draft.state import Cell, DraftState
+
+    a = DraftState(ally_cells=[Cell(cell_id=0, champion_id=1, skin_id=0)])
+    b = DraftState(ally_cells=[Cell(cell_id=0, champion_id=1, skin_id=1002)])
+    assert DraftRecommender._signature(a) != DraftRecommender._signature(b)

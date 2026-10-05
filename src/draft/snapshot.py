@@ -28,6 +28,7 @@ class SnapshotPlayer:
     champion: Optional[str] = None
     hover_id: int = 0  # survolé, pas encore verrouillé
     hover: Optional[str] = None
+    skin_id: int = 0
     role: Optional[str] = None
     role_source: Optional[str] = None  # "lcu" | "inferred" | "user"
     role_confidence: Optional[float] = None
@@ -148,6 +149,7 @@ def _team(
                 cell_id=cell.cell_id,
                 champion_id=champion_id,
                 champion=name(champion_id) if champion_id else None,
+                skin_id=cell.skin_id,
                 hover_id=0 if champion_id else cell.hover_id,
                 hover=name(cell.hover_id) if cell.hover_id and not champion_id else None,
                 role=state.inferred_roles.get(champion_id) or cell.position,
