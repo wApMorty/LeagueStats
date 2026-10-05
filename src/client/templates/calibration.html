@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Calibration · LeagueStats{% endblock %}
+{% block page_class %} page-coaching page-calibration{% endblock %}
+{% block content %}
+<div id="calib">
+<header class="page-head" data-rise="1">
+  <div class="page-titles">
+    <div class="kicker">Coaching · modèle de draft{% if v.version %} · {{ v.version }}{% endif %}</div>
+    <h1 data-spell="1">Calibration</h1>
+  </div>
+  {% if v.versions|length > 1 %}
+  <nav class="chips" aria-label="Version du modèle">
+    {% for item in v.versions %}
+    <a class="role-chip" style="--hue: 55" href="/calibration?version={{ item.name|urlencode }}"
+       hx-get="/calibration?version={{ item.name|urlencode }}" hx-target="#calib" hx-select="#calib" hx-swap="outerHTML" hx-push-url="true"
+       {% if item.on %}aria-current="true"{% endif %}>{{ item.name }}<span>{{ item.count }}</span></a>
+    {% endfor %}
+  </nav>
+  {% endif %}
+</header>
+
+{% if v.empty %}
+<p class="empty">Aucune prédiction avec une issue connue : les issues sont enregistrées automatiquement après chaque partie classée (SPEC-08), ou à la main avec « outcome win » et « outcome loss » dans le Live Coach.</p>
+{% elif not v.enough %}
+<p class="empty">Pas assez de données pour l'instant : {{ v.n }} prédiction{{ "s" if v.n > 1 }} sur {{ v.minimum }} nécessaires pour la version {{ v.version }}. Joue encore quelques parties classées avant de te fier à ce diagramme ; les versions du modèle ne sont jamais mélangées.</p>
+{% else %}
+<div class="cols">
+  <div class="main">
+    <section class="panel" data-fade="1" data-delay="100">
+      <div class="panel-head"><h2>Diagramme de fiabilité</h2><span class="muted">prédit contre observé, par classe de 10 %</span></div>
+      {{ v.chart }}
+    </section>
+  </div>
+  <aside class="side">
+    <section class="sample" data-rise="1" data-delay="200">
+      <div class="queue-name">Score de Brier</div>
+      <div class="sample-line"><b>{{ v.brier }}</b></div>
+      <div class="sample-note">{{ v.n }} prédictions · 0 = parfait, 0,25 = toujours 50 %</div>
+    </section>
+    <table class="calib-table" data-rise="1" data-delay="320">
+      <caption class="sr-only">Prédit et observé par classe</caption>
+      <thead><tr><th>Classe</th><th class="r">n</th><th class="r">Prédit</th><th class="r">Observé</th></tr></thead>
+      <tbody>
+        {% for row in v.table %}
+        <tr><td>{{ row.range }}</td><td class="r tab">{{ row.n }}</td><td class="r tab">{{ row.predicted }}</td><td class="r tab">{{ row.observed }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="fine" data-rise="1" data-delay="440">La diagonale pointillée est un modèle parfaitement calibré ; le rayon d'un point suit le nombre de parties de sa classe.</p>
+  </aside>
+</div>
+{% endif %}
+</div>
+{% endblock %}

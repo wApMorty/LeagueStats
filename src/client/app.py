@@ -21,7 +21,14 @@ from ..pool_manager import get_user_data_path
 from ..repositories.coaching import CoachingRepository
 from ..user_prefs import load_motion, save_motion
 from .assets import PLACEHOLDER, Assets
-from .data import ROLE_ORDER, default_role, progression_view, rank_view
+from .data import (
+    ROLE_ORDER,
+    calibration_empty,
+    calibration_view,
+    default_role,
+    progression_view,
+    rank_view,
+)
 from .db import read_only
 from .draft_grimoire import grimoire_view
 from .draft_loadout import normalize_page, plan as loadout_plan, runes_payload, send as send_loadout
@@ -60,7 +67,7 @@ NAV = (
             NavItem("rang", "Rang", "ᚱ", 245, "/rang"),
             NavItem("progression", "Progression", "ᛏ", 290, "/progression"),
             NavItem("parties", "Parties", "ᛗ", 85, "/parties"),
-            NavItem("calibration", "Calibration", "ᛉ", 345),
+            NavItem("calibration", "Calibration", "ᛉ", 345, "/calibration"),
         ),
     ),
     NavGroup(
@@ -234,6 +241,11 @@ def create_app(
         return render(
             request, "progression.html", v=coaching(read, lambda: progression_view({}, [], role))
         )
+
+    @app.get("/calibration", response_class=HTMLResponse)
+    def calibration(request: Request, version: Optional[str] = None):
+        view = coaching(lambda repo: calibration_view(repo, version), calibration_empty)
+        return render(request, "calibration.html", v=view)
 
     @app.get("/parties", response_class=HTMLResponse)
     def parties(request: Request):

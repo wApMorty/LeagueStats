@@ -815,3 +815,11 @@ h2 { margin: 0; font: 600 24px/1 var(--font-title); }
 .top-row b { display: block; font: 600 22px/1.05 var(--font-title); }
 .top-row i { display: block; font-style: normal; font-size: 13px; color: var(--muted); }
 .top-delta { font: 600 30px/1 var(--font-title); }
+
+/* Calibration (tâche 54) */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.calib-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.calib-table th { padding: 0 0 8px; border-bottom: 1px solid oklch(0.74 0.11 55 / 0.25); font-size: 11px; font-weight: 400;
+  letter-spacing: 0.16em; text-transform: uppercase; text-align: left; color: var(--muted-2); }
+.calib-table td { padding: 7px 0; border-bottom: 1px solid oklch(0.74 0.11 55 / 0.07); }
+.calib-table .r { text-align: right; }

@@ -127,6 +127,9 @@ class ClientConfig:
     GAME_MARKS: int = 10
     GAME_TOP: int = 3
 
+    # Écran Calibration (SPEC-21 tâche 54) : taille du diagramme de fiabilité.
+    CALIBRATION_CHART_SIZE: Tuple[int, int] = (620, 520)
+
     # Live Coach lancé en fil par le client : attente du client LoL (secondes) entre deux essais
     # et délai d'arrêt à la fermeture de la fenêtre.
     LIVE_COACH_RETRY_S: float = 15.0

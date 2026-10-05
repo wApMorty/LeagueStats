@@ -12,13 +12,23 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 from markupsafe import Markup
 
+from ..analysis.calibration import brier_score, calibration_buckets, fetch_labeled_predictions
 from ..coaching.grid import GRID
 from ..coaching.metrics import METRICS, format_value
 from ..coaching.progression import DIVISIONS, TIERS, lp_scale, patterns, trends
 from ..config_client import client_config
-from ..config_constants import coaching_config
-from .charts import Band, Series, SparkLine, Tick, bar_chart, line_chart, sparkline
-from .draft_view import ROLE_LABELS, signed
+from ..config_constants import analysis_config, coaching_config
+from .charts import (
+    Band,
+    Series,
+    SparkLine,
+    Tick,
+    bar_chart,
+    line_chart,
+    reliability_chart,
+    sparkline,
+)
+from .draft_view import ROLE_LABELS, fr, signed
 
 FR_MONTHS = (
     "janv.",
@@ -441,3 +451,79 @@ def progression_view(roles: Dict[str, int], history: List[dict], role: Optional[
         ),
         "patterns": _pattern_lines(patterns(history, role) if games else [], role, games),
     }
+
+
+# ---------- calibration ----------
+
+
+def calibration_view(repo, version: Optional[str]) -> dict:
+    """L'écran Calibration d'une version du modèle de draft (jamais de mélange, SPEC-05 §7).
+
+    `repo` : `CoachingRepository` ; `version` absente ou inconnue : la version courante de
+    `analysis_config` si elle a des issues, sinon la plus fournie. Sous `MIN_ROWS_FOR_CALIBRATION`
+    prédictions : le même refus que la console (`scripts/calibrate_model.py`), sans diagramme.
+    """
+    labelled = repo.labelled_versions()
+    names = [name for name, _ in labelled]
+    current = analysis_config.MODEL_VERSION
+    chosen = version if version in names else current if current in names else None
+    chosen = chosen or (names[0] if names else None)
+    view = {
+        "empty": chosen is None,
+        "version": chosen,
+        "current": current,
+        "versions": [{"name": n, "count": c, "on": n == chosen} for n, c in labelled],
+        "minimum": analysis_config.MIN_ROWS_FOR_CALIBRATION,
+        "n": 0,
+        "enough": False,
+        "chart": None,
+        "table": [],
+        "brier": None,
+    }
+    if chosen is None:
+        return view
+    rows = fetch_labeled_predictions(repo.db, chosen)
+    view["n"] = len(rows)
+    if len(rows) < analysis_config.MIN_ROWS_FOR_CALIBRATION:
+        return view
+    buckets = calibration_buckets(rows)
+    brier = brier_score(rows)
+    view.update(
+        enough=True,
+        brier=fr(brier, 4),
+        brier_value=brier,
+        table=[
+            {
+                "range": f"{b['lo']} à {b['hi']} %",
+                "n": b["n"],
+                "predicted": f"{fr(b['predicted'] * 100, 1)} %" if b["n"] else "—",
+                "observed": f"{fr(b['observed'] * 100, 1)} %" if b["n"] else "—",
+            }
+            for b in buckets
+        ],
+        chart=Markup(
+            reliability_chart(
+                [(b["predicted"], b["observed"], b["n"]) for b in buckets if b["n"]],
+                size=client_config.CALIBRATION_CHART_SIZE,
+                uid="calibration",
+                title="Diagramme de fiabilité",
+                desc=f"Probabilité prédite contre fréquence observée, {len(rows)} prédictions "
+                f"du modèle {chosen}, Brier {fr(brier, 4)}",
+            )
+        ),
+    )
+    return view
+
+
+class _NoPredictions:
+    """Ce que lit `calibration_view` quand la base n'a pas (encore) de table de prédictions."""
+
+    db = None
+
+    @staticmethod
+    def labelled_versions() -> list:
+        return []
+
+
+def calibration_empty() -> dict:
+    return calibration_view(_NoPredictions(), None)

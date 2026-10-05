@@ -217,6 +217,13 @@ class CoachingRepository:
         )
         return {"probability": rows[0][0], "model_version": rows[0][1]} if rows else None
 
+    def labelled_versions(self) -> List[tuple]:
+        """(version du modèle, prédictions dont l'issue est connue), de la plus fournie à la moins fournie."""
+        return self._rows(
+            "SELECT model_version, COUNT(*) FROM predictions WHERE outcome IS NOT NULL "
+            "GROUP BY model_version ORDER BY COUNT(*) DESC, model_version"
+        )
+
     # ---------- impact sur la win chance (SPEC-20) ----------
 
     def games_without_impact(self) -> List[dict]:

@@ -32,24 +32,36 @@ def fetch_labeled_predictions(db, model_version: Optional[str] = None) -> List[R
     return cursor.fetchall()
 
 
-def calibration_curve(rows: List[Row]) -> str:
-    """Bucket predictions into 10 decile buckets, predicted vs observed win rate."""
+def calibration_buckets(rows: List[Row]) -> List[dict]:
+    """Bucket predictions into 10 decile buckets: `lo`/`hi` (percent), `n`, and, for a non-empty
+    bucket, the mean `predicted` probability and the `observed` win rate (both in [0, 1])."""
     buckets: List[List[Row]] = [[] for _ in range(10)]
     for predicted, outcome in rows:
         idx = min(int(predicted * 10), 9)
         buckets[idx].append((predicted, outcome))
+    return [
+        {
+            "lo": i * 10,
+            "hi": (i + 1) * 10,
+            "n": len(bucket),
+            "predicted": sum(p for p, _ in bucket) / len(bucket) if bucket else None,
+            "observed": sum(o for _, o in bucket) / len(bucket) if bucket else None,
+        }
+        for i, bucket in enumerate(buckets)
+    ]
 
+
+def calibration_curve(rows: List[Row]) -> str:
+    """Bucket predictions into 10 decile buckets, predicted vs observed win rate."""
     lines = []
-    for i, bucket in enumerate(buckets):
-        lo, hi = i * 10, (i + 1) * 10
-        if not bucket:
+    for bucket in calibration_buckets(rows):
+        lo, hi = bucket["lo"], bucket["hi"]
+        if not bucket["n"]:
             lines.append(f"  [{lo:3d}-{hi:3d}%[  n=0")
             continue
-        mean_predicted = sum(p for p, _ in bucket) / len(bucket)
-        observed = sum(o for _, o in bucket) / len(bucket)
         lines.append(
-            f"  [{lo:3d}-{hi:3d}%[  n={len(bucket):4d}  "
-            f"predicted={mean_predicted * 100:5.1f}%  observed={observed * 100:5.1f}%"
+            f"  [{lo:3d}-{hi:3d}%[  n={bucket['n']:4d}  "
+            f"predicted={bucket['predicted'] * 100:5.1f}%  observed={bucket['observed'] * 100:5.1f}%"
         )
     return "\n".join(lines)
 
