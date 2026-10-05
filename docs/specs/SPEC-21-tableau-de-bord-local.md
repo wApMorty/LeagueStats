@@ -8,7 +8,7 @@ remplacée). Forme, périmètre, ordre, temps réel et niveau d'écriture valid�
 2026-10-05** : ordre des lots, taille de la fenêtre, thème clair reporté, écrans sans maquette extrapolés
 d'« Alchimie ». Point d'entrée et **écritures du coaching validés le 2026-10-05**. **Lot 4 (coaching et post-game) fait le
 2026-10-05** : tâches 50 à 54, 71, 75, 95 et 56 ; reste la recette de @pj35 (rendu des écrans, clic sur les axes, partie
-réelle) puis les lots 5 et 6.
+réelle) puis les lots 5 et 6. **Lot 5 (profil et historique) fait le 2026-10-05** : tâches 76 à 78, relevé des endpoints en §10.
 
 **Origine** : feature candidate 5 du `TODO.md` (ex-tâche #6, `ROADMAP_2026.md` Horizon 3),
 repriorisée le 2026-09-26. Reformulée par @pj35 le 2026-10-04 : « bien plus qu'un rapport HTML en
@@ -19,8 +19,8 @@ coaching, et en revoyant la draft et le post-game avec le Live Coach. » Ajout l
 **la qualité des animations est un objectif de premier rang** (motion design poussé, thèmes à
 discuter avec @pj35).
 
-**Effort** : ~33 jours, 37 tâches, 163 pts, en six lots utilisables chacun seuls (§5) ; 129 pts
-faits (lots 1 à 4).
+**Effort** : ~33 jours, 37 tâches, 163 pts, en six lots utilisables chacun seuls (§5) ; 142 pts
+faits (lots 1 à 5).
 
 ---
 
@@ -413,7 +413,7 @@ Numéros à la suite du `TODO.md` (dernière : 67). Les tâches 48 à 56 et 68 �
 2026-10-04 ; **84 à 95 sont ajoutées le 2026-10-05** après le handoff de design. L'ordre d'exécution est
 celui des lots, **réordonnés d'après le handoff** (§2, à valider) : coque, motion, draft, file trouvée et
 transition, coaching et post-game, puis la navigation. Les tâches d'écran renvoient à leur fiche du §4.10.
-Les tâches 48, 49, 55, 68, 69, 70 et 84 (lot 1), puis 72, 73, 74 et 85 à 92 (lot 2), 93 et 94 (lot 3), puis 50 à 54, 56, 71, 75 et 95 (lot 4) sont faites ; la mesure du p95 (84) et le rendu des écrans restent à la recette de @pj35.
+Les tâches 48, 49, 55, 68, 69, 70 et 84 (lot 1), puis 72, 73, 74 et 85 à 92 (lot 2), 93 et 94 (lot 3), puis 50 à 54, 56, 71, 75 et 95 (lot 4) sont faites, puis 76 à 78 (lot 5) ; la mesure du p95 (84) et le rendu des écrans restent à la recette de @pj35.
 
 **Lot 1 — Socle, coque et motion (31 pts)** — étapes 1 et 2 du handoff
 
@@ -468,9 +468,9 @@ Les tâches 48, 49, 55, 68, 69, 70 et 84 (lot 1), puis 72, 73, 74 et 85 à 92 (l
 
 | # | Tâche | Pts | Dépend de |
 |---|---|---|---|
-| 76 | **Spike des endpoints de navigation** : formes relevées sur le client de @pj35 pour les lots 5 et 6, fixtures, corrections de §4.6 | 3 | 70 |
-| 77 | Profil, rang, régalia, défis (sans maquette) | 5 | 76 |
-| 78 | Historique (20 parties) et détail ; liaison aux parties capturées (sans maquette) | 5 | 76, 53 |
+| 76 | ✅ **Spike des endpoints de navigation** : formes relevées sur le client de @pj35 pour les lots 5 et 6, fixtures, corrections de §4.6 | 3 | 70 |
+| 77 | ✅ Profil, rang, régalia, défis (sans maquette) | 5 | 76 |
+| 78 | ✅ Historique (20 parties) et détail ; liaison aux parties capturées (sans maquette) | 5 | 76, 53 |
 
 **Lot 6 — Collection, lobby, file, social et clôture (21 pts)**
 
@@ -482,7 +482,7 @@ Les tâches 48, 49, 55, 68, 69, 70 et 84 (lot 1), puis 72, 73, 74 et 85 à 92 (l
 | 82 | Social en lecture seule : amis, statuts, conversations | 3 | 76 |
 | 83 | Clôture : exe vérifié, `README.md`, `docs/PROJECT_STRUCTURE.md`, `CHANGELOG.md`, statuts, `TODO.md` | 3 | 56, 77–79, 81, 82, 95 |
 
-Total : 31 + 51 + 8 + 39 + 13 + 21 = **163 pts**, 37 tâches, dont 129 pts faits (lots 1 à 4). Chaque lot se clôt par
+Total : 31 + 51 + 8 + 39 + 13 + 21 = **163 pts**, 37 tâches, dont 142 pts faits (lots 1 à 5). Chaque lot se clôt par
 une recette de @pj35 (§6, 10).
 
 ## 6. Critères d'acceptation

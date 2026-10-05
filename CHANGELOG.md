@@ -6,6 +6,16 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Feature
 
+- **Client LeagueStats, profil et historique (SPEC-21 tâches 76 à 78)** — le groupe « Client » de la
+  navigation s'ouvre. **Profil** (`/profil`) : identité et progression du niveau, cartes de rang Solo et Flex
+  (série de promotion, placement), régalia, défis (catégories et trois meilleurs). **Historique**
+  (`/historique`) : les 20 parties que le client LoL sert, avec KDA, sbires par minute, durée et file ;
+  le détail d'une partie montre les deux équipes (objectifs, bans, dix joueurs, dégâts, objets) et renvoie vers
+  l'analyse du Live Coach quand la partie a aussi été capturée. Lecture seule. Sans client LoL, ou quand une
+  réponse a changé de forme après un patch, l'écran dit « client fermé » ou « indisponible » (jamais une 500).
+  Les formes du LCU sont relevées par `scripts/dump_lcu_nav_forms.py` (lectures `GET` uniquement) et figées en
+  fixtures anonymisées.
+
 - **Client LeagueStats, coaching et post-game (SPEC-21 tâches 50 à 54, 56, 71, 75 et 95)** — la navigation
   « Coaching » a ses écrans. **Accueil** : axes de travail avec leurs cinq pastilles tenu / non tenu, places
   libres et proposition du coach (« Fixer cet axe », « Choisir une autre métrique », « Clore l'axe » : **première
