@@ -7,7 +7,7 @@ vers le menu.
 import threading
 import time
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, Callable, Optional, Union
 
 import uvicorn
 
@@ -27,7 +27,12 @@ def _run(server: uvicorn.Server) -> None:
         pass
 
 
-def start(db_path: Union[str, Path], bus: Any = None, lcu: Any = None) -> Optional[str]:
+def start(
+    db_path: Union[str, Path],
+    bus: Any = None,
+    lcu: Any = None,
+    commands: Optional[Callable[[str], bool]] = None,
+) -> Optional[str]:
     """Démarre le serveur (une seule fois) et renvoie son URL, ou `None` en cas d'échec."""
     global _server, _thread, _url  # pylint: disable=global-statement
     with _lock:
@@ -37,7 +42,7 @@ def start(db_path: Union[str, Path], bus: Any = None, lcu: Any = None) -> Option
             # log_config=None : sans console (exe fenêtré), sys.stdout vaut None et le
             # logging d'uvicorn plante (SPEC-21 §8).
             config = uvicorn.Config(
-                create_app(db_path, bus, lcu),
+                create_app(db_path, bus, lcu, commands=commands),
                 host=client_config.HOST,
                 port=client_config.PORT,
                 log_level="warning",

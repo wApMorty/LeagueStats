@@ -1,0 +1,237 @@
+{
+  "_note": "Forme attendue du LCU (documentation communautaire), non relev\u00e9e : voir scripts/dump_lcu_draft_forms.py",
+  "actions": [
+    [
+      {
+        "id": 0,
+        "actorCellId": 0,
+        "championId": 0,
+        "completed": false,
+        "isAllyAction": true,
+        "isInProgress": true,
+        "type": "ban"
+      },
+      {
+        "id": 1,
+        "actorCellId": 1,
+        "championId": 0,
+        "completed": false,
+        "isAllyAction": true,
+        "isInProgress": true,
+        "type": "ban"
+      },
+      {
+        "id": 2,
+        "actorCellId": 2,
+        "championId": 0,
+        "completed": false,
+        "isAllyAction": true,
+        "isInProgress": true,
+        "type": "ban"
+      },
+      {
+        "id": 3,
+        "actorCellId": 3,
+        "championId": 0,
+        "completed": false,
+        "isAllyAction": true,
+        "isInProgress": true,
+        "type": "ban"
+      },
+      {
+        "id": 4,
+        "actorCellId": 4,
+        "championId": 0,
+        "completed": false,
+        "isAllyAction": true,
+        "isInProgress": true,
+        "type": "ban"
+      },
+      {
+        "id": 5,
+        "actorCellId": 5,
+        "championId": 0,
+        "completed": false,
+        "isAllyAction": false,
+        "isInProgress": true,
+        "type": "ban"
+      },
+      {
+        "id": 6,
+        "actorCellId": 6,
+        "championId": 0,
+        "completed": false,
+        "isAllyAction": false,
+        "isInProgress": true,
+        "type": "ban"
+      },
+      {
+        "id": 7,
+        "actorCellId": 7,
+        "championId": 0,
+        "completed": false,
+        "isAllyAction": false,
+        "isInProgress": true,
+        "type": "ban"
+      },
+      {
+        "id": 8,
+        "actorCellId": 8,
+        "championId": 0,
+        "completed": false,
+        "isAllyAction": false,
+        "isInProgress": true,
+        "type": "ban"
+      },
+      {
+        "id": 9,
+        "actorCellId": 9,
+        "championId": 0,
+        "completed": false,
+        "isAllyAction": false,
+        "isInProgress": true,
+        "type": "ban"
+      }
+    ]
+  ],
+  "allowSkinSelection": true,
+  "bans": {
+    "myTeamBans": [],
+    "theirTeamBans": [],
+    "numBans": 10
+  },
+  "hasSimultaneousBans": true,
+  "hasSimultaneousPicks": false,
+  "isCustomGame": false,
+  "localPlayerCellId": 0,
+  "myTeam": [
+    {
+      "assignedPosition": "top",
+      "cellId": 0,
+      "championId": 0,
+      "championPickIntent": 0,
+      "selectedSkinId": 0,
+      "spell1Id": 4,
+      "spell2Id": 12,
+      "team": 1,
+      "summonerId": 0,
+      "puuid": "anon"
+    },
+    {
+      "assignedPosition": "jungle",
+      "cellId": 1,
+      "championId": 0,
+      "championPickIntent": 0,
+      "selectedSkinId": 0,
+      "spell1Id": 4,
+      "spell2Id": 14,
+      "team": 1,
+      "summonerId": 0,
+      "puuid": "anon"
+    },
+    {
+      "assignedPosition": "middle",
+      "cellId": 2,
+      "championId": 0,
+      "championPickIntent": 0,
+      "selectedSkinId": 0,
+      "spell1Id": 4,
+      "spell2Id": 14,
+      "team": 1,
+      "summonerId": 0,
+      "puuid": "anon"
+    },
+    {
+      "assignedPosition": "bottom",
+      "cellId": 3,
+      "championId": 0,
+      "championPickIntent": 0,
+      "selectedSkinId": 0,
+      "spell1Id": 4,
+      "spell2Id": 14,
+      "team": 1,
+      "summonerId": 0,
+      "puuid": "anon"
+    },
+    {
+      "assignedPosition": "utility",
+      "cellId": 4,
+      "championId": 0,
+      "championPickIntent": 0,
+      "selectedSkinId": 0,
+      "spell1Id": 4,
+      "spell2Id": 14,
+      "team": 1,
+      "summonerId": 0,
+      "puuid": "anon"
+    }
+  ],
+  "theirTeam": [
+    {
+      "assignedPosition": "",
+      "cellId": 5,
+      "championId": 0,
+      "championPickIntent": 0,
+      "selectedSkinId": 0,
+      "spell1Id": 4,
+      "spell2Id": 14,
+      "team": 2,
+      "summonerId": 0,
+      "puuid": "anon"
+    },
+    {
+      "assignedPosition": "",
+      "cellId": 6,
+      "championId": 0,
+      "championPickIntent": 0,
+      "selectedSkinId": 0,
+      "spell1Id": 4,
+      "spell2Id": 14,
+      "team": 2,
+      "summonerId": 0,
+      "puuid": "anon"
+    },
+    {
+      "assignedPosition": "",
+      "cellId": 7,
+      "championId": 0,
+      "championPickIntent": 0,
+      "selectedSkinId": 0,
+      "spell1Id": 4,
+      "spell2Id": 14,
+      "team": 2,
+      "summonerId": 0,
+      "puuid": "anon"
+    },
+    {
+      "assignedPosition": "",
+      "cellId": 8,
+      "championId": 0,
+      "championPickIntent": 0,
+      "selectedSkinId": 0,
+      "spell1Id": 4,
+      "spell2Id": 14,
+      "team": 2,
+      "summonerId": 0,
+      "puuid": "anon"
+    },
+    {
+      "assignedPosition": "",
+      "cellId": 9,
+      "championId": 0,
+      "championPickIntent": 0,
+      "selectedSkinId": 0,
+      "spell1Id": 4,
+      "spell2Id": 14,
+      "team": 2,
+      "summonerId": 0,
+      "puuid": "anon"
+    }
+  ],
+  "timer": {
+    "adjustedTimeLeftInPhase": 27000,
+    "isInfinite": false,
+    "phase": "BAN_PICK",
+    "totalTimeInPhase": 30000
+  }
+}

@@ -127,6 +127,16 @@ def test_stop_interrompt_l_attente_et_arrete_le_moniteur(monkeypatch):
     assert FauxMoniteur.instances[0].stopped
 
 
+def test_send_depose_la_commande_chez_le_moniteur_quand_il_existe():
+    import queue
+
+    coach = launch.LiveCoachThread(bus)
+    assert coach.send("r LeeSin top") is False  # le Live Coach n'est pas encore prêt
+    coach._monitor = type("M", (), {"_command_queue": queue.Queue()})()
+    assert coach.send("r LeeSin top") is True
+    assert coach._monitor._command_queue.get_nowait() == "r LeeSin top"
+
+
 def test_pas_d_ecoute_de_la_console_quand_le_moniteur_n_en_veut_pas():
     moniteur = type("M", (), {"console_input": False, "_command_listener_thread": None})()
     CommandListener(moniteur).start()

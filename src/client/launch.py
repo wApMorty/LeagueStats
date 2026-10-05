@@ -42,6 +42,13 @@ class LiveCoachThread:
         self._thread = threading.Thread(target=self._run, name="live-coach", daemon=True)
         self._thread.start()
 
+    def send(self, line: str) -> bool:
+        """Dépose une commande console (`r <champion> <lane>`) ; False si le Live Coach n'est pas prêt."""
+        if self._monitor is None:
+            return False
+        self._monitor._command_queue.put(line)  # pylint: disable=protected-access
+        return True
+
     def stop(self) -> None:
         self._stopping.set()
         if self._monitor is not None:
@@ -93,12 +100,12 @@ def run_client(verbose: bool = False) -> bool:
     if not check_dependencies() or not check_database():
         return False
     bus = EventBus()
-    url = server.start(config.DATABASE_PATH, bus, LCUClient(verbose=verbose))
+    coach = LiveCoachThread(bus, verbose)
+    url = server.start(config.DATABASE_PATH, bus, LCUClient(verbose=verbose), coach.send)
     if url is None:
         return False
     print(f"[INFO] Client LeagueStats sur {url}")
     events = LcuEvents(bus, LCUClient(verbose=verbose).find_lcu_credentials)
-    coach = LiveCoachThread(bus, verbose)
     try:
         events.start()
         coach.start()

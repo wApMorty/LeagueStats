@@ -4,7 +4,7 @@ import json
 import secrets
 import sqlite3
 from pathlib import Path
-from typing import Any, NamedTuple, Optional, Tuple, Union
+from typing import Any, Callable, NamedTuple, Optional, Tuple, Union
 from urllib.parse import urlsplit
 
 import anyio
@@ -19,6 +19,8 @@ from ..config_client import client_config
 from ..pool_manager import get_user_data_path
 from ..user_prefs import load_motion, save_motion
 from .assets import PLACEHOLDER, Assets
+from .draft_actions import Refusal, role_command, run as run_draft_action
+from .lcu_proxy import LcuProxy
 from .lcu_status import LcuProbe
 
 
@@ -88,9 +90,16 @@ def _host_allowed(value: str, scheme: Optional[str] = None) -> bool:
 
 
 def create_app(
-    db_path: Union[str, Path], bus: Any = None, lcu: Any = None, assets: Optional[Assets] = None
+    db_path: Union[str, Path],
+    bus: Any = None,
+    lcu: Any = None,
+    assets: Optional[Assets] = None,
+    commands: Optional[Callable[[str], bool]] = None,
 ) -> FastAPI:
     """Construit l'application ; `bus` et `lcu` sont ceux que les écrans liront.
+
+    `commands` dépose une ligne de commande chez le Live Coach (`r <champion> <lane>`) et dit si
+    elle a été prise ; None en mode console.
 
     Tout passe par un garde : `Host` et `Origin` sur la boucle locale (sinon 403), et le jeton de
     session (`app.state.session_token`) sur les méthodes qui écrivent et sur le SSE, avant tout
@@ -103,6 +112,7 @@ def create_app(
     app.state.assets = assets or Assets(Path(get_user_data_path(client_config.ASSETS_DIR)))
     app.state.session_token = secrets.token_urlsafe(client_config.SESSION_TOKEN_BYTES)
     probe = LcuProbe(lcu)
+    proxy = LcuProxy(lcu)
     templates = Jinja2Templates(directory=get_resource_path(f"{CLIENT_DIR}/templates"))
     app.mount(
         "/static", StaticFiles(directory=get_resource_path(f"{CLIENT_DIR}/static")), name="static"
@@ -184,6 +194,25 @@ def create_app(
     @app.get("/", response_class=HTMLResponse)
     def accueil(request: Request):
         return render(request, "accueil.html")
+
+    @app.post("/draft/action/{name}")
+    def draft_action(name: str, champion_id: int):
+        """Survoler, verrouiller ou bannir ; refusé (409) hors phase et hors tour, sans écriture."""
+        try:
+            return run_draft_action(proxy, name, champion_id)
+        except Refusal as refusal:
+            return JSONResponse({"detail": str(refusal)}, status_code=409)
+
+    @app.post("/draft/role")
+    def draft_role(champion: str, lane: str):
+        """Corrige le rôle d'un champion : la commande `r` du Live Coach, appliquée à son prochain tour."""
+        try:
+            line = role_command(champion, lane)
+        except Refusal as refusal:
+            return JSONResponse({"detail": str(refusal)}, status_code=409)
+        if commands is None or not commands(line):
+            return JSONResponse({"detail": "Live Coach inactif"}, status_code=503)
+        return Response(status_code=204)
 
     @app.get("/assets/{kind}/{name:path}")
     def asset(kind: str, name: str):
