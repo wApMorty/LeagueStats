@@ -37,6 +37,7 @@ class MonitorLifecycle:
                 self.m._handle_ready_check()
 
             if not self.m.lcu.is_in_champion_select():
+                self.m.recommender.clear()  # SPEC-21 : l'écran de draft se vide
                 # Show ready message when leaving champion select if we had a draft
                 if self.m.last_draft_state.phase and (
                     self.m.last_draft_state.ally_picks or self.m.last_draft_state.enemy_picks

@@ -46,14 +46,14 @@ class DraftStateParser:
         player_champion: Optional[str] = None
 
         # Get basic info
-        state.phase = champ_select_data.get("timer", {}).get("phase", "")
+        state.phase = (champ_select_data.get("timer") or {}).get("phase", "")
         state.local_player_cell_id = champ_select_data.get("localPlayerCellId")
 
         # Parse team composition
         my_team = champ_select_data.get("myTeam", [])
         their_team = champ_select_data.get("theirTeam", [])
 
-        timer = champ_select_data.get("timer", {})
+        timer = champ_select_data.get("timer") or {}
         state.time_left_ms = timer.get("adjustedTimeLeftInPhase")
         state.time_total_ms = timer.get("totalTimeInPhase")
 

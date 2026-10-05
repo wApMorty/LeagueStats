@@ -164,6 +164,8 @@ class DraftRecommender:
             self._provide(state, analysis)
         except Exception as e:
             print(f"[WARNING] Erreur lors de la génération des recommandations: {e}")
+        if getattr(self.m, "bus", None) is None:
+            return  # mode console : rien ne change, aucun calcul de plus
         self._fill_candidates(state, analysis)
         self._publish(state, analysis)
 
@@ -203,6 +205,18 @@ class DraftRecommender:
             state.my_ban_id,
             state.my_ban_hover_id,
         )
+
+    def clear(self) -> None:
+        """Fin du champ select : l'écran de draft repasse à l'état vide (publie `None` une seule fois)."""
+        try:
+            if self._last_key is None:
+                return
+            self._last_analysis = self._last_key = None
+            self.m.last_snapshot = None
+            if getattr(self.m, "bus", None) is not None:
+                self.m.bus.publish(TOPIC, None)
+        except Exception:  # pylint: disable=broad-exception-caught
+            pass
 
     def refresh(self, state: DraftState) -> None:
         """Republie le dernier classement avec l'état à jour quand un survol ou un tour a changé.

@@ -184,11 +184,14 @@ def test_snapshot_en_phase_de_bans_sans_aucun_pick(monitor):
     assert payload["recommendations"] == [] and payload["advice"].startswith("[BAN]")
 
 
-def test_snapshot_sans_bus_garde_le_dernier(monitor):
+def test_mode_console_ne_construit_aucun_snapshot(monitor):
     assert monitor.bus is None
+    monitor.ban_advisor.advice = Mock(side_effect=AssertionError("ne doit pas être appelé"))
     with patch.object(monitor.search, "rank", return_value=RANKED):
         monitor._provide_recommendations(pick_state())
-    assert monitor.last_snapshot.recommendations[0].champion == "Aatrox"
+        monitor._provide_recommendations(DraftState(phase="BAN_PICK"))
+    assert monitor.last_snapshot is None
+    monitor.assistant.get_ban_recommendations.assert_not_called()
 
 
 def test_snapshot_echec_de_construction_n_interrompt_rien(monitor, capsys):
@@ -382,3 +385,25 @@ def test_le_parseur_lit_le_ban_du_joueur_local_pose_ou_survole():
     assert (parse(survol).my_ban_hover_id, parse(survol).my_ban_id) == (266, 0)
     assert (parse(pose).my_ban_hover_id, parse(pose).my_ban_id) == (0, 266)
     assert (parse(autre).my_ban_hover_id, parse(autre).my_ban_id) == (0, 0)
+
+
+def test_fin_de_champ_select_vide_le_dernier_snapshot_une_seule_fois(monitor):
+    bus = EventBus()
+    monitor.bus = bus
+    with patch.object(monitor.search, "rank", return_value=RANKED):
+        monitor._provide_recommendations(pick_state())
+    assert bus.latest(TOPIC) is not None
+    with bus.subscribe([TOPIC]) as subscription:
+        monitor.recommender.clear()
+        monitor.recommender.clear()
+        assert subscription.get(1) == (TOPIC, None)
+        assert subscription.get(0.05) is None
+    assert bus.latest(TOPIC) is None and monitor.last_snapshot is None
+
+
+def test_le_parseur_tolere_un_timer_nul():
+    lcu = Mock()
+    lcu.get_assigned_positions.return_value = {}
+    data = {"timer": None, "localPlayerCellId": 0, "myTeam": [], "theirTeam": []}
+    state, _ = DraftStateParser(lcu, str).parse(data, {}, {})
+    assert state.phase == "" and state.time_left_ms is None

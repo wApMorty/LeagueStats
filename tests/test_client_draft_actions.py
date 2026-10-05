@@ -65,7 +65,7 @@ def test_survoler_ecrit_sur_l_action_en_cours(pick):
         (
             "PATCH",
             "/lol-champ-select/v1/session/actions/12",
-            {"championId": 266, "completed": False},
+            {"championId": 266, "completed": False, "type": "pick"},
         )
     ]
     assert result == {"action": "hover", "champion_id": 266, "completed": False}
@@ -73,7 +73,7 @@ def test_survoler_ecrit_sur_l_action_en_cours(pick):
 
 def test_verrouiller_complete_l_action(pick):
     draft_actions.run(LcuProxy(pick), "lock", 266)
-    assert pick.writes[0][2] == {"championId": 266, "completed": True}
+    assert pick.writes[0][2] == {"championId": 266, "completed": True, "type": "pick"}
 
 
 def test_bannir_et_survoler_un_ban(ban):

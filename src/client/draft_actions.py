@@ -65,7 +65,7 @@ def run(proxy: LcuProxy, name: str, champion_id: int) -> Dict[str, Any]:
     result = proxy.send(
         "PATCH",
         f"/lol-champ-select/v1/session/actions/{action['id']}",
-        {"championId": champion_id, "completed": completed},
+        {"championId": champion_id, "completed": completed, "type": expected},
     )
     if result is None:
         raise Refusal("Le client LoL a refusé l'action")

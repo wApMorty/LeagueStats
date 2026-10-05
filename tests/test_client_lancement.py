@@ -127,6 +127,15 @@ def test_stop_interrompt_l_attente_et_arrete_le_moniteur(monkeypatch):
     assert FauxMoniteur.instances[0].stopped
 
 
+def test_le_fil_du_live_coach_est_un_daemon():
+    coach = launch.LiveCoachThread(bus)
+    coach.start()
+    try:
+        assert coach._thread.daemon is True
+    finally:
+        coach.stop()
+
+
 def test_send_depose_la_commande_chez_le_moniteur_quand_il_existe():
     import queue
 
