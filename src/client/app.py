@@ -76,7 +76,10 @@ NAV = (
     NavGroup(
         "Partie",
         55,
-        (NavItem("draft", "Draft", "ᛟ", 55, "/draft"), NavItem("postgame", "Post-game", "ᛞ", 345)),
+        (
+            NavItem("draft", "Draft", "ᛟ", 55, "/draft"),
+            NavItem("postgame", "Post-game", "ᛞ", 345, "/postgame"),
+        ),
     ),
     NavGroup(
         "Client",
@@ -303,7 +306,22 @@ def create_app(
                 title="Partie introuvable",
                 detail=f"La partie {game_id} n'est pas dans les parties capturées.",
             )
-        return render(request, "partie.html", g=page)
+        return render(request, "partie.html", g=page, review=False)
+
+    @app.get("/postgame", response_class=HTMLResponse)
+    def postgame(request: Request):
+        """La revue de la dernière partie capturée ; le client y bascule à l'événement `game_captured`."""
+        champions, now = Champions(app.state.assets), datetime.now(timezone.utc)
+
+        def latest(repo: CoachingRepository) -> Optional[dict]:
+            game_id = repo.latest_game_id()
+            return (
+                game_page(repo, game_id, champions, load_model(), now, review=True)
+                if game_id
+                else None
+            )
+
+        return render(request, "partie.html", g=coaching(latest, lambda: None), review=True)
 
     def draft_snapshot() -> Optional[dict]:
         return bus.latest("draft") if bus is not None else None

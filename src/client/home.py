@@ -20,7 +20,7 @@ from ..config_client import client_config
 from ..config_constants import coaching_config
 from ..repositories.coaching import CoachingRepository
 from .charts import SparkLine, diverging, sparkline
-from .data import ago, default_role, parse_utc, plural, rank_view, scale_of
+from .data import ago, default_role, finding_reference, parse_utc, plural, rank_view, scale_of
 from .draft_view import ROLE_LABELS, Champions, fr, signed
 
 GOAL_HUES = (290, 230)  # violet puis bleu : un axe par couleur
@@ -120,24 +120,13 @@ def _findings(repo: CoachingRepository, champions: Champions, now: datetime) -> 
     for i, row in enumerate(latest["rows"]):
         metric = row["metric"]
         left, width = diverging(row["z"], client_config.HOME_FINDING_Z_FULL)
-        norm = (
-            format_value(metric, row["norm_mean"])
-            if row["norm_mean"] is not None
-            and (row["norm_n"] or 0) >= coaching_config.MIN_NORM_SAMPLE
-            else "—"
-        )
-        if METRICS[metric].zero_sum and norm != "—":
-            norm = "0" if row["norm_mean"] == 0 else norm
-        objective = (
-            f" · obj. {format_value(metric, row['objective_value'])}"
-            if row["objective_value"] is not None
-            else ""
-        )
+        norm, objective = finding_reference(row)
+        reference = (norm or "—") + (f" · obj. {objective}" if objective else "")
         rows.append(
             {
                 "label": METRICS[metric].label,
                 "value": format_value(metric, row["value"]),
-                "reference": norm + objective,
+                "reference": reference,
                 "z": f"{signed(row['z'], 1)} σ",
                 "good": row["z"] >= 0,
                 "left": round(left, 1),

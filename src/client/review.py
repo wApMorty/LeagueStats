@@ -14,14 +14,15 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from markupsafe import Markup
 
+from ..coaching.metrics import METRICS, format_value
 from ..config_client import client_config
 from ..repositories.coaching import CoachingRepository
-from ..winprob.impact import KILL_TYPES, event_kind, scoring_team
+from ..winprob.impact import KILL_TYPES, event_kind, impacts, scoring_team
 from ..winprob.model import WinModel
 from ..winprob.report import LABELS, TAKEN, curve_points
 from ..winprob.train import model_path
-from .charts import Band, Mark, Series, Tick, line_chart
-from .data import ago, date_fr, parse_utc, plural
+from .charts import Band, Mark, Series, Tick, diverging, line_chart
+from .data import ago, date_fr, finding_reference, parse_utc, plural, tier_name
 from .draft_view import ROLE_LABELS, Champions, fr, signed
 
 # Couleur du repère d'un événement qui rapporte (un événement qui coûte est toujours rose).
@@ -300,8 +301,10 @@ def game_page(
     champions: Champions,
     model: Optional[WinModel],
     now: datetime,
+    review: bool = False,
 ) -> Optional[dict]:
-    """La page d'une partie capturée ; None si elle n'existe pas."""
+    """La page d'une partie capturée ; None si elle n'existe pas. `review` : la revue qui suit la
+    partie (`/postgame`), au lieu de la partie consultée plus tard."""
     record = repo.game_record(game_id)
     if record is None:
         return None
@@ -318,6 +321,12 @@ def game_page(
 
     page: Dict[str, Any] = {
         "game_id": game_id,
+        "review": review,
+        "kicker": (
+            f"Revue de partie · {ago(ended, now)}"
+            if review
+            else f"Partie du {date_fr(ended)} · {ago(ended, now)}"
+        ),
         "win": win,
         "title": "Victoire" if win else "Défaite",
         "champion": champions.name(me["championId"]),
@@ -336,6 +345,9 @@ def game_page(
         "curve_note": None,
         "impact_note": None,
         "impact": {"available": False, "costly": [], "profitable": [], "events": []},
+        "lp": None,
+        "axes": [],
+        "findings": [],
     }
     points: List[Tuple[float, float]] = []
     if timeline is None:
@@ -354,18 +366,88 @@ def game_page(
     events = _events(rows, timeline, game, pid, champions) if rows and timeline else []
     if events:
         mine = [e for e in events if e["mine"]]
+        stack = sorted(
+            sorted(events, key=lambda e: -abs(e["delta"]))[: client_config.GAME_MARKS],
+            key=lambda e: e["ts"],
+        )
+        biggest = max(abs(e["delta"]) for e in stack) or 1.0
+        residual = _residual(model, game, timeline, rows, me["teamId"])
         page["impact"] = {
             "available": True,
             "events": events,
+            "stack": [
+                {**e, **_bar(e["delta"], biggest), "delay": 500 + i * 110}
+                for i, e in enumerate(stack)
+            ],
             "costly": sorted(
                 (e for e in mine if e["mine_delta"] < 0), key=lambda e: e["mine_delta"]
             )[: client_config.GAME_TOP],
             "profitable": sorted(
                 (e for e in mine if e["mine_delta"] > 0), key=lambda e: -e["mine_delta"]
             )[: client_config.GAME_TOP],
+            "attributed": _pts(sum(e["mine_delta"] for e in mine)),
+            "residual": _pts(residual) if residual is not None else None,
         }
     elif timeline is not None:
         page["impact_note"] = "Impact non calculé pour cette partie."
     if points:
         page["curve"] = _curve_chart(points, events)
+
+    rank = repo.rank_after_game(game_id)
+    if rank:
+        page["lp"] = {
+            "delta": signed(rank["lp_delta"], 0) if rank["lp_delta"] is not None else None,
+            "gain": (rank["lp_delta"] or 0) >= 0,
+            "value": abs(rank["lp_delta"] or 0),
+            "rank": f"{tier_name(rank)} · {rank['lp']} LP",
+        }
+    for verdict in repo.game_verdicts(game_id):
+        metric = METRICS[verdict["metric"]]
+        page["axes"].append(
+            {
+                "held": verdict["held"],
+                "text": (
+                    f"Axe « {metric.label} » : {'tenu' if verdict['held'] else 'non tenu'} "
+                    f"({format_value(verdict['metric'], verdict['value'])}, cible "
+                    f"{'≥' if metric.sense > 0 else '≤'} "
+                    f"{format_value(verdict['metric'], verdict['target'])})"
+                ),
+            }
+        )
+    for finding in repo.game_findings(game_id):
+        norm, objective = finding_reference(finding)
+        page["findings"].append(
+            {
+                "label": METRICS[finding["metric"]].label,
+                "value": format_value(finding["metric"], finding["value"]),
+                "reference": " · ".join(
+                    part
+                    for part in (
+                        f"norme {norm}" if norm else "",
+                        f"obj. {objective}" if objective else "",
+                    )
+                    if part
+                )
+                or "—",
+                "good": finding["z"] >= 0,
+            }
+        )
     return page
+
+
+def _bar(delta: float, biggest: float) -> dict:
+    """Position (en %) de la barre divergente d'un événement, la plus grande remplissant la demi-largeur."""
+    left, width = diverging(delta, biggest)
+    return {"left": round(left, 1), "width": round(width, 1)}
+
+
+def _residual(
+    model: Optional[WinModel], game: dict, timeline: dict, rows: List[dict], team: int
+) -> Optional[float]:
+    """Ce que le temps, le farm et les niveaux ont changé hors des événements, pour l'équipe du joueur
+    (non attribué). Recalculé avec le modèle qui a produit les lignes stockées : d'une autre version,
+    il ne leur correspondrait plus et n'est pas affiché."""
+    if model is None or rows[0]["model_version"] != model.version:
+        return None
+    summary = impacts(model, game, timeline)["teams"].get(team)
+    return summary["unattributed"] if summary else None

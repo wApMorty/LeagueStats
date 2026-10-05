@@ -19,7 +19,7 @@ boucle du Live Coach.
 import json
 import sqlite3
 from datetime import datetime, timezone
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, Optional, Set
 
 from ..config_constants import coaching_config
 from ..draft.final_analysis import _to_points as to_points
@@ -48,11 +48,33 @@ class GameCapture:
 
     def on_post_game(self) -> None:
         """Un passage de la fenêtre d'après-partie."""
+        known = self._captured_ids()
         self._safely(self.remember_end_of_game)
         self._safely(lambda: ranked.snapshot_after_game(self.m.lcu, self.m.assistant.db))
         self._safely(self.capture_recent)
         self._safely(lambda: self.analyze(live=True))
         self._safely(lambda: self.impact(live=True))
+        self._safely(lambda: self._announce(known))
+
+    @property
+    def _client_mode(self) -> bool:
+        """Le client LeagueStats est branché : sa page de revue remplace le rapport console (SPEC-21 §4.5)."""
+        return getattr(self.m, "bus", None) is not None
+
+    def _captured_ids(self) -> Set[int]:
+        try:
+            return set(self.m.assistant.db.get_captured_game_ids())
+        except Exception:  # best-effort : ne pas annoncer à tort vaut mieux que planter
+            return set()
+
+    def _announce(self, known: Set[int]) -> None:
+        """Annonce au client la partie qui vient d'être capturée (sujet `game_captured`) ; la plus
+        récente si le passage en a pris plusieurs (les identifiants de partie croissent avec le temps).
+        """
+        bus = getattr(self.m, "bus", None)
+        fresh = self._captured_ids() - known
+        if bus is not None and fresh:
+            bus.publish("game_captured", {"game_id": max(fresh)})
 
     def analyze(self, live: bool) -> None:
         """Analyse les parties capturées (tâches 34 à 38).
@@ -65,7 +87,7 @@ class GameCapture:
         analyses = findings.analyze_pending(db)
         for analysis in analyses:
             lines = goals.judge(repo, analysis)
-            if live:
+            if live and not self._client_mode:
                 lines = self._game_report(analysis) + lines
             for line in lines:
                 print(line)
@@ -84,7 +106,7 @@ class GameCapture:
     def impact(self, live: bool) -> None:
         """Impact sur la win chance des parties capturées (SPEC-20) ; en direct, le rapport de la dernière."""
         reports = compute_pending(self.m.assistant.db)
-        if live and reports:
+        if live and reports and not self._client_mode:
             print("\n".join([""] + reports[-1][1]))
 
     def _game_report(self, analysis) -> list:

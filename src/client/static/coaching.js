@@ -31,4 +31,18 @@
     );
   };
   document.addEventListener("htmx:load", (event) => play(event.target));
+
+  // Une partie vient d'être capturée (sujet `game_captured`, SPEC-21 §4.5) : la fenêtre bascule sur la revue.
+  // Un lien caché dans #view passe par la navigation htmx de la coque, donc par la transition de page et
+  // l'historique. Jamais en pleine draft : un champ select en cours ne doit pas être arraché à l'écran ;
+  // la revue reste à une entrée de navigation (« Post-game »).
+  window.Sse?.open("game_captured", (name) => {
+    const view = document.getElementById("view");
+    if (name !== "game_captured" || !view || document.getElementById("draft")) return;
+    const link = Object.assign(document.createElement("a"), { href: "/postgame", hidden: true });
+    view.appendChild(link);
+    htmx.process(link);
+    link.click();
+    link.remove();
+  });
 })();

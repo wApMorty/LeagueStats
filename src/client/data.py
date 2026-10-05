@@ -453,6 +453,25 @@ def progression_view(roles: Dict[str, int], history: List[dict], role: Optional[
     }
 
 
+def finding_reference(row: dict) -> Tuple[Optional[str], Optional[str]]:
+    """(norme, objectif) formatés d'un constat ; None quand la référence manque ou est en construction
+    (norme sous `MIN_NORM_SAMPLE` parties). Un écart face à l'adversaire de lane a 0 pour norme."""
+    metric = row["metric"]
+    reliable = (
+        row["norm_mean"] is not None and (row["norm_n"] or 0) >= coaching_config.MIN_NORM_SAMPLE
+    )
+    if not reliable:
+        norm = None
+    elif METRICS[metric].zero_sum and row["norm_mean"] == 0:
+        norm = "0"
+    else:
+        norm = format_value(metric, row["norm_mean"])
+    objective = (
+        format_value(metric, row["objective_value"]) if row["objective_value"] is not None else None
+    )
+    return norm, objective
+
+
 # ---------- calibration ----------
 
 

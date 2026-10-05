@@ -1,14 +1,30 @@
 {% extends "base.html" %}
-{% block title %}{{ g.title }} · {{ g.champion }} · LeagueStats{% endblock %}
+{% block title %}{% if g %}{{ g.title }} · {{ g.champion }}{% else %}Post-game{% endif %} · LeagueStats{% endblock %}
 {% block page_class %} page-coaching page-game{% endblock %}
 {% block content %}
+{% if not g %}
 <header class="page-head" data-rise="1">
+  <div class="page-titles"><div class="kicker">Revue de partie</div><h1 data-spell="1">Post-game</h1></div>
+</header>
+<p class="empty">Aucune partie capturée pour l'instant : la revue apparaît ici après chaque partie classée.</p>
+{% else %}
+<header class="page-head game-hero" data-rise="1">
   <div class="page-titles">
-    <div class="kicker">Partie du {{ g.date }} · {{ g.ago }}</div>
+    <div class="kicker">{{ g.kicker }}</div>
     <h1 class="game-title {{ 'win' if g.win else 'loss' }}" data-spell="1">{{ g.title }}</h1>
     <div class="game-context">{{ g.champion }}{% if g.role %} · {{ g.role }}{% endif %}{% if g.opponent %} contre {{ g.opponent }}{% endif %} · {{ g.duration }} · {{ g.queue }}</div>
   </div>
-  <a href="/parties">‹ Toutes les parties</a>
+  <div class="game-side">
+    {% if g.axes %}
+    <div class="axis-pills">
+      {% for a in g.axes %}<span class="axis-pill {{ 'held' if a.held else 'miss' }}"><i></i>{{ a.text }}</span>{% endfor %}
+    </div>
+    {% endif %}
+    {% if g.lp and g.lp.delta %}
+    <div class="lp-gain {{ 'gain' if g.lp.gain else 'loss' }}"><b>{{ g.lp.delta }} LP</b><span>{{ g.lp.rank }}</span></div>
+    {% endif %}
+    <a href="/parties">‹ Toutes les parties</a>
+  </div>
 </header>
 
 <div class="cols">
@@ -38,9 +54,44 @@
       </section>
       {% endfor %}
     </div>
+    {% endif %}
+  </div>
+
+  <aside class="side">
+    {% if g.impact.available %}
+    <section class="impact">
+      <div class="impact-head" data-rise="1" data-delay="300"><h2>Impact par événement</h2><span class="muted-2">ΔP équipe, pts</span></div>
+      {% for e in g.impact.stack %}
+      <div class="impact-row" data-stack="1" data-delay="{{ e.delay }}">
+        <span class="tab muted-2">{{ e.time }}</span>
+        <span class="impact-label">{{ e.label }}{% if e.mine %}<em>toi</em>{% endif %}</span>
+        <span class="diverge"><i class="diverge-bar" data-bar="x" data-delay="{{ e.delay }}"
+            style="left: {{ e.left }}%; width: {{ e.width }}%; background: {{ e.color }}; box-shadow: 0 0 10px {{ e.color }}; transform-origin: {{ 'left' if e.delta >= 0 else 'right' }} center"></i></span>
+        <b class="tab" style="color: {{ e.color }}">{{ e.delta_text }}</b>
+      </div>
+      {% endfor %}
+      <div class="impact-foot" data-rise="1" data-delay="1600">
+        <span>Ton impact attribué <b>{{ g.impact.attributed }} pt</b></span>
+        {% if g.impact.residual %}<span class="muted-2">Résidu non attribué {{ g.impact.residual }}</span>{% endif %}
+      </div>
+    </section>
     {% elif g.impact_note %}
     <p class="fine">{{ g.impact_note }}</p>
     {% endif %}
-  </div>
+
+    {% if g.findings %}
+    <section class="gaps">
+      <h2 data-rise="1" data-delay="1700">Écarts à la norme et à l'objectif</h2>
+      {% for f in g.findings %}
+      <div class="gap-row" data-rise="1" data-delay="{{ 1800 + loop.index0 * 60 }}">
+        <span>{{ f.label }}</span>
+        <b class="tab {{ 'ok' if f.good else 'ko' }}">{{ f.value }}</b>
+        <span class="muted-2 r">{{ f.reference }}</span>
+      </div>
+      {% endfor %}
+    </section>
+    {% endif %}
+  </aside>
 </div>
+{% endif %}
 {% endblock %}

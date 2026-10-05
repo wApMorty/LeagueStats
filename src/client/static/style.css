@@ -816,6 +816,43 @@ h2 { margin: 0; font: 600 24px/1 var(--font-title); }
 .top-row i { display: block; font-style: normal; font-size: 13px; color: var(--muted); }
 .top-delta { font: 600 30px/1 var(--font-title); }
 
+/* Post-game (tâche 75) : en-tête, axes jugés, LP, pile d'impact, écarts */
+.page-game { --halo-1: 100% 10%; --halo-2: 10% 0%; --halo-3: 40% 100%; }
+.game-hero { align-items: center; }
+.game-side { display: flex; align-items: center; gap: 40px; }
+.axis-pills { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.axis-pill { --c: var(--mint); display: flex; align-items: center; gap: 8px; padding: 5px 14px; border-radius: 999px;
+  border: 1px solid var(--c); color: var(--c); font-size: 14px; }
+.axis-pill.miss { --c: var(--rose); }
+.axis-pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
+.lp-gain { display: flex; flex-direction: column; align-items: flex-end; }
+.lp-gain b { font: 600 58px/1 var(--font-title); background: linear-gradient(90deg, oklch(0.9 0.14 95), oklch(0.82 0.15 165));
+  -webkit-background-clip: text; background-clip: text; color: transparent; }
+.lp-gain.loss b { background-image: linear-gradient(90deg, oklch(0.72 0.21 345), oklch(0.7 0.2 20)); }
+.lp-gain span { font-size: 15px; color: var(--ink-2); }
+.impact { display: flex; flex-direction: column; }
+.impact-head { display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 10px;
+  border-bottom: 1px solid oklch(0.74 0.11 55 / 0.2); }
+.impact-head h2 { font-size: 26px; }
+.impact-head span { font-size: 12px; }
+.impact-row { display: grid; grid-template-columns: 46px minmax(0, 1fr) 120px 46px; align-items: center; gap: 10px;
+  height: 35px; border-bottom: 1px solid oklch(0.74 0.11 55 / 0.07); font-size: 14px; }
+.impact-label { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.impact-label em { margin-left: 6px; font-size: 11px; font-style: normal; letter-spacing: 0.1em; text-transform: uppercase; color: var(--copper); }
+.impact-row .diverge { margin: 0; }
+.impact-row .diverge-bar { top: 1px; }
+.impact-row b { text-align: right; }
+.impact-foot { margin-top: 12px; display: flex; justify-content: space-between; gap: 12px; font-size: 14px; color: var(--ink-2); }
+.impact-foot b { color: oklch(0.86 0.09 165); }
+.gaps { display: flex; flex-direction: column; }
+.gaps h2 { padding-bottom: 10px; border-bottom: 1px solid oklch(0.74 0.11 55 / 0.2); font-size: 26px; }
+.gap-row { display: grid; grid-template-columns: minmax(0, 1fr) 70px minmax(0, 150px); align-items: center; gap: 10px;
+  height: 40px; border-bottom: 1px solid oklch(0.74 0.11 55 / 0.07); font-size: 14px; }
+.gap-row b { text-align: right; }
+.gap-row .r { text-align: right; }
+.gap-row .ok { color: var(--mint); }
+.gap-row .ko { color: var(--rose); }
+
 /* Calibration (tâche 54) */
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .calib-table { width: 100%; border-collapse: collapse; font-size: 14px; }

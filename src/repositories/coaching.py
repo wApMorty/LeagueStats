@@ -256,6 +256,16 @@ class CoachingRepository:
         )
         return {"probability": rows[0][0], "model_version": rows[0][1]} if rows else None
 
+    def game_verdicts(self, game_id: int) -> List[dict]:
+        """Verdict de chaque axe jugé sur la partie : métrique, poste, cible, valeur et si l'axe est tenu."""
+        keys = ("metric", "role", "target", "value", "held")
+        rows = self._rows(
+            "SELECT g.metric, g.role, g.target, v.value, v.held FROM goal_verdicts v "
+            "JOIN coaching_goals g ON g.id = v.goal_id WHERE v.game_id = ? ORDER BY g.id",
+            (game_id,),
+        )
+        return [dict(zip(keys, row[:4] + (bool(row[4]),))) for row in rows]
+
     def labelled_versions(self) -> List[tuple]:
         """(version du modèle, prédictions dont l'issue est connue), de la plus fournie à la moins fournie."""
         return self._rows(
