@@ -21,6 +21,7 @@ from ..user_prefs import load_motion, save_motion
 from .assets import PLACEHOLDER, Assets
 from .draft_grimoire import grimoire_view
 from .draft_loadout import normalize_page, plan as loadout_plan, runes_payload, send as send_loadout
+from . import found
 from .draft_actions import Refusal, role_command, run as run_draft_action
 from .draft_skins import SkinBook, select_skin
 from .draft_view import signature, stage_view
@@ -239,6 +240,19 @@ def create_app(
         """Le grimoire des champions, ouvert par le script au clic."""
         view = grimoire_view(draft_snapshot(), app.state.assets)
         return templates.TemplateResponse(request, "partials/draft_grimoire.html", {"g": view})
+
+    @app.get("/found/state")
+    def found_state() -> dict:
+        """Phase du client LoL et compte à rebours de la partie trouvée."""
+        return found.state(proxy)
+
+    @app.post("/found/{name}")
+    def found_answer(name: str):
+        """Accepte ou refuse la partie trouvée ; refusé (409) hors de la file trouvée."""
+        try:
+            return found.answer(proxy, name)
+        except Refusal as refusal:
+            return JSONResponse({"detail": str(refusal)}, status_code=409)
 
     @app.get("/draft/runes")
     def draft_runes() -> dict:

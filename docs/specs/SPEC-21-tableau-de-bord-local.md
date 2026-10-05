@@ -445,7 +445,7 @@ Les tâches 48, 49, 55, 68, 69, 70 et 84 (lot 1), puis 72, 73, 74 et 85 à 92 (l
 
 | # | Tâche | Pts | Dépend de |
 |---|---|---|---|
-| 93 | **File trouvée** : overlay de la coque sur la phase `ReadyCheck`, compte à rebours de 10 s, accepter / refuser (LCU, avec jeton), mention de l'auto-accept, effondrement vers la draft ; « Champ select en cours » dans la barre de titre ; tests avec faux LCU | 5 | 84, 55 |
+| 93 | ✅ **File trouvée** : overlay de la coque sur la phase `ReadyCheck`, compte à rebours de 10 s, accepter / refuser (LCU, avec jeton), mention de l'auto-accept, effondrement vers la draft ; « Champ select en cours » dans la barre de titre ; tests avec faux LCU | 5 | 84, 55 |
 | 94 | **Transition de page signature** : cercle runique, runes, implosion, clip-path ; remplace le fondu de View Transitions ; la navigation glisse à la sortie de la draft ; Réduit = instantané ; jamais de clic perdu | 3 | 84, 73 |
 
 **Lot 4 — Coaching et post-game (39 pts)** — étape 5 du handoff

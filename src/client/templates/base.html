@@ -13,10 +13,12 @@
 <script src="/static/htmx.min.js" defer></script>
 <script src="/static/motion.js" defer></script>
 <script src="/static/shell.js" defer></script>
+<script src="/static/sse.js" defer></script>
 <script src="/static/draft.js" defer></script>
 <script src="/static/champions.js" defer></script>
 <script src="/static/rune_logic.js" defer></script>
 <script src="/static/runes.js" defer></script>
+<script src="/static/found.js" defer></script>
 {% block head %}{% endblock %}
 </head>
 <body>
@@ -27,6 +29,7 @@
       LeagueStats
     </span>
   </div>
+  <button type="button" class="chip chip-ok tb-pill" id="tb-center" hidden title="Ouvrir la draft"><span class="dot"></span>Champ select en cours</button>
   {% include "partials/client_state.html" %}
   <div class="titlebar-buttons">
     <button class="tb-btn" id="tb-min" type="button" title="Réduire" aria-label="Réduire">

@@ -86,36 +86,6 @@
     }
   }
 
-  async function stream() {
-    while (ctx.alive()) {
-      try {
-        const response = await fetch("/events?topic=draft", {
-          headers: authHeaders(),
-          signal: ctx.abort.signal,
-        });
-        if (!response.ok) throw new Error(response.status);
-        refresh(); // l'état a pu changer pendant une coupure
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-        for (;;) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, "\n");
-          let end;
-          while ((end = buffer.indexOf("\n\n")) >= 0) {
-            const frame = buffer.slice(0, end);
-            buffer = buffer.slice(end + 2);
-            if (/^event: ?draft$/m.test(frame)) refresh();
-          }
-        }
-      } catch (error) {
-        if (ctx.abort.signal.aborted) return;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-    }
-  }
-
   // ---------- état : chrono, balance, sélection ----------
 
   function readState() {
@@ -446,13 +416,13 @@
 
   function boot(root) {
     if (ctx && ctx.root === root) return;
-    ctx?.abort.abort();
+    ctx?.sse?.abort();
     const stage = root.querySelector("#draft-stage");
     ctx = {
       root,
       stage,
       sync: root.querySelector("#d-sync"),
-      abort: new AbortController(),
+      sse: null,
       alive: () => root.isConnected,
       state: null,
       sel: null,
@@ -484,9 +454,9 @@
     const timer = setInterval(() => {
       if (ctx.alive()) return tick();
       clearInterval(timer);
-      ctx.abort.abort(); // l'écran a été quitté : le flux SSE se ferme
+      ctx.sse?.abort(); // l'écran a été quitté : le flux SSE se ferme
     }, 250);
-    stream();
+    ctx.sse = Sse.open("draft", () => refresh(), { alive: ctx.alive, onOpen: refresh });
   }
 
   document.addEventListener("htmx:load", (event) => {
