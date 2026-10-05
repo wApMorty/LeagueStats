@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Noto+Sans+Runic&display=swap">
+<script src="motion.js"></script>
+<style>
+html, body { margin: 0; background: oklch(0.16 0.02 170); }
+* { box-sizing: border-box; }
+a { color: oklch(0.8 0.09 55); }
+a:hover { color: oklch(0.88 0.08 55); }
+button { font: inherit; }
+</style>
+</helmet>
+<div ref="{{ root }}" style="position:relative; width:1700px; height:950px; overflow:hidden; color:oklch(0.94 0.012 120); font-family:'Alegreya Sans', sans-serif; background:radial-gradient(ellipse 900px 700px at 75% 0%, oklch(0.25 0.09 290 / 0.75) 0%, transparent 70%), radial-gradient(ellipse 800px 600px at 0% 100%, oklch(0.24 0.07 190 / 0.8) 0%, transparent 70%), radial-gradient(ellipse 700px 500px at 100% 90%, oklch(0.23 0.08 345 / 0.55) 0%, transparent 70%), oklch(0.15 0.02 170);">
+  <div data-rise="1" style="position:absolute; left:48px; right:48px; top:30px; display:flex; align-items:flex-end; justify-content:space-between;">
+    <div style="display:flex; flex-direction:column; gap:6px;">
+      <div style="font-size:12px; letter-spacing:0.22em; text-transform:uppercase; color:oklch(0.74 0.11 55 / 0.85);">Coaching · grille du rôle</div>
+      <div data-spell="1" style="font:600 46px/1 'Cormorant Garamond', serif;">Progression</div>
+    </div>
+    <div style="display:flex; gap:8px;">
+      <sc-for list="{{ roles }}" as="r" hint-placeholder-count="5">
+        <button onClick="{{ r.onPick }}" style="position:relative; height:42px; padding:0 18px; border-radius:21px; border:1px solid {{ r.bd }}; background:{{ r.bg }}; color:{{ r.fg }}; font-size:15px; cursor:pointer; display:flex; align-items:center; gap:8px;">{{ r.label }}<span style="font-size:12px; opacity:0.75;">{{ r.n }}</span></button>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="position:absolute; left:48px; top:122px; width:1124px; display:flex; flex-direction:column;">
+    <div style="display:grid; grid-template-columns:minmax(0,1fr) 64px 84px 84px 90px 190px 170px; align-items:center; gap:0 8px; padding:0 0 10px; border-bottom:1px solid oklch(0.74 0.11 55 / 0.25); font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:oklch(0.62 0.03 160);">
+      <span>Métrique</span><span>Poids</span><span style="text-align:right;">Toi</span><span style="text-align:right;">Norme</span><span style="text-align:right;">Objectif</span><span style="text-align:center;">Tendance (z glissant)</span><span style="text-align:right;">Verdict</span>
+    </div>
+    <sc-for list="{{ rows }}" as="m" hint-placeholder-count="8">
+      <div data-row="1" data-delay="{{ m.d }}" style="display:grid; grid-template-columns:minmax(0,1fr) 64px 84px 84px 90px 190px 170px; align-items:center; gap:0 8px; height:56px; border-bottom:1px solid oklch(0.74 0.11 55 / 0.08);">
+        <span style="display:flex; align-items:center; gap:12px; font:600 21px/1 'Cormorant Garamond', serif;"><span style="width:8px; height:8px; flex:none; background:{{ m.hc }}; box-shadow:0 0 10px {{ m.hc }}; transform:rotate(45deg);"></span>{{ m.label }}</span>
+        <span style="font-size:13px; letter-spacing:0.2em; color:oklch(0.86 0.13 85);">{{ m.w }}</span>
+        <span style="text-align:right; font-size:17px; font-weight:700; font-variant-numeric:tabular-nums;">{{ m.you }}</span>
+        <span style="text-align:right; font-size:15px; color:oklch(0.7 0.02 160); font-variant-numeric:tabular-nums;">{{ m.norm }}</span>
+        <span style="text-align:right; font-size:15px; color:oklch(0.7 0.02 160); font-variant-numeric:tabular-nums;">{{ m.obj }}</span>
+        <svg viewBox="0 0 190 40" style="width:190px; height:40px; overflow:visible;">
+          <line x1="0" x2="190" y1="20" y2="20" style="stroke:oklch(0.74 0.11 55 / 0.2); stroke-width:1; stroke-dasharray:2 4;"></line>
+          <path data-sparkfade="1" data-delay="{{ m.d }}" d="{{ m.po }}" style="fill:none; stroke:oklch(0.74 0.11 55 / 0.8); stroke-width:1.4; stroke-dasharray:{{ m.poDash }};"></path>
+          <path data-spark="1" data-delay="{{ m.d }}" data-pen="{{ m.hc }}" d="{{ m.pn }}" style="fill:none; stroke:{{ m.hc }}; stroke-width:2; stroke-linejoin:round; stroke-linecap:round; filter:drop-shadow(0 0 4px {{ m.hc }});"></path>
+        </svg>
+        <div style="display:flex; justify-content:flex-end;"><span style="padding:3px 12px; border-radius:999px; font-size:13px; border:1px {{ m.vStyle }} {{ m.vc }}; color:{{ m.vc }}; background:{{ m.vbg }};">{{ m.verdict }}</span></div>
+      </div>
+    </sc-for>
+  </div>
+
+  <aside style="position:absolute; left:1212px; top:122px; width:440px; display:flex; flex-direction:column; gap:20px;">
+    <div data-rise="1" data-delay="200" style="padding:22px 24px; border-radius:6px; background:linear-gradient(150deg, oklch(0.72 0.2 290 / 0.18) 0%, oklch(0.19 0.02 170) 60%); border:1px solid oklch(0.72 0.2 290 / 0.5);">
+      <div style="font-size:12px; letter-spacing:0.18em; text-transform:uppercase; color:oklch(0.7 0.02 160);">Échantillon · {{ roleName }}</div>
+      <div style="margin-top:8px; display:flex; align-items:baseline; gap:10px;"><span style="font:600 48px/1 'Cormorant Garamond', serif; background:linear-gradient(90deg, oklch(0.86 0.13 85), oklch(0.72 0.2 290)); -webkit-background-clip:text; background-clip:text; color:transparent;">{{ games }}</span><span style="font-size:16px; color:oklch(0.82 0.015 140);">parties analysées</span></div>
+      <div style="margin-top:6px; font-size:14px; color:oklch(0.7 0.02 160);">{{ sampleNote }}</div>
+    </div>
+    <div data-rise="1" data-delay="320" style="display:flex; flex-direction:column; gap:12px;">
+      <span style="font:600 28px/1 'Cormorant Garamond', serif;">Schémas</span>
+      <sc-for list="{{ patterns }}" as="p" hint-placeholder-count="3">
+        <div style="position:relative; padding:14px 16px 14px 44px; border-radius:6px; background:oklch(0.185 0.02 170); border:1px solid oklch(0.74 0.11 55 / 0.14); font-size:15px; line-height:1.45; text-wrap:pretty;">
+          <svg viewBox="-10 -10 20 20" style="position:absolute; left:14px; top:17px; width:18px; height:18px; overflow:visible;"><circle r="8" style="fill:none; stroke:{{ p.c }}; stroke-width:1.2;"></circle><path d="M0,-6 L3.5,4.85 L-5.7,-1.85 L5.7,-1.85 L-3.5,4.85 Z" style="fill:none; stroke:{{ p.c }}; stroke-width:1;"></path></svg>
+          {{ p.t }}
+        </div>
+      </sc-for>
+    </div>
+    <div data-rise="1" data-delay="440" style="display:flex; flex-direction:column; gap:8px; font-size:13px; color:oklch(0.7 0.02 160);">
+      <span style="display:flex; align-items:center; gap:10px;"><span style="width:22px; height:2px; background:oklch(0.8 0.1 165);"></span>z face à la norme (pairs du même poste)</span>
+      <span style="display:flex; align-items:center; gap:10px;"><span style="width:22px; height:0; border-top:1.5px dashed oklch(0.74 0.11 55);"></span>z face à l'objectif (OneTricks, si publié)</span>
+      <span>Poids : ●● métrique principale, ● secondaire.</span>
+    </div>
+  </aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1700, &quot;height&quot;: 950}, &quot;go&quot;: {&quot;editor&quot;: null, &quot;tsType&quot;: &quot;(route: string) =&gt; void&quot;}, &quot;speed&quot;: {&quot;editor&quot;: &quot;range&quot;, &quot;default&quot;: 1, &quot;min&quot;: 0.5, &quot;max&quot;: 2, &quot;step&quot;: 0.1, &quot;tsType&quot;: &quot;number&quot;}, &quot;reduced&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;}}">
+const MINT = 'oklch(0.82 0.14 160)', ROSE = 'oklch(0.72 0.21 345)', COPPER = 'oklch(0.74 0.11 55)', MUTED = 'oklch(0.7 0.02 160)';
+const ROLE_H = { top: 55, jungle: 150, middle: 290, bottom: 85, support: 230 };
+const ROW_H = [165, 230, 290, 345, 55, 85, 200, 120, 260, 20, 180, 310];
+const LABELS = { cs_10: 'CS @10', cs_14: 'CS @14', cs_per_min: 'CS/min', gold_diff_15: "Écart d'or @15", xp_diff_15: "Écart d'XP @15", deaths_before_14: 'Morts avant 14 min', solo_deaths: 'Morts en solo', deaths_per_10: 'Morts / 10 min', kill_participation: 'Participation aux kills', objective_presence: 'Présence aux objectifs', damage_per_min: 'Dégâts / min', damage_share: 'Part des dégâts', structure_damage_per_min: 'Dégâts aux structures / min', vision_per_min: 'Vision / min', wards_killed_per_10: 'Wards détruites / 10 min', control_wards_per_10: 'Pinks achetées / 10 min' };
+const GRID = {
+  top: { cs_10: 1, gold_diff_15: 2, xp_diff_15: 2, deaths_before_14: 2, solo_deaths: 2, deaths_per_10: 2, damage_per_min: 1, structure_damage_per_min: 2 },
+  jungle: { cs_10: 1, cs_per_min: 1, gold_diff_15: 1, xp_diff_15: 1, deaths_before_14: 1, solo_deaths: 1, deaths_per_10: 2, kill_participation: 1, objective_presence: 1, structure_damage_per_min: 1 },
+  middle: { cs_10: 1, cs_per_min: 1, gold_diff_15: 2, xp_diff_15: 2, deaths_before_14: 1, solo_deaths: 1, deaths_per_10: 2, kill_participation: 1, damage_per_min: 2, damage_share: 2, structure_damage_per_min: 1 },
+  bottom: { cs_10: 1, cs_14: 2, cs_per_min: 2, gold_diff_15: 2, xp_diff_15: 2, deaths_before_14: 2, solo_deaths: 2, deaths_per_10: 2, objective_presence: 1, damage_per_min: 2, damage_share: 2, structure_damage_per_min: 2 },
+  support: { gold_diff_15: 1, xp_diff_15: 1, deaths_before_14: 1, deaths_per_10: 2, kill_participation: 1, objective_presence: 1, vision_per_min: 2, wards_killed_per_10: 1, control_wards_per_10: 2, structure_damage_per_min: 1 },
+};
+const ROLES = [['top', 'Top', 31], ['jungle', 'Jungle', 4], ['middle', 'Mid', 6], ['bottom', 'Bot', 2], ['support', 'Support', 5]];
+const TOP = {
+  cs_10: ['68', '71', '78', 'stable'], gold_diff_15: ['+112', '0', '—', 'en progrès'], xp_diff_15: ['−85', '0', '—', 'en recul'],
+  deaths_before_14: ['1,4', '1,1', '—', 'en progrès'], solo_deaths: ['2,1', '1,6', '—', 'stable'], deaths_per_10: ['2,3', '2,0', '1,6', 'stable'],
+  damage_per_min: ['612', '655', '700', 'en recul'], structure_damage_per_min: ['284', '231', '310', 'en progrès'],
+};
+const PATTERNS = {
+  top: [{ t: 'Mort avant 14 min : 29 % de victoires sur 14 parties, contre 64 % sinon.', c: ROSE }, { t: "Écart d'or @15 positif : 68 % de victoires sur 19 parties.", c: MINT }, { t: 'Dégâts aux structures au-dessus de la norme : 71 % de victoires sur 17 parties.', c: MINT }],
+  middle: [{ t: 'Part des dégâts sous 22 % : 2 victoires sur 6 parties.', c: ROSE }],
+  support: [{ t: 'Plus de 1,2 pink / 10 min : 4 victoires sur 5 parties.', c: MINT }],
+};
+// Échelle réelle et format de chaque métrique (src/coaching/metrics.py) : [min, max, format, publiée par OneTricks]
+const SCALE = {
+  cs_10: [55, 82, 'int', 1], cs_14: [88, 125, 'int', 1], cs_per_min: [5.8, 8.6, 'd1', 1], gold_diff_15: [-450, 450, 'sign', 0], xp_diff_15: [-400, 400, 'sign', 0],
+  deaths_before_14: [0.4, 2.2, 'd1', 0], solo_deaths: [0.3, 2.4, 'd1', 0], deaths_per_10: [1.1, 3.2, 'd1', 1], kill_participation: [0.38, 0.72, 'pct', 1],
+  objective_presence: [0.3, 0.75, 'pct', 0], damage_per_min: [380, 950, 'int', 1], damage_share: [0.14, 0.33, 'pct', 1], structure_damage_per_min: [60, 480, 'int', 0],
+  vision_per_min: [0.5, 2.6, 'd2', 1], wards_killed_per_10: [0.3, 2.4, 'd1', 0], control_wards_per_10: [0.3, 1.7, 'd1', 0],
+};
+const ZERO_SUM = { gold_diff_15: 1, xp_diff_15: 1 };
+const fmtv = (v, f) => (f === 'int' ? Math.round(v).toString() : f === 'd1' ? v.toFixed(1).replace('.', ',') : f === 'd2' ? v.toFixed(2).replace('.', ',') : f === 'pct' ? Math.round(v * 100) + ' %' : (v >= 0 ? '+' : '−') + Math.abs(Math.round(v)));
+function gen(k, role, r) {
+  const [a, b, f, ot] = SCALE[k], span = b - a;
+  const norm = ZERO_SUM[k] ? 0 : a + span * (0.35 + r() * 0.3);
+  const you = ZERO_SUM[k] ? (r() - 0.5) * span * 0.6 : norm + (r() - 0.5) * span * 0.35;
+  const obj = ot && r() > 0.3 ? norm + span * (0.08 + r() * 0.12) * (k.startsWith('deaths') ? -1 : 1) : null;
+  return [fmtv(you, f), ZERO_SUM[k] ? '0' : fmtv(norm, f), obj == null ? '—' : fmtv(obj, f), ['stable', 'en progrès', 'en recul'][Math.floor(r() * 3)]];
+}
+const rnd = s => { let x = 0; for (const ch of s) x = (x * 31 + ch.charCodeAt(0)) % 233280; return () => (x = (x * 9301 + 49297) % 233280) / 233280; };
+const spark = (r, trend, n = 16) => { let z = (r() - 0.5) * 0.8; const pts = []; for (let i = 0; i < n; i++) { z += (r() - 0.5) * 0.35 + trend * 0.06; z = Math.max(-1.8, Math.min(1.8, z)); pts.push(z); } return pts.map((v, i) => `${i ? 'L' : 'M'}${(i * 190 / (n - 1)).toFixed(1)},${(20 - v * 10).toFixed(1)}`).join(' '); };
+
+class Component extends DCLogic {
+  root = React.createRef();
+  state = { role: 'top' };
+  mo() { return { sp: this.props.speed ?? 1, reduced: !!this.props.reduced }; }
+  play(full) {
+    const r = this.root.current; if (!r || !window.Motion) return;
+    const sp = this.props.speed ?? 1;
+    if (full) Motion.intro(r, this.mo());
+    if (this.props.reduced) return;
+    r.querySelectorAll('[data-row]').forEach(el => el.animate([{ opacity: 0, transform: 'translateX(-14px)' }, { opacity: 1, transform: 'none' }], { duration: 600 / sp, delay: +el.dataset.delay / sp, easing: Motion.E.entree, fill: 'backwards' }));
+    r.querySelectorAll('[data-spark]').forEach(el => Motion.trace(el, 1200, +el.dataset.delay + 200, sp));
+    r.querySelectorAll('[data-sparkfade]').forEach(el => el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 800 / sp, delay: (+el.dataset.delay + 900) / sp, fill: 'backwards' }));
+  }
+  componentDidMount() { const go = () => (window.Motion ? this.play(true) : setTimeout(go, 50)); go(); }
+  componentDidUpdate() { const ps = this._prev || {}; this._prev = { ...this.state }; if (ps.role && ps.role !== this.state.role) requestAnimationFrame(() => this.play(false)); }
+  renderVals() {
+    const role = this.state.role, games = ROLES.find(r => r[0] === role)[2], enough = games >= 5;
+    const rows = Object.entries(GRID[role]).map(([k, w], i) => {
+      const r = rnd(role + k);
+      let [you, norm, obj, verdict] = TOP[k] && role === 'top' ? TOP[k] : gen(k, role, r);
+      if (!enough) verdict = `${games}/5 parties, pas de verdict`;
+      const trend = verdict === 'en progrès' ? 1 : verdict === 'en recul' ? -1 : 0;
+      const vc = !enough ? MUTED : verdict === 'en progrès' ? MINT : verdict === 'en recul' ? ROSE : MUTED;
+      return {
+        label: LABELS[k], w: w === 2 ? '●●' : '●', you, norm, obj, verdict, vc,
+        vStyle: enough ? 'solid' : 'dashed', vbg: enough && trend ? (trend > 0 ? 'oklch(0.8 0.1 165 / 0.1)' : 'oklch(0.74 0.12 355 / 0.1)') : 'transparent',
+        pn: enough ? spark(r, trend) : 'M0,20 L190,20', po: obj !== '—' && enough ? spark(rnd(k + role + 'o'), trend * 0.5) : 'M0,20 L0,20',
+        poDash: '4 4', d: 120 + i * 55, hc: `oklch(0.8 0.15 ${ROW_H[i % ROW_H.length]})`,
+      };
+    });
+    return {
+      root: this.root, rows, games, roleName: ROLES.find(r => r[0] === role)[1],
+      sampleNote: enough ? 'Tendance sur une moyenne glissante de 10 parties ; verdict de trends() au-delà de 5.' : `Sous 5 parties, la grille s'affiche sans verdict.`,
+      patterns: PATTERNS[role] || [{ t: `Pas assez de parties en ${ROLES.find(r => r[0] === role)[1]} pour dégager un schéma.`, c: MUTED }],
+      roles: ROLES.map(([k, label, n]) => {
+        const on = k === role;
+        const h = ROLE_H[k];
+        return { label, n, bd: on ? `oklch(0.78 0.16 ${h})` : `oklch(0.72 0.12 ${h} / 0.35)`, bg: on ? `linear-gradient(150deg, oklch(0.72 0.17 ${h} / 0.35), oklch(0.72 0.17 ${h} / 0.08))` : 'transparent', fg: on ? 'oklch(0.97 0.01 120)' : `oklch(0.8 0.08 ${h})`, onPick: () => this.setState({ role: k }) };
+      }),
+    };
+  }
+}
+</script>
+</body>
+</html>

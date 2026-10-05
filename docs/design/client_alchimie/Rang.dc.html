@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Noto+Sans+Runic&display=swap">
+<script src="motion.js"></script>
+<style>
+html, body { margin: 0; background: oklch(0.16 0.02 170); }
+* { box-sizing: border-box; }
+a { color: oklch(0.8 0.09 55); }
+a:hover { color: oklch(0.88 0.08 55); }
+button { font: inherit; }
+</style>
+</helmet>
+<div ref="{{ root }}" style="position:relative; width:1700px; height:950px; overflow:hidden; color:oklch(0.94 0.012 120); font-family:'Alegreya Sans', sans-serif; background:radial-gradient(ellipse 900px 700px at 100% 0%, oklch(0.25 0.09 290 / 0.75) 0%, transparent 70%), radial-gradient(ellipse 800px 600px at 20% 30%, oklch(0.24 0.07 190 / 0.8) 0%, transparent 70%), radial-gradient(ellipse 700px 500px at 60% 100%, oklch(0.23 0.08 345 / 0.55) 0%, transparent 70%), oklch(0.15 0.02 170);">
+  <div data-rise="1" style="position:absolute; left:48px; right:48px; top:30px; display:flex; align-items:flex-end; justify-content:space-between;">
+    <div style="display:flex; flex-direction:column; gap:6px;">
+      <div style="font-size:12px; letter-spacing:0.22em; text-transform:uppercase; color:oklch(0.74 0.11 55 / 0.85);">Coaching · 59 photos de rang</div>
+      <div data-spell="1" style="font:600 46px/1 'Cormorant Garamond', serif;">Rang</div>
+    </div>
+    <div style="display:flex; gap:24px; font-size:14px; color:oklch(0.82 0.015 140);">
+      <span style="display:flex; align-items:center; gap:8px;"><span style="width:22px; height:2px; background:linear-gradient(90deg, oklch(0.74 0.14 215), oklch(0.88 0.16 130));"></span>Classée solo/duo</span>
+      <span style="display:flex; align-items:center; gap:8px;"><span style="width:22px; height:2px; background:linear-gradient(90deg, oklch(0.72 0.2 290), oklch(0.74 0.22 340));"></span>Classée flexible</span>
+    </div>
+  </div>
+
+  <!-- courbe -->
+  <div data-fade="1" data-delay="100" style="position:absolute; left:48px; top:128px; width:1124px; height:560px; border-radius:6px; background:oklch(0.185 0.02 170); border:1px solid oklch(0.74 0.11 55 / 0.18);">
+    <svg viewBox="0 0 1124 560" style="position:absolute; inset:0; width:1124px; height:560px; overflow:visible;">
+      <defs>
+        <linearGradient id="rgSolo" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="oklch(0.74 0.14 215)"></stop><stop offset="0.55" stop-color="oklch(0.8 0.15 165)"></stop><stop offset="1" stop-color="oklch(0.88 0.16 130)"></stop></linearGradient>
+        <linearGradient id="rgFlex" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="oklch(0.72 0.2 290)"></stop><stop offset="1" stop-color="oklch(0.74 0.22 340)"></stop></linearGradient>
+        <linearGradient id="rgArea" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="oklch(0.8 0.15 165)" stop-opacity="0.28"></stop><stop offset="1" stop-color="oklch(0.74 0.14 215)" stop-opacity="0"></stop></linearGradient>
+      </defs>
+      <rect x="90" y="40" width="990" height="220" style="fill:oklch(0.78 0.15 155 / 0.07);"></rect>
+      <rect x="90" y="260" width="990" height="220" style="fill:oklch(0.74 0.12 215 / 0.07);"></rect>
+      <sc-for list="{{ grid }}" as="g" hint-placeholder-count="7">
+        <line data-trace="900" data-delay="{{ g.d }}" x1="90" x2="1080" y1="{{ g.y }}" y2="{{ g.y }}" style="stroke:{{ g.c }}; stroke-width:1;"></line>
+      </sc-for>
+      <path data-fade="1" data-delay="1800" d="{{ soloArea }}" style="fill:url(#rgArea);"></path>
+      <path data-trace="2600" data-delay="500" d="{{ flexPath }}" style="fill:none; stroke:url(#rgFlex); stroke-width:2.2; filter:drop-shadow(0 0 5px oklch(0.72 0.2 290 / 0.6));"></path>
+      <path data-trace="2400" data-delay="300" d="{{ soloPath }}" style="fill:none; stroke:url(#rgSolo); stroke-width:2.8; stroke-linejoin:round; stroke-linecap:round; filter:drop-shadow(0 0 7px oklch(0.8 0.15 165 / 0.6));"></path>
+    </svg>
+    <sc-for list="{{ grid }}" as="g" hint-placeholder-count="7"><div data-fade="1" data-delay="{{ g.d }}" style="position:absolute; left:0; width:76px; top:{{ g.ly }}px; text-align:right; font-size:13px; line-height:16px; color:{{ g.lc }};">{{ g.t }}</div></sc-for>
+    <sc-for list="{{ xt }}" as="x" hint-placeholder-count="5"><div style="position:absolute; top:498px; left:{{ x.lx }}px; width:100px; text-align:center; font-size:12px; color:oklch(0.62 0.03 160);">{{ x.t }}</div></sc-for>
+    <sc-for list="{{ soloPts }}" as="p" hint-placeholder-count="10">
+      <div data-pop="1" data-delay="{{ p.d }}" style="position:absolute; left:{{ p.x }}px; top:{{ p.y }}px; width:8px; height:8px; margin:-4px 0 0 -4px; border-radius:50%; background:oklch(0.185 0.02 170); border:1.5px solid {{ p.c }};"></div>
+    </sc-for>
+    <div data-pop="1" data-delay="2700" style="position:absolute; left:{{ endX }}px; top:{{ endY }}px; width:18px; height:18px; margin:-9px 0 0 -9px; border-radius:50%; background:oklch(0.9 0.15 130); box-shadow:0 0 24px oklch(0.88 0.16 130), 0 0 60px oklch(0.72 0.2 290 / 0.6);"></div>
+    <div data-rise="1" data-delay="2800" style="position:absolute; left:{{ endLabelX }}px; top:{{ endLabelY }}px; padding:6px 12px; border-radius:4px; background:oklch(0.23 0.022 170); border:1px solid oklch(0.8 0.1 165 / 0.5); font-size:14px; white-space:nowrap;">Émeraude II · 47 LP</div>
+  </div>
+
+  <!-- LP par partie -->
+  <div data-rise="1" data-delay="600" style="position:absolute; left:48px; top:712px; width:1124px; height:210px; padding:18px 24px; border-radius:6px; background:oklch(0.185 0.02 170); border:1px solid oklch(0.74 0.11 55 / 0.18); display:flex; flex-direction:column;">
+    <div style="display:flex; justify-content:space-between; align-items:baseline;"><span style="font:600 24px/1 'Cormorant Garamond', serif;">LP par partie · 20 dernières en solo/duo</span><span style="font-size:14px; color:oklch(0.7 0.02 160);">Moyenne +4,4 LP</span></div>
+    <div style="position:relative; flex:1; margin-top:12px; display:grid; grid-template-columns:repeat(20, minmax(0,1fr)); gap:10px;">
+      <div style="position:absolute; left:0; right:0; top:50%; height:1px; background:oklch(0.74 0.11 55 / 0.35);"></div>
+      <sc-for list="{{ bars }}" as="b" hint-placeholder-count="20">
+        <div style="position:relative; height:100%;">
+          <div data-bar="1" data-delay="{{ b.d }}" style="position:absolute; left:0; right:0; border-radius:3px; top:{{ b.top }}%; height:{{ b.h }}%; background:{{ b.c }}; transform-origin:{{ b.o }};"></div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- files -->
+  <aside style="position:absolute; left:1212px; top:128px; width:440px; display:flex; flex-direction:column; gap:20px;">
+    <sc-for list="{{ queues }}" as="q" hint-placeholder-count="2">
+      <div data-rise="1" data-tilt="1" data-delay="{{ q.d }}" style="position:relative; padding:24px 26px; border-radius:6px; background:linear-gradient(150deg, {{ q.tint }} 0%, oklch(0.19 0.02 170) 60%); border:1px solid {{ q.bd }}; box-shadow:0 0 40px {{ q.tint }}; overflow:hidden;">
+        <svg data-spin="{{ q.spin }}" viewBox="-60 -60 120 120" style="position:absolute; right:-24px; top:-24px; width:140px; height:140px; overflow:visible;"><circle r="56" style="fill:none; stroke:oklch(0.74 0.11 55 / 0.18);"></circle><path d="M0,-56 L32.9,45.3 L-53.3,-17.3 L53.3,-17.3 L-32.9,45.3 Z" style="fill:none; stroke:oklch(0.74 0.11 55 / 0.16);"></path></svg>
+        <div style="font-size:12px; letter-spacing:0.18em; text-transform:uppercase; color:{{ q.c }};">{{ q.name }}</div>
+        <div style="margin-top:12px; display:flex; align-items:center; gap:16px;">
+          <svg viewBox="-30 -30 60 60" style="width:62px; height:62px; overflow:visible;"><circle data-trace="1200" data-delay="{{ q.d }}" r="27" style="fill:none; stroke:{{ q.c }}; stroke-width:1.5;"></circle><path data-trace="1400" data-delay="{{ q.d2 }}" d="M0,-20 L17,0 L0,20 L-17,0 Z" style="fill:none; stroke:{{ q.c }}; stroke-width:1.5;"></path><circle r="4" style="fill:{{ q.c }};"></circle></svg>
+          <div style="display:flex; flex-direction:column;"><span style="font:600 38px/1 'Cormorant Garamond', serif;">{{ q.tier }}</span><span style="font-size:17px;"><span data-count="{{ q.lp }}" data-delay="{{ q.d }}">{{ q.lp }}</span> LP</span></div>
+        </div>
+        <div style="margin-top:18px; display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px;">
+          <sc-for list="{{ q.stats }}" as="s" hint-placeholder-count="3">
+            <div style="display:flex; flex-direction:column; gap:2px;"><span style="font:600 26px/1 'Cormorant Garamond', serif; font-variant-numeric:tabular-nums;">{{ s.v }}</span><span style="font-size:12px; color:oklch(0.7 0.02 160);">{{ s.l }}</span></div>
+          </sc-for>
+        </div>
+        <div style="margin-top:14px; font-size:13px; color:oklch(0.7 0.02 160);">{{ q.note }}</div>
+      </div>
+    </sc-for>
+    <div data-rise="1" data-delay="500" style="font-size:13px; line-height:1.5; color:oklch(0.62 0.03 160); text-wrap:pretty;">Échelle continue : 100 LP par division, 400 par palier. Une photo par fin de partie classée ; sous deux photos, une file n'a pas de courbe.</div>
+  </aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1700, &quot;height&quot;: 950}, &quot;go&quot;: {&quot;editor&quot;: null, &quot;tsType&quot;: &quot;(route: string) =&gt; void&quot;}, &quot;speed&quot;: {&quot;editor&quot;: &quot;range&quot;, &quot;default&quot;: 1, &quot;min&quot;: 0.5, &quot;max&quot;: 2, &quot;step&quot;: 0.1, &quot;tsType&quot;: &quot;number&quot;}, &quot;reduced&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;}}">
+const MINT = 'oklch(0.82 0.15 160)', ROSE = 'oklch(0.72 0.21 345)', COPPER = 'oklch(0.72 0.2 290)';
+const X0 = 90, W = 990, Y0 = 40, H = 440, N = 30;
+const xs = i => X0 + (i * W) / (N - 1);
+const ys = v => Y0 + H * (1 - (v - 100) / 600);
+function series(seed, start, end, n, vol) {
+  let x = start; const out = [];
+  for (let i = 0; i < n; i++) { seed = (seed * 9301 + 49297) % 233280; x += (seed / 233280 - 0.42) * vol; out.push(x); }
+  const k = end - out[n - 1]; return out.map((v, i) => v + (k * i) / (n - 1));
+}
+const SOLO = series(7, 515, 647, N, 34);
+const FLEX_I = [2, 6, 9, 13, 17, 21, 25, 28];
+const FLEX = series(3, 160, 322, FLEX_I.length, 40);
+const DATES = ['5 sept.', '12 sept.', '19 sept.', '26 sept.', '4 oct.'];
+
+class Component extends DCLogic {
+  root = React.createRef();
+  mo() { return { sp: this.props.speed ?? 1, reduced: !!this.props.reduced }; }
+  componentDidMount() {
+    const go = () => {
+      if (!window.Motion) return setTimeout(go, 50);
+      const r = this.root.current, sp = this.props.speed ?? 1;
+      Motion.intro(r, this.mo()); Motion.ambient(r, this.mo());
+      if (!this.props.reduced) r.querySelectorAll('[data-bar]').forEach(el => el.animate([{ transform: 'scaleY(0)' }, { transform: 'scaleY(1)' }], { duration: 700 / sp, delay: +el.dataset.delay / sp, easing: Motion.E.ressort, fill: 'backwards' }));
+    };
+    go();
+  }
+  renderVals() {
+    const tiers = ['Platine III', 'Platine II', 'Platine I', 'Émeraude IV', 'Émeraude III', 'Émeraude II', 'Émeraude I'];
+    const grid = tiers.map((t, i) => { const v = 100 + i * 100, y = ys(v); return { t, y: y.toFixed(1), ty: (y + 4).toFixed(1), ly: (y - 8).toFixed(1), d: i * 60, lc: v >= 400 ? 'oklch(0.82 0.14 155)' : 'oklch(0.78 0.11 215)', c: v === 400 ? 'oklch(0.86 0.13 85 / 0.6)' : v > 400 ? 'oklch(0.78 0.15 155 / 0.16)' : 'oklch(0.74 0.12 215 / 0.16)' }; });
+    const pts = SOLO.map((v, i) => [xs(i), ys(v)]);
+    const soloPath = pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+    const soloArea = `${soloPath} L${xs(N - 1).toFixed(1)},${(Y0 + H).toFixed(1)} L${X0},${Y0 + H} Z`;
+    const flexPath = FLEX.map((v, i) => `${i ? 'L' : 'M'}${xs(FLEX_I[i]).toFixed(1)},${ys(v).toFixed(1)}`).join(' ');
+    const diffs = SOLO.slice(1).map((v, i) => v - SOLO[i]).slice(-20);
+    const mx = Math.max(...diffs.map(Math.abs));
+    const [ex, ey] = pts[N - 1];
+    return {
+      root: this.root, grid, soloPath, soloArea, flexPath,
+      xt: DATES.map((t, i) => ({ t, x: (X0 + (i * W) / 4).toFixed(1), lx: (X0 + (i * W) / 4 - 50).toFixed(1) })),
+      soloPts: pts.slice(0, -1).map(([x, y], i) => ({ x: x.toFixed(1), y: y.toFixed(1), d: 300 + (i / (N - 1)) * 2400, c: `oklch(0.8 0.15 ${(215 - (i / (N - 1)) * 85).toFixed(0)})` })),
+      endX: ex.toFixed(1), endY: ey.toFixed(1), endLabelX: (ex - 190).toFixed(1), endLabelY: (ey - 46).toFixed(1),
+      bars: diffs.map((d, i) => { const h = (Math.abs(d) / mx) * 48; return { h: h.toFixed(1), top: (d >= 0 ? 50 - h : 50).toFixed(1), c: d >= 0 ? MINT : ROSE, o: d >= 0 ? 'center bottom' : 'center top', d: 700 + i * 40 }; }),
+      queues: [
+        { name: 'Classée solo/duo', tier: 'Émeraude II', lp: 47, c: MINT, tint: 'oklch(0.8 0.15 160 / 0.16)', bd: 'oklch(0.8 0.15 160 / 0.5)', d: 200, d2: 500, spin: 120, stats: [{ v: '62 V', l: 'victoires' }, { v: '55 D', l: 'défaites' }, { v: '53 %', l: 'taux de victoire' }], note: '+132 LP sur 30 jours · 41 photos' },
+        { name: 'Classée flexible', tier: 'Platine I', lp: 22, c: COPPER, tint: 'oklch(0.72 0.2 290 / 0.18)', bd: 'oklch(0.72 0.2 290 / 0.55)', d: 320, d2: 620, spin: -120, stats: [{ v: '14 V', l: 'victoires' }, { v: '9 D', l: 'défaites' }, { v: '61 %', l: 'taux de victoire' }], note: '+162 LP sur 30 jours · 18 photos' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

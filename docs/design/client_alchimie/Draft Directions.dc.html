@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Noto+Sans+Runic&display=swap">
+<style>
+html, body { margin: 0; background: oklch(0.2 0.008 270); }
+* { box-sizing: border-box; }
+a { color: oklch(0.82 0.11 85); }
+a:hover { color: oklch(0.9 0.09 85); }
+button { font: inherit; }
+</style>
+</helmet>
+<div style="min-height:100vh; padding:96px; font-family:'Alegreya Sans', sans-serif; color:oklch(0.92 0.01 85);">
+<section id="turn1" style="display:flex; flex-direction:column; gap:48px;">
+  <div style="display:flex; flex-direction:column; gap:8px; max-width:1400px;">
+    <div style="font:500 14px/1 'Alegreya Sans', sans-serif; letter-spacing:0.2em; text-transform:uppercase; color:oklch(0.7 0.02 270);">Tour 1 · Draft interactive (SPEC-21 §4.5)</div>
+    <div style="font:600 56px/1.05 'Cormorant Garamond', serif; color:oklch(0.95 0.01 85);">Trois directions pour l'atelier des sorciers</div>
+    <div style="font-size:20px; line-height:1.5; color:oklch(0.75 0.015 270); text-wrap:pretty;">Même draft, mêmes données (pool GRIND, Top contre Darius). Clique une recommandation pour la survoler, puis verrouille : le sceau s'appose. Chaque maquette fait 1920×986 (zone utile).</div>
+  </div>
+  <div style="display:flex; flex-wrap:wrap; gap:120px;">
+
+    <!-- ============ 1a — CERCLE D'INVOCATION ============ -->
+    <div id="1a" style="display:flex; flex-direction:column; gap:20px; width:1920px;">
+      <div style="display:flex; align-items:center; gap:20px;">
+        <div style="display:grid; place-items:center; width:56px; height:56px; border-radius:50%; background:oklch(0.82 0.11 85); color:oklch(0.16 0.02 275); font:700 22px/1 'Alegreya Sans', sans-serif;">1a</div>
+        <div style="display:flex; flex-direction:column; gap:4px; flex:1;">
+          <div style="font:600 34px/1.1 'Cormorant Garamond', serif;">Cercle d'invocation — grimoire nocturne</div>
+          <div style="font-size:18px; color:oklch(0.72 0.015 270);">Les dix champions sur un seul cercle, la win chance en sceau central. Le plus spectaculaire, le plus « structurel ».</div>
+        </div>
+        <button onClick="{{ a.replay }}" style="height:44px; padding:0 20px; border-radius:22px; border:1px solid oklch(0.82 0.11 85 / 0.5); background:transparent; color:oklch(0.88 0.08 85); font-size:16px; cursor:pointer;">Rejouer l'invocation</button>
+        <button onClick="{{ a.reset }}" style="height:44px; padding:0 20px; border-radius:22px; border:1px solid oklch(1 0 0 / 0.15); background:transparent; color:oklch(0.8 0.01 270); font-size:16px; cursor:pointer;">Réinitialiser</button>
+      </div>
+      <div data-board="a" style="position:relative; width:1920px; height:986px; overflow:hidden; border-radius:10px; box-shadow:0 30px 80px rgb(0 0 0 / 0.5); background:radial-gradient(circle at 40% 56%, oklch(0.215 0.04 280) 0%, oklch(0.155 0.025 275) 52%); color:oklch(0.94 0.015 85); font-family:'Alegreya Sans', sans-serif;">
+        <!-- barre de titre -->
+        <div style="position:absolute; left:0; top:0; right:0; height:36px; display:flex; align-items:center; background:oklch(0.125 0.022 275); border-bottom:1px solid oklch(0.82 0.11 85 / 0.16); z-index:5;">
+          <div style="flex:1; height:100%; display:flex; align-items:center; gap:10px; padding-left:14px;">
+            <svg viewBox="-9 -9 18 18" style="width:16px; height:16px; overflow:visible;"><circle r="8" style="fill:none; stroke:oklch(0.82 0.11 85); stroke-width:1;"></circle><path d="M0,-7 L4.11,5.66 L-6.66,-2.16 L6.66,-2.16 L-4.11,5.66 Z" style="fill:none; stroke:oklch(0.82 0.11 85); stroke-width:1; stroke-linejoin:round;"></path></svg>
+            <span style="font-size:12px; letter-spacing:0.12em; text-transform:uppercase; color:oklch(0.75 0.03 85);">LeagueStats</span>
+          </div>
+          <span style="display:inline-flex; align-items:center; gap:7px; margin-right:12px; padding:2px 12px; border-radius:999px; font-size:12px; color:oklch(0.94 0.015 85); background:oklch(0.155 0.025 275); border:1px solid oklch(0.82 0.11 85 / 0.2);"><span data-glow="2200" style="width:7px; height:7px; border-radius:50%; background:oklch(0.78 0.13 155); box-shadow:0 0 8px oklch(0.78 0.13 155);"></span>Client LoL connecté</span>
+          <div style="display:flex; height:100%;">
+            <button style="width:46px; height:100%; border:0; background:transparent; color:oklch(0.94 0.015 85); display:grid; place-items:center;" style-hover="background: oklch(0.82 0.11 85 / 0.12)"><svg viewBox="0 0 12 12" style="width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:1.2;"><path d="M2 6h8"></path></svg></button>
+            <button style="width:46px; height:100%; border:0; background:transparent; color:oklch(0.94 0.015 85); display:grid; place-items:center;" style-hover="background: oklch(0.82 0.11 85 / 0.12)"><svg viewBox="0 0 12 12" style="width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:1.2;"><rect x="2.5" y="2.5" width="7" height="7"></rect></svg></button>
+            <button style="width:46px; height:100%; border:0; background:transparent; color:oklch(0.94 0.015 85); display:grid; place-items:center;" style-hover="background: oklch(0.6 0.19 25)"><svg viewBox="0 0 12 12" style="width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:1.2;"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7"></path></svg></button>
+          </div>
+        </div>
+        <!-- navigation -->
+        <nav style="position:absolute; left:0; top:36px; bottom:0; width:220px; padding:22px 12px; display:flex; flex-direction:column; gap:22px; background:oklch(0.125 0.022 275); border-right:1px solid oklch(0.82 0.11 85 / 0.14);">
+          <sc-for list="{{ nav }}" as="g" hint-placeholder-count="3">
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <div style="padding:0 12px 6px; font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:oklch(0.62 0.03 280);">{{ g.g }}</div>
+              <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="4">
+                <div style="position:relative; display:flex; align-items:center; gap:12px; height:38px; padding:0 12px; border-radius:6px; font-size:15px; color:oklch(0.8 0.02 280); cursor:pointer;" style-hover="background: oklch(0.82 0.11 85 / 0.06); color: oklch(0.94 0.015 85)">
+                  <sc-if value="{{ it.on }}" hint-placeholder-val="{{ false }}"><div style="position:absolute; inset:0; border-radius:6px; background:oklch(0.82 0.11 85 / 0.1); box-shadow:inset 0 0 0 1px oklch(0.82 0.11 85 / 0.28);"></div></sc-if>
+                  <span style="position:relative; width:18px; text-align:center; font:16px/1 'Noto Sans Runic', serif; color:oklch(0.82 0.11 85 / 0.6);">{{ it.rune }}</span>
+                  <span style="position:relative;">{{ it.label }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+          <div style="margin-top:auto; display:flex; flex-direction:column; gap:8px; padding:0 12px; font-size:13px; color:oklch(0.65 0.02 280);">
+            <div style="display:flex; justify-content:space-between;"><span>Thème</span><span style="color:oklch(0.88 0.08 85);">Grimoire nocturne</span></div>
+            <div style="display:flex; justify-content:space-between;"><span>Motion</span><span style="color:oklch(0.88 0.08 85);">Complet</span></div>
+          </div>
+        </nav>
+        <!-- contenu -->
+        <main data-quake="1" style="position:absolute; left:220px; top:36px; width:1700px; height:950px;">
+          <div data-rise="1" data-delay="0" style="position:absolute; left:40px; top:26px; width:1140px; display:flex; align-items:flex-end; justify-content:space-between;">
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <div style="font-size:12px; letter-spacing:0.22em; text-transform:uppercase; color:oklch(0.82 0.11 85 / 0.8);">Champ select · Classée solo/duo · Phase de picks</div>
+              <div style="font:600 40px/1 'Cormorant Garamond', serif;">{{ a.title }}</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="text-align:right; font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:oklch(0.72 0.02 280);">Temps<br>restant</div>
+              <div style="position:relative; width:64px; height:64px;">
+                <svg viewBox="-32 -32 64 64" style="position:absolute; inset:0; width:64px; height:64px; overflow:visible;"><circle r="28" style="fill:none; stroke:oklch(1 0 0 / 0.08); stroke-width:3;"></circle><circle r="28" style="fill:none; stroke:oklch(0.82 0.11 85); stroke-width:3; stroke-linecap:round; stroke-dasharray:175.93; stroke-dashoffset:{{ tickOff28 }}; transform:rotate(-90deg); transition:stroke-dashoffset 1s linear;"></circle></svg>
+                <div style="position:absolute; inset:0; display:grid; place-items:center; font:600 26px/1 'Cormorant Garamond', serif;">{{ tick }}</div>
+              </div>
+            </div>
+          </div>
+          <!-- zone du cercle -->
+          <div style="position:absolute; left:0; top:96px; width:1220px; height:854px;">
+            <div data-rise="1" data-delay="700" style="position:absolute; left:40px; top:4px; display:flex; flex-direction:column; gap:10px;">
+              <div style="font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:oklch(0.76 0.11 210);">Bans alliés</div>
+              <div style="display:flex; gap:8px;">
+                <sc-for list="{{ bansA }}" as="b" hint-placeholder-count="5">
+                  <div style="position:relative; width:36px; height:36px; border-radius:50%; overflow:hidden; border:1px solid oklch(0.76 0.11 210 / 0.4);"><img src="{{ b.img }}" alt="{{ b.id }}" style="display:block; width:116%; height:116%; margin:-8%; filter:grayscale(1) brightness(0.6);"><div style="position:absolute; left:-4px; right:-4px; top:50%; height:1.5px; background:oklch(0.76 0.11 210); transform:rotate(-45deg);"></div></div>
+                </sc-for>
+              </div>
+            </div>
+            <div data-rise="1" data-delay="760" style="position:absolute; right:40px; top:4px; display:flex; flex-direction:column; align-items:flex-end; gap:10px;">
+              <div style="font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:oklch(0.72 0.14 22);">Bans adverses</div>
+              <div style="display:flex; gap:8px;">
+                <sc-for list="{{ bansE }}" as="b" hint-placeholder-count="5">
+                  <div style="position:relative; width:36px; height:36px; border-radius:50%; overflow:hidden; border:1px solid oklch(0.72 0.14 22 / 0.4);"><img src="{{ b.img }}" alt="{{ b.id }}" style="display:block; width:116%; height:116%; margin:-8%; filter:grayscale(1) brightness(0.6);"><div style="position:absolute; left:-4px; right:-4px; top:50%; height:1.5px; background:oklch(0.72 0.14 22); transform:rotate(-45deg);"></div></div>
+                </sc-for>
+              </div>
+            </div>
+            <!-- anneau runique (tourne) -->
+            <svg data-spin="180" viewBox="-440 -440 880 880" style="position:absolute; left:170px; top:-13px; width:880px; height:880px; overflow:visible;">
+              <circle data-trace="1700" data-delay="0" r="410" style="fill:none; stroke:oklch(0.82 0.11 85 / 0.55); stroke-width:1.2;"></circle>
+              <circle data-trace="1700" data-delay="180" r="378" style="fill:none; stroke:oklch(0.82 0.11 85 / 0.35); stroke-width:1;"></circle>
+              <circle data-fade="1" data-delay="900" r="372" style="fill:none; stroke:oklch(0.82 0.11 85 / 0.45); stroke-width:6; stroke-dasharray:1 13;"></circle>
+              <path id="ringA" d="M0,-394 A394,394 0 1,1 0,394 A394,394 0 1,1 0,-394" style="fill:none;"></path>
+              <text data-fade="1" data-delay="600" data-ring="2470" style="font:17px 'Noto Sans Runic', serif; fill:oklch(0.82 0.11 85 / 0.6);"><textPath href="#ringA">ᚠ ᚢ ᚦ ᚨ ᚱ ᚲ ᚷ ᚹ ᚺ ᚾ ᛁ ᛃ ᛇ ᛈ ᛉ ᛊ ᛏ ᛒ ᛖ ᛗ ᛚ ᛜ ᛞ ᛟ ᚠ ᚢ ᚦ ᚨ ᚱ ᚲ ᚷ ᚹ ᚺ ᚾ ᛁ ᛃ ᛇ ᛈ ᛉ ᛊ ᛏ ᛒ ᛖ ᛗ ᛚ ᛜ ᛞ ᛟ ᚠ ᚢ ᚦ ᚨ ᚱ ᚲ ᚷ ᚹ ᚺ ᚾ ᛁ ᛃ ᛇ ᛈ ᛉ ᛊ ᛏ ᛒ ᛖ ᛗ ᛚ ᛜ ᛞ ᛟ</textPath></text>
+            </svg>
+            <!-- pentacle (contre-rotation) -->
+            <svg data-spin="-140" viewBox="-440 -440 880 880" style="position:absolute; left:170px; top:-13px; width:880px; height:880px; overflow:visible;">
+              <circle data-trace="1500" data-delay="300" r="258" style="fill:none; stroke:oklch(0.82 0.11 85 / 0.4); stroke-width:1;"></circle>
+              <circle data-fade="1" data-delay="1200" r="240" style="fill:none; stroke:oklch(0.82 0.11 85 / 0.25); stroke-width:1; stroke-dasharray:2 9;"></circle>
+              <path data-trace="1900" data-delay="500" d="M0,-258 L151.7,208.7 L-245.4,-79.7 L245.4,-79.7 L-151.7,208.7 Z" style="fill:none; stroke:oklch(0.82 0.11 85 / 0.5); stroke-width:1.2; stroke-linejoin:round;"></path>
+            </svg>
+            <!-- arcs d'équipe + sceau central -->
+            <svg viewBox="-440 -440 880 880" style="position:absolute; left:170px; top:-13px; width:880px; height:880px; overflow:visible;">
+              <path data-trace="1300" data-delay="900" d="M-144.7,-296.6 A330,330 0 0,0 -144.7,296.6" style="fill:none; stroke:oklch(0.76 0.11 210 / 0.7); stroke-width:2;"></path>
+              <path data-trace="1300" data-delay="900" d="M144.7,-296.6 A330,330 0 0,1 144.7,296.6" style="fill:none; stroke:oklch(0.72 0.14 22 / 0.7); stroke-width:2;"></path>
+              <circle data-trace="1200" data-delay="1000" r="170" style="fill:none; stroke:oklch(0.82 0.11 85 / 0.3); stroke-width:1;"></circle>
+              <circle data-trace="1200" data-delay="1100" r="128" style="fill:none; stroke:oklch(0.82 0.11 85 / 0.22); stroke-width:1;"></circle>
+              <circle data-fade="1" data-delay="1300" r="150" style="fill:none; stroke:oklch(0.72 0.14 22 / 0.45); stroke-width:4;"></circle>
+              <circle data-fade="1" data-delay="1300" r="150" style="fill:none; stroke:oklch(0.76 0.11 210); stroke-width:10; stroke-linecap:round; stroke-dasharray:{{ a.arc }}; transform:rotate(-90deg); filter:drop-shadow(0 0 10px oklch(0.76 0.11 210 / 0.6));"></circle>
+            </svg>
+            <div data-fade="1" data-delay="1400" style="position:absolute; left:460px; top:327px; width:300px; height:200px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; text-align:center;">
+              <div style="font-size:12px; letter-spacing:0.22em; text-transform:uppercase; color:oklch(0.82 0.11 85 / 0.85);">Victoire prédite</div>
+              <div style="font:600 76px/1 'Cormorant Garamond', serif; font-variant-numeric:tabular-nums; color:oklch(0.94 0.015 85); text-shadow:0 0 30px oklch(0.76 0.11 210 / 0.5);">{{ a.wcTxt }}</div>
+              <div style="font-size:14px; color:oklch(0.72 0.02 280);">{{ a.note }}</div>
+            </div>
+            <!-- alliés -->
+            <sc-for list="{{ a.allies }}" as="s" hint-placeholder-count="4">
+              <div data-pop="1" data-delay="{{ s.d }}" style="position:absolute; left:{{ s.l }}px; top:{{ s.t }}px; width:112px; height:112px;">
+                <div style="position:absolute; inset:0; border-radius:50%; overflow:hidden; border:2px solid oklch(0.76 0.11 210); box-shadow:0 0 26px oklch(0.76 0.11 210 / 0.35); background:oklch(0.12 0.02 275);"><img src="{{ s.img }}" alt="{{ s.name }}" style="display:block; width:116%; height:116%; margin:-8%; opacity:{{ s.op }};"></div>
+                <sc-if value="{{ s.hov }}" hint-placeholder-val="{{ false }}"><svg data-spin="10" viewBox="0 0 132 132" style="position:absolute; left:-10px; top:-10px; width:132px; height:132px; overflow:visible;"><circle cx="66" cy="66" r="64" style="fill:none; stroke:oklch(0.76 0.11 210); stroke-width:1.5; stroke-dasharray:5 7;"></circle></svg></sc-if>
+                <sc-if value="{{ s.lock }}" hint-placeholder-val="{{ false }}"><svg viewBox="-13 -13 26 26" style="position:absolute; right:-4px; bottom:-2px; width:28px; height:28px; overflow:visible;"><circle r="12" style="fill:oklch(0.82 0.11 85); stroke:oklch(0.155 0.025 275); stroke-width:2;"></circle><path d="M0,-8 L4.7,6.47 L-7.61,-2.47 L7.61,-2.47 L-4.7,6.47 Z" style="fill:none; stroke:oklch(0.18 0.03 275); stroke-width:1.2; stroke-linejoin:round;"></path></svg></sc-if>
+                <div style="position:absolute; right:calc(100% + 18px); top:50%; margin-top:-26px; width:200px; text-align:right;">
+                  <div style="font:600 26px/1.05 'Cormorant Garamond', serif;">{{ s.name }}</div>
+                  <div style="margin-top:5px; font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:oklch(0.72 0.02 280);">{{ s.role }} · {{ s.st }}</div>
+                </div>
+              </div>
+            </sc-for>
+            <!-- moi (Top) -->
+            <div style="position:absolute; left:401px; top:66px; width:128px; height:128px;">
+              <div data-shock="1" style="position:absolute; inset:0; border-radius:50%; border:2px solid oklch(0.82 0.11 85); opacity:0;"></div>
+              <div data-shock="1" style="position:absolute; inset:0; border-radius:50%; border:1px solid oklch(0.82 0.11 85); opacity:0;"></div>
+              <div data-pop="1" data-delay="1000" style="position:absolute; inset:0; border-radius:50%; overflow:hidden; border:3px solid oklch(0.82 0.11 85); box-shadow:0 0 40px oklch(0.82 0.11 85 / 0.45); background:oklch(0.12 0.02 275);"><img data-me="1" src="{{ a.meImg }}" alt="{{ a.meName }}" style="display:block; width:116%; height:116%; margin:-8%; opacity:{{ a.meOp }};"></div>
+              <sc-if value="{{ a.unlocked }}" hint-placeholder-val="{{ true }}"><svg data-spin="8" viewBox="0 0 152 152" style="position:absolute; left:-12px; top:-12px; width:152px; height:152px; overflow:visible;"><circle cx="76" cy="76" r="74" style="fill:none; stroke:oklch(0.82 0.11 85); stroke-width:1.5; stroke-dasharray:6 8;"></circle></svg></sc-if>
+              <sc-if value="{{ a.locked }}" hint-placeholder-val="{{ false }}"><svg data-seal="1" viewBox="-20 -20 40 40" style="position:absolute; right:-8px; bottom:-6px; width:46px; height:46px; overflow:visible;"><circle r="18" style="fill:oklch(0.82 0.11 85); stroke:oklch(0.155 0.025 275); stroke-width:2.5;"></circle><circle r="14.5" style="fill:none; stroke:oklch(0.18 0.03 275 / 0.6); stroke-width:0.8;"></circle><path d="M0,-11 L6.47,8.9 L-10.46,-3.4 L10.46,-3.4 L-6.47,8.9 Z" style="fill:none; stroke:oklch(0.18 0.03 275); stroke-width:1.4; stroke-linejoin:round;"></path></svg></sc-if>
+              <div data-rise="1" data-delay="1150" style="position:absolute; right:calc(100% + 20px); top:50%; margin-top:-38px; width:220px; text-align:right;">
+                <div style="font-size:12px; letter-spacing:0.22em; text-transform:uppercase; color:oklch(0.82 0.11 85);">Toi</div>
+                <div style="font:600 32px/1.05 'Cormorant Garamond', serif;">{{ a.meName }}</div>
+                <div style="margin-top:5px; font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:oklch(0.72 0.02 280);">Top · {{ a.meState }}</div>
+              </div>
+            </div>
+            <!-- adversaires -->
+            <sc-for list="{{ a.enemies }}" as="s" hint-placeholder-count="5">
+              <div data-pop="1" data-delay="{{ s.d }}" style="position:absolute; left:{{ s.l }}px; top:{{ s.t }}px; width:112px; height:112px;">
+                <sc-if value="{{ s.pick }}" hint-placeholder-val="{{ true }}"><div style="position:absolute; inset:0; border-radius:50%; overflow:hidden; border:2px solid oklch(0.72 0.14 22); box-shadow:0 0 26px oklch(0.72 0.14 22 / 0.35); background:oklch(0.12 0.02 275);"><img src="{{ s.img }}" alt="{{ s.name }}" style="display:block; width:116%; height:116%; margin:-8%;"></div></sc-if>
+                <sc-if value="{{ s.pending }}" hint-placeholder-val="{{ false }}"><div data-glow="2600" style="position:absolute; inset:0; border-radius:50%; border:1.5px dashed oklch(0.72 0.14 22 / 0.8); display:grid; place-items:center; font:34px/1 'Noto Sans Runic', serif; color:oklch(0.72 0.14 22 / 0.7);">ᛃ</div></sc-if>
+                <div style="position:absolute; left:calc(100% + 18px); top:50%; margin-top:-26px; width:200px;">
+                  <div style="font:600 26px/1.05 'Cormorant Garamond', serif;">{{ s.name }}</div>
+                  <div style="margin-top:5px; font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:oklch(0.72 0.02 280);">{{ s.role }} · {{ s.st }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <!-- panneau des recommandations -->
+          <div style="position:absolute; left:1220px; top:26px; width:440px; bottom:30px; display:flex; flex-direction:column;">
+            <div data-rise="1" data-delay="300" style="display:flex; flex-direction:column; gap:6px; padding:0 4px 18px; border-bottom:1px solid oklch(0.82 0.11 85 / 0.18);">
+              <div style="font-size:12px; letter-spacing:0.22em; text-transform:uppercase; color:oklch(0.82 0.11 85 / 0.8);">Recommandations · pool GRIND</div>
+              <div style="font:600 36px/1 'Cormorant Garamond', serif;">Top contre Darius</div>
+              <div style="font-size:14px; color:oklch(0.72 0.02 280);">Profondeur atteinte : 2 picks anticipés</div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:6px; padding-top:14px;">
+              <sc-for list="{{ a.recs }}" as="r" hint-placeholder-count="4">
+                <div data-rise="1" data-delay="{{ r.d }}" onClick="{{ r.onPick }}" style="position:relative; display:grid; grid-template-columns:60px minmax(0,1fr) auto; gap:16px; align-items:center; padding:14px 16px; border-radius:8px; cursor:pointer;" style-hover="background: oklch(0.82 0.11 85 / 0.05)">
+                  <sc-if value="{{ r.sel }}" hint-placeholder-val="{{ false }}"><div style="position:absolute; inset:0; border-radius:8px; background:oklch(0.82 0.11 85 / 0.08); box-shadow:inset 0 0 0 1px oklch(0.82 0.11 85 / 0.5), 0 0 30px oklch(0.82 0.11 85 / 0.1); pointer-events:none;"></div></sc-if>
+                  <div style="position:relative; width:60px; height:60px; border-radius:50%; overflow:hidden; border:1.5px solid oklch(0.82 0.11 85 / 0.6);"><img src="{{ r.img }}" alt="{{ r.name }}" style="display:block; width:116%; height:116%; margin:-8%;"></div>
+                  <div style="position:relative; min-width:0;">
+                    <div style="font:600 26px/1.05 'Cormorant Garamond', serif;">{{ r.name }}</div>
+                    <div style="margin-top:3px; font-size:13px; line-height:1.35; color:oklch(0.72 0.02 280); text-wrap:pretty;">{{ r.games }} games · suite attendue : {{ r.pv }}</div>
+                  </div>
+                  <div style="position:relative; display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+                    <div style="font:600 28px/1 'Cormorant Garamond', serif; font-variant-numeric:tabular-nums;">{{ r.wpTxt }}</div>
+                    <sc-if value="{{ r.up }}" hint-placeholder-val="{{ true }}"><div style="font-size:13px; font-weight:700; color:oklch(0.78 0.13 155);">{{ r.dTxt }} pts</div></sc-if>
+                    <sc-if value="{{ r.down }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px; font-weight:700; color:oklch(0.72 0.14 22);">{{ r.dTxt }} pts</div></sc-if>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+            <div data-rise="1" data-delay="900" style="display:flex; flex-direction:column; gap:10px; margin-top:16px; padding:16px 4px 0; border-top:1px solid oklch(0.82 0.11 85 / 0.14); font-size:14px; color:oklch(0.72 0.02 280);">
+              <div>Sans données exploitables en top : Ambessa (38 games)</div>
+              <div style="display:flex; justify-content:space-between; gap:12px;"><span>Loadout</span><span style="color:oklch(0.94 0.015 85);">Page « {{ a.meName }} · Top » prête · Flash, Téléport</span></div>
+              <div style="font:italic 500 22px/1.25 'Cormorant Garamond', serif; color:oklch(0.88 0.08 85);">« C'est le moment de sécuriser votre champion ! »</div>
+            </div>
+            <div style="margin-top:auto;">
+              <sc-if value="{{ a.unlocked }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ a.lock }}" style="width:100%; height:58px; border:0; border-radius:8px; background:oklch(0.82 0.11 85); color:oklch(0.16 0.025 275); font-size:18px; font-weight:700; letter-spacing:0.04em; display:flex; align-items:center; justify-content:center; gap:12px; cursor:pointer; box-shadow:0 0 30px oklch(0.82 0.11 85 / 0.3);" style-hover="background: oklch(0.88 0.1 85)"><svg viewBox="-12 -12 24 24" style="width:20px; height:20px; overflow:visible;"><circle r="11" style="fill:none; stroke:currentColor; stroke-width:1.4;"></circle><path d="M0,-9 L5.29,7.28 L-8.56,-2.78 L8.56,-2.78 L-5.29,7.28 Z" style="fill:none; stroke:currentColor; stroke-width:1.4; stroke-linejoin:round;"></path></svg>{{ a.lockLabel }}</button>
+              </sc-if>
+              <sc-if value="{{ a.locked }}" hint-placeholder-val="{{ false }}">
+                <div style="height:58px; border-radius:8px; border:1px solid oklch(0.82 0.11 85 / 0.5); display:flex; align-items:center; justify-content:space-between; padding:0 20px; font-size:17px; color:oklch(0.88 0.08 85);"><span>{{ a.meName }} verrouillé · sceau apposé</span><a onClick="{{ a.reset }}" style="font-size:14px; cursor:pointer; text-decoration:underline;">annuler (maquette)</a></div>
+              </sc-if>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- ============ 1b — GRIMOIRE OUVERT ============ -->
+    <div id="1b" style="display:flex; flex-direction:column; gap:20px; width:1920px;">
+      <div style="display:flex; align-items:center; gap:20px;">
+        <div style="display:grid; place-items:center; width:56px; height:56px; border-radius:50%; background:oklch(0.58 0.17 35); color:oklch(0.97 0.015 88); font:700 22px/1 'Alegreya Sans', sans-serif;">1b</div>
+        <div style="display:flex; flex-direction:column; gap:4px; flex:1;">
+          <div style="font:600 34px/1.1 'Cormorant Garamond', serif;">Grimoire ouvert — encre et parchemin</div>
+          <div style="font-size:18px; color:oklch(0.72 0.015 270);">Une double page : équipes et balance à gauche, recettes conseillées à droite. Les cercles restent ornementaux, le sceau de cire est le moment fort.</div>
+        </div>
+        <button onClick="{{ b.replay }}" style="height:44px; padding:0 20px; border-radius:22px; border:1px solid oklch(0.82 0.11 85 / 0.5); background:transparent; color:oklch(0.88 0.08 85); font-size:16px; cursor:pointer;">Rejouer le tracé</button>
+        <button onClick="{{ b.reset }}" style="height:44px; padding:0 20px; border-radius:22px; border:1px solid oklch(1 0 0 / 0.15); background:transparent; color:oklch(0.8 0.01 270); font-size:16px; cursor:pointer;">Réinitialiser</button>
+      </div>
+      <div data-board="b" style="position:relative; width:1920px; height:986px; overflow:hidden; border-radius:10px; box-shadow:0 30px 80px rgb(0 0 0 / 0.5); background:oklch(0.87 0.03 72); color:oklch(0.24 0.02 60); font-family:'Alegreya Sans', sans-serif;">
+        <div style="position:absolute; left:0; top:0; right:0; height:36px; display:flex; align-items:center; background:oklch(0.91 0.024 80); border-bottom:1px solid oklch(0.35 0.03 60 / 0.18); z-index:5;">
+          <div style="flex:1; height:100%; display:flex; align-items:center; gap:10px; padding-left:14px;">
+            <svg viewBox="-9 -9 18 18" style="width:16px; height:16px; overflow:visible;"><circle r="8" style="fill:none; stroke:oklch(0.58 0.17 35); stroke-width:1;"></circle><path d="M0,-7 L4.11,5.66 L-6.66,-2.16 L6.66,-2.16 L-4.11,5.66 Z" style="fill:none; stroke:oklch(0.58 0.17 35); stroke-width:1; stroke-linejoin:round;"></path></svg>
+            <span style="font-size:12px; letter-spacing:0.12em; text-transform:uppercase; color:oklch(0.42 0.03 60);">LeagueStats</span>
+          </div>
+          <span style="display:inline-flex; align-items:center; gap:7px; margin-right:12px; padding:2px 12px; border-radius:999px; font-size:12px; color:oklch(0.24 0.02 60); background:oklch(0.95 0.02 85); border:1px solid oklch(0.35 0.03 60 / 0.2);"><span data-glow="2200" style="width:7px; height:7px; border-radius:50%; background:oklch(0.6 0.13 150);"></span>Client LoL connecté</span>
+          <div style="display:flex; height:100%;">
+            <button style="width:46px; height:100%; border:0; background:transparent; color:oklch(0.24 0.02 60); display:grid; place-items:center;" style-hover="background: oklch(0.35 0.03 60 / 0.1)"><svg viewBox="0 0 12 12" style="width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:1.2;"><path d="M2 6h8"></path></svg></button>
+            <button style="width:46px; height:100%; border:0; background:transparent; color:oklch(0.24 0.02 60); display:grid; place-items:center;" style-hover="background: oklch(0.35 0.03 60 / 0.1)"><svg viewBox="0 0 12 12" style="width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:1.2;"><rect x="2.5" y="2.5" width="7" height="7"></rect></svg></button>
+            <button style="width:46px; height:100%; border:0; background:transparent; color:oklch(0.24 0.02 60); display:grid; place-items:center;" style-hover="background: oklch(0.58 0.17 35); color: oklch(0.97 0.015 88)"><svg viewBox="0 0 12 12" style="width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:1.2;"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7"></path></svg></button>
+          </div>
+        </div>
+        <nav style="position:absolute; left:0; top:36px; bottom:0; width:220px; padding:22px 12px; display:flex; flex-direction:column; gap:22px; background:oklch(0.92 0.022 82); border-right:1px solid oklch(0.35 0.03 60 / 0.16);">
+          <sc-for list="{{ nav }}" as="g" hint-placeholder-count="3">
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <div style="padding:0 12px 6px; font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:oklch(0.5 0.03 60);">{{ g.g }}</div>
+              <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="4">
+                <div style="position:relative; display:flex; align-items:center; gap:12px; height:38px; padding:0 12px; border-radius:6px; font-size:15px; color:oklch(0.34 0.02 60); cursor:pointer;" style-hover="background: oklch(0.35 0.03 60 / 0.06)">
+                  <sc-if value="{{ it.on }}" hint-placeholder-val="{{ false }}"><div style="position:absolute; inset:0; border-radius:6px; background:oklch(0.58 0.17 35 / 0.1); box-shadow:inset 0 0 0 1px oklch(0.58 0.17 35 / 0.3);"></div></sc-if>
+                  <span style="position:relative; width:18px; text-align:center; font:16px/1 'Noto Sans Runic', serif; color:oklch(0.6 0.1 70);">{{ it.rune }}</span>
+                  <span style="position:relative;">{{ it.label }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+          <div style="margin-top:auto; display:flex; flex-direction:column; gap:8px; padding:0 12px; font-size:13px; color:oklch(0.48 0.03 60);">
+            <div style="display:flex; justify-content:space-between;"><span>Thème</span><span style="color:oklch(0.5 0.15 35);">Parchemin</span></div>
+            <div style="display:flex; justify-content:space-between;"><span>Motion</span><span style="color:oklch(0.5 0.15 35);">Complet</span></div>
+          </div>
+        </nav>
+        <main data-quake="1" style="position:absolute; left:220px; top:36px; width:1700px; height:950px;">
+          <div style="position:absolute; left:28px; top:24px; width:1644px; height:902px; border-radius:6px; background:oklch(0.965 0.018 88); box-shadow:0 2px 0 oklch(0.8 0.03 75), 0 24px 50px oklch(0.3 0.04 60 / 0.25);">
+            <div style="position:absolute; left:792px; width:60px; top:0; bottom:0; background:linear-gradient(90deg, transparent, oklch(0.45 0.04 65 / 0.14) 50%, transparent);"></div>
+            <svg viewBox="0 0 1644 902" style="position:absolute; inset:0; width:1644px; height:902px; overflow:visible; pointer-events:none;">
+              <rect data-trace="2200" data-delay="0" x="22" y="22" width="778" height="858" style="fill:none; stroke:oklch(0.3 0.03 60 / 0.4); stroke-width:1;"></rect>
+              <rect data-trace="2200" data-delay="150" x="30" y="30" width="762" height="842" style="fill:none; stroke:oklch(0.3 0.03 60 / 0.22); stroke-width:0.6;"></rect>
+              <rect data-trace="2200" data-delay="300" x="844" y="22" width="778" height="858" style="fill:none; stroke:oklch(0.3 0.03 60 / 0.4); stroke-width:1;"></rect>
+              <rect data-trace="2200" data-delay="450" x="852" y="30" width="762" height="842" style="fill:none; stroke:oklch(0.3 0.03 60 / 0.22); stroke-width:0.6;"></rect>
+            </svg>
+            <svg viewBox="-20 -20 40 40" style="position:absolute; left:42px; top:42px; width:38px; height:38px; overflow:visible;"><circle data-trace="1200" data-delay="600" r="18" style="fill:none; stroke:oklch(0.6 0.1 70); stroke-width:0.9;"></circle><path data-trace="1400" data-delay="900" d="M0,-16 L9.4,12.9 L-15.2,-4.9 L15.2,-4.9 L-9.4,12.9 Z" style="fill:none; stroke:oklch(0.6 0.1 70); stroke-width:0.9; stroke-linejoin:round;"></path></svg>
+            <svg viewBox="-20 -20 40 40" style="position:absolute; left:42px; bottom:42px; width:38px; height:38px; overflow:visible;"><circle data-trace="1200" data-delay="700" r="18" style="fill:none; stroke:oklch(0.6 0.1 70); stroke-width:0.9;"></circle><path data-trace="1400" data-delay="1000" d="M0,-16 L9.4,12.9 L-15.2,-4.9 L15.2,-4.9 L-9.4,12.9 Z" style="fill:none; stroke:oklch(0.6 0.1 70); stroke-width:0.9; stroke-linejoin:round;"></path></svg>
+            <svg viewBox="-20 -20 40 40" style="position:absolute; right:42px; top:42px; width:38px; height:38px; overflow:visible;"><circle data-trace="1200" data-delay="800" r="18" style="fill:none; stroke:oklch(0.6 0.1 70); stroke-width:0.9;"></circle><path data-trace="1400" data-delay="1100" d="M0,-16 L9.4,12.9 L-15.2,-4.9 L15.2,-4.9 L-9.4,12.9 Z" style="fill:none; stroke:oklch(0.6 0.1 70); stroke-width:0.9; stroke-linejoin:round;"></path></svg>
+            <svg viewBox="-20 -20 40 40" style="position:absolute; right:42px; bottom:42px; width:38px; height:38px; overflow:visible;"><circle data-trace="1200" data-delay="900" r="18" style="fill:none; stroke:oklch(0.6 0.1 70); stroke-width:0.9;"></circle><path data-trace="1400" data-delay="1200" d="M0,-16 L9.4,12.9 L-15.2,-4.9 L15.2,-4.9 L-9.4,12.9 Z" style="fill:none; stroke:oklch(0.6 0.1 70); stroke-width:0.9; stroke-linejoin:round;"></path></svg>
+            <!-- page gauche -->
+            <div style="position:absolute; left:96px; top:70px; width:640px; display:flex; flex-direction:column;">
+              <div data-rise="1" data-delay="200" style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <div style="display:flex; flex-direction:column; gap:4px;">
+                  <div style="font-size:12px; letter-spacing:0.22em; text-transform:uppercase; color:oklch(0.55 0.1 70);">Champ select · Classée solo/duo</div>
+                  <div style="font:italic 600 54px/1 'Cormorant Garamond', serif;">{{ b.titleShort }}</div>
+                  <div style="font-size:17px; color:oklch(0.45 0.02 60);">{{ b.sub }}</div>
+                </div>
+                <div style="position:relative; width:76px; height:76px;">
+                  <svg viewBox="-38 -38 76 76" style="position:absolute; inset:0; width:76px; height:76px; overflow:visible;"><circle r="32" style="fill:none; stroke:oklch(0.3 0.03 60 / 0.12); stroke-width:2;"></circle><circle r="32" style="fill:none; stroke:oklch(0.58 0.17 35); stroke-width:2; stroke-dasharray:201.06; stroke-dashoffset:{{ tickOff32 }}; transform:rotate(-90deg); transition:stroke-dashoffset 1s linear;"></circle></svg>
+                  <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;"><span style="font:600 28px/1 'Cormorant Garamond', serif;">{{ tick }}</span><span style="font-size:10px; letter-spacing:0.14em; text-transform:uppercase; color:oklch(0.45 0.02 60);">sec</span></div>
+                </div>
+              </div>
+              <div data-rise="1" data-delay="450" style="margin-top:30px; display:flex; flex-direction:column;">
+                <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                  <div style="display:flex; align-items:baseline; gap:12px;"><span style="font:600 60px/1 'Cormorant Garamond', serif; font-variant-numeric:tabular-nums; color:oklch(0.45 0.11 260);">{{ b.wcTxt }}</span><span style="font-size:13px; letter-spacing:0.16em; text-transform:uppercase; color:oklch(0.45 0.11 260);">Notre cercle</span></div>
+                  <div style="display:flex; align-items:baseline; gap:12px;"><span style="font-size:13px; letter-spacing:0.16em; text-transform:uppercase; color:oklch(0.45 0.11 25);">Cercle adverse</span><span style="font:600 32px/1 'Cormorant Garamond', serif; font-variant-numeric:tabular-nums; color:oklch(0.45 0.11 25);">{{ b.foeTxt }}</span></div>
+                </div>
+                <div style="position:relative; margin-top:16px; height:12px;">
+                  <div style="position:absolute; inset:0; border-radius:6px; overflow:hidden; background:oklch(0.45 0.11 25 / 0.8);"><div style="position:absolute; inset:0; background:oklch(0.45 0.11 260); transform-origin:left center; transform:scaleX({{ b.frac }});"></div></div>
+                  <div style="position:absolute; top:-9px; left:{{ b.pct }}%; width:0; height:30px;"><div style="position:absolute; left:-1px; top:0; width:2px; height:30px; background:oklch(0.24 0.02 60);"></div><div style="position:absolute; left:-6px; top:-7px; width:12px; height:12px; background:oklch(0.965 0.018 88); border:2px solid oklch(0.24 0.02 60); transform:rotate(45deg);"></div></div>
+                </div>
+                <div style="margin-top:12px; font:italic 500 19px/1.2 'Cormorant Garamond', serif; color:oklch(0.42 0.02 60);">Victoire prédite {{ b.note }}</div>
+              </div>
+              <div style="margin-top:28px; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:40px;">
+                <div style="display:flex; flex-direction:column;">
+                  <div data-rise="1" data-delay="600" style="padding-bottom:8px; border-bottom:1px solid oklch(0.3 0.03 60 / 0.25); font-size:12px; letter-spacing:0.2em; text-transform:uppercase; color:oklch(0.45 0.11 260);">Notre cercle</div>
+                  <div data-rise="1" data-delay="680" style="position:relative; display:flex; align-items:center; gap:14px; height:64px;">
+                    <div style="position:relative; width:50px; height:50px; flex:none;">
+                      <div style="position:absolute; inset:0; border-radius:50%; overflow:hidden; box-shadow:0 0 0 3px oklch(0.965 0.018 88), 0 0 0 4.5px oklch(0.58 0.17 35);"><img data-me="1" src="{{ b.meImg }}" alt="{{ b.meName }}" style="display:block; width:116%; height:116%; margin:-8%; opacity:{{ b.meOp }};"></div>
+                      <sc-if value="{{ b.unlocked }}" hint-placeholder-val="{{ true }}"><svg data-spin="9" viewBox="0 0 70 70" style="position:absolute; left:-10px; top:-10px; width:70px; height:70px; overflow:visible;"><circle cx="35" cy="35" r="34" style="fill:none; stroke:oklch(0.58 0.17 35); stroke-width:1; stroke-dasharray:3 5;"></circle></svg></sc-if>
+                    </div>
+                    <div style="flex:1; min-width:0;"><div style="font:600 24px/1.05 'Cormorant Garamond', serif;">{{ b.meName }}</div><div style="font-size:12px; letter-spacing:0.12em; text-transform:uppercase; color:oklch(0.5 0.15 35);">Top · toi · {{ b.meState }}</div></div>
+                    <sc-if value="{{ b.locked }}" hint-placeholder-val="{{ false }}"><svg data-seal="1" viewBox="-13 -13 26 26" style="width:26px; height:26px; overflow:visible;"><circle r="12" style="fill:oklch(0.58 0.17 35);"></circle><path d="M0,-8 L4.7,6.47 L-7.61,-2.47 L7.61,-2.47 L-4.7,6.47 Z" style="fill:none; stroke:oklch(0.965 0.018 88); stroke-width:1.1; stroke-linejoin:round;"></path></svg></sc-if>
+                  </div>
+                  <sc-for list="{{ b.allies }}" as="s" hint-placeholder-count="4">
+                    <div data-rise="1" data-delay="{{ s.d }}" style="display:flex; align-items:center; gap:14px; height:64px; border-top:1px solid oklch(0.3 0.03 60 / 0.1);">
+                      <div style="position:relative; width:50px; height:50px; flex:none;">
+                        <div style="position:absolute; inset:0; border-radius:50%; overflow:hidden; box-shadow:0 0 0 3px oklch(0.965 0.018 88), 0 0 0 4px oklch(0.45 0.11 260 / 0.7);"><img src="{{ s.img }}" alt="{{ s.name }}" style="display:block; width:116%; height:116%; margin:-8%; opacity:{{ s.op }};"></div>
+                        <sc-if value="{{ s.hov }}" hint-placeholder-val="{{ false }}"><svg data-spin="12" viewBox="0 0 70 70" style="position:absolute; left:-10px; top:-10px; width:70px; height:70px; overflow:visible;"><circle cx="35" cy="35" r="34" style="fill:none; stroke:oklch(0.45 0.11 260); stroke-width:1; stroke-dasharray:3 5;"></circle></svg></sc-if>
+                      </div>
+                      <div style="flex:1; min-width:0;"><div style="font:600 24px/1.05 'Cormorant Garamond', serif;">{{ s.name }}</div><div style="font-size:12px; letter-spacing:0.12em; text-transform:uppercase; color:oklch(0.45 0.02 60);">{{ s.role }} · {{ s.st }}</div></div>
+                      <sc-if value="{{ s.lock }}" hint-placeholder-val="{{ false }}"><svg viewBox="-13 -13 26 26" style="width:22px; height:22px; overflow:visible;"><circle r="12" style="fill:oklch(0.58 0.17 35 / 0.85);"></circle><path d="M0,-8 L4.7,6.47 L-7.61,-2.47 L7.61,-2.47 L-4.7,6.47 Z" style="fill:none; stroke:oklch(0.965 0.018 88); stroke-width:1.1; stroke-linejoin:round;"></path></svg></sc-if>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="display:flex; flex-direction:column;">
+                  <div data-rise="1" data-delay="640" style="padding-bottom:8px; border-bottom:1px solid oklch(0.3 0.03 60 / 0.25); font-size:12px; letter-spacing:0.2em; text-transform:uppercase; color:oklch(0.45 0.11 25);">Cercle adverse</div>
+                  <sc-for list="{{ b.enemies }}" as="s" hint-placeholder-count="5">
+                    <div data-rise="1" data-delay="{{ s.d }}" style="display:flex; align-items:center; gap:14px; height:64px; border-top:{{ s.bt }};">
+                      <sc-if value="{{ s.pick }}" hint-placeholder-val="{{ true }}"><div style="width:50px; height:50px; flex:none; border-radius:50%; overflow:hidden; box-shadow:0 0 0 3px oklch(0.965 0.018 88), 0 0 0 4px oklch(0.45 0.11 25 / 0.7);"><img src="{{ s.img }}" alt="{{ s.name }}" style="display:block; width:116%; height:116%; margin:-8%;"></div></sc-if>
+                      <sc-if value="{{ s.pending }}" hint-placeholder-val="{{ false }}"><div data-glow="2600" style="width:50px; height:50px; flex:none; border-radius:50%; border:1px dashed oklch(0.45 0.11 25); display:grid; place-items:center; font:22px/1 'Noto Sans Runic', serif; color:oklch(0.45 0.11 25 / 0.7);">ᛃ</div></sc-if>
+                      <div style="flex:1; min-width:0;"><div style="font:600 24px/1.05 'Cormorant Garamond', serif;">{{ s.name }}</div><div style="font-size:12px; letter-spacing:0.12em; text-transform:uppercase; color:oklch(0.45 0.02 60);">{{ s.role }} · {{ s.st }}</div></div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <div data-rise="1" data-delay="1100" style="margin-top:20px; display:flex; align-items:center; gap:8px;">
+                <span style="margin-right:6px; font-size:12px; letter-spacing:0.2em; text-transform:uppercase; color:oklch(0.45 0.02 60);">Bannis</span>
+                <sc-for list="{{ bansA }}" as="x" hint-placeholder-count="5"><div style="position:relative; width:30px; height:30px; border-radius:50%; overflow:hidden; opacity:0.75;"><img src="{{ x.img }}" alt="{{ x.id }}" style="display:block; width:116%; height:116%; margin:-8%; filter:grayscale(1) sepia(0.4);"><div style="position:absolute; left:-4px; right:-4px; top:50%; height:1.5px; background:oklch(0.45 0.11 260); transform:rotate(-45deg);"></div></div></sc-for>
+                <span style="width:5px; height:5px; margin:0 8px; background:oklch(0.6 0.1 70); transform:rotate(45deg);"></span>
+                <sc-for list="{{ bansE }}" as="x" hint-placeholder-count="5"><div style="position:relative; width:30px; height:30px; border-radius:50%; overflow:hidden; opacity:0.75;"><img src="{{ x.img }}" alt="{{ x.id }}" style="display:block; width:116%; height:116%; margin:-8%; filter:grayscale(1) sepia(0.4);"><div style="position:absolute; left:-4px; right:-4px; top:50%; height:1.5px; background:oklch(0.45 0.11 25); transform:rotate(-45deg);"></div></div></sc-for>
+              </div>
+            </div>
+            <!-- page droite -->
+            <div style="position:absolute; left:906px; top:70px; width:640px; display:flex; flex-direction:column;">
+              <div data-rise="1" data-delay="300" style="display:flex; flex-direction:column; gap:4px;">
+                <div style="font-size:12px; letter-spacing:0.22em; text-transform:uppercase; color:oklch(0.55 0.1 70);">Recettes conseillées · pool GRIND</div>
+                <div style="font:italic 600 54px/1 'Cormorant Garamond', serif;">Top contre Darius</div>
+                <div style="font-size:17px; color:oklch(0.45 0.02 60);">Profondeur atteinte : 2 picks anticipés</div>
+              </div>
+              <div style="margin-top:22px; display:flex; flex-direction:column;">
+                <sc-for list="{{ b.recs }}" as="r" hint-placeholder-count="4">
+                  <div data-rise="1" data-delay="{{ r.d }}" onClick="{{ r.onPick }}" style="position:relative; display:grid; grid-template-columns:44px 58px minmax(0,1fr) auto; gap:16px; align-items:center; padding:16px 14px; border-top:1px solid oklch(0.3 0.03 60 / 0.16); cursor:pointer;" style-hover="background: oklch(0.6 0.1 70 / 0.07)">
+                    <sc-if value="{{ r.sel }}" hint-placeholder-val="{{ false }}">
+                      <div style="position:absolute; inset:0; background:oklch(0.58 0.17 35 / 0.07); pointer-events:none;"></div>
+                      <svg viewBox="-15 -15 30 30" style="position:absolute; left:-40px; top:50%; margin-top:-14px; width:28px; height:28px; overflow:visible;"><circle data-ink="700" r="13" style="fill:none; stroke:oklch(0.58 0.17 35); stroke-width:1.2;"></circle><path data-ink="900" d="M0,-12 L7.05,9.7 L-11.4,-3.7 L11.4,-3.7 L-7.05,9.7 Z" style="fill:none; stroke:oklch(0.58 0.17 35); stroke-width:1.2; stroke-linejoin:round;"></path></svg>
+                    </sc-if>
+                    <div style="position:relative; font:600 34px/1 'Cormorant Garamond', serif; color:oklch(0.6 0.1 70);">{{ r.n }}</div>
+                    <div style="position:relative; width:58px; height:58px; border-radius:50%; overflow:hidden; box-shadow:0 0 0 3px oklch(0.965 0.018 88), 0 0 0 4px oklch(0.3 0.03 60 / 0.5);"><img src="{{ r.img }}" alt="{{ r.name }}" style="display:block; width:116%; height:116%; margin:-8%;"></div>
+                    <div style="position:relative; min-width:0;">
+                      <div style="font:600 28px/1.05 'Cormorant Garamond', serif;">{{ r.name }}</div>
+                      <div style="margin-top:2px; font-size:14px; color:oklch(0.45 0.02 60);">{{ r.games }} games</div>
+                      <div style="margin-top:2px; font:italic 500 17px/1.25 'Cormorant Garamond', serif; color:oklch(0.42 0.02 60);">suite attendue : {{ r.pv }}</div>
+                    </div>
+                    <div style="position:relative; display:flex; flex-direction:column; align-items:flex-end; gap:2px;">
+                      <div style="font:600 36px/1 'Cormorant Garamond', serif; font-variant-numeric:tabular-nums;">{{ r.wpTxt }}</div>
+                      <sc-if value="{{ r.up }}" hint-placeholder-val="{{ true }}"><div style="font-size:14px; font-weight:700; color:oklch(0.48 0.12 150);">{{ r.dTxt }} pts</div></sc-if>
+                      <sc-if value="{{ r.down }}" hint-placeholder-val="{{ false }}"><div style="font-size:14px; font-weight:700; color:oklch(0.45 0.11 25);">{{ r.dTxt }} pts</div></sc-if>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+              <div data-rise="1" data-delay="1000" style="display:flex; flex-direction:column; gap:8px; padding-top:16px; border-top:1px solid oklch(0.3 0.03 60 / 0.16); font-size:15px; color:oklch(0.42 0.02 60);">
+                <div>* Sans données exploitables en top : Ambessa (38 games)</div>
+                <div>Runes : page « {{ b.meName }} · Top » prête à importer · Sorts : Flash, Téléport</div>
+                <div style="font:italic 500 23px/1.25 'Cormorant Garamond', serif; color:oklch(0.5 0.15 35);">« C'est le moment de sécuriser votre champion ! »</div>
+              </div>
+              <div style="margin-top:22px;">
+                <sc-if value="{{ b.unlocked }}" hint-placeholder-val="{{ true }}">
+                  <button onClick="{{ b.lock }}" style="width:100%; height:58px; border:0; border-radius:4px; background:oklch(0.58 0.17 35); color:oklch(0.97 0.015 88); font:italic 600 24px/1 'Cormorant Garamond', serif; letter-spacing:0.02em; cursor:pointer; box-shadow:0 3px 0 oklch(0.45 0.15 32);" style-hover="background: oklch(0.62 0.17 35)">{{ b.lockLabel }}</button>
+                </sc-if>
+                <sc-if value="{{ b.locked }}" hint-placeholder-val="{{ false }}">
+                  <div style="height:58px; display:flex; align-items:center; justify-content:space-between; padding:0 4px; border-top:1px solid oklch(0.3 0.03 60 / 0.3); border-bottom:1px solid oklch(0.3 0.03 60 / 0.3);"><span style="font:italic 600 24px/1 'Cormorant Garamond', serif;">{{ b.meName }} est scellé.</span><a onClick="{{ b.reset }}" style="font-size:14px; color:oklch(0.5 0.15 35); cursor:pointer; text-decoration:underline;">annuler (maquette)</a></div>
+                </sc-if>
+              </div>
+            </div>
+            <sc-if value="{{ b.locked }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute; right:84px; top:44px; width:176px; height:176px; transform:rotate(-12deg); pointer-events:none;">
+                <div data-shock="1" style="position:absolute; inset:0; border-radius:50%; border:2px solid oklch(0.58 0.17 35); opacity:0;"></div>
+                <svg data-seal="1" viewBox="-80 -80 160 160" style="position:absolute; inset:0; width:176px; height:176px; overflow:visible; filter:drop-shadow(0 4px 6px oklch(0.3 0.08 30 / 0.35));">
+                  <circle r="78" style="fill:oklch(0.55 0.17 33);"></circle>
+                  <circle r="72" style="fill:none; stroke:oklch(0.97 0.015 88 / 0.55); stroke-width:1;"></circle>
+                  <path id="sealB" d="M0,-62 A62,62 0 1,1 0,62 A62,62 0 1,1 0,-62" style="fill:none;"></path>
+                  <text data-ring="389" style="font:11px 'Noto Sans Runic', serif; fill:oklch(0.97 0.015 88 / 0.8);"><textPath href="#sealB">ᛟ ᚱ ᛞ ᛖ ᚱ ᛜ ᛊ ᛁ ᚷ ᛁ ᛚ ᛚ ᚢ ᛗ ᛟ ᚱ ᛞ ᛖ ᚱ ᛜ ᛊ ᛁ ᚷ ᛁ ᛚ ᛚ ᚢ ᛗ</textPath></text>
+                  <circle r="52" style="fill:none; stroke:oklch(0.97 0.015 88 / 0.55); stroke-width:1;"></circle>
+                  <path d="M0,-44 L25.9,35.6 L-41.8,-13.6 L41.8,-13.6 L-25.9,35.6 Z" style="fill:none; stroke:oklch(0.97 0.015 88 / 0.35); stroke-width:1.2; stroke-linejoin:round;"></path>
+                  </svg>
+                <div style="position:absolute; inset:0; display:grid; place-items:center; font:700 26px/1 'Cormorant Garamond', serif; letter-spacing:0.12em; color:oklch(0.97 0.015 88); pointer-events:none;">{{ b.meUpper }}</div>
+              </div>
+            </sc-if>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- ============ 1c — DEUX SCEAUX ============ -->
+    <div id="1c" style="display:flex; flex-direction:column; gap:20px; width:1920px;">
+      <div style="display:flex; align-items:center; gap:20px;">
+        <div style="display:grid; place-items:center; width:56px; height:56px; border-radius:50%; background:oklch(0.74 0.11 55); color:oklch(0.16 0.02 170); font:700 22px/1 'Alegreya Sans', sans-serif;">1c</div>
+        <div style="display:flex; flex-direction:column; gap:4px; flex:1;">
+          <div style="font:600 34px/1.1 'Cormorant Garamond', serif;">Deux sceaux — table d'alchimie</div>
+          <div style="font-size:18px; color:oklch(0.72 0.015 270);">Un pentacle par équipe, un rôle par branche ; la balance au centre. Recommandations en cartes sous les sceaux, lecture gauche-droite.</div>
+        </div>
+        <button onClick="{{ c.replay }}" style="height:44px; padding:0 20px; border-radius:22px; border:1px solid oklch(0.82 0.11 85 / 0.5); background:transparent; color:oklch(0.88 0.08 85); font-size:16px; cursor:pointer;">Rejouer la transmutation</button>
+        <button onClick="{{ c.reset }}" style="height:44px; padding:0 20px; border-radius:22px; border:1px solid oklch(1 0 0 / 0.15); background:transparent; color:oklch(0.8 0.01 270); font-size:16px; cursor:pointer;">Réinitialiser</button>
+      </div>
+      <div data-board="c" style="position:relative; width:1920px; height:986px; overflow:hidden; border-radius:10px; box-shadow:0 30px 80px rgb(0 0 0 / 0.5); background:radial-gradient(ellipse at 56% 40%, oklch(0.215 0.03 170) 0%, oklch(0.16 0.02 170) 60%); color:oklch(0.94 0.012 120); font-family:'Alegreya Sans', sans-serif;">
+        <div style="position:absolute; left:0; top:0; right:0; height:36px; display:flex; align-items:center; background:oklch(0.13 0.018 170); border-bottom:1px solid oklch(0.74 0.11 55 / 0.16); z-index:5;">
+          <div style="flex:1; height:100%; display:flex; align-items:center; gap:10px; padding-left:14px;">
+            <svg viewBox="-9 -9 18 18" style="width:16px; height:16px; overflow:visible;"><circle r="8" style="fill:none; stroke:oklch(0.74 0.11 55); stroke-width:1;"></circle><path d="M0,-7 L4.11,5.66 L-6.66,-2.16 L6.66,-2.16 L-4.11,5.66 Z" style="fill:none; stroke:oklch(0.74 0.11 55); stroke-width:1; stroke-linejoin:round;"></path></svg>
+            <span style="font-size:12px; letter-spacing:0.12em; text-transform:uppercase; color:oklch(0.72 0.04 60);">LeagueStats</span>
+          </div>
+          <span style="display:inline-flex; align-items:center; gap:7px; margin-right:12px; padding:2px 12px; border-radius:999px; font-size:12px; color:oklch(0.94 0.012 120); background:oklch(0.16 0.02 170); border:1px solid oklch(0.74 0.11 55 / 0.2);"><span data-glow="2200" style="width:7px; height:7px; border-radius:50%; background:oklch(0.8 0.1 165); box-shadow:0 0 8px oklch(0.8 0.1 165);"></span>Client LoL connecté</span>
+          <div style="display:flex; height:100%;">
+            <button style="width:46px; height:100%; border:0; background:transparent; color:oklch(0.94 0.012 120); display:grid; place-items:center;" style-hover="background: oklch(0.74 0.11 55 / 0.12)"><svg viewBox="0 0 12 12" style="width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:1.2;"><path d="M2 6h8"></path></svg></button>
+            <button style="width:46px; height:100%; border:0; background:transparent; color:oklch(0.94 0.012 120); display:grid; place-items:center;" style-hover="background: oklch(0.74 0.11 55 / 0.12)"><svg viewBox="0 0 12 12" style="width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:1.2;"><rect x="2.5" y="2.5" width="7" height="7"></rect></svg></button>
+            <button style="width:46px; height:100%; border:0; background:transparent; color:oklch(0.94 0.012 120); display:grid; place-items:center;" style-hover="background: oklch(0.6 0.19 25)"><svg viewBox="0 0 12 12" style="width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:1.2;"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7"></path></svg></button>
+          </div>
+        </div>
+        <nav style="position:absolute; left:0; top:36px; bottom:0; width:220px; padding:22px 12px; display:flex; flex-direction:column; gap:22px; background:oklch(0.14 0.018 170); border-right:1px solid oklch(0.74 0.11 55 / 0.14);">
+          <sc-for list="{{ nav }}" as="g" hint-placeholder-count="3">
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <div style="padding:0 12px 6px; font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:oklch(0.6 0.03 160);">{{ g.g }}</div>
+              <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="4">
+                <div style="position:relative; display:flex; align-items:center; gap:12px; height:38px; padding:0 12px; border-radius:6px; font-size:15px; color:oklch(0.8 0.02 140); cursor:pointer;" style-hover="background: oklch(0.74 0.11 55 / 0.06)">
+                  <sc-if value="{{ it.on }}" hint-placeholder-val="{{ false }}"><div style="position:absolute; inset:0; border-radius:6px; background:oklch(0.74 0.11 55 / 0.1); box-shadow:inset 0 0 0 1px oklch(0.74 0.11 55 / 0.3);"></div></sc-if>
+                  <span style="position:relative; width:18px; text-align:center; font:16px/1 'Noto Sans Runic', serif; color:oklch(0.74 0.11 55 / 0.65);">{{ it.rune }}</span>
+                  <span style="position:relative;">{{ it.label }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+          <div style="margin-top:auto; display:flex; flex-direction:column; gap:8px; padding:0 12px; font-size:13px; color:oklch(0.62 0.02 160);">
+            <div style="display:flex; justify-content:space-between;"><span>Thème</span><span style="color:oklch(0.8 0.09 55);">Alchimie</span></div>
+            <div style="display:flex; justify-content:space-between;"><span>Motion</span><span style="color:oklch(0.8 0.09 55);">Complet</span></div>
+          </div>
+        </nav>
+        <main data-quake="1" style="position:absolute; left:220px; top:36px; width:1700px; height:950px;">
+          <div data-rise="1" data-delay="0" style="position:absolute; left:40px; right:40px; top:24px; height:64px; display:flex; align-items:center; justify-content:space-between;">
+            <div style="display:flex; flex-direction:column; gap:6px; width:560px;">
+              <div style="font-size:12px; letter-spacing:0.22em; text-transform:uppercase; color:oklch(0.74 0.11 55 / 0.85);">Champ select · Classée solo/duo</div>
+              <div style="font:600 38px/1 'Cormorant Garamond', serif;">{{ c.title }}</div>
+            </div>
+            <div style="position:relative; width:64px; height:64px;">
+              <svg viewBox="-32 -32 64 64" style="position:absolute; inset:0; width:64px; height:64px; overflow:visible;"><circle r="28" style="fill:none; stroke:oklch(1 0 0 / 0.08); stroke-width:3;"></circle><circle r="28" style="fill:none; stroke:oklch(0.74 0.11 55); stroke-width:3; stroke-linecap:round; stroke-dasharray:175.93; stroke-dashoffset:{{ tickOff28 }}; transform:rotate(-90deg); transition:stroke-dashoffset 1s linear;"></circle></svg>
+              <div style="position:absolute; inset:0; display:grid; place-items:center; font:600 26px/1 'Cormorant Garamond', serif;">{{ tick }}</div>
+            </div>
+            <div style="display:flex; gap:28px; width:560px; justify-content:flex-end;">
+              <div style="display:flex; flex-direction:column; gap:8px;"><div style="font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:oklch(0.8 0.1 165);">Bans alliés</div><div style="display:flex; gap:6px;"><sc-for list="{{ bansA }}" as="x" hint-placeholder-count="5"><div style="position:relative; width:32px; height:32px; border-radius:50%; overflow:hidden; border:1px solid oklch(0.8 0.1 165 / 0.4);"><img src="{{ x.img }}" alt="{{ x.id }}" style="display:block; width:116%; height:116%; margin:-8%; filter:grayscale(1) brightness(0.6);"><div style="position:absolute; left:-4px; right:-4px; top:50%; height:1.5px; background:oklch(0.8 0.1 165); transform:rotate(-45deg);"></div></div></sc-for></div></div>
+              <div style="display:flex; flex-direction:column; gap:8px;"><div style="font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:oklch(0.74 0.12 355);">Bans adverses</div><div style="display:flex; gap:6px;"><sc-for list="{{ bansE }}" as="x" hint-placeholder-count="5"><div style="position:relative; width:32px; height:32px; border-radius:50%; overflow:hidden; border:1px solid oklch(0.74 0.12 355 / 0.4);"><img src="{{ x.img }}" alt="{{ x.id }}" style="display:block; width:116%; height:116%; margin:-8%; filter:grayscale(1) brightness(0.6);"><div style="position:absolute; left:-4px; right:-4px; top:50%; height:1.5px; background:oklch(0.74 0.12 355); transform:rotate(-45deg);"></div></div></sc-for></div></div>
+            </div>
+          </div>
+          <!-- sceau allié -->
+          <div style="position:absolute; left:170px; top:104px; width:520px; height:520px;">
+            <svg data-spin="160" viewBox="-260 -260 520 520" style="position:absolute; left:0; top:0; width:520px; height:520px; overflow:visible;">
+              <circle data-trace="1600" data-delay="0" r="252" style="fill:none; stroke:oklch(0.74 0.11 55 / 0.45); stroke-width:1;"></circle>
+              <circle data-trace="1600" data-delay="150" r="222" style="fill:none; stroke:oklch(0.74 0.11 55 / 0.3); stroke-width:1;"></circle>
+              <path id="ringC1" d="M0,-237 A237,237 0 1,1 0,237 A237,237 0 1,1 0,-237" style="fill:none;"></path>
+              <text data-fade="1" data-delay="600" data-ring="1489" style="font:14px 'Noto Sans Runic', serif; fill:oklch(0.74 0.11 55 / 0.6);"><textPath href="#ringC1">ᚠ ᚢ ᚦ ᚨ ᚱ ᚲ ᚷ ᚹ ᚺ ᚾ ᛁ ᛃ ᛇ ᛈ ᛉ ᛊ ᛏ ᛒ ᛖ ᛗ ᛚ ᛜ ᛞ ᛟ ᚠ ᚢ ᚦ ᚨ ᚱ ᚲ ᚷ ᚹ ᚺ ᚾ ᛁ ᛃ ᛇ ᛈ ᛉ ᛊ ᛏ ᛒ ᛖ ᛗ ᛚ ᛜ ᛞ ᛟ</textPath></text>
+            </svg>
+            <svg viewBox="-260 -260 520 520" style="position:absolute; left:0; top:0; width:520px; height:520px; overflow:visible;">
+              <path data-flash="1" d="M0,-190 L111.7,153.7 L-180.7,-58.7 L180.7,-58.7 L-111.7,153.7 Z" style="fill:none; stroke:oklch(0.8 0.1 165); stroke-width:8; stroke-linejoin:round; opacity:0; filter:blur(5px);"></path>
+              <circle data-trace="1400" data-delay="400" r="190" style="fill:none; stroke:oklch(0.8 0.1 165 / 0.55); stroke-width:1.2;"></circle>
+              <path data-trace="2000" data-delay="600" d="M0,-190 L111.7,153.7 L-180.7,-58.7 L180.7,-58.7 L-111.7,153.7 Z" style="fill:none; stroke:oklch(0.8 0.1 165 / 0.75); stroke-width:1.4; stroke-linejoin:round;"></path>
+            </svg>
+            <sc-for list="{{ c.allies }}" as="s" hint-placeholder-count="4">
+              <div data-pop="1" data-delay="{{ s.d }}" style="position:absolute; left:{{ s.l }}px; top:{{ s.t }}px; width:92px; height:92px;">
+                <div style="position:absolute; inset:0; border-radius:50%; overflow:hidden; border:2px solid oklch(0.8 0.1 165); box-shadow:0 0 22px oklch(0.8 0.1 165 / 0.35); background:oklch(0.13 0.018 170);"><img src="{{ s.img }}" alt="{{ s.name }}" style="display:block; width:116%; height:116%; margin:-8%; opacity:{{ s.op }};"></div>
+                <sc-if value="{{ s.hov }}" hint-placeholder-val="{{ false }}"><svg data-spin="10" viewBox="0 0 112 112" style="position:absolute; left:-10px; top:-10px; width:112px; height:112px; overflow:visible;"><circle cx="56" cy="56" r="54" style="fill:none; stroke:oklch(0.8 0.1 165); stroke-width:1.5; stroke-dasharray:5 7;"></circle></svg></sc-if>
+                <div style="position:absolute; top:calc(100% + 6px); left:50%; width:180px; margin-left:-90px; text-align:center;">
+                  <div style="display:inline-block; padding:0 6px; background:oklch(0.17 0.022 170); font:600 21px/1.1 'Cormorant Garamond', serif;">{{ s.name }}</div>
+                  <div style="font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:oklch(0.7 0.02 160);">{{ s.role }} · {{ s.st }}</div>
+                </div>
+              </div>
+            </sc-for>
+            <div style="position:absolute; left:208px; top:18px; width:104px; height:104px;">
+              <div data-shock="1" style="position:absolute; inset:0; border-radius:50%; border:2px solid oklch(0.74 0.11 55); opacity:0;"></div>
+              <div data-shock="1" style="position:absolute; inset:0; border-radius:50%; border:1px solid oklch(0.8 0.1 165); opacity:0;"></div>
+              <div data-pop="1" data-delay="1000" style="position:absolute; inset:0; border-radius:50%; overflow:hidden; border:3px solid oklch(0.74 0.11 55); box-shadow:0 0 36px oklch(0.74 0.11 55 / 0.45); background:oklch(0.13 0.018 170);"><img data-me="1" src="{{ c.meImg }}" alt="{{ c.meName }}" style="display:block; width:116%; height:116%; margin:-8%; opacity:{{ c.meOp }};"></div>
+              <sc-if value="{{ c.unlocked }}" hint-placeholder-val="{{ true }}"><svg data-spin="8" viewBox="0 0 128 128" style="position:absolute; left:-12px; top:-12px; width:128px; height:128px; overflow:visible;"><circle cx="64" cy="64" r="62" style="fill:none; stroke:oklch(0.74 0.11 55); stroke-width:1.5; stroke-dasharray:6 8;"></circle></svg></sc-if>
+              <sc-if value="{{ c.locked }}" hint-placeholder-val="{{ false }}"><svg data-seal="1" viewBox="-20 -20 40 40" style="position:absolute; right:-10px; bottom:-6px; width:42px; height:42px; overflow:visible;"><circle r="18" style="fill:oklch(0.74 0.11 55); stroke:oklch(0.16 0.02 170); stroke-width:2.5;"></circle><path d="M0,-11 L6.47,8.9 L-10.46,-3.4 L10.46,-3.4 L-6.47,8.9 Z" style="fill:none; stroke:oklch(0.18 0.02 170); stroke-width:1.4; stroke-linejoin:round;"></path></svg></sc-if>
+              <div style="position:absolute; left:calc(100% + 18px); top:22px; width:180px;">
+                <div style="font-size:11px; letter-spacing:0.22em; text-transform:uppercase; color:oklch(0.74 0.11 55);">Toi · Top</div>
+                <div style="font:600 28px/1.05 'Cormorant Garamond', serif;">{{ c.meName }}</div>
+                <div style="font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:oklch(0.7 0.02 160);">{{ c.meState }}</div>
+              </div>
+            </div>
+          </div>
+          <!-- balance -->
+          <div data-fade="1" data-delay="1200" style="position:absolute; left:760px; top:150px; width:180px; height:440px; display:flex; flex-direction:column; align-items:center;">
+            <div style="font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:oklch(0.74 0.12 355);">Eux · {{ c.foeTxt }}</div>
+            <div style="position:relative; margin-top:12px; width:46px; height:270px;">
+              <div style="position:absolute; inset:0; border-radius:23px; overflow:hidden; border:1px solid oklch(0.74 0.11 55 / 0.5); background:oklch(0.74 0.12 355 / 0.3);"><div style="position:absolute; inset:0; background:linear-gradient(0deg, oklch(0.8 0.1 165), oklch(0.8 0.1 165 / 0.6)); transform-origin:center bottom; transform:scaleY({{ c.frac }});"></div></div>
+              <div style="position:absolute; left:-18px; right:-18px; bottom:{{ c.pct }}%; height:0;"><div style="position:absolute; left:0; right:0; top:-1px; height:2px; background:oklch(0.74 0.11 55);"></div><div style="position:absolute; left:-5px; top:-6px; width:12px; height:12px; background:oklch(0.74 0.11 55); transform:rotate(45deg);"></div><div style="position:absolute; right:-5px; top:-6px; width:12px; height:12px; background:oklch(0.74 0.11 55); transform:rotate(45deg);"></div></div>
+            </div>
+            <div style="margin-top:18px; font:600 58px/1 'Cormorant Garamond', serif; font-variant-numeric:tabular-nums; color:oklch(0.86 0.09 165); text-shadow:0 0 24px oklch(0.8 0.1 165 / 0.45);">{{ c.wcTxt }}</div>
+            <div style="margin-top:4px; font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:oklch(0.8 0.1 165);">Nous · victoire prédite</div>
+            <div style="margin-top:6px; font-size:13px; text-align:center; color:oklch(0.7 0.02 160);">{{ c.note }}</div>
+          </div>
+          <!-- sceau adverse -->
+          <div style="position:absolute; left:1010px; top:104px; width:520px; height:520px;">
+            <svg data-spin="-160" viewBox="-260 -260 520 520" style="position:absolute; left:0; top:0; width:520px; height:520px; overflow:visible;">
+              <circle data-trace="1600" data-delay="100" r="252" style="fill:none; stroke:oklch(0.74 0.11 55 / 0.45); stroke-width:1;"></circle>
+              <circle data-trace="1600" data-delay="250" r="222" style="fill:none; stroke:oklch(0.74 0.11 55 / 0.3); stroke-width:1;"></circle>
+              <path id="ringC2" d="M0,-237 A237,237 0 1,1 0,237 A237,237 0 1,1 0,-237" style="fill:none;"></path>
+              <text data-fade="1" data-delay="700" data-ring="1489" style="font:14px 'Noto Sans Runic', serif; fill:oklch(0.74 0.11 55 / 0.6);"><textPath href="#ringC2">ᛟ ᛞ ᛜ ᛚ ᛗ ᛖ ᛒ ᛏ ᛊ ᛉ ᛈ ᛇ ᛃ ᛁ ᚾ ᚺ ᚹ ᚷ ᚲ ᚱ ᚨ ᚦ ᚢ ᚠ ᛟ ᛞ ᛜ ᛚ ᛗ ᛖ ᛒ ᛏ ᛊ ᛉ ᛈ ᛇ ᛃ ᛁ ᚾ ᚺ ᚹ ᚷ ᚲ ᚱ ᚨ ᚦ ᚢ ᚠ</textPath></text>
+            </svg>
+            <svg viewBox="-260 -260 520 520" style="position:absolute; left:0; top:0; width:520px; height:520px; overflow:visible;">
+              <circle data-trace="1400" data-delay="500" r="190" style="fill:none; stroke:oklch(0.74 0.12 355 / 0.55); stroke-width:1.2;"></circle>
+              <path data-trace="2000" data-delay="700" d="M0,-190 L111.7,153.7 L-180.7,-58.7 L180.7,-58.7 L-111.7,153.7 Z" style="fill:none; stroke:oklch(0.74 0.12 355 / 0.75); stroke-width:1.4; stroke-linejoin:round;"></path>
+            </svg>
+            <sc-for list="{{ c.enemies }}" as="s" hint-placeholder-count="5">
+              <div data-pop="1" data-delay="{{ s.d }}" style="position:absolute; left:{{ s.l }}px; top:{{ s.t }}px; width:92px; height:92px;">
+                <sc-if value="{{ s.pick }}" hint-placeholder-val="{{ true }}"><div style="position:absolute; inset:0; border-radius:50%; overflow:hidden; border:2px solid oklch(0.74 0.12 355); box-shadow:0 0 22px oklch(0.74 0.12 355 / 0.35); background:oklch(0.13 0.018 170);"><img src="{{ s.img }}" alt="{{ s.name }}" style="display:block; width:116%; height:116%; margin:-8%;"></div></sc-if>
+                <sc-if value="{{ s.pending }}" hint-placeholder-val="{{ false }}"><div data-glow="2600" style="position:absolute; inset:0; border-radius:50%; border:1.5px dashed oklch(0.74 0.12 355 / 0.8); background:oklch(0.16 0.02 170); display:grid; place-items:center; font:28px/1 'Noto Sans Runic', serif; color:oklch(0.74 0.12 355 / 0.7);">ᛃ</div></sc-if>
+                <div style="position:absolute; top:calc(100% + 6px); left:50%; width:180px; margin-left:-90px; text-align:center;">
+                  <div style="display:inline-block; padding:0 6px; background:oklch(0.17 0.022 170); font:600 21px/1.1 'Cormorant Garamond', serif;">{{ s.name }}</div>
+                  <div style="font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:oklch(0.7 0.02 160);">{{ s.role }} · {{ s.st }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <!-- recommandations -->
+          <div style="position:absolute; left:40px; right:40px; top:640px; bottom:26px; display:flex; flex-direction:column;">
+            <div data-rise="1" data-delay="500" style="display:flex; align-items:baseline; justify-content:space-between; padding-bottom:12px; border-bottom:1px solid oklch(0.74 0.11 55 / 0.2);">
+              <div style="display:flex; align-items:baseline; gap:16px;"><span style="font:600 30px/1 'Cormorant Garamond', serif;">Recommandations · Top contre Darius</span><span style="font-size:14px; color:oklch(0.7 0.02 160);">Pool GRIND · profondeur atteinte : 2 picks anticipés</span></div>
+              <span style="font-size:14px; color:oklch(0.7 0.02 160);">Sans données exploitables en top : Ambessa (38 games)</span>
+            </div>
+            <div style="margin-top:14px; display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:20px;">
+              <sc-for list="{{ c.recs }}" as="r" hint-placeholder-count="4">
+                <div data-rise="1" data-delay="{{ r.d }}" onClick="{{ r.onPick }}" style="position:relative; height:196px; padding:18px 20px; border-radius:6px; background:oklch(0.195 0.02 170); border:1px solid oklch(0.74 0.11 55 / 0.18); cursor:pointer; display:flex; flex-direction:column;" style-hover="border-color: oklch(0.74 0.11 55 / 0.45)">
+                  <sc-if value="{{ r.sel }}" hint-placeholder-val="{{ false }}">
+                    <div style="position:absolute; inset:-1px; border-radius:6px; border:1.5px solid oklch(0.74 0.11 55); box-shadow:0 0 30px oklch(0.74 0.11 55 / 0.18), inset 0 0 40px oklch(0.74 0.11 55 / 0.06); pointer-events:none;"></div>
+                    <div style="position:absolute; left:-5px; top:-5px; width:9px; height:9px; background:oklch(0.74 0.11 55); transform:rotate(45deg);"></div>
+                    <div style="position:absolute; right:-5px; top:-5px; width:9px; height:9px; background:oklch(0.74 0.11 55); transform:rotate(45deg);"></div>
+                    <div style="position:absolute; left:-5px; bottom:-5px; width:9px; height:9px; background:oklch(0.74 0.11 55); transform:rotate(45deg);"></div>
+                    <div style="position:absolute; right:-5px; bottom:-5px; width:9px; height:9px; background:oklch(0.74 0.11 55); transform:rotate(45deg);"></div>
+                  </sc-if>
+                  <div style="display:flex; align-items:center; gap:14px;">
+                    <div style="width:60px; height:60px; flex:none; border-radius:50%; overflow:hidden; border:1.5px solid oklch(0.74 0.11 55 / 0.6);"><img src="{{ r.img }}" alt="{{ r.name }}" style="display:block; width:116%; height:116%; margin:-8%;"></div>
+                    <div style="flex:1; min-width:0;"><div style="font:600 28px/1 'Cormorant Garamond', serif;">{{ r.name }}</div><div style="margin-top:3px; font-size:13px; color:oklch(0.7 0.02 160);">{{ r.games }} games</div></div>
+                    <div style="display:flex; flex-direction:column; align-items:flex-end;">
+                      <div style="font:600 34px/1 'Cormorant Garamond', serif; font-variant-numeric:tabular-nums;">{{ r.wpTxt }}</div>
+                      <sc-if value="{{ r.up }}" hint-placeholder-val="{{ true }}"><div style="font-size:13px; font-weight:700; color:oklch(0.8 0.1 165);">{{ r.dTxt }} pts</div></sc-if>
+                      <sc-if value="{{ r.down }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px; font-weight:700; color:oklch(0.74 0.12 355);">{{ r.dTxt }} pts</div></sc-if>
+                    </div>
+                  </div>
+                  <div style="margin-top:12px; font-size:13px; line-height:1.4; color:oklch(0.7 0.02 160); text-wrap:pretty;">Suite attendue : {{ r.pv }}</div>
+                  <div style="margin-top:auto; display:flex; justify-content:flex-end;">
+                    <sc-if value="{{ r.canLock }}" hint-placeholder-val="{{ false }}"><button onClick="{{ c.lock }}" style="height:40px; padding:0 18px; border:0; border-radius:20px; background:oklch(0.74 0.11 55); color:oklch(0.16 0.02 170); font-size:15px; font-weight:700; letter-spacing:0.03em; cursor:pointer;" style-hover="background: oklch(0.8 0.11 55)">Verrouiller</button></sc-if>
+                    <sc-if value="{{ r.isLocked }}" hint-placeholder-val="{{ false }}"><div style="display:flex; align-items:center; gap:12px; font-size:14px; color:oklch(0.8 0.09 55);"><span>Scellé</span><a onClick="{{ c.reset }}" style="font-size:13px; cursor:pointer; text-decoration:underline;">annuler</a></div></sc-if>
+                    <sc-if value="{{ r.idle }}" hint-placeholder-val="{{ true }}"><div style="height:40px; display:flex; align-items:center; font-size:13px; letter-spacing:0.14em; text-transform:uppercase; color:oklch(0.62 0.03 160);">Survoler</div></sc-if>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+            <div data-rise="1" data-delay="1000" style="margin-top:auto; display:flex; justify-content:space-between; font-size:14px; color:oklch(0.7 0.02 160);">
+              <span>Loadout : page « {{ c.meName }} · Top » prête · Flash, Téléport</span>
+              <span style="font:italic 500 20px/1 'Cormorant Garamond', serif; color:oklch(0.8 0.09 55);">« C'est le moment de sécuriser votre champion ! »</span>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+  </div>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;motionSpeed&quot;: {&quot;editor&quot;: &quot;range&quot;, &quot;default&quot;: 1, &quot;min&quot;: 0.5, &quot;max&quot;: 2, &quot;step&quot;: 0.1, &quot;tsType&quot;: &quot;number&quot;, &quot;section&quot;: &quot;Motion&quot;}, &quot;reducedMotion&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Motion&quot;}}">
+const V = '14.24.1';
+const IMG = id => (id ? `https://ddragon.leagueoflegends.com/cdn/${V}/img/champion/${id}.png` : '');
+const fmt = (n, d = 1) => n.toFixed(d).replace('.', ',');
+const ALLIES = [
+  { role: 'Jungle', id: 'Vi', name: 'Vi', st: 'verrouillé', lock: true },
+  { role: 'Mid', id: 'Orianna', name: 'Orianna', st: 'verrouillé', lock: true },
+  { role: 'Bot', id: 'Jinx', name: 'Jinx', st: 'verrouillé', lock: true },
+  { role: 'Support', id: 'Thresh', name: 'Thresh', st: 'survol', lock: false },
+];
+const ENEMIES = [
+  { role: 'Top', id: 'Darius', name: 'Darius', st: 'déduit 82 %' },
+  { role: 'Jungle', id: 'LeeSin', name: 'Lee Sin', st: 'déduit 97 %' },
+  { role: 'Mid', id: 'Ahri', name: 'Ahri', st: 'déduit 94 %' },
+  { role: 'Bot', id: 'Kaisa', name: "Kai'Sa", st: 'déduit 99 %' },
+  { role: 'Support', id: null, name: 'En attente', st: 'à choisir', pending: true },
+];
+const RECS = [
+  { id: 'Sion', name: 'Sion', wp: 54.82, delta: 3.1, games: '1,2k', pv: 'Nautilus (support), Thresh (support)' },
+  { id: 'Shen', name: 'Shen', wp: 53.07, delta: 1.4, games: '860', pv: 'Rell (support), Thresh (support)' },
+  { id: 'Yorick', name: 'Yorick', wp: 51.94, delta: 0.2, games: '2,4k', pv: 'Nautilus (support)' },
+  { id: 'Olaf', name: 'Olaf', wp: 50.41, delta: -1.3, games: '410', pv: 'Braum (support)' },
+];
+const ROMAN = ['I', 'II', 'III', 'IV'];
+const BANS_A = ['Aatrox', 'Mordekaiser', 'Zed', 'Yone', 'Rengar'];
+const BANS_E = ['KSante', 'Malphite', 'Jax', 'Briar', 'Smolder'];
+const NAV = [
+  { g: 'Coaching', items: [['Accueil', 'ᚨ'], ['Rang', 'ᚱ'], ['Progression', 'ᛏ'], ['Parties', 'ᛗ'], ['Calibration', 'ᛉ']] },
+  { g: 'Partie', items: [['Draft', 'ᛟ', true], ['Post-game', 'ᛞ']] },
+  { g: 'Client', items: [['Profil', 'ᛒ'], ['Collection', 'ᚲ'], ['Lobby', 'ᚹ'], ['Social', 'ᛜ']] },
+];
+const STAR = [[0, -190], [180.7, -58.7], [111.7, 153.7], [-111.7, 153.7], [-180.7, -58.7]];
+const polar = (deg, r, cx, cy, size) => {
+  const t = (deg * Math.PI) / 180;
+  return { l: +(cx + Math.cos(t) * r - size / 2).toFixed(1), t: +(cy + Math.sin(t) * r - size / 2).toFixed(1) };
+};
+const C150 = 2 * Math.PI * 150;
+const init = () => ({ hover: 'Sion', locked: null, wc: 54.82, shown: 54.82 });
+
+class Component extends DCLogic {
+  state = { a: init(), b: init(), c: init(), tick: 24 };
+
+  componentDidMount() {
+    this.fixRings();
+    ['a', 'b', 'c'].forEach(k => this.intro(k));
+    this.ambient();
+    this.iv = setInterval(() => this.setState(s => ({ tick: s.tick <= 1 ? 30 : s.tick - 1 })), 1000);
+  }
+  componentWillUnmount() { clearInterval(this.iv); }
+  componentDidUpdate() {
+    const ps = this._prev || this.state; this._prev = { ...this.state };
+    this.fixRings();
+    this.ambient();
+    ['a', 'b', 'c'].forEach(k => {
+      const was = ps[k], now = this.state[k];
+      if (now.locked && was.locked !== now.locked) requestAnimationFrame(() => this.seal(k));
+      if (was.hover !== now.hover && !now.locked) this.pulseMe(k);
+    });
+  }
+
+  sp() { return Math.max(0.25, this.props.motionSpeed ?? 1); }
+  reduced() { return !!this.props.reducedMotion; }
+  board(k) { return document.querySelector(`[data-board="${k}"]`); }
+
+  fixRings() {
+    document.querySelectorAll('text[data-ring]').forEach(t => {
+      if (t.__ring) return;
+      t.__ring = true;
+      t.setAttribute('textLength', t.dataset.ring);
+      t.setAttribute('lengthAdjust', 'spacing');
+    });
+  }
+
+  trace(el, dur, delay, sp) {
+    if (!el.getTotalLength) return;
+    const L = el.getTotalLength();
+    el.style.strokeDasharray = `${L} ${L}`;
+    el.animate([{ strokeDashoffset: L }, { strokeDashoffset: 0 }], {
+      duration: dur / sp, delay: delay / sp, easing: 'cubic-bezier(.65,0,.35,1)', fill: 'both',
+    });
+  }
+
+  intro(k) {
+    const root = this.board(k);
+    if (!root) return;
+    const sp = this.sp();
+    const all = root.querySelectorAll('[data-trace],[data-rise],[data-pop],[data-fade]');
+    all.forEach(el => el.getAnimations().forEach(a => a.cancel()));
+    if (this.reduced()) return;
+    const D = el => +(el.dataset.delay || 0);
+    root.querySelectorAll('[data-trace]').forEach(el => this.trace(el, +el.dataset.trace, D(el), sp));
+    root.querySelectorAll('[data-rise]').forEach(el => el.animate(
+      [{ opacity: 0, transform: 'translateY(18px)' }, { opacity: 1, transform: 'translateY(0)' }],
+      { duration: 760 / sp, delay: D(el) / sp, easing: 'cubic-bezier(.22,1,.36,1)', fill: 'backwards' }));
+    root.querySelectorAll('[data-pop]').forEach(el => el.animate(
+      [{ opacity: 0, transform: 'scale(.3) rotate(-40deg)' }, { opacity: 1, transform: 'scale(1.08) rotate(4deg)', offset: 0.7 }, { opacity: 1, transform: 'scale(1) rotate(0)' }],
+      { duration: 720 / sp, delay: D(el) / sp, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' }));
+    root.querySelectorAll('[data-fade]').forEach(el => el.animate(
+      [{ opacity: 0 }, { opacity: 1 }],
+      { duration: 900 / sp, delay: D(el) / sp, easing: 'ease-out', fill: 'backwards' }));
+  }
+
+  ambient() {
+    if (this.reduced()) return;
+    const sp = this.sp();
+    document.querySelectorAll('[data-spin]').forEach(el => {
+      if (el.__spun) return;
+      el.__spun = true;
+      const s = +el.dataset.spin;
+      el.animate([{ transform: 'rotate(0deg)' }, { transform: `rotate(${s > 0 ? 360 : -360}deg)` }],
+        { duration: (Math.abs(s) * 1000) / sp, iterations: Infinity });
+    });
+    document.querySelectorAll('[data-glow]').forEach(el => {
+      if (el.__glow) return;
+      el.__glow = true;
+      el.animate([{ opacity: 0.35 }, { opacity: 1 }, { opacity: 0.35 }],
+        { duration: +el.dataset.glow / sp, iterations: Infinity, easing: 'ease-in-out' });
+    });
+    document.querySelectorAll('[data-ink]').forEach(el => {
+      if (el.__ink) return;
+      el.__ink = true;
+      this.trace(el, +el.dataset.ink, 0, sp);
+    });
+  }
+
+  seal(k) {
+    const root = this.board(k);
+    if (!root) return;
+    const sp = this.reduced() ? 100 : this.sp();
+    root.querySelectorAll('[data-seal]').forEach(el => el.animate(
+      [{ transform: 'scale(2.8) rotate(-30deg)', opacity: 0 }, { transform: 'scale(.9) rotate(6deg)', opacity: 1, offset: 0.62 }, { transform: 'scale(1.04) rotate(-2deg)', offset: 0.82 }, { transform: 'scale(1) rotate(0deg)', opacity: 1 }],
+      { duration: 640 / sp, easing: 'cubic-bezier(.3,0,.2,1)', fill: 'backwards' }));
+    root.querySelectorAll('[data-shock]').forEach((el, i) => el.animate(
+      [{ transform: 'scale(.7)', opacity: 0.95 }, { transform: 'scale(2.6)', opacity: 0 }],
+      { duration: 1000 / sp, delay: (360 + i * 140) / sp, easing: 'cubic-bezier(.15,.7,.2,1)', fill: 'both' }));
+    root.querySelectorAll('[data-flash]').forEach(el => el.animate(
+      [{ opacity: 0 }, { opacity: 1, offset: 0.2 }, { opacity: 0 }],
+      { duration: 1600 / sp, delay: 320 / sp }));
+    root.querySelectorAll('[data-quake]').forEach(el => el.animate(
+      [{ transform: 'translate(0,0)' }, { transform: 'translate(-4px,2px)' }, { transform: 'translate(3px,-2px)' }, { transform: 'translate(-2px,1px)' }, { transform: 'translate(0,0)' }],
+      { duration: 280 / sp, delay: 390 / sp }));
+  }
+
+  pulseMe(k) {
+    const root = this.board(k);
+    if (!root || this.reduced()) return;
+    const sp = this.sp();
+    root.querySelectorAll('[data-me]').forEach(el => el.animate(
+      [{ opacity: 0, transform: 'scale(1.5)' }, { opacity: 0.6, transform: 'scale(1)' }],
+      { duration: 520 / sp, easing: 'cubic-bezier(.2,.8,.2,1)' }));
+  }
+
+  setWc(k, target) {
+    const from = this.state[k].shown;
+    const t0 = performance.now();
+    const d = this.reduced() ? 1 : 800 / this.sp();
+    cancelAnimationFrame(this['raf' + k]);
+    const step = now => {
+      const p = Math.min(1, (now - t0) / d);
+      const e = 1 - Math.pow(1 - p, 3);
+      this.setState(s => ({ [k]: { ...s[k], shown: from + (target - from) * e } }));
+      if (p < 1) this['raf' + k] = requestAnimationFrame(step);
+    };
+    this['raf' + k] = requestAnimationFrame(step);
+  }
+  hover(k, id) {
+    if (this.state[k].locked || this.state[k].hover === id) return;
+    const r = RECS.find(x => x.id === id);
+    this.setState(s => ({ [k]: { ...s[k], hover: id, wc: r.wp } }));
+    this.setWc(k, r.wp);
+  }
+  lock(k) {
+    if (this.state[k].locked) return;
+    this.setState(s => ({ [k]: { ...s[k], locked: s[k].hover } }));
+  }
+  reset(k) {
+    this.setState(s => ({ [k]: { ...s[k], hover: 'Sion', locked: null, wc: 54.82 } }));
+    this.setWc(k, 54.82);
+    requestAnimationFrame(() => this.intro(k));
+  }
+
+  vals(k) {
+    const s = this.state[k];
+    const cur = s.locked || s.hover;
+    const rec = RECS.find(r => r.id === cur);
+    const locked = !!s.locked;
+    const recs = RECS.map((r, i) => ({
+      ...r, n: ROMAN[i], img: IMG(r.id), wpTxt: fmt(r.wp, 2) + ' %',
+      dTxt: (r.delta >= 0 ? '+' : '−') + fmt(Math.abs(r.delta)),
+      up: r.delta >= 0, down: r.delta < 0, d: 500 + i * 90,
+      sel: cur === r.id, canLock: !locked && cur === r.id, isLocked: locked && cur === r.id, idle: cur !== r.id,
+      onPick: () => this.hover(k, r.id),
+    }));
+    return {
+      recs, locked, unlocked: !locked,
+      meImg: IMG(cur), meName: rec.name, meUpper: rec.name.toUpperCase(), meOp: locked ? 1 : 0.6,
+      meState: locked ? 'verrouillé' : 'survol',
+      wcTxt: fmt(s.shown) + ' %', foeTxt: fmt(100 - s.shown) + ' %',
+      frac: (s.shown / 100).toFixed(4), pct: s.shown.toFixed(2),
+      arc: `${((C150 * s.shown) / 100).toFixed(1)} ${C150.toFixed(1)}`,
+      note: locked ? `${rec.name} verrouillé · fin de draft estimée` : `si ${rec.name} est verrouillé`,
+      title: locked ? 'En attente du support adverse' : 'Phase de picks — à toi de jouer',
+      titleShort: locked ? 'Sceau apposé' : 'Phase de picks',
+      sub: locked ? 'En attente du support adverse' : 'À toi de jouer — Top',
+      lockLabel: k === 'b' ? `Apposer le sceau — verrouiller ${rec.name}` : `Verrouiller ${rec.name}`,
+      lock: () => this.lock(k), reset: () => this.reset(k), replay: () => this.intro(k),
+    };
+  }
+
+  renderVals() {
+    const ally = (s, i) => ({ ...s, img: IMG(s.id), hov: !s.lock, op: s.lock ? 1 : 0.55 });
+    const enemy = (s, i) => ({ ...s, img: IMG(s.id), pick: !s.pending, bt: i ? '1px solid oklch(0.3 0.03 60 / 0.1)' : '0' });
+    const a = this.vals('a'), b = this.vals('b'), c = this.vals('c');
+    const angA = [212, 180, 148, 116], angE = [296, 328, 0, 32, 64];
+    a.allies = ALLIES.map((s, i) => ({ ...ally(s, i), ...polar(angA[i], 330, 610, 427, 112), d: 1150 + i * 90 }));
+    a.enemies = ENEMIES.map((s, i) => ({ ...enemy(s, i), ...polar(angE[i], 330, 610, 427, 112), d: 1200 + i * 90 }));
+    b.allies = ALLIES.map((s, i) => ({ ...ally(s, i), d: 760 + i * 80 }));
+    b.enemies = ENEMIES.map((s, i) => ({ ...enemy(s, i), d: 720 + i * 80 }));
+    const idxA = [4, 3, 2, 1];
+    c.allies = ALLIES.map((s, i) => { const p = STAR[idxA[i]]; return { ...ally(s, i), l: +(260 + p[0] - 46).toFixed(1), t: +(260 + p[1] - 46).toFixed(1), d: 1200 + i * 90 }; });
+    c.enemies = ENEMIES.map((s, i) => { const p = STAR[i]; return { ...enemy(s, i), l: +(260 + p[0] - 46).toFixed(1), t: +(260 + p[1] - 46).toFixed(1), d: 1250 + i * 90 }; });
+    const nav = NAV.map(g => ({ g: g.g, items: g.items.map(([label, rune, on]) => ({ label, rune, on: !!on })) }));
+    const tick = this.state.tick;
+    return {
+      a, b, c, nav, tick,
+      tickOff28: (175.93 * (1 - tick / 30)).toFixed(2),
+      tickOff32: (201.06 * (1 - tick / 30)).toFixed(2),
+      bansA: BANS_A.map(id => ({ id, img: IMG(id) })),
+      bansE: BANS_E.map(id => ({ id, img: IMG(id) })),
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-10-04 (SPEC-21 réécrite : client LeagueStats)
+**Mis à jour** : 2026-10-05 (SPEC-21 : plan revu après le handoff de design « Alchimie »)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -107,48 +107,64 @@ Répond à la confusion cause/effet des constats de SPEC-19. Ordre validé par @
 | 4 | Impact dans le bilan et les schémas de SPEC-19 | 3 | ✅ tâche 45 (2026-10-02, section du bilan : impact par partie et par type d'événement) ; révision de la grille de SPEC-19 à rouvrir sur données |
 | 5 | Live Client API et overlay en jeu | 4 | ✅ tâches 46 et 47 (2026-10-02, `live.py`, `overlay.py`) ; reste la recette en partie réelle de l'overlay |
 
-### Lot suivant — SPEC-21, client LeagueStats (🟡 réécrite le 2026-10-04)
+### Lot suivant — SPEC-21, client LeagueStats (🟡 plan revu le 2026-10-05)
 
 [SPEC-21](docs/specs/SPEC-21-tableau-de-bord-local.md) : de « tableau de bord en lecture seule » à
 **client de bureau** (fenêtre `pywebview` sur FastAPI, front sans build) qui parle au client LoL par
 le LCU : navigation (profil, historique, collection, lobby/file, social en lecture seule), section
-**Coaching** complète, draft interactive et post-game avec le Live Coach, **motion design poussé**
-(thèmes à discuter avec @pj35). WebSocket LCU pour le client, polling du Live Coach inchangé. Forme,
-périmètre, ordre, temps réel et niveau d'écriture validés le 2026-10-04 ; thèmes,
-écritures du coaching et point d'entrée à valider. Six lots utilisables seuls, SPEC-21 §5
-(25 tâches, 109 pts) :
+**Coaching** complète, draft interactive et post-game avec le Live Coach, **motion design poussé**.
+WebSocket LCU pour le client, polling du Live Coach inchangé. Forme, périmètre, temps réel et niveau
+d'écriture validés le 2026-10-04. **Le 2026-10-05**, le handoff de design « Alchimie »
+(`docs/design/client_alchimie/`) a fait passer le plan à 37 tâches et 163 pts, avec une fiche par écran
+(SPEC-21 §4.10) ; validés le 2026-10-05 : ordre des lots, taille de la fenêtre, thème clair reporté,
+écrans sans maquette extrapolés ; à valider : écritures du coaching et point d'entrée. Six lots utilisables seuls,
+SPEC-21 §5 :
 
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
-| **Lot 1 — Socle, thème, motion, Coaching** | | | | |
+| **Lot 1 — Socle, coque et motion (31 pts)** | | | | |
 | 48 | Spike d'empaquetage et de fluidité : fenêtre `pywebview` depuis l'exe, taille, démarrage, temps d'image | 5 | — | ✅ 2026-10-04 : exe +7,2 Mo (82,3 Mo), démarrage 2,0 à 2,5 s, p95 6,2 ms par image, sans bordure confirmée (SPEC-21 §8) ; prise en main par @pj35 faite ; une première exécution d'un exe neuf n'a pas affiché la page (non reproduite), à surveiller à la recette |
 | 49 | Socle : config, connexion lecture seule, serveur en thread, fabrique d'app, jeton de session | 5 | 48 | ✅ 2026-10-04 : 25 tests ; port libre choisi par l'OS (validé) ; `fastapi`/`uvicorn` déclarés dès maintenant pour que la CI reste verte (le reste des dépendances à leur tâche) ; `writable()` laissé à la tâche 71 (écritures du coaching à valider) |
 | 68 | Coque : fenêtre, navigation, transitions de page, états « client fermé » | 5 | 49 | ✅ 2026-10-04 : 30 tests ; poignées gauche/haut mesurées sans saut (`resize(fix_point)`, SPEC-21 §8) ; **recette @pj35 à faire** : poignées `s`/`se`, jeton de session sur une requête htmx POST, transition de page à l'œil (aucun test d'interface sans ton accord) |
-| 69 | Thème et motion : jetons, primitives, banc `/_motion`, deux thèmes | 5 | 68 | ⬜ |
 | 70 | Bus, SSE et WebSocket LCU | 5 | 49 | ✅ 2026-10-04 : 18 tests (faux serveur WebSocket local) ; `LcuEvents` pas encore lancé (tâche 55) ; consommateur JS du SSE (`fetch` avec jeton, `EventSource` n'envoie pas d'en-tête) à écrire avec le premier écran qui l'utilise (tâche 73) |
-| 50 | `charts.py` : graphiques SVG purs, tracé animable | 5 | 69 | ⬜ |
-| 51 | Écran Rang | 3 | 50 | ⬜ |
+| 69 | Jetons, polices et coque « Alchimie » (barre de titre, navigation, réglage Motion) | 5 | 68 | ⬜ |
+| 84 | `motion.js` et banc `/_motion` | 3 | 69 | ⬜ |
+| 55 | Lancement : `--client`, option 7 du menu, Live Coach en fil | 3 | 49, 70 | ⬜ |
+| **Lot 2 — Draft Alchimie (51 pts)** | | | | |
+| 72 | `DraftSnapshot`, recommandations structurées, sortie console identique | 5 | 70 | ⬜ |
+| 85 | Bans conseillés et balance dans le snapshot | 3 | 72 | ⬜ |
+| 86 | Assets Data Dragon locaux et formes LCU de la draft | 5 | 49 | ⬜ |
+| 74 | Actions de draft : survoler, verrouiller, bannir, corriger un rôle | 5 | 72 | ⬜ |
+| 73 | Draft, cadre : en-tête, sceaux, balance, consommateur SSE | 5 | 72, 84, 86 | ⬜ |
+| 87 | Draft, phase de bans | 5 | 73, 74, 85 | ⬜ |
+| 88 | Draft, phase de picks | 5 | 73, 74 | ⬜ |
+| 89 | Draft, grimoire des champions | 5 | 88 | ⬜ |
+| 90 | Draft, sélection de skin | 3 | 86, 88 | ⬜ |
+| 91 | Draft, colonne loadout | 5 | 86, 88 | ⬜ |
+| 92 | Draft, éditeur de runes | 5 | 91 | ⬜ |
+| **Lot 3 — File trouvée et transition de page (8 pts)** | | | | |
+| 93 | File trouvée : overlay, accepter / refuser | 5 | 84, 55 | ⬜ |
+| 94 | Transition de page signature | 3 | 84, 73 | ⬜ |
+| **Lot 4 — Coaching et post-game (39 pts)** | | | | |
+| 50 | `charts.py` : graphiques SVG purs, tracé animable | 5 | 84 | ⬜ |
+| 51 | Écran Rang | 5 | 50 | ⬜ |
 | 52 | Écran Progression | 5 | 50 | ⬜ |
 | 53 | Écran Parties : win chance, impact par événement | 5 | 50 | ⬜ |
 | 54 | Écran Calibration | 3 | 50 | ⬜ |
-| 71 | Accueil Coaching : axes, constats, bilan | 3 | 51–54 | ⬜ |
-| 55 | Lancement : `--client`, option 7 du menu, Live Coach en fil | 3 | 49, 70 | ⬜ |
-| 56 | Empaquetage du lot : dépendances, `.spec`, CI, exe vérifié, docs | 3 | 51–55, 71 | ⬜ |
-| **Lot 2 — Draft interactive et post-game** | | | | |
-| 72 | `DraftSnapshot`, recommandations structurées, sortie console identique | 5 | 70 | ⬜ |
-| 73 | Écran de draft (lecture) | 5 | 72 | ⬜ |
-| 74 | Actions de draft : survoler, verrouiller, corriger un rôle | 5 | 73 | ⬜ |
-| 75 | Post-game : page de revue animée | 5 | 72, 53 | ⬜ |
-| **Lot 3 — Profil et historique** | | | | |
+| 71 | Accueil Coaching : axes, constats, colonne latérale | 5 | 51–53 | ⬜ |
+| 75 | Post-game, données et page de revue | 5 | 72, 53 | ⬜ |
+| 95 | Post-game, mise en scène | 3 | 75, 84 | ⬜ |
+| 56 | Empaquetage : dépendances, `.spec`, CI, exe vérifié, docs | 3 | 55, 71, 75, 92 | ⬜ |
+| **Lot 5 — Profil et historique (13 pts)** | | | | |
 | 76 | Spike des endpoints de navigation, fixtures | 3 | 70 | ⬜ |
 | 77 | Profil, rang, régalia, défis | 5 | 76 | ⬜ |
 | 78 | Historique (20 parties) et détail | 5 | 76, 53 | ⬜ |
-| **Lots 4 à 6 et clôture** | | | | |
+| **Lot 6 — Collection, lobby, file, social, clôture (21 pts)** | | | | |
 | 79 | Collection (lecture) | 5 | 76 | ⬜ |
 | 80 | Lobby : créer, choisir, quitter | 5 | 76 | ⬜ |
-| 81 | File : lancer, annuler, accepter | 5 | 80 | ⬜ |
+| 81 | File : lancer, annuler ; barre de titre | 5 | 80, 93 | ⬜ |
 | 82 | Social en lecture seule | 3 | 76 | ⬜ |
-| 83 | Clôture : exe vérifié, docs, statuts | 3 | 74, 75, 77–79, 81, 82 | ⬜ |
+| 83 | Clôture : exe vérifié, docs, statuts | 3 | 56, 77–79, 81, 82, 95 | ⬜ |
 
 ### Lot suivant — SPEC-22, attribution complète de l'impact (🟡 rédigée le 2026-10-04)
 

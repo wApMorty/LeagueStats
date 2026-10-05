@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Noto+Sans+Runic&display=swap">
+<script src="motion.js"></script>
+<style>
+html, body { margin: 0; height: 100%; overflow: hidden; background: oklch(0.1 0.015 170); }
+* { box-sizing: border-box; }
+a { color: oklch(0.8 0.09 55); }
+a:hover { color: oklch(0.88 0.08 55); }
+button { font: inherit; }
+</style>
+</helmet>
+<div style="position:fixed; inset:0; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+<div ref="{{ app }}" style="position:relative; flex:none; width:1920px; height:986px; transform:scale({{ scale }}); overflow:hidden; background:oklch(0.16 0.02 170); color:oklch(0.94 0.012 120); font-family:'Alegreya Sans', sans-serif;">
+
+  <!-- barre de titre -->
+  <header style="position:absolute; left:0; top:0; right:0; height:36px; display:flex; align-items:center; background:linear-gradient(90deg, oklch(0.14 0.03 290), oklch(0.13 0.018 170) 30%, oklch(0.13 0.018 170) 70%, oklch(0.14 0.03 345)); z-index:20;">
+    <div style="position:absolute; left:0; right:0; bottom:-1px; height:1px; background:linear-gradient(90deg, oklch(0.74 0.11 55), oklch(0.7 0.2 290) 30%, oklch(0.8 0.1 165) 60%, oklch(0.72 0.22 345));"></div>
+    <div style="width:220px; height:100%; display:flex; align-items:center; gap:10px; padding-left:14px;">
+      <svg viewBox="-9 -9 18 18" style="width:16px; height:16px; overflow:visible;"><circle r="8" style="fill:none; stroke:oklch(0.74 0.11 55); stroke-width:1;"></circle><path d="M0,-7 L4.11,5.66 L-6.66,-2.16 L6.66,-2.16 L-4.11,5.66 Z" style="fill:none; stroke:oklch(0.74 0.11 55); stroke-width:1; stroke-linejoin:round;"></path></svg>
+      <span style="font-size:12px; letter-spacing:0.12em; text-transform:uppercase; color:oklch(0.72 0.04 60);">LeagueStats</span>
+    </div>
+    <div style="flex:1; height:100%; display:flex; align-items:center; justify-content:center;">
+      <sc-if value="{{ qIdle }}" hint-placeholder-val="{{ true }}">
+        <button onClick="{{ startQueue }}" style="height:26px; padding:0 14px; border-radius:13px; border:1px solid oklch(0.74 0.11 55 / 0.45); background:transparent; color:oklch(0.86 0.06 55); font-size:12px; letter-spacing:0.06em; cursor:pointer; display:flex; align-items:center; gap:8px;" style-hover="background: oklch(0.74 0.11 55 / 0.12)"><span style="width:6px; height:6px; background:oklch(0.74 0.11 55); transform:rotate(45deg);"></span>Lancer la file · Classée solo/duo</button>
+      </sc-if>
+      <sc-if value="{{ qSearch }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex; align-items:center; gap:12px; font-size:12px; color:oklch(0.86 0.06 55);">
+          <svg data-spin="3" viewBox="-9 -9 18 18" style="width:16px; height:16px; overflow:visible;"><circle r="7.5" style="fill:none; stroke:oklch(0.74 0.11 55); stroke-width:1.2; stroke-dasharray:3 3;"></circle></svg>
+          <span style="letter-spacing:0.06em;">Recherche · Classée solo/duo · {{ qTime }}</span>
+          <a onClick="{{ cancelQueue }}" style="cursor:pointer; color:oklch(0.7 0.02 160);">Annuler</a>
+        </div>
+      </sc-if>
+      <sc-if value="{{ qDraft }}" hint-placeholder-val="{{ false }}">
+        <span style="font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:oklch(0.8 0.1 165);">Champ select en cours</span>
+      </sc-if>
+    </div>
+    <span style="display:inline-flex; align-items:center; gap:7px; margin-right:12px; padding:2px 12px; border-radius:999px; font-size:12px; background:oklch(0.16 0.02 170); border:1px solid oklch(0.74 0.11 55 / 0.2);"><span data-glow="2200" style="width:7px; height:7px; border-radius:50%; background:oklch(0.8 0.1 165); box-shadow:0 0 8px oklch(0.8 0.1 165);"></span>Client LoL connecté</span>
+    <div style="display:flex; height:100%;">
+      <button style="width:46px; height:100%; border:0; background:transparent; color:oklch(0.94 0.012 120); display:grid; place-items:center;" style-hover="background: oklch(0.74 0.11 55 / 0.12)"><svg viewBox="0 0 12 12" style="width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:1.2;"><path d="M2 6h8"></path></svg></button>
+      <button style="width:46px; height:100%; border:0; background:transparent; color:oklch(0.94 0.012 120); display:grid; place-items:center;" style-hover="background: oklch(0.74 0.11 55 / 0.12)"><svg viewBox="0 0 12 12" style="width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:1.2;"><rect x="2.5" y="2.5" width="7" height="7"></rect></svg></button>
+      <button style="width:46px; height:100%; border:0; background:transparent; color:oklch(0.94 0.012 120); display:grid; place-items:center;" style-hover="background: oklch(0.6 0.19 25)"><svg viewBox="0 0 12 12" style="width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:1.2;"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7"></path></svg></button>
+    </div>
+  </header>
+
+  <!-- navigation (masquée pendant la draft) -->
+  <sc-if value="{{ showNav }}" hint-placeholder-val="{{ true }}">
+    <nav data-nav="1" style="position:absolute; left:0; top:36px; bottom:0; width:220px; padding:22px 12px; display:flex; flex-direction:column; gap:22px; background:linear-gradient(180deg, oklch(0.16 0.04 290) 0%, oklch(0.14 0.018 170) 42%, oklch(0.14 0.018 170) 62%, oklch(0.15 0.035 345) 100%); border-right:1px solid oklch(0.7 0.2 290 / 0.22); z-index:10;">
+      <sc-for list="{{ nav }}" as="g" hint-placeholder-count="3">
+        <div style="display:flex; flex-direction:column; gap:2px;">
+          <div style="padding:0 12px 6px; font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:{{ g.c }};">{{ g.g }}</div>
+          <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="4">
+            <div onClick="{{ it.onGo }}" title="{{ it.tip }}" style="position:relative; display:flex; align-items:center; gap:12px; height:38px; padding:0 12px; border-radius:6px; font-size:15px; color:{{ it.fg }}; cursor:{{ it.cur }};" style-hover="background: oklch(0.74 0.11 55 / 0.06)">
+              <sc-if value="{{ it.on }}" hint-placeholder-val="{{ false }}"><div data-navon="1" style="position:absolute; inset:0; border-radius:6px; background:linear-gradient(90deg, {{ it.ca }}, transparent 85%); box-shadow:inset 0 0 0 1px {{ it.cb }}, 0 0 18px {{ it.ca }};"></div></sc-if>
+              <span style="position:relative; width:18px; text-align:center; font:16px/1 'Noto Sans Runic', serif; color:{{ it.rc }}; text-shadow:0 0 10px {{ it.ca }};">{{ it.rune }}</span>
+              <span style="position:relative;">{{ it.label }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-for>
+      <div style="margin-top:auto; display:flex; flex-direction:column; gap:10px; padding:0 12px; font-size:13px; color:oklch(0.62 0.02 160);">
+        <div style="display:flex; justify-content:space-between;"><span>Thème</span><span style="color:oklch(0.8 0.09 55);">Alchimie</span></div>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <span>Motion</span>
+          <div style="display:flex; padding:2px; border-radius:15px; border:1px solid oklch(0.74 0.11 55 / 0.25);">
+            <sc-for list="{{ modes }}" as="m" hint-placeholder-count="3">
+              <button onClick="{{ m.onPick }}" style="flex:1; height:24px; border:0; border-radius:12px; background:{{ m.bg }}; color:{{ m.fg }}; font-size:12px; cursor:pointer;">{{ m.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </nav>
+  </sc-if>
+
+  <!-- écrans -->
+  <div ref="{{ content }}" style="position:absolute; top:36px; left:{{ cLeft }}px; width:{{ cWidth }}px; height:950px; overflow:hidden;">
+    <sc-if value="{{ r.accueil }}" hint-placeholder-val="{{ true }}"><dc-import name="Accueil" go="{{ go }}" speed="{{ speed }}" reduced="{{ reduced }}" hint-size="1700px,950px"></dc-import></sc-if>
+    <sc-if value="{{ r.rang }}" hint-placeholder-val="{{ false }}"><dc-import name="Rang" go="{{ go }}" speed="{{ speed }}" reduced="{{ reduced }}" hint-size="1700px,950px"></dc-import></sc-if>
+    <sc-if value="{{ r.progression }}" hint-placeholder-val="{{ false }}"><dc-import name="Progression" go="{{ go }}" speed="{{ speed }}" reduced="{{ reduced }}" hint-size="1700px,950px"></dc-import></sc-if>
+    <sc-if value="{{ r.draft }}" hint-placeholder-val="{{ false }}"><dc-import name="Draft" go="{{ go }}" speed="{{ speed }}" reduced="{{ reduced }}" hint-size="1920px,950px"></dc-import></sc-if>
+    <sc-if value="{{ r.postgame }}" hint-placeholder-val="{{ false }}"><dc-import name="Post-game" go="{{ go }}" speed="{{ speed }}" reduced="{{ reduced }}" hint-size="1700px,950px"></dc-import></sc-if>
+  </div>
+
+  <!-- voile de transition : cercle qui se trace puis s'ouvre -->
+  <div ref="{{ veil }}" style="position:absolute; top:36px; left:{{ cLeft }}px; width:{{ cWidth }}px; height:950px; pointer-events:none; opacity:0; display:grid; place-items:center; z-index:15;">
+    <div data-vglow="1" style="position:absolute; left:50%; top:50%; width:900px; height:900px; margin:-450px 0 0 -450px; border-radius:50%; opacity:0; background:radial-gradient(circle, oklch(0.8 0.13 55 / 0.6) 0%, oklch(0.6 0.24 290 / 0.35) 32%, oklch(0.6 0.24 290 / 0.08) 50%, transparent 66%);"></div>
+    <svg data-vsig="1" viewBox="-260 -260 520 520" style="position:relative; width:520px; height:520px; overflow:visible; filter:drop-shadow(0 0 16px oklch(0.8 0.13 55 / 0.8));">
+      <circle data-vtrace="1" r="240" style="fill:none; stroke:oklch(0.8 0.13 55); stroke-width:2;"></circle>
+      <path id="veilRing" d="M0,-222 A222,222 0 1,1 0,222 A222,222 0 1,1 0,-222" style="fill:none;"></path>
+      <text data-ring="1394" style="font:17px 'Noto Sans Runic', serif; fill:oklch(0.9 0.1 85);"><textPath href="#veilRing">ᚠ ᚢ ᚦ ᚨ ᚱ ᚲ ᚷ ᚹ ᚺ ᚾ ᛁ ᛃ ᛇ ᛈ ᛉ ᛊ ᛏ ᛒ ᛖ ᛗ ᛚ ᛜ ᛞ ᛟ ᚠ ᚢ ᚦ ᚨ ᚱ ᚲ ᚷ ᚹ ᚺ ᚾ ᛁ ᛃ ᛇ ᛈ ᛉ ᛊ ᛏ ᛒ ᛖ ᛗ ᛚ ᛜ ᛞ ᛟ</textPath></text>
+      <circle data-vtrace="1" r="204" style="fill:none; stroke:oklch(0.86 0.11 165); stroke-width:1.4;"></circle>
+      <path data-vtrace="1" d="M0,-204 L119.9,165 L-194,-63 L194,-63 L-119.9,165 Z" style="fill:none; stroke:oklch(0.9 0.12 70); stroke-width:2.2; stroke-linejoin:round;"></path>
+      <path data-vtrace="1" d="M0,204 L-119.9,-165 L194,63 L-194,63 L119.9,-165 Z" style="fill:none; stroke:oklch(0.68 0.24 290); stroke-width:1.6; stroke-linejoin:round;"></path>
+      <circle data-vtrace="1" r="74" style="fill:none; stroke:oklch(0.9 0.12 70); stroke-width:1.4;"></circle>
+    </svg>
+  </div>
+
+  <!-- partie trouvée : invocation -->
+  <sc-if value="{{ qFound }}" hint-placeholder-val="{{ false }}">
+    <div ref="{{ found }}" style="position:absolute; inset:36px 0 0 0; z-index:30; display:grid; place-items:center; background:radial-gradient(circle at 50% 48%, oklch(0.2 0.04 170 / 0.94) 0%, oklch(0.08 0.015 170 / 0.96) 55%);">
+      <div data-fade="1" style="position:absolute; inset:0;"></div>
+      <div data-pillar="1" style="position:absolute; left:50%; top:0; bottom:0; width:520px; margin-left:-260px; transform-origin:center bottom; background:linear-gradient(90deg, transparent, oklch(0.7 0.27 345 / 0.16) 18%, oklch(0.86 0.11 165 / 0.14) 36%, oklch(0.97 0.05 140 / 0.3) 50%, oklch(0.86 0.11 165 / 0.14) 64%, oklch(0.7 0.27 345 / 0.16) 82%, transparent); pointer-events:none;"></div>
+      <div data-glow="2400" style="position:absolute; left:50%; top:50%; width:1100px; height:1100px; margin:-550px 0 0 -550px; border-radius:50%; background:radial-gradient(circle, oklch(0.86 0.11 165 / 0.3) 0%, oklch(0.7 0.27 345 / 0.16) 38%, transparent 65%); pointer-events:none;"></div>
+      <div data-core="1" style="position:relative; width:720px; height:720px;">
+        <svg data-spin="60" viewBox="-360 -360 720 720" style="position:absolute; inset:0; width:720px; height:720px; overflow:visible;">
+          <circle data-trace="1100" r="350" style="fill:none; stroke:oklch(0.74 0.11 55 / 0.6); stroke-width:1.2;"></circle>
+          <path id="qfRing" d="M0,-332 A332,332 0 1,1 0,332 A332,332 0 1,1 0,-332" style="fill:none;"></path>
+          <text data-fade="1" data-delay="400" data-ring="2086" style="font:18px 'Noto Sans Runic', serif; fill:oklch(0.74 0.11 55 / 0.75);"><textPath href="#qfRing">ᚠ ᚢ ᚦ ᚨ ᚱ ᚲ ᚷ ᚹ ᚺ ᚾ ᛁ ᛃ ᛇ ᛈ ᛉ ᛊ ᛏ ᛒ ᛖ ᛗ ᛚ ᛜ ᛞ ᛟ ᚠ ᚢ ᚦ ᚨ ᚱ ᚲ ᚷ ᚹ ᚺ ᚾ ᛁ ᛃ ᛇ ᛈ ᛉ ᛊ ᛏ ᛒ ᛖ ᛗ ᛚ ᛜ ᛞ ᛟ ᚠ ᚢ ᚦ ᚨ ᚱ ᚲ ᚷ ᚹ ᚺ ᚾ ᛁ ᛃ ᛇ ᛈ ᛉ ᛊ ᛏ ᛒ ᛖ ᛗ ᛚ ᛜ ᛞ ᛟ</textPath></text>
+          <circle data-trace="1100" data-delay="150" r="314" style="fill:none; stroke:oklch(0.74 0.11 55 / 0.4); stroke-width:1;"></circle>
+        </svg>
+        <svg data-spin="-90" viewBox="-360 -360 720 720" style="position:absolute; inset:0; width:720px; height:720px; overflow:visible;">
+          <path data-glow="1800" d="M0,-290 L170.5,234.6 L-275.8,-89.6 L275.8,-89.6 L-170.5,234.6 Z" style="fill:none; stroke:oklch(0.8 0.1 165); stroke-width:10; stroke-linejoin:round; filter:blur(8px);"></path>
+          <path data-trace="1500" data-delay="300" d="M0,-290 L170.5,234.6 L-275.8,-89.6 L275.8,-89.6 L-170.5,234.6 Z" style="fill:none; stroke:oklch(0.86 0.09 165); stroke-width:2; stroke-linejoin:round;"></path>
+          <circle data-trace="1200" data-delay="500" r="290" style="fill:none; stroke:oklch(0.8 0.1 165 / 0.6); stroke-width:1.2;"></circle>
+          <circle data-trace="1000" data-delay="700" r="112" style="fill:none; stroke:oklch(0.7 0.27 345); stroke-width:1.6;"></circle>
+          <path data-trace="1500" data-delay="450" d="M0,290 L-170.5,-234.6 L275.8,89.6 L-275.8,89.6 L170.5,-234.6 Z" style="fill:none; stroke:oklch(0.7 0.27 345 / 0.75); stroke-width:1.4; stroke-linejoin:round;"></path>
+        </svg>
+        <svg viewBox="-360 -360 720 720" style="position:absolute; inset:0; width:720px; height:720px; overflow:visible;">
+          <circle r="350" style="fill:none; stroke:oklch(1 0 0 / 0.06); stroke-width:5;"></circle>
+          <circle r="350" style="fill:none; stroke:oklch(0.8 0.1 165); stroke-width:5; stroke-linecap:round; stroke-dasharray:2199.1; stroke-dashoffset:{{ acceptOff }}; transform:rotate(-90deg); transition:stroke-dashoffset 1s linear;"></circle>
+        </svg>
+        <div data-shock="1" style="position:absolute; left:160px; top:160px; width:400px; height:400px; border-radius:50%; border:2px solid oklch(0.8 0.1 165); opacity:0;"></div>
+        <div data-shock="1" style="position:absolute; left:160px; top:160px; width:400px; height:400px; border-radius:50%; border:1px solid oklch(0.74 0.11 55); opacity:0;"></div>
+        <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
+          <div data-rise="1" data-delay="500" style="font-size:13px; letter-spacing:0.26em; text-transform:uppercase; color:oklch(0.74 0.11 55);">Classée solo/duo · Top</div>
+          <div data-pop="1" data-spell="1" data-delay="1300" style="margin-top:8px; font:600 72px/1 'Cormorant Garamond', serif; text-shadow:0 0 40px oklch(0.8 0.1 165 / 0.6);">{{ foundTitle }}</div>
+          <div data-rise="1" data-delay="800" style="margin-top:10px; font-size:16px; color:oklch(0.82 0.015 140);">{{ foundSub }}</div>
+        </div>
+      </div>
+      <div data-rise="1" data-delay="900" style="position:absolute; left:0; right:0; bottom:70px; display:flex; flex-direction:column; align-items:center; gap:14px;">
+        <sc-if value="{{ canAnswer }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex; gap:14px;">
+            <button onClick="{{ accept }}" style="height:56px; padding:0 44px; border:0; border-radius:28px; background:oklch(0.8 0.1 165); color:oklch(0.14 0.02 170); font-size:18px; font-weight:700; letter-spacing:0.04em; cursor:pointer; box-shadow:0 0 40px oklch(0.8 0.1 165 / 0.45);" style-hover="background: oklch(0.86 0.09 165)">Accepter</button>
+            <button onClick="{{ decline }}" style="height:56px; padding:0 30px; border-radius:28px; border:1px solid oklch(1 0 0 / 0.2); background:transparent; color:oklch(0.86 0.01 140); font-size:16px; cursor:pointer;">Refuser</button>
+          </div>
+        </sc-if>
+        <span style="font-size:13px; color:oklch(0.7 0.02 160);">Auto-accept du Live Coach actif · acceptation automatique à 4 s</span>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;motionSpeed&quot;: {&quot;editor&quot;: &quot;range&quot;, &quot;default&quot;: 1, &quot;min&quot;: 0.5, &quot;max&quot;: 2, &quot;step&quot;: 0.1, &quot;tsType&quot;: &quot;number&quot;, &quot;section&quot;: &quot;Motion&quot;}}">
+const NAV = [
+  { g: 'Coaching', h: 165, items: [['accueil', 'Accueil', 'ᚨ', 165], ['rang', 'Rang', 'ᚱ', 245], ['progression', 'Progression', 'ᛏ', 290], [null, 'Parties', 'ᛗ', 85], [null, 'Calibration', 'ᛉ', 345]] },
+  { g: 'Partie', h: 55, items: [['draft', 'Draft', 'ᛟ', 55], ['postgame', 'Post-game', 'ᛞ', 345]] },
+  { g: 'Client', h: 245, items: [[null, 'Profil', 'ᛒ', 245], [null, 'Collection', 'ᚲ', 85], [null, 'Lobby', 'ᚹ', 290], [null, 'Social', 'ᛜ', 165]] },
+];
+const ROUTES = ['accueil', 'rang', 'progression', 'draft', 'postgame'];
+const mmss = s => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+
+class Component extends DCLogic {
+  app = React.createRef(); content = React.createRef(); veil = React.createRef(); found = React.createRef();
+  state = { route: 'accueil', scale: 1, motion: 'complet', queue: 'idle', qSec: 0, accept: 10, accepted: false, sysReduce: false };
+
+  componentDidMount() {
+    this._prev = { ...this.state };
+    this.fit = () => this.setState({ scale: Math.min(window.innerWidth / 1920, window.innerHeight / 986) });
+    this.fit();
+    window.addEventListener('resize', this.fit);
+    this.mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    this.setState({ sysReduce: this.mq.matches });
+    try { const saved = localStorage.getItem('ls-alchimie-route'); if (ROUTES.includes(saved)) this.setState({ route: saved }); } catch (e) {}
+    const go = () => { if (!window.Motion) return setTimeout(go, 50); Motion.ambient(this.app.current, this.mo()); Motion.embers(this.reduced() ? 0 : 0.35); };
+    go();
+    this.iv = setInterval(() => this.tick(), 1000);
+  }
+  componentWillUnmount() { window.removeEventListener('resize', this.fit); clearInterval(this.iv); clearTimeout(this.t1); clearTimeout(this.t2); clearTimeout(this.t3); window.Motion && Motion.embers(0); }
+  componentDidUpdate() {
+    const ps = this._prev || {}; this._prev = { ...this.state };
+    if (!window.Motion) return;
+    Motion.ambient(this.app.current, this.mo());
+    if (this.state.queue === 'found' && ps.queue !== 'found') requestAnimationFrame(() => this.playFound());
+    if (this.state.motion !== ps.motion || this.state.sysReduce !== ps.sysReduce) Motion.embers(this.reduced() ? 0 : 0.35);
+    if (this.state.route !== ps.route) { try { localStorage.setItem('ls-alchimie-route', this.state.route); } catch (e) {} }
+    if (this.state.route !== ps.route && (this.state.route === 'draft') !== (ps.route === 'draft')) {
+      const nav = this.app.current.querySelector('[data-nav]');
+      if (nav && !this.reduced()) nav.animate([{ transform: 'translateX(-220px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 520 / this.sp(), easing: Motion.E.entree });
+    }
+  }
+
+  sp() { return this.props.motionSpeed ?? 1; }
+  reduced() { return this.state.motion === 'reduit' || (this.state.motion === 'systeme' && this.state.sysReduce); }
+  mo() { return { sp: this.sp(), reduced: this.reduced() }; }
+
+  tick() {
+    const s = this.state;
+    if (s.queue === 'searching') {
+      if (s.qSec >= 6) this.setState({ queue: 'found', accept: 10, accepted: false });
+      else this.setState({ qSec: s.qSec + 1 });
+    } else if (s.queue === 'found' && !s.accepted) {
+      const a = s.accept - 1;
+      this.setState({ accept: a });
+      if (a <= 4) this.doAccept();
+    }
+  }
+
+  doAccept() {
+    if (this.state.accepted) return;
+    this.setState({ accepted: true });
+    requestAnimationFrame(() => {
+      const el = this.found.current; if (!el) return;
+      Motion.seal(el, { ...this.mo(), colors: [Motion.C.mint, Motion.C.gold, Motion.C.white, Motion.C.copper] });
+      if (this.reduced()) return;
+      const [cx, cy] = Motion.center(el.querySelector('[data-core]'));
+      Motion.impact(cx, cy, { color: Motion.C.mint, comp: Motion.C.magenta, target: this.app.current, frameMs: 60 });
+      setTimeout(() => {
+        Motion.burst(cx, cy, { n: 340, speed: 22, glyphs: 46, ringR: 1200, ringW: 12, ringLife: 1050, life: 1600, colors: [Motion.C.mint, Motion.C.white, Motion.C.gold, Motion.C.magenta] });
+        Motion.flash(Motion.C.white, 0.8, 720);
+        Motion.shake(this.app.current, 16, 560);
+      }, 90);
+      el.querySelectorAll('[data-spin]').forEach(s => s.getAnimations().forEach(a => (a.playbackRate = 9)));
+    });
+    this.t1 = setTimeout(() => {
+      const el = this.found.current;
+      const close = () => { this.setState({ queue: 'draft' }); this.go('draft', true); };
+      if (el && !this.reduced()) el.animate([{ opacity: 1, transform: 'scale(1)', filter: 'brightness(1)' }, { opacity: 0, transform: 'scale(.2) rotate(160deg)', filter: 'brightness(3)' }], { duration: 560 / this.sp(), easing: 'cubic-bezier(.6,0,.8,.2)', fill: 'forwards' }).onfinish = close;
+      else close();
+    }, 1200 / this.sp());
+  }
+
+  // Transition : le cercle se trace (plume d'étincelles), les runes convergent, il implose, puis l'onde de choc ouvre la page.
+  go(to, force) {
+    if (!ROUTES.includes(to) || (to === this.state.route && !force) || this.busy) return;
+    const content = this.content.current, veil = this.veil.current;
+    if (this.reduced() || !content || !veil || !window.Motion) { this.setState({ route: to }); return; }
+    const sp = this.sp();
+    this.busy = true;
+    veil.style.opacity = 1;
+    const sig = veil.querySelector('[data-vsig]'), glow = veil.querySelector('[data-vglow]');
+    sig.getAnimations().forEach(a => a.cancel());
+    veil.querySelectorAll('[data-vtrace]').forEach((el, i) => Motion.trace(el, 520, i * 70, sp));
+    Motion.fixRings(veil);
+    const [cx, cy] = Motion.center(sig);
+    Motion.converge(cx, cy, { n: 44, radius: 760, life: 760 / sp });
+    glow.animate([{ opacity: 0, transform: 'scale(.4)' }, { opacity: 1, transform: 'scale(1)' }], { duration: 620 / sp, easing: Motion.E.entree, fill: 'forwards' });
+    sig.animate([{ transform: 'rotate(-140deg) scale(.7)' }, { transform: 'rotate(0deg) scale(1)', offset: 0.78 }, { transform: 'rotate(120deg) scale(.06)' }], { duration: 860 / sp, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards' });
+    const out = content.animate([{ opacity: 1, transform: 'scale(1)', filter: 'brightness(1)' }, { opacity: 0, transform: 'scale(.92)', filter: 'brightness(.4)' }], { duration: 560 / sp, easing: Motion.E.standard, fill: 'forwards' });
+    this.t2 = setTimeout(() => {
+      Motion.burst(cx, cy, { n: 240, speed: 17, glyphs: 30, ringR: 950, ringW: 10, ringLife: 950, life: 1400, colors: [Motion.C.copper, Motion.C.gold, Motion.C.violet, Motion.C.white] });
+      Motion.flash(Motion.C.violet, 0.5, 560);
+      Motion.shake(this.app.current, 10, 460);
+      glow.animate([{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(4)' }], { duration: 700 / sp, easing: Motion.E.entree, fill: 'forwards' });
+      this.setState({ route: to }, () => {
+        out.cancel();
+        content.animate([{ clipPath: 'circle(0% at 50% 50%)', filter: 'brightness(2.2)' }, { clipPath: 'circle(40% at 50% 50%)', filter: 'brightness(1.3)', offset: 0.45 }, { clipPath: 'circle(75% at 50% 50%)', filter: 'brightness(1)' }], { duration: 820 / sp, easing: Motion.E.entree });
+        setTimeout(() => { veil.style.opacity = 0; this.busy = false; }, 820 / sp);
+      });
+    }, 860 / sp);
+  }
+
+  playFound() {
+    const el = this.found.current; if (!el) return;
+    const mo = this.mo(), sp = this.sp();
+    Motion.intro(el, mo); Motion.ambient(el, mo);
+    if (mo.reduced) return;
+    const core = el.querySelector('[data-core]'), [cx, cy] = Motion.center(core);
+    Motion.converge(cx, cy, { n: 90, radius: 1100, life: 1500 / sp, colors: [Motion.C.mint, Motion.C.gold] });
+    el.querySelector('[data-pillar]').animate([{ transform: 'scaleY(0)', opacity: 0 }, { transform: 'scaleY(1)', opacity: 1 }], { duration: 900 / sp, delay: 1000 / sp, easing: Motion.E.entree, fill: 'backwards' });
+    this.t3 = setTimeout(() => {
+      Motion.impact(cx, cy, { color: Motion.C.mint, comp: Motion.C.magenta });
+      setTimeout(() => { Motion.burst(cx, cy, { n: 200, speed: 13, glyphs: 22, ringR: 560, ringW: 9, colors: [Motion.C.mint, Motion.C.gold, Motion.C.magenta, Motion.C.white] }); Motion.flash(Motion.C.magenta, 0.45, 600); Motion.shake(this.app.current, 9, 460); }, 60);
+    }, 1400 / sp);
+  }
+
+  renderVals() {
+    const s = this.state, draft = s.route === 'draft';
+    const r = Object.fromEntries(ROUTES.map(k => [k, s.route === k]));
+    return {
+      app: this.app, content: this.content, veil: this.veil, found: this.found,
+      scale: s.scale.toFixed(4), r, showNav: !draft, cLeft: draft ? 0 : 220, cWidth: draft ? 1920 : 1700,
+      go: to => this.go(to), speed: this.sp(), reduced: this.reduced(),
+      nav: NAV.map(g => ({ g: g.g, c: `oklch(0.74 0.12 ${g.h})`, items: g.items.map(([k, label, rune, h]) => ({ label, rune, on: k === s.route, rc: k ? `oklch(0.82 0.16 ${h})` : `oklch(0.6 0.08 ${h})`, ca: `oklch(0.72 0.18 ${h} / 0.2)`, cb: `oklch(0.78 0.16 ${h} / 0.55)`, fg: k ? 'oklch(0.82 0.02 140)' : 'oklch(0.55 0.02 160)', cur: k ? 'pointer' : 'default', tip: k ? label : 'Lot suivant de SPEC-21', onGo: () => k && this.go(k) })) })),
+      modes: [['systeme', 'Système'], ['complet', 'Complet'], ['reduit', 'Réduit']].map(([k, label]) => ({ label, bg: s.motion === k ? 'oklch(0.74 0.11 55)' : 'transparent', fg: s.motion === k ? 'oklch(0.16 0.02 170)' : 'oklch(0.75 0.02 150)', onPick: () => this.setState({ motion: k }) })),
+      qIdle: s.queue === 'idle' || (s.queue === 'draft' && !draft), qSearch: s.queue === 'searching', qFound: s.queue === 'found', qDraft: s.queue === 'draft' && draft,
+      qTime: mmss(s.qSec + 96),
+      startQueue: () => this.setState({ queue: 'searching', qSec: 0 }),
+      cancelQueue: () => this.setState({ queue: 'idle' }),
+      acceptOff: (2199.1 * (1 - s.accept / 10)).toFixed(1),
+      foundTitle: s.accepted ? 'Acceptée' : 'Partie trouvée',
+      foundSub: s.accepted ? 'Le cercle se referme · ouverture du champ select' : `${s.accept} s pour répondre`,
+      canAnswer: !s.accepted,
+      accept: () => this.doAccept(),
+      decline: () => this.setState({ queue: 'idle' }),
+    };
+  }
+}
+</script>
+</body>
+</html>

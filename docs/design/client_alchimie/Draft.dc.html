@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Noto+Sans+Runic&display=swap">
+<script src="motion.js"></script>
+<style>
+html, body { margin: 0; background: oklch(0.16 0.02 170); }
+* { box-sizing: border-box; }
+a { color: oklch(0.8 0.09 55); }
+a:hover { color: oklch(0.88 0.08 55); }
+button { font: inherit; }
+</style>
+</helmet>
+<div ref="{{ root }}" data-quake="1" style="position:relative; width:1920px; height:950px; overflow:hidden; color:oklch(0.94 0.012 120); font-family:'Alegreya Sans', sans-serif; background:radial-gradient(ellipse 700px 600px at 18% 38%, oklch(0.26 0.07 175 / 0.9) 0%, transparent 70%), radial-gradient(ellipse 700px 600px at 62% 38%, oklch(0.24 0.09 345 / 0.7) 0%, transparent 70%), radial-gradient(ellipse 900px 400px at 40% 100%, oklch(0.22 0.08 290 / 0.8) 0%, transparent 70%), oklch(0.15 0.02 170);">
+
+  <div style="position:absolute; left:0; top:0; width:1480px; height:950px; pointer-events:none; opacity:{{ splashOp }}; transition:opacity 700ms ease; -webkit-mask-image:radial-gradient(ellipse 75% 70% at 50% 38%, #000 25%, transparent 78%); mask-image:radial-gradient(ellipse 75% 70% at 50% 38%, #000 25%, transparent 78%);"><img data-splash="1" src="{{ splashImg }}" alt="" style="display:block; width:100%; height:100%; object-fit:cover; object-position:center 22%;"></div>
+
+  <!-- en-tête -->
+  <div data-rise="1" data-delay="0" style="position:absolute; left:40px; top:22px; width:1400px; height:68px; display:flex; align-items:center; justify-content:space-between;">
+    <div style="display:flex; flex-direction:column; gap:5px; width:560px;">
+      <div style="display:flex; align-items:center; gap:14px; font-size:12px; letter-spacing:0.22em; text-transform:uppercase; color:oklch(0.74 0.11 55 / 0.85);">
+        <a onClick="{{ back }}" style="display:flex; align-items:center; gap:6px; color:oklch(0.7 0.02 160); text-decoration:none; cursor:pointer; letter-spacing:0.14em;" style-hover="color: oklch(0.94 0.012 120)"><span style="font-size:15px;">‹</span>Coaching</a>
+        <span style="width:4px; height:4px; background:oklch(0.74 0.11 55 / 0.6); transform:rotate(45deg);"></span>
+        <span>Champ select · Classée solo/duo</span>
+        <sc-if value="{{ canReplayBans }}" hint-placeholder-val="{{ false }}"><a onClick="{{ replayBans }}" style="letter-spacing:0.08em; text-transform:none; cursor:pointer; color:oklch(0.78 0.2 345);">rejouer depuis les bans (maquette)</a></sc-if>
+      </div>
+      <div data-spell="1" style="font:600 38px/1 'Cormorant Garamond', serif;">{{ title }}</div>
+    </div>
+    <div style="display:flex; gap:28px; justify-content:flex-end;">
+      <div style="display:flex; flex-direction:column; gap:8px;"><div style="font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:oklch(0.8 0.1 165);">{{ bansALabel }}</div><div style="display:flex; gap:6px; align-items:center; height:40px;"><sc-for list="{{ bansA }}" as="x" hint-placeholder-count="5"><div data-ban="{{ x.k }}" data-rk="{{ x.rk }}" title="{{ x.tip }}" onClick="{{ x.onClick }}" style="position:relative; flex:none; width:{{ x.sz }}px; height:{{ x.sz }}px; border-radius:50%; overflow:hidden; border:{{ x.bd }}; box-shadow:{{ x.glow }}; cursor:{{ x.cur }}; background:oklch(0.13 0.018 170);"><sc-if value="{{ x.has }}" hint-placeholder-val="{{ true }}"><img src="{{ x.img }}" alt="" style="display:block; width:116%; height:116%; margin:-8%; filter:{{ x.flt }}; opacity:{{ x.op }};"></sc-if><sc-if value="{{ x.struck }}" hint-placeholder-val="{{ true }}"><div style="position:absolute; left:-4px; right:-4px; top:50%; height:2px; background:{{ x.c }}; box-shadow:0 0 6px {{ x.c }}; transform:rotate(-45deg);"></div></sc-if><sc-if value="{{ x.empty }}" hint-placeholder-val="{{ false }}"><div data-glow="2200" style="position:absolute; inset:0; display:grid; place-items:center; font:15px/1 'Noto Sans Runic', serif; color:{{ x.c }};">{{ x.rune }}</div></sc-if></div></sc-for></div></div>
+      <div style="display:flex; flex-direction:column; gap:8px;"><div style="font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:oklch(0.74 0.12 355);">{{ bansELabel }}</div><div style="display:flex; gap:6px; align-items:center; height:40px;"><sc-for list="{{ bansE }}" as="x" hint-placeholder-count="5"><div data-ban="{{ x.k }}" data-rk="{{ x.rk }}" title="{{ x.tip }}" onClick="{{ x.onClick }}" style="position:relative; flex:none; width:{{ x.sz }}px; height:{{ x.sz }}px; border-radius:50%; overflow:hidden; border:{{ x.bd }}; box-shadow:{{ x.glow }}; cursor:{{ x.cur }}; background:oklch(0.13 0.018 170);"><sc-if value="{{ x.has }}" hint-placeholder-val="{{ true }}"><img src="{{ x.img }}" alt="" style="display:block; width:116%; height:116%; margin:-8%; filter:{{ x.flt }}; opacity:{{ x.op }};"></sc-if><sc-if value="{{ x.struck }}" hint-placeholder-val="{{ true }}"><div style="position:absolute; left:-4px; right:-4px; top:50%; height:2px; background:{{ x.c }}; box-shadow:0 0 6px {{ x.c }}; transform:rotate(-45deg);"></div></sc-if><sc-if value="{{ x.empty }}" hint-placeholder-val="{{ false }}"><div data-glow="2200" style="position:absolute; inset:0; display:grid; place-items:center; font:15px/1 'Noto Sans Runic', serif; color:{{ x.c }};">{{ x.rune }}</div></sc-if></div></sc-for></div></div>
+    </div>
+    <div style="position:absolute; left:668px; top:2px; width:64px; height:64px;">
+      <svg viewBox="-32 -32 64 64" style="position:absolute; inset:0; width:64px; height:64px; overflow:visible;"><circle r="28" style="fill:none; stroke:oklch(1 0 0 / 0.08); stroke-width:3;"></circle><circle r="28" style="fill:none; stroke:oklch(0.74 0.11 55); stroke-width:3; stroke-linecap:round; stroke-dasharray:175.93; stroke-dashoffset:{{ tickOff }}; transform:rotate(-90deg); transition:stroke-dashoffset 1s linear;"></circle></svg>
+      <div style="position:absolute; inset:0; display:grid; place-items:center; font:600 26px/1 'Cormorant Garamond', serif;">{{ tick }}</div>
+    </div>
+  </div>
+
+  <!-- sceau allié -->
+  <div style="position:absolute; left:70px; top:104px; width:520px; height:520px;">
+    <svg data-spin="160" viewBox="-260 -260 520 520" style="position:absolute; left:0; top:0; width:520px; height:520px; overflow:visible;">
+      <circle data-trace="1600" r="252" style="fill:none; stroke:oklch(0.74 0.11 55 / 0.45); stroke-width:1;"></circle>
+      <circle data-trace="1600" data-delay="150" r="222" style="fill:none; stroke:oklch(0.74 0.11 55 / 0.3); stroke-width:1;"></circle>
+      <path id="dRing1" d="M0,-237 A237,237 0 1,1 0,237 A237,237 0 1,1 0,-237" style="fill:none;"></path>
+      <text data-fade="1" data-delay="600" data-ring="1489" style="font:14px 'Noto Sans Runic', serif; fill:oklch(0.74 0.11 55 / 0.6);"><textPath href="#dRing1">ᚠ ᚢ ᚦ ᚨ ᚱ ᚲ ᚷ ᚹ ᚺ ᚾ ᛁ ᛃ ᛇ ᛈ ᛉ ᛊ ᛏ ᛒ ᛖ ᛗ ᛚ ᛜ ᛞ ᛟ ᚠ ᚢ ᚦ ᚨ ᚱ ᚲ ᚷ ᚹ ᚺ ᚾ ᛁ ᛃ ᛇ ᛈ ᛉ ᛊ ᛏ ᛒ ᛖ ᛗ ᛚ ᛜ ᛞ ᛟ</textPath></text>
+    </svg>
+    <svg viewBox="-260 -260 520 520" style="position:absolute; left:0; top:0; width:520px; height:520px; overflow:visible;">
+      <circle r="200" style="fill:oklch(0.6 0.24 290 / 0.10); filter:blur(30px);"></circle>
+      <path data-flash="1" d="M0,-190 L111.7,153.7 L-180.7,-58.7 L180.7,-58.7 L-111.7,153.7 Z" style="fill:none; stroke:oklch(0.7 0.27 345); stroke-width:10; stroke-linejoin:round; opacity:0; filter:blur(6px);"></path>
+      <circle data-trace="1400" data-delay="400" r="190" style="fill:none; stroke:oklch(0.8 0.1 165 / 0.55); stroke-width:1.2;"></circle>
+      <path data-trace="2000" data-delay="600" d="M0,-190 L111.7,153.7 L-180.7,-58.7 L180.7,-58.7 L-111.7,153.7 Z" style="fill:none; stroke:oklch(0.8 0.1 165 / 0.75); stroke-width:1.4; stroke-linejoin:round;"></path>
+    </svg>
+    <sc-for list="{{ allies }}" as="s" hint-placeholder-count="4">
+      <div data-pop="1" data-delay="{{ s.d }}" style="position:absolute; left:{{ s.l }}px; top:{{ s.t }}px; width:92px; height:92px;">
+        <div style="position:absolute; inset:0; border-radius:50%; overflow:hidden; border:2px solid oklch(0.8 0.1 165); box-shadow:0 0 22px oklch(0.8 0.1 165 / 0.35); background:oklch(0.13 0.018 170);"><img src="{{ s.img }}" alt="" style="display:block; width:116%; height:116%; margin:-8%; opacity:{{ s.op }};"></div>
+        <sc-if value="{{ s.hov }}" hint-placeholder-val="{{ false }}"><svg data-spin="10" viewBox="0 0 112 112" style="position:absolute; left:-10px; top:-10px; width:112px; height:112px; overflow:visible;"><circle cx="56" cy="56" r="54" style="fill:none; stroke:oklch(0.8 0.1 165); stroke-width:1.5; stroke-dasharray:5 7;"></circle></svg></sc-if>
+        <div style="position:absolute; top:calc(100% + 6px); left:50%; width:180px; margin-left:-90px; text-align:center;">
+          <div style="display:inline-block; padding:0 6px; background:oklch(0.18 0.024 170); font:600 21px/1.1 'Cormorant Garamond', serif;">{{ s.name }}</div>
+          <div style="font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:oklch(0.7 0.02 160);">{{ s.role }} · {{ s.st }}</div>
+        </div>
+      </div>
+    </sc-for>
+    <div onClick="{{ meClick }}" title="{{ meTip }}" style="position:absolute; left:208px; top:18px; width:104px; height:104px; cursor:pointer;">
+      <div data-shock="1" style="position:absolute; inset:0; border-radius:50%; border:2px solid oklch(0.74 0.11 55); opacity:0;"></div>
+      <div data-shock="1" style="position:absolute; inset:0; border-radius:50%; border:1px solid oklch(0.8 0.1 165); opacity:0;"></div>
+      <div data-pop="1" data-delay="1000" style="position:absolute; inset:0; border-radius:50%; overflow:hidden; border:3px solid oklch(0.74 0.11 55); box-shadow:0 0 36px oklch(0.74 0.11 55 / 0.45); background:oklch(0.13 0.018 170);"><img data-me="1" src="{{ meImg }}" alt="" style="display:block; width:116%; height:116%; margin:-8%; opacity:{{ meOp }};"></div>
+      <sc-if value="{{ unlocked }}" hint-placeholder-val="{{ true }}"><svg data-spin="8" viewBox="0 0 128 128" style="position:absolute; left:-12px; top:-12px; width:128px; height:128px; overflow:visible;"><circle cx="64" cy="64" r="62" style="fill:none; stroke:oklch(0.74 0.11 55); stroke-width:1.5; stroke-dasharray:6 8;"></circle></svg></sc-if>
+      <sc-if value="{{ locked }}" hint-placeholder-val="{{ false }}"><svg data-seal="1" viewBox="-20 -20 40 40" style="position:absolute; right:-10px; bottom:-6px; width:42px; height:42px; overflow:visible;"><circle r="18" style="fill:oklch(0.74 0.11 55); stroke:oklch(0.16 0.02 170); stroke-width:2.5;"></circle><path d="M0,-11 L6.47,8.9 L-10.46,-3.4 L10.46,-3.4 L-6.47,8.9 Z" style="fill:none; stroke:oklch(0.18 0.02 170); stroke-width:1.4; stroke-linejoin:round;"></path></svg></sc-if>
+      <div style="position:absolute; left:calc(100% + 18px); top:22px; width:180px;">
+        <div style="font-size:11px; letter-spacing:0.22em; text-transform:uppercase; color:oklch(0.74 0.11 55);">Toi · Top</div>
+        <div style="font:600 28px/1.05 'Cormorant Garamond', serif;">{{ meName }}</div>
+        <div style="font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:oklch(0.7 0.02 160);">{{ meState }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- balance -->
+  <div data-fade="1" data-delay="1200" style="position:absolute; left:650px; top:150px; width:180px; height:440px; display:flex; flex-direction:column; align-items:center;">
+    <div style="font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:oklch(0.74 0.12 355);">Eux · {{ foeTxt }}</div>
+    <div style="position:relative; margin-top:12px; width:46px; height:270px;">
+      <div style="position:absolute; inset:0; border-radius:23px; overflow:hidden; border:1px solid oklch(0.7 0.2 290 / 0.6); background:linear-gradient(180deg, oklch(0.72 0.22 345 / 0.55), oklch(0.72 0.22 345 / 0.2));"><div style="position:absolute; inset:0; background:linear-gradient(0deg, oklch(0.8 0.12 165), oklch(0.74 0.15 220) 60%, oklch(0.72 0.17 260)); box-shadow:0 0 20px oklch(0.74 0.15 220); transform-origin:center bottom; transform:scaleY({{ frac }});"></div></div>
+      <div style="position:absolute; left:-18px; right:-18px; bottom:{{ pct }}%; height:0;"><div style="position:absolute; left:0; right:0; top:-1px; height:2px; background:oklch(0.74 0.11 55);"></div><div style="position:absolute; left:-5px; top:-6px; width:12px; height:12px; background:oklch(0.74 0.11 55); transform:rotate(45deg);"></div><div style="position:absolute; right:-5px; top:-6px; width:12px; height:12px; background:oklch(0.74 0.11 55); transform:rotate(45deg);"></div></div>
+    </div>
+    <div style="margin-top:18px; font:600 58px/1 'Cormorant Garamond', serif; font-variant-numeric:tabular-nums; color:oklch(0.86 0.09 165); text-shadow:0 0 24px oklch(0.8 0.1 165 / 0.45);">{{ wcTxt }}</div>
+    <div style="margin-top:4px; font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:oklch(0.8 0.1 165);">Nous · victoire prédite</div>
+    <div style="margin-top:6px; font-size:13px; text-align:center; color:oklch(0.7 0.02 160);">{{ note }}</div>
+  </div>
+
+  <!-- sceau adverse -->
+  <div style="position:absolute; left:890px; top:104px; width:520px; height:520px;">
+    <svg data-spin="-160" viewBox="-260 -260 520 520" style="position:absolute; left:0; top:0; width:520px; height:520px; overflow:visible;">
+      <circle data-trace="1600" data-delay="100" r="252" style="fill:none; stroke:oklch(0.74 0.11 55 / 0.45); stroke-width:1;"></circle>
+      <circle data-trace="1600" data-delay="250" r="222" style="fill:none; stroke:oklch(0.74 0.11 55 / 0.3); stroke-width:1;"></circle>
+      <path id="dRing2" d="M0,-237 A237,237 0 1,1 0,237 A237,237 0 1,1 0,-237" style="fill:none;"></path>
+      <text data-fade="1" data-delay="700" data-ring="1489" style="font:14px 'Noto Sans Runic', serif; fill:oklch(0.74 0.11 55 / 0.6);"><textPath href="#dRing2">ᛟ ᛞ ᛜ ᛚ ᛗ ᛖ ᛒ ᛏ ᛊ ᛉ ᛈ ᛇ ᛃ ᛁ ᚾ ᚺ ᚹ ᚷ ᚲ ᚱ ᚨ ᚦ ᚢ ᚠ ᛟ ᛞ ᛜ ᛚ ᛗ ᛖ ᛒ ᛏ ᛊ ᛉ ᛈ ᛇ ᛃ ᛁ ᚾ ᚺ ᚹ ᚷ ᚲ ᚱ ᚨ ᚦ ᚢ ᚠ</textPath></text>
+    </svg>
+    <svg viewBox="-260 -260 520 520" style="position:absolute; left:0; top:0; width:520px; height:520px; overflow:visible;">
+      <circle r="200" style="fill:oklch(0.6 0.2 250 / 0.10); filter:blur(30px);"></circle>
+      <circle data-trace="1400" data-delay="500" r="190" style="fill:none; stroke:oklch(0.74 0.12 355 / 0.55); stroke-width:1.2;"></circle>
+      <path data-trace="2000" data-delay="700" d="M0,-190 L111.7,153.7 L-180.7,-58.7 L180.7,-58.7 L-111.7,153.7 Z" style="fill:none; stroke:oklch(0.74 0.12 355 / 0.75); stroke-width:1.4; stroke-linejoin:round;"></path>
+    </svg>
+    <sc-for list="{{ enemies }}" as="s" hint-placeholder-count="5">
+      <div data-pop="1" data-delay="{{ s.d }}" style="position:absolute; left:{{ s.l }}px; top:{{ s.t }}px; width:92px; height:92px;">
+        <sc-if value="{{ s.pick }}" hint-placeholder-val="{{ true }}"><div data-epick="1" style="position:absolute; inset:0; border-radius:50%; overflow:hidden; border:2px solid oklch(0.74 0.12 355); box-shadow:0 0 22px oklch(0.74 0.12 355 / 0.35); background:oklch(0.13 0.018 170);"><img src="{{ s.img }}" alt="" style="display:block; width:116%; height:116%; margin:-8%;"></div></sc-if>
+        <sc-if value="{{ s.pending }}" hint-placeholder-val="{{ false }}"><div data-glow="2600" style="position:absolute; inset:0; border-radius:50%; border:1.5px dashed oklch(0.74 0.12 355 / 0.8); background:oklch(0.16 0.02 170); display:grid; place-items:center; font:28px/1 'Noto Sans Runic', serif; color:oklch(0.74 0.12 355 / 0.7);">ᛃ</div></sc-if>
+        <div style="position:absolute; top:calc(100% + 6px); left:50%; width:180px; margin-left:-90px; text-align:center;">
+          <div style="display:inline-block; padding:0 6px; background:oklch(0.18 0.024 170); font:600 21px/1.1 'Cormorant Garamond', serif;">{{ s.name }}</div>
+          <div style="font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:oklch(0.7 0.02 160);">{{ s.role }} · {{ s.st }}</div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- recommandations -->
+  <div style="position:absolute; left:40px; width:1400px; top:640px; bottom:26px; display:flex; flex-direction:column;">
+    <div data-rise="1" data-delay="500" style="display:flex; align-items:center; justify-content:space-between; gap:20px; padding-bottom:12px; border-bottom:1px solid oklch(0.74 0.11 55 / 0.2);">
+      <div style="display:flex; flex-direction:column; gap:6px; min-width:0;"><span style="font:600 30px/1 'Cormorant Garamond', serif;">{{ recTitle }}</span><span style="font-size:14px; color:oklch(0.7 0.02 160);">{{ recSub }}</span></div>
+      <div style="display:flex; align-items:center; gap:12px; flex:none;">
+        <sc-if value="{{ canAct }}" hint-placeholder-val="{{ true }}">
+          <button onClick="{{ openGrid }}" style="height:46px; padding:0 20px; border-radius:23px; border:1px solid oklch(0.72 0.2 290 / 0.6); background:oklch(0.72 0.2 290 / 0.12); color:oklch(0.9 0.07 290); font-size:15px; cursor:pointer; display:flex; align-items:center; gap:10px;" style-hover="background: oklch(0.72 0.2 290 / 0.26)"><svg viewBox="0 0 16 16" style="width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.6;"><circle cx="7" cy="7" r="5"></circle><path d="M11 11l3.5 3.5"></path></svg>Tous les champions</button>
+          <button onClick="{{ act }}" style="height:46px; padding:0 26px; border:0; border-radius:23px; background:{{ actBg }}; color:oklch(0.14 0.02 170); font-size:15px; font-weight:700; letter-spacing:0.03em; cursor:pointer; box-shadow:0 0 26px {{ actBg }};">{{ actLabel }}</button>
+        </sc-if>
+        <sc-if value="{{ locked }}" hint-placeholder-val="{{ false }}"><div style="display:flex; align-items:center; gap:12px; font-size:15px; color:oklch(0.86 0.13 85);"><span>{{ meName }} scellé</span><a onClick="{{ unlock }}" style="font-size:13px; cursor:pointer; text-decoration:underline;">annuler (maquette)</a></div></sc-if>
+      </div>
+    </div>
+    <sc-if value="{{ unlocked }}" hint-placeholder-val="{{ true }}">
+    <div style="margin-top:14px; display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:18px;">
+      <sc-for list="{{ recs }}" as="r" hint-placeholder-count="4">
+        <div data-rise="1" data-tilt="1" data-delay="{{ r.d }}" onClick="{{ r.onPick }}" style="position:relative; height:196px; padding:18px 20px; border-radius:6px; background:oklch(0.195 0.02 170); border:1px solid oklch(0.74 0.11 55 / 0.18); cursor:pointer; display:flex; flex-direction:column;" style-hover="border-color: oklch(0.74 0.11 55 / 0.45)">
+          <div style="position:absolute; left:16px; right:16px; top:-1px; height:2px; border-radius:1px; background:{{ r.hc }}; box-shadow:0 0 12px {{ r.hc }};"></div>
+          <sc-if value="{{ r.sel }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute; inset:-1px; border-radius:6px; border:1.5px solid {{ r.hc }}; box-shadow:0 0 30px oklch(0.74 0.11 55 / 0.18), inset 0 0 40px oklch(0.74 0.11 55 / 0.06); pointer-events:none;"></div>
+            <div style="position:absolute; left:-5px; top:-5px; width:9px; height:9px; background:oklch(0.74 0.11 55); transform:rotate(45deg);"></div>
+            <div style="position:absolute; right:-5px; top:-5px; width:9px; height:9px; background:oklch(0.74 0.11 55); transform:rotate(45deg);"></div>
+            <div style="position:absolute; left:-5px; bottom:-5px; width:9px; height:9px; background:oklch(0.74 0.11 55); transform:rotate(45deg);"></div>
+            <div style="position:absolute; right:-5px; bottom:-5px; width:9px; height:9px; background:oklch(0.74 0.11 55); transform:rotate(45deg);"></div>
+          </sc-if>
+          <div style="display:flex; align-items:center; gap:14px;">
+            <div style="width:60px; height:60px; flex:none; border-radius:50%; overflow:hidden; border:1.5px solid oklch(0.74 0.11 55 / 0.6);"><img src="{{ r.img }}" alt="" style="display:block; width:116%; height:116%; margin:-8%;"></div>
+            <div style="flex:1; min-width:0;"><div style="font:600 28px/1 'Cormorant Garamond', serif;">{{ r.name }}</div><div style="margin-top:3px; font-size:13px; color:oklch(0.7 0.02 160);">{{ r.sub1 }}</div></div>
+            <div style="display:flex; flex-direction:column; align-items:flex-end;">
+              <div style="font:600 34px/1 'Cormorant Garamond', serif; font-variant-numeric:tabular-nums;">{{ r.wpTxt }}</div>
+              <sc-if value="{{ r.up }}" hint-placeholder-val="{{ true }}"><div style="font-size:13px; font-weight:700; color:oklch(0.8 0.1 165);">{{ r.dTxt }}</div></sc-if>
+              <sc-if value="{{ r.down }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px; font-weight:700; color:oklch(0.74 0.12 355);">{{ r.dTxt }}</div></sc-if>
+            </div>
+          </div>
+          <div style="margin-top:12px; font-size:13px; line-height:1.4; color:oklch(0.7 0.02 160); text-wrap:pretty;">{{ r.line }}</div>
+          <div style="margin-top:auto; display:flex; justify-content:flex-end;">
+            <div style="height:32px; display:flex; align-items:center; font-size:13px; letter-spacing:0.14em; text-transform:uppercase; color:{{ r.stc }};">{{ r.stTxt }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+    </sc-if>
+    <sc-if value="{{ locked }}" hint-placeholder-val="{{ false }}">
+      <div style="margin-top:12px; display:flex; gap:12px; overflow-x:auto; padding:8px 4px 10px; scrollbar-width:thin; scrollbar-color:oklch(0.86 0.13 85 / 0.5) transparent;">
+        <sc-for list="{{ skins }}" as="k" hint-placeholder-count="8">
+          <div data-skin="1" data-rk="{{ k.rk }}" onClick="{{ k.onPick }}" title="{{ k.tip }}" style="position:relative; flex:none; width:104px; height:188px; border-radius:8px; overflow:hidden; cursor:{{ k.cur }}; border:2px solid {{ k.bd }}; box-shadow:{{ k.glow }}; background:oklch(0.12 0.02 170); transition:transform 220ms cubic-bezier(.2,.8,.2,1);" style-hover="transform: translateY(-5px)">
+            <img src="{{ k.img }}" alt="" loading="lazy" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter:{{ k.flt }};">
+            <div style="position:absolute; left:0; right:0; bottom:0; padding:26px 8px 8px; background:linear-gradient(0deg, oklch(0.1 0.02 170 / 0.95) 30%, transparent); font-size:12px; line-height:1.2; text-align:center; text-wrap:pretty;">{{ k.name }}</div>
+            <sc-if value="{{ k.lockd }}" hint-placeholder-val="{{ false }}"><div style="position:absolute; right:6px; top:6px; width:26px; height:26px; border-radius:50%; display:grid; place-items:center; background:oklch(0.1 0.02 170 / 0.85); border:1px solid oklch(1 0 0 / 0.25);"><svg viewBox="0 0 12 12" style="width:11px; height:11px; fill:none; stroke:oklch(0.85 0.01 140); stroke-width:1.3;"><rect x="2.5" y="5.5" width="7" height="5" rx="1"></rect><path d="M4 5.5V4a2 2 0 0 1 4 0v1.5"></path></svg></div></sc-if>
+            <sc-if value="{{ k.sel }}" hint-placeholder-val="{{ false }}"><div style="position:absolute; left:6px; top:6px; width:10px; height:10px; background:oklch(0.86 0.13 85); box-shadow:0 0 10px oklch(0.86 0.13 85); transform:rotate(45deg);"></div></sc-if>
+          </div>
+        </sc-for>
+        <sc-if value="{{ skinsLoading }}" hint-placeholder-val="{{ false }}"><div style="height:188px; display:flex; align-items:center; padding:0 20px; font:italic 500 22px/1 'Cormorant Garamond', serif; color:oklch(0.7 0.02 160);">Lecture du grimoire des apparences…</div></sc-if>
+      </div>
+    </sc-if>
+    <div data-rise="1" data-delay="1000" style="margin-top:auto; display:flex; justify-content:space-between; align-items:center; font-size:14px; color:oklch(0.7 0.02 160);">
+      <span style="font:italic 500 20px/1 'Cormorant Garamond', serif; color:oklch(0.8 0.09 55);">« {{ advice }} »</span>
+      <sc-if value="{{ locked }}" hint-placeholder-val="{{ false }}"><a onClick="{{ finish }}" style="font-size:15px; cursor:pointer; color:oklch(0.86 0.09 165);">Fin de draft → revue de partie (démo)</a></sc-if>
+    </div>
+  </div>
+
+  <!-- colonne loadout -->
+  <aside style="position:absolute; left:1480px; top:0; right:0; bottom:0; padding:26px 32px 26px; display:flex; flex-direction:column; background:linear-gradient(180deg, oklch(0.19 0.04 290) 0%, oklch(0.18 0.02 170) 40%, oklch(0.18 0.02 170) 70%, oklch(0.19 0.035 345) 100%); border-left:1px solid oklch(0.7 0.2 290 / 0.3);">
+    <div data-rise="1" data-delay="200" style="display:flex; flex-direction:column; gap:6px;">
+      <div style="font-size:12px; letter-spacing:0.22em; text-transform:uppercase; color:oklch(0.74 0.11 55 / 0.85);">Loadout · {{ meName }} Top</div>
+      <div style="display:flex; align-items:baseline; justify-content:space-between;"><span style="font:600 32px/1 'Cormorant Garamond', serif;">Runes &amp; sorts</span>
+        <sc-if value="{{ pristine }}" hint-placeholder-val="{{ true }}"><span style="font-size:12px; color:oklch(0.7 0.02 160);">OneTricks · {{ otGames }} parties</span></sc-if>
+        <sc-if value="{{ modified }}" hint-placeholder-val="{{ false }}"><span style="padding:2px 10px; border-radius:999px; font-size:12px; color:oklch(0.16 0.02 170); background:oklch(0.8 0.09 55);">Modifiée à la main</span></sc-if>
+      </div>
+    </div>
+    <!-- page de runes -->
+    <div data-rise="1" data-delay="320" onClick="{{ openEditor }}" style="margin-top:18px; padding:18px 18px 16px; border-radius:6px; background:linear-gradient(155deg, {{ pTint }} 0%, oklch(0.205 0.02 170) 45%, {{ sTint }} 100%); border:1px solid {{ pTree.col }}; cursor:pointer;" style-hover="border-color: oklch(0.74 0.11 55 / 0.5)">
+      <div style="display:flex; align-items:center; gap:10px; font-size:12px; letter-spacing:0.18em; text-transform:uppercase; color:{{ pTree.col }};"><img src="{{ pTree.icon }}" alt="" style="width:22px; height:22px;">{{ pTree.name }}<span style="margin-left:auto; font-size:13px; letter-spacing:0.04em; text-transform:none;">Modifier ›</span></div>
+      <div style="margin-top:12px; display:flex; align-items:center; gap:14px;">
+        <div data-rk="key" style="position:relative; width:72px; height:72px; flex:none; border-radius:50%; background:oklch(0.14 0.018 170); border:1.5px solid {{ pTree.col }}; box-shadow:0 0 20px {{ pTree.col }}; display:grid; place-items:center; font-size:13px; color:oklch(0.6 0.02 160);">{{ pKey.ab }}<img src="{{ pKey.icon }}" alt="" style="position:absolute; inset:4px; width:60px; height:60px;"></div>
+        <div style="font:600 24px/1.05 'Cormorant Garamond', serif;">{{ pKey.name }}</div>
+      </div>
+      <div style="margin-top:12px; display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px;">
+        <sc-for list="{{ pRunes }}" as="u" hint-placeholder-count="3">
+          <div style="display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center;">
+            <div style="position:relative; width:44px; height:44px; border-radius:50%; background:oklch(0.14 0.018 170); border:1px solid {{ pTree.col }}; display:grid; place-items:center; font-size:11px; color:oklch(0.6 0.02 160);">{{ u.ab }}<img src="{{ u.icon }}" alt="" style="position:absolute; inset:5px; width:32px; height:32px;"></div>
+            <div style="font-size:12px; line-height:1.2; color:oklch(0.82 0.015 140);">{{ u.name }}</div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="margin-top:14px; padding-top:12px; border-top:1px solid oklch(0.74 0.11 55 / 0.14); display:flex; align-items:center; gap:10px; font-size:12px; letter-spacing:0.18em; text-transform:uppercase; color:{{ sTree.col }};"><img src="{{ sTree.icon }}" alt="" style="width:20px; height:20px;">{{ sTree.name }}</div>
+      <div style="margin-top:10px; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px;">
+        <sc-for list="{{ sRunes }}" as="u" hint-placeholder-count="2">
+          <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;">
+            <div style="position:relative; width:36px; height:36px; flex:none; border-radius:50%; background:oklch(0.14 0.018 170); border:1px solid {{ sTree.col }}; display:grid; place-items:center; font-size:10px; color:oklch(0.6 0.02 160);">{{ u.ab }}<img src="{{ u.icon }}" alt="" style="position:absolute; inset:4px; width:26px; height:26px;"></div>
+            <span style="font-size:12px; line-height:1.15; color:oklch(0.82 0.015 140);">{{ u.name }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="margin-top:12px; display:flex; align-items:center; gap:8px;">
+        <sc-for list="{{ shardsView }}" as="u" hint-placeholder-count="3"><div style="position:relative; width:26px; height:26px; border-radius:50%; background:oklch(0.14 0.018 170); border:1px solid oklch(0.74 0.11 55 / 0.4);"><img src="{{ u.icon }}" alt="" style="position:absolute; inset:4px; width:16px; height:16px;"></div></sc-for>
+        <span style="margin-left:6px; min-width:0; font-size:12px; line-height:1.3; color:oklch(0.7 0.02 160);">{{ shardsTxt }}</span>
+      </div>
+    </div>
+    <!-- sorts -->
+    <div data-rise="1" data-delay="420" style="position:relative; margin-top:18px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; font-size:12px; letter-spacing:0.18em; text-transform:uppercase; color:oklch(0.7 0.02 160);"><span>Sorts d'invocateur</span><a onClick="{{ swapSpells }}" style="font-size:12px; letter-spacing:0.08em; text-transform:none; cursor:pointer; color:oklch(0.8 0.09 55);">Échanger D ⇄ F</a></div>
+      <div style="margin-top:10px; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px;">
+        <sc-for list="{{ spellSlots }}" as="p" hint-placeholder-count="2">
+          <div data-rk="{{ p.rk }}" onClick="{{ p.onOpen }}" style="position:relative; display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:6px; background:oklch(0.205 0.02 170); border:1px solid oklch(0.74 0.11 55 / 0.18); cursor:pointer;" style-hover="border-color: oklch(0.74 0.11 55 / 0.5)">
+            <sc-if value="{{ p.open }}" hint-placeholder-val="{{ false }}"><div style="position:absolute; inset:-1px; border-radius:6px; border:1.5px solid oklch(0.74 0.11 55); pointer-events:none;"></div></sc-if>
+            <img src="{{ p.icon }}" alt="" style="width:48px; height:48px; border-radius:4px; border:1px solid oklch(0.74 0.11 55 / 0.4);">
+            <div style="display:flex; flex-direction:column;"><span style="font:600 20px/1.05 'Cormorant Garamond', serif;">{{ p.name }}</span><span style="font-size:12px; color:oklch(0.7 0.02 160);">Touche {{ p.key }}</span></div>
+          </div>
+        </sc-for>
+      </div>
+      <sc-if value="{{ pickerOpen }}" hint-placeholder-val="{{ false }}">
+        <div data-picker="1" style="position:absolute; left:0; right:0; top:100%; margin-top:8px; z-index:4; padding:14px; border-radius:6px; background:oklch(0.23 0.022 170); border:1px solid oklch(0.74 0.11 55 / 0.45); box-shadow:0 20px 40px oklch(0.08 0.02 170 / 0.6);">
+          <div style="font-size:12px; letter-spacing:0.16em; text-transform:uppercase; color:oklch(0.8 0.09 55);">Choisir le sort {{ pickerKey }}</div>
+          <div style="margin-top:10px; display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:10px;">
+            <sc-for list="{{ spellChoices }}" as="c" hint-placeholder-count="9">
+              <div onClick="{{ c.onPick }}" style="display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; opacity:{{ c.op }};" style-hover="opacity: 1">
+                <img src="{{ c.icon }}" alt="" style="width:44px; height:44px; border-radius:4px; border:1.5px solid {{ c.bd }};">
+                <span style="font-size:11px; color:oklch(0.82 0.015 140);">{{ c.name }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+    <!-- objets -->
+    <div data-rise="1" data-delay="520" style="margin-top:18px; display:flex; flex-direction:column; gap:10px;">
+      <div style="font-size:12px; letter-spacing:0.18em; text-transform:uppercase; color:oklch(0.7 0.02 160);">Objets · lecture seule</div>
+      <sc-for list="{{ items }}" as="b" hint-placeholder-count="3">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="width:64px; font-size:13px; color:oklch(0.7 0.02 160);">{{ b.t }}</span>
+          <sc-for list="{{ b.ids }}" as="i" hint-placeholder-count="3"><img src="{{ i.icon }}" alt="" style="width:36px; height:36px; border-radius:4px; border:1px solid oklch(0.74 0.11 55 / 0.3);"></sc-for>
+        </div>
+      </sc-for>
+    </div>
+    <div data-rise="1" data-delay="620" style="margin-top:auto; display:flex; flex-direction:column; gap:10px;">
+      <div style="font-size:13px; line-height:1.4; color:oklch(0.7 0.02 160);">{{ pushNote }}</div>
+      <div style="display:flex; gap:10px;">
+        <button onClick="{{ push }}" style="flex:1; height:48px; border:0; border-radius:24px; background:oklch(0.74 0.11 55); color:oklch(0.16 0.02 170); font-size:15px; font-weight:700; cursor:pointer;" style-hover="background: oklch(0.8 0.11 55)">{{ pushLabel }}</button>
+        <sc-if value="{{ modified }}" hint-placeholder-val="{{ false }}"><button onClick="{{ restore }}" style="height:48px; padding:0 16px; border-radius:24px; border:1px solid oklch(0.74 0.11 55 / 0.45); background:transparent; color:oklch(0.86 0.06 55); font-size:14px; cursor:pointer;">Rétablir OneTricks</button></sc-if>
+      </div>
+    </div>
+  </aside>
+
+  <!-- grimoire des champions (pick / ban manuel) -->
+  <sc-if value="{{ gridOpen }}" hint-placeholder-val="{{ false }}">
+    <div data-grid="1" style="position:absolute; left:0; top:0; width:1480px; bottom:0; z-index:7; padding:28px 44px 0; display:flex; flex-direction:column; background:linear-gradient(180deg, oklch(0.15 0.035 290 / 0.97) 0%, oklch(0.13 0.018 170 / 0.97) 45%, oklch(0.14 0.03 345 / 0.97) 100%);">
+      <svg data-spin="240" viewBox="-420 -420 840 840" style="position:absolute; left:320px; top:60px; width:840px; height:840px; overflow:visible; pointer-events:none;"><circle data-ink="1500" r="410" style="fill:none; stroke:{{ gAccent }}; stroke-width:1; opacity:0.18;"></circle><path data-ink="2100" d="M0,-410 L241,331.7 L-389.9,-126.7 L389.9,-126.7 L-241,331.7 Z" style="fill:none; stroke:{{ gAccent }}; stroke-width:1; opacity:0.14;"></path></svg>
+      <div style="position:relative; display:flex; align-items:flex-end; justify-content:space-between; gap:24px; padding-bottom:16px; border-bottom:1px solid oklch(0.74 0.11 55 / 0.2);">
+        <div style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:12px; letter-spacing:0.22em; text-transform:uppercase; color:{{ gAccent }};">{{ gKicker }}</span><span style="font:600 40px/1 'Cormorant Garamond', serif;">Grimoire des champions</span></div>
+        <div style="display:flex; align-items:center; gap:14px;">
+          <div style="position:relative;">
+            <svg viewBox="0 0 16 16" style="position:absolute; left:16px; top:14px; width:16px; height:16px; fill:none; stroke:oklch(0.8 0.09 55); stroke-width:1.6; pointer-events:none;"><circle cx="7" cy="7" r="5"></circle><path d="M11 11l3.5 3.5"></path></svg>
+            <input ref="{{ qRef }}" value="{{ q }}" onChange="{{ onQ }}" placeholder="Rechercher un champion" style="width:320px; height:44px; padding:0 16px 0 42px; border-radius:22px; border:1px solid oklch(0.74 0.11 55 / 0.4); background:oklch(0.17 0.02 170); color:oklch(0.94 0.012 120); font:inherit; font-size:15px; outline:none;" style-focus="border-color: oklch(0.8 0.13 55); box-shadow: 0 0 0 3px oklch(0.8 0.13 55 / 0.2)">
+          </div>
+          <button onClick="{{ closeGrid }}" aria-label="Fermer" title="Fermer (Échap)" style="width:44px; height:44px; border-radius:50%; border:1px solid oklch(1 0 0 / 0.18); background:transparent; color:oklch(0.86 0.01 140); display:grid; place-items:center; cursor:pointer;" style-hover="background: oklch(1 0 0 / 0.08)"><svg viewBox="0 0 12 12" style="width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:1.4;"><path d="M2 2l8 8M10 2l-8 8"></path></svg></button>
+        </div>
+      </div>
+      <div style="position:relative; margin-top:16px; display:flex; align-items:center; gap:8px;">
+        <sc-for list="{{ roleChips }}" as="c" hint-placeholder-count="6"><button onClick="{{ c.onPick }}" style="height:36px; padding:0 16px; border-radius:18px; border:1px solid {{ c.bd }}; background:{{ c.bg }}; color:{{ c.fg }}; font-size:14px; cursor:pointer;">{{ c.label }}</button></sc-for>
+        <span style="width:1px; height:24px; margin:0 8px; background:oklch(0.74 0.11 55 / 0.25);"></span>
+        <button onClick="{{ togglePool }}" style="height:36px; padding:0 16px; border-radius:18px; border:1px solid {{ poolBd }}; background:{{ poolBg }}; color:{{ poolFg }}; font-size:14px; cursor:pointer; display:flex; align-items:center; gap:8px;"><span style="width:8px; height:8px; background:oklch(0.86 0.13 85); transform:rotate(45deg);"></span>Pool GRIND uniquement</button>
+        <span style="margin-left:auto; font-size:14px; color:oklch(0.7 0.02 160);">{{ gCount }}</span>
+      </div>
+      <div style="position:relative; flex:1; min-height:0; margin-top:14px; overflow-y:auto; scrollbar-width:thin; scrollbar-color:oklch(0.74 0.11 55 / 0.5) transparent; padding:6px 4px 20px;">
+        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(104px, 1fr)); gap:14px 10px;">
+          <sc-for list="{{ tiles }}" as="t" hint-placeholder-count="24">
+            <div data-tile="1" data-rk="{{ t.rk }}" onClick="{{ t.onPick }}" onDoubleClick="{{ t.onDbl }}" title="{{ t.tip }}" style="position:relative; display:flex; flex-direction:column; align-items:center; gap:6px; padding:8px 4px; border-radius:8px; cursor:{{ t.cur }}; opacity:{{ t.op }};" style-hover="background: oklch(0.74 0.11 55 / 0.08)">
+              <div style="position:relative; width:76px; height:76px;">
+                <div style="position:absolute; inset:0; border-radius:50%; overflow:hidden; border:2px solid {{ t.bd }}; box-shadow:{{ t.glow }}; background:oklch(0.12 0.02 170);"><img src="{{ t.img }}" alt="" loading="lazy" style="display:block; width:116%; height:116%; margin:-8%; filter:{{ t.flt }};"></div>
+                <sc-if value="{{ t.sel }}" hint-placeholder-val="{{ false }}"><svg data-spin="7" viewBox="0 0 96 96" style="position:absolute; left:-10px; top:-10px; width:96px; height:96px; overflow:visible;"><circle cx="48" cy="48" r="46" style="fill:none; stroke:{{ t.bd }}; stroke-width:1.6; stroke-dasharray:5 6;"></circle></svg></sc-if>
+                <sc-if value="{{ t.gone }}" hint-placeholder-val="{{ false }}"><div style="position:absolute; left:-2px; right:-2px; top:50%; height:2px; background:oklch(0.72 0.21 345); transform:rotate(-45deg);"></div></sc-if>
+                <sc-if value="{{ t.pool }}" hint-placeholder-val="{{ false }}"><div style="position:absolute; right:3px; top:3px; width:12px; height:12px; background:oklch(0.86 0.13 85); border:2px solid oklch(0.13 0.018 170); transform:rotate(45deg);"></div></sc-if>
+              </div>
+              <span style="font-size:14px; line-height:1.15; text-align:center;">{{ t.name }}</span>
+              <span style="min-height:15px; font-size:12px; font-weight:700; line-height:1.2; text-align:center; color:{{ t.mc }};">{{ t.meta }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <sc-if value="{{ noTiles }}" hint-placeholder-val="{{ false }}"><div style="padding:60px 0; text-align:center; font:italic 500 24px/1.3 'Cormorant Garamond', serif; color:oklch(0.7 0.02 160);">Aucun champion ne répond à cette recherche.</div></sc-if>
+      </div>
+      <div style="position:relative; height:104px; flex:none; display:flex; align-items:center; gap:18px; border-top:1px solid oklch(0.74 0.11 55 / 0.2);">
+        <div data-rk="g-sel" style="width:66px; height:66px; flex:none; border-radius:50%; overflow:hidden; border:2px solid {{ gAccent }}; box-shadow:0 0 24px {{ gAccent }};"><img src="{{ gSelImg }}" alt="" style="display:block; width:116%; height:116%; margin:-8%;"></div>
+        <div style="display:flex; flex-direction:column; gap:5px; flex:1; min-width:0;"><span style="font:600 30px/1 'Cormorant Garamond', serif;">{{ gSelName }}</span><span style="font-size:14px; line-height:1.35; color:oklch(0.76 0.02 160); text-wrap:pretty;">{{ gSelInfo }}</span></div>
+        <span style="font-size:13px; color:oklch(0.62 0.03 160);">Double-clic pour {{ gVerb }}</span>
+        <button onClick="{{ closeGrid }}" style="height:48px; padding:0 22px; border-radius:24px; border:1px solid oklch(1 0 0 / 0.18); background:transparent; color:oklch(0.86 0.01 140); font-size:15px; cursor:pointer;">Fermer</button>
+        <sc-if value="{{ canAct }}" hint-placeholder-val="{{ true }}"><button onClick="{{ act }}" style="height:48px; padding:0 28px; border:0; border-radius:24px; background:{{ actBg }}; color:oklch(0.14 0.02 170); font-size:16px; font-weight:700; letter-spacing:0.03em; cursor:pointer; box-shadow:0 0 28px {{ actBg }};">{{ actLabel }}</button></sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- grimoire de runes (éditeur) -->
+  <sc-if value="{{ editing }}" hint-placeholder-val="{{ false }}">
+    <div data-editor="1" style="position:absolute; left:0; top:0; width:1480px; bottom:0; z-index:6; padding:30px 44px; display:flex; flex-direction:column; background:oklch(0.13 0.018 170 / 0.97);">
+      <svg data-spin="220" viewBox="-400 -400 800 800" style="position:absolute; left:340px; top:75px; width:800px; height:800px; overflow:visible; pointer-events:none;"><circle data-ink="1600" r="390" style="fill:none; stroke:oklch(0.74 0.11 55 / 0.12); stroke-width:1;"></circle><path data-ink="2200" d="M0,-390 L229.2,315.5 L-370.9,-120.5 L370.9,-120.5 L-229.2,315.5 Z" style="fill:none; stroke:oklch(0.74 0.11 55 / 0.1); stroke-width:1;"></path></svg>
+      <div style="position:relative; display:flex; align-items:flex-end; justify-content:space-between; padding-bottom:16px; border-bottom:1px solid oklch(0.74 0.11 55 / 0.2);">
+        <div style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:12px; letter-spacing:0.22em; text-transform:uppercase; color:oklch(0.74 0.11 55 / 0.85);">Page « {{ meName }} · Top »</span><span style="font:600 40px/1 'Cormorant Garamond', serif;">Grimoire de runes</span></div>
+        <div style="display:flex; gap:12px;">
+          <button onClick="{{ cancelEdit }}" style="height:44px; padding:0 20px; border-radius:22px; border:1px solid oklch(1 0 0 / 0.18); background:transparent; color:oklch(0.86 0.01 140); font-size:15px; cursor:pointer;">Annuler</button>
+          <button onClick="{{ applyEdit }}" style="height:44px; padding:0 22px; border:0; border-radius:22px; background:oklch(0.74 0.11 55); color:oklch(0.16 0.02 170); font-size:15px; font-weight:700; cursor:pointer;" style-hover="background: oklch(0.8 0.11 55)">Appliquer la page</button>
+        </div>
+      </div>
+      <div style="position:relative; margin-top:22px; display:grid; grid-template-columns:minmax(0,1.45fr) minmax(0,1fr) 300px; gap:44px; flex:1; min-height:0;">
+        <!-- arbre principal -->
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <div style="font-size:12px; letter-spacing:0.2em; text-transform:uppercase; color:oklch(0.7 0.02 160);">Arbre principal</div>
+          <div style="display:flex; gap:10px;">
+            <sc-for list="{{ ed.trees }}" as="t" hint-placeholder-count="5">
+              <div onClick="{{ t.onPick }}" style="display:flex; flex-direction:column; align-items:center; gap:6px; width:84px; cursor:pointer; opacity:{{ t.op }};" style-hover="opacity: 1">
+                <div style="width:50px; height:50px; border-radius:50%; display:grid; place-items:center; background:oklch(0.18 0.02 170); border:1.5px solid {{ t.bd }};"><img src="{{ t.icon }}" alt="" style="width:30px; height:30px;"></div>
+                <span style="font-size:12px;">{{ t.name }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="margin-top:4px; display:flex; gap:22px; padding:14px 0; border-top:1px solid oklch(0.74 0.11 55 / 0.14); border-bottom:1px solid oklch(0.74 0.11 55 / 0.14);">
+            <sc-for list="{{ ed.keys }}" as="u" hint-placeholder-count="3">
+              <div data-rk="{{ u.rk }}" onClick="{{ u.onPick }}" style="display:flex; flex-direction:column; align-items:center; gap:6px; width:110px; text-align:center; cursor:pointer; opacity:{{ u.op }};" style-hover="opacity: 1">
+                <div style="position:relative; width:74px; height:74px; border-radius:50%; background:oklch(0.17 0.02 170); border:2px solid {{ u.bd }}; box-shadow:{{ u.glow }}; display:grid; place-items:center; font-size:13px; color:oklch(0.6 0.02 160);">{{ u.ab }}<img src="{{ u.icon }}" alt="" style="position:absolute; inset:4px; width:62px; height:62px; filter:{{ u.flt }};"></div>
+                <span style="font-size:13px; line-height:1.2;">{{ u.name }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <sc-for list="{{ ed.rows }}" as="row" hint-placeholder-count="3">
+            <div style="display:flex; gap:22px;">
+              <sc-for list="{{ row.runes }}" as="u" hint-placeholder-count="3">
+                <div data-rk="{{ u.rk }}" onClick="{{ u.onPick }}" style="display:flex; flex-direction:column; align-items:center; gap:5px; width:110px; text-align:center; cursor:pointer; opacity:{{ u.op }};" style-hover="opacity: 1">
+                  <div style="position:relative; width:52px; height:52px; border-radius:50%; background:oklch(0.17 0.02 170); border:1.5px solid {{ u.bd }}; box-shadow:{{ u.glow }}; display:grid; place-items:center; font-size:11px; color:oklch(0.6 0.02 160);">{{ u.ab }}<img src="{{ u.icon }}" alt="" style="position:absolute; inset:6px; width:38px; height:38px; filter:{{ u.flt }};"></div>
+                  <span style="font-size:12px; line-height:1.2;">{{ u.name }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+        <!-- arbre secondaire -->
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <div style="font-size:12px; letter-spacing:0.2em; text-transform:uppercase; color:oklch(0.7 0.02 160);">Arbre secondaire · 2 runes de rangées différentes</div>
+          <div style="display:flex; gap:10px;">
+            <sc-for list="{{ ed.subTrees }}" as="t" hint-placeholder-count="4">
+              <div onClick="{{ t.onPick }}" style="display:flex; flex-direction:column; align-items:center; gap:6px; width:80px; cursor:pointer; opacity:{{ t.op }};" style-hover="opacity: 1">
+                <div style="width:46px; height:46px; border-radius:50%; display:grid; place-items:center; background:oklch(0.18 0.02 170); border:1.5px solid {{ t.bd }};"><img src="{{ t.icon }}" alt="" style="width:28px; height:28px;"></div>
+                <span style="font-size:12px;">{{ t.name }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="margin-top:4px; padding-top:14px; border-top:1px solid oklch(0.74 0.11 55 / 0.14); display:flex; flex-direction:column; gap:14px;">
+            <sc-for list="{{ ed.subRows }}" as="row" hint-placeholder-count="3">
+              <div style="display:flex; gap:12px;">
+                <sc-for list="{{ row.runes }}" as="u" hint-placeholder-count="3">
+                  <div data-rk="{{ u.rk }}" onClick="{{ u.onPick }}" style="display:flex; flex-direction:column; align-items:center; gap:5px; width:100px; text-align:center; cursor:pointer; opacity:{{ u.op }};" style-hover="opacity: 1">
+                    <div style="position:relative; width:46px; height:46px; border-radius:50%; background:oklch(0.17 0.02 170); border:1.5px solid {{ u.bd }}; box-shadow:{{ u.glow }}; display:grid; place-items:center; font-size:11px; color:oklch(0.6 0.02 160);">{{ u.ab }}<img src="{{ u.icon }}" alt="" style="position:absolute; inset:5px; width:34px; height:34px; filter:{{ u.flt }};"></div>
+                    <span style="font-size:12px; line-height:1.2;">{{ u.name }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <!-- fragments -->
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <div style="font-size:12px; letter-spacing:0.2em; text-transform:uppercase; color:oklch(0.7 0.02 160);">Fragments</div>
+          <sc-for list="{{ ed.shards }}" as="row" hint-placeholder-count="3">
+            <div style="display:flex; flex-direction:column; gap:8px; padding:12px 0; border-top:1px solid oklch(0.74 0.11 55 / 0.14);">
+              <span style="font-size:12px; color:oklch(0.7 0.02 160);">{{ row.t }}</span>
+              <div style="display:flex; gap:12px;">
+                <sc-for list="{{ row.opts }}" as="u" hint-placeholder-count="3">
+                  <div data-rk="{{ u.rk }}" onClick="{{ u.onPick }}" title="{{ u.name }}" style="position:relative; width:40px; height:40px; border-radius:50%; background:oklch(0.17 0.02 170); border:1.5px solid {{ u.bd }}; box-shadow:{{ u.glow }}; cursor:pointer; opacity:{{ u.op }};" style-hover="opacity: 1"><img src="{{ u.icon }}" alt="" style="position:absolute; inset:8px; width:22px; height:22px;"></div>
+                </sc-for>
+              </div>
+              <span style="font-size:13px;">{{ row.cur }}</span>
+            </div>
+          </sc-for>
+          <div style="margin-top:auto; font-size:13px; line-height:1.45; color:oklch(0.7 0.02 160); text-wrap:pretty;">La page appliquée remplace l'import OneTricks pour cette draft ; elle part dans le client au clic sur « Envoyer au client ».</div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1920, &quot;height&quot;: 950}, &quot;go&quot;: {&quot;editor&quot;: null, &quot;tsType&quot;: &quot;(route: string) =&gt; void&quot;}, &quot;speed&quot;: {&quot;editor&quot;: &quot;range&quot;, &quot;default&quot;: 1, &quot;min&quot;: 0.5, &quot;max&quot;: 2, &quot;step&quot;: 0.1, &quot;tsType&quot;: &quot;number&quot;}, &quot;reduced&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;}}">
+const V = '14.24.1';
+const IMG = id => (id ? `https://ddragon.leagueoflegends.com/cdn/${V}/img/champion/${id}.png` : '');
+const PERK = p => `https://ddragon.leagueoflegends.com/cdn/img/perk-images/${p}`;
+const SPELL = id => `https://ddragon.leagueoflegends.com/cdn/${V}/img/spell/${id}.png`;
+const ITEM = id => `https://ddragon.leagueoflegends.com/cdn/${V}/img/item/${id}.png`;
+const fmt = (n, d = 1) => n.toFixed(d).replace('.', ',');
+const ab = n => n.split(/[\s:'’-]+/).filter(w => w.length > 2).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+const R = (n, p) => ({ name: n, icon: PERK(p), ab: ab(n) });
+
+const TREES = {
+  precision: { name: 'Précision', icon: PERK('Styles/7201_Precision.png'),
+    keys: [R('Attaque soutenue', 'Styles/Precision/PressTheAttack/PressTheAttack.png'), R('Tempo mortel', 'Styles/Precision/LethalTempo/LethalTempoTemp.png'), R('Jeu de jambes', 'Styles/Precision/FleetFootwork/FleetFootwork.png'), R('Conquérant', 'Styles/Precision/Conqueror/Conqueror.png')],
+    rows: [[R('Absorption de vie', 'Styles/Precision/AbsorbLife/AbsorbLife.png'), R('Triomphe', 'Styles/Precision/Triumph.png'), R("Présence d'esprit", 'Styles/Precision/PresenceOfMind/PresenceOfMind.png')],
+      [R('Légende : alacrité', 'Styles/Precision/LegendAlacrity/LegendAlacrity.png'), R('Légende : hâte', 'Styles/Precision/LegendHaste/LegendHaste.png'), R('Légende : lignée', 'Styles/Precision/LegendBloodline/LegendBloodline.png')],
+      [R('Coup de grâce', 'Styles/Precision/CoupDeGrace/CoupDeGrace.png'), R('Abattage', 'Styles/Precision/CutDown/CutDown.png'), R('Dernier rempart', 'Styles/Precision/LastStand/LastStand.png')]] },
+  domination: { name: 'Domination', icon: PERK('Styles/7200_Domination.png'),
+    keys: [R('Électrocution', 'Styles/Domination/Electrocute/Electrocute.png'), R('Moisson noire', 'Styles/Domination/DarkHarvest/DarkHarvest.png'), R('Pluie de lames', 'Styles/Domination/HailOfBlades/HailOfBlades.png')],
+    rows: [[R('Coup bas', 'Styles/Domination/CheapShot/CheapShot.png'), R('Goût du sang', 'Styles/Domination/TasteOfBlood/GreenTerror_TasteOfBlood.png'), R('Impact soudain', 'Styles/Domination/SuddenImpact/SuddenImpact.png')],
+      [R('Sixième sens', 'Styles/Domination/SixthSense/SixthSense.png'), R('Souvenirs macabres', 'Styles/Domination/GrislyMementos/GrislyMementos.png'), R('Balise profonde', 'Styles/Domination/DeepWard/DeepWard.png')],
+      [R('Chasseur de trésors', 'Styles/Domination/TreasureHunter/TreasureHunter.png'), R('Chasseur acharné', 'Styles/Domination/RelentlessHunter/RelentlessHunter.png'), R('Chasseur ultime', 'Styles/Domination/UltimateHunter/UltimateHunter.png')]] },
+  sorcery: { name: 'Sorcellerie', icon: PERK('Styles/7202_Sorcery.png'),
+    keys: [R("Invocation d'Aery", 'Styles/Sorcery/SummonAery/SummonAery.png'), R('Comète arcanique', 'Styles/Sorcery/ArcaneComet/ArcaneComet.png'), R('Rush de phase', 'Styles/Sorcery/PhaseRush/PhaseRush.png')],
+    rows: [[R('Orbe annulaire', 'Styles/Sorcery/NullifyingOrb/Pokeshield.png'), R('Bande de mana', 'Styles/Sorcery/ManaflowBand/ManaflowBand.png'), R('Cape de nimbus', 'Styles/Sorcery/NimbusCloak/6361.png')],
+      [R('Transcendance', 'Styles/Sorcery/Transcendence/Transcendence.png'), R('Célérité', 'Styles/Sorcery/Celerity/CelerityTemp.png'), R('Concentration absolue', 'Styles/Sorcery/AbsoluteFocus/AbsoluteFocus.png')],
+      [R('Brûlure', 'Styles/Sorcery/Scorch/Scorch.png'), R("Marche sur l'eau", 'Styles/Sorcery/Waterwalking/Waterwalking.png'), R('Tempête menaçante', 'Styles/Sorcery/GatheringStorm/GatheringStorm.png')]] },
+  resolve: { name: 'Volonté', icon: PERK('Styles/7204_Resolve.png'),
+    keys: [R("Poigne de l'immortel", 'Styles/Resolve/GraspOfTheUndying/GraspOfTheUndying.png'), R('Répercussion', 'Styles/Resolve/VeteranAftershock/VeteranAftershock.png'), R('Gardien', 'Styles/Resolve/Guardian/Guardian.png')],
+    rows: [[R('Démolition', 'Styles/Resolve/Demolish/Demolish.png'), R('Source de vie', 'Styles/Resolve/FontOfLife/FontOfLife.png'), R('Coup de bouclier', 'Styles/Resolve/MirrorShell/MirrorShell.png')],
+      [R('Conditionnement', 'Styles/Resolve/Conditioning/Conditioning.png'), R('Second souffle', 'Styles/Resolve/SecondWind/SecondWind.png'), R("Plaque d'os", 'Styles/Resolve/BonePlating/BonePlating.png')],
+      [R('Surcroissance', 'Styles/Resolve/Overgrowth/Overgrowth.png'), R('Revitalisation', 'Styles/Resolve/Revitalize/Revitalize.png'), R('Inébranlable', 'Styles/Sorcery/Unflinching/Unflinching.png')]] },
+  inspiration: { name: 'Inspiration', icon: PERK('Styles/7203_Whimsy.png'),
+    keys: [R('Augmentation glaciale', 'Styles/Inspiration/GlacialAugment/GlacialAugment.png'), R('Grimoire descellé', 'Styles/Inspiration/UnsealedSpellbook/UnsealedSpellbook.png'), R('Premier coup', 'Styles/Inspiration/FirstStrike/FirstStrike.png')],
+    rows: [[R('Flashtraption', 'Styles/Inspiration/HextechFlashtraption/HextechFlashtraption.png'), R('Chaussures magiques', 'Styles/Inspiration/MagicalFootwear/MagicalFootwear.png'), R('Remboursement', 'Styles/Inspiration/CashBack/CashBack2.png')],
+      [R('Triple tonique', 'Styles/Inspiration/PerfectTiming/AlchemistCabinet.png'), R('Livraison de biscuits', 'Styles/Inspiration/BiscuitDelivery/BiscuitDelivery.png'), R('Tonique de distorsion', 'Styles/Inspiration/TimeWarpTonic/TimeWarpTonic.png')],
+      [R('Perspicacité cosmique', 'Styles/Inspiration/CosmicInsight/CosmicInsight.png'), R("Vitesse d'approche", 'Styles/Resolve/ApproachVelocity/ApproachVelocity.png'), R('Touche-à-tout', 'Styles/Inspiration/JackOfAllTrades/JackofAllTrades2.png')]] },
+};
+const TREE_ORDER = ['precision', 'domination', 'sorcery', 'resolve', 'inspiration'];
+const TCOL = { precision: 'oklch(0.86 0.13 85)', domination: 'oklch(0.7 0.21 20)', sorcery: 'oklch(0.72 0.17 280)', resolve: 'oklch(0.78 0.15 150)', inspiration: 'oklch(0.8 0.12 210)' };
+Object.keys(TCOL).forEach(k => (TREES[k].col = TCOL[k]));
+const HUES = ['oklch(0.86 0.13 85)', 'oklch(0.8 0.12 165)', 'oklch(0.74 0.15 245)', 'oklch(0.7 0.2 290)'];
+const SM = f => PERK(`StatMods/${f}.png`);
+const SHARDS = [
+  { t: 'Offensif', opts: [{ name: 'Force adaptative', icon: SM('StatModsAdaptiveForceIcon') }, { name: "Vitesse d'attaque", icon: SM('StatModsAttackSpeedIcon') }, { name: 'Accélération de compétence', icon: SM('StatModsCDRScalingIcon') }] },
+  { t: 'Flexible', opts: [{ name: 'Force adaptative', icon: SM('StatModsAdaptiveForceIcon') }, { name: 'Vitesse de déplacement', icon: SM('StatModsMovementSpeedIcon') }, { name: 'PV croissants', icon: SM('StatModsHealthScalingIcon') }] },
+  { t: 'Défensif', opts: [{ name: 'PV +65', icon: SM('StatModsHealthPlusIcon') }, { name: 'Ténacité et résistance', icon: SM('StatModsTenacityIcon') }, { name: 'PV croissants', icon: SM('StatModsHealthScalingIcon') }] },
+];
+const SPELLS = [['SummonerFlash', 'Flash'], ['SummonerTeleport', 'Téléport'], ['SummonerDot', 'Embrasement'], ['SummonerHaste', 'Fantôme'], ['SummonerExhaust', 'Fatigue'], ['SummonerHeal', 'Soins'], ['SummonerBarrier', 'Barrière'], ['SummonerBoost', 'Purge'], ['SummonerSmite', 'Châtiment']];
+const SPELL_NAME = Object.fromEntries(SPELLS);
+const ITEMS = [{ t: 'Départ', ids: [1054, 2003] }, { t: 'Core', ids: [3084, 2502, 3068] }, { t: 'Bottes', ids: [3047] }];
+const OT_PAGE = { p: 'resolve', k: 0, r: [0, 1, 0], s: 'inspiration', sub: [[0, 1], [2, 1]], sh: [2, 2, 2] };
+const OT_SPELLS = ['SummonerFlash', 'SummonerTeleport'];
+
+const ALLIES = [
+  { role: 'Jungle', id: 'Vi', name: 'Vi', st: 'verrouillé', lock: true },
+  { role: 'Mid', id: 'Orianna', name: 'Orianna', st: 'verrouillé', lock: true },
+  { role: 'Bot', id: 'Jinx', name: 'Jinx', st: 'verrouillé', lock: true },
+  { role: 'Support', id: 'Thresh', name: 'Thresh', st: 'survol', lock: false },
+];
+const ENEMIES = [
+  { role: 'Top', id: 'Darius', name: 'Darius', st: 'déduit 82 %' },
+  { role: 'Jungle', id: 'LeeSin', name: 'Lee Sin', st: 'déduit 97 %' },
+  { role: 'Mid', id: 'Ahri', name: 'Ahri', st: 'déduit 94 %' },
+  { role: 'Bot', id: 'Kaisa', name: "Kai'Sa", st: 'déduit 99 %' },
+  { role: 'Support', id: null, name: 'En attente', st: 'à choisir', pending: true },
+];
+const RECS = [
+  { id: 'Sion', name: 'Sion', wp: 54.82, delta: 3.1, games: '1,2k', ot: '1 240', pv: 'Nautilus (support), Thresh (support)' },
+  { id: 'Shen', name: 'Shen', wp: 53.07, delta: 1.4, games: '860', ot: '910', pv: 'Rell (support), Thresh (support)' },
+  { id: 'Yorick', name: 'Yorick', wp: 51.94, delta: 0.2, games: '2,4k', ot: '2 050', pv: 'Nautilus (support)' },
+  { id: 'Olaf', name: 'Olaf', wp: 50.41, delta: -1.3, games: '410', ot: '380', pv: 'Braum (support)' },
+];
+const ALLY_BANS = ['Mordekaiser', 'Zed', 'Yone', 'Rengar'];
+const BANS_E = ['KSante', 'Malphite', 'Jax', 'Briar', 'Smolder'];
+const BAN_RECS = [
+  { id: 'Fiora', g: 2.9, why: 'Contre-pick de Sion et Yorick' },
+  { id: 'Aatrox', g: 2.4, why: 'Gagne 56 % de ses lanes contre ton pool' },
+  { id: 'Camille', g: 1.8, why: 'Contre-pick de Shen' },
+  { id: 'Illaoi', g: 1.2, why: 'Gagne 54 % contre Sion' },
+];
+const BAN_HUES = ['oklch(0.72 0.22 345)', 'oklch(0.7 0.21 20)', 'oklch(0.72 0.2 290)', 'oklch(0.76 0.18 45)'];
+const POOL = ['Ambessa', 'Sion', 'Shen', 'Yorick', 'Olaf'];
+const NAMES = { KSante: "K'Sante", Kaisa: "Kai'Sa", Khazix: "Kha'Zix", LeeSin: 'Lee Sin', MasterYi: 'Maître Yi', JarvanIV: 'Jarvan IV', XinZhao: 'Xin Zhao', AurelionSol: 'Aurelion Sol', TwistedFate: 'Twisted Fate', MissFortune: 'Miss Fortune', Leblanc: 'LeBlanc', Renata: 'Renata Glasc' };
+const nm = id => NAMES[id] || id;
+const ROSTER = {
+  Top: 'Aatrox Ambessa Camille Darius Fiora Garen Gnar Gwen Illaoi Irelia Jax Jayce KSante Kennen Kled Malphite Mordekaiser Nasus Olaf Ornn Renekton Riven Sett Shen Sion Teemo Tryndamere Urgot Volibear Yorick Yone Akali',
+  Jungle: 'Briar Diana Ekko Elise Evelynn Graves Hecarim JarvanIV Karthus Kayn Khazix Kindred LeeSin Lillia MasterYi Nidalee Nocturne Rengar Sejuani Viego Vi Warwick XinZhao Zac Volibear',
+  Mid: 'Ahri Akali Anivia Annie AurelionSol Azir Cassiopeia Fizz Hwei Kassadin Katarina Leblanc Lux Malzahar Orianna Sylas Syndra Talon TwistedFate Veigar Vex Viktor Yasuo Yone Zed Zoe Jayce',
+  Bot: 'Aphelios Ashe Caitlyn Draven Ezreal Jhin Jinx Kaisa Kalista Lucian MissFortune Samira Sivir Smolder Tristana Twitch Varus Vayne Xayah Zeri Senna Seraphine',
+  Support: 'Alistar Bard Blitzcrank Braum Janna Karma Leona Lulu Milio Morgana Nami Nautilus Pyke Rakan Rell Renata Senna Seraphine Sona Soraka Thresh Yuumi Zilean Zyra Lux',
+};
+const CHAMPS = (() => {
+  const m = {};
+  Object.entries(ROSTER).forEach(([role, s]) => s.split(' ').forEach(id => { (m[id] = m[id] || { id, name: nm(id), roles: [] }).roles.push(role); }));
+  return Object.values(m).sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+})();
+const ROLES = [['Tous', 70], ['Top', 55], ['Jungle', 150], ['Mid', 290], ['Bot', 85], ['Support', 230]];
+const hash = s => [...s].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 9973, 7);
+const info = id => {
+  const r = RECS.find(x => x.id === id);
+  if (r) return { ...r, rec: true, pool: true };
+  return { id, name: nm(id), wp: 46.5 + (hash(id) % 500) / 100, ot: String(150 + (hash(id) % 900)), games: '—', pv: '—', delta: 0, rec: false, pool: POOL.includes(id) };
+};
+const norm = t => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const MAG = 'oklch(0.72 0.22 345)', GOLD = 'oklch(0.86 0.13 85)';
+const STAR = [[0, -190], [180.7, -58.7], [111.7, 153.7], [-111.7, 153.7], [-180.7, -58.7]];
+const clone = o => JSON.parse(JSON.stringify(o));
+const ON = 'oklch(0.8 0.1 165)', OFF = 'oklch(0.74 0.11 55 / 0.25)', GLOW = '0 0 18px oklch(0.8 0.1 165 / 0.45)';
+
+class Component extends DCLogic {
+  root = React.createRef();
+  qRef = React.createRef();
+  fetchSkins(id) {
+    if (this.state.skins[id]) return;
+    fetch(`https://ddragon.leagueoflegends.com/cdn/${V}/data/fr_FR/champion/${id}.json`)
+      .then(r => r.json())
+      .then(j => j.data[id].skins.map(k => ({ num: k.num, name: k.name })))
+      .catch(() => [{ num: 0, name: 'default' }])
+      .then(list => this.setState(s => ({ skins: { ...s.skins, [id]: list } })));
+  }
+  state = { skins: {}, skin: 0, phase: 'ban', banHover: 'Fiora', myBan: null, grid: false, q: '', role: 'Top', poolOnly: false, hover: 'Sion', locked: null, shown: 54.82, tick: 24, page: clone(OT_PAGE), spells: [...OT_SPELLS], modified: false, pushed: false, edit: null, picker: null, bloomKey: null };
+
+  act = () => {
+    const s = this.state;
+    if (s.phase === 'ban') { if (!s.myBan) this.setState({ myBan: s.banHover, grid: false }); }
+    else if (!s.locked) this.setState({ locked: s.hover, grid: false });
+  };
+  banPick(id) {
+    if (this.state.myBan || this.state.banHover === id) return;
+    this.setState({ banHover: id });
+    this.bloom(this.state.grid ? `c-${id}` : 'ban-me');
+  }
+  gridPick(id, gone) {
+    if (gone) return;
+    if (this.state.phase === 'ban') return this.banPick(id);
+    if (this.state.hover !== id) this.bloom(`c-${id}`);
+    this.hover(id);
+  }
+  animTiles(quick) {
+    const root = this.root.current; if (!root || this.props.reduced) return;
+    const sp = this.props.speed ?? 1;
+    root.querySelectorAll('[data-tile]').forEach((el, i) => el.animate(
+      [{ opacity: 0, transform: 'scale(.55) translateY(12px) rotate(-8deg)' }, { opacity: 1, transform: 'none' }],
+      { duration: 420 / sp, delay: ((quick ? 0 : 220) + Math.min(i, 48) * (quick ? 6 : 14)) / sp, easing: Motion.E.ressort, fill: 'backwards' }));
+  }
+
+  mo() { return { sp: this.props.speed ?? 1, reduced: !!this.props.reduced }; }
+  componentDidMount() {
+    this._prev = { ...this.state };
+    const go = () => { if (!window.Motion) return setTimeout(go, 50); Motion.intro(this.root.current, this.mo()); Motion.ambient(this.root.current, this.mo()); };
+    go();
+    this.iv = setInterval(() => this.setState(s => ({ tick: s.tick <= 1 ? 30 : s.tick - 1 })), 1000);
+    this.onKey = e => { if (e.key === 'Escape' && this.state.grid) this.setState({ grid: false }); };
+    window.addEventListener('keydown', this.onKey);
+  }
+  componentWillUnmount() { clearInterval(this.iv); cancelAnimationFrame(this.raf); clearTimeout(this.tBan); window.removeEventListener('keydown', this.onKey); }
+  componentDidUpdate() {
+    const ps = this._prev || {}; this._prev = { ...this.state };
+    const root = this.root.current;
+    if (!window.Motion || !root) return;
+    Motion.ambient(root, this.mo());
+    const s = this.state;
+    if (s.locked && !ps.locked) requestAnimationFrame(() => Motion.seal(root, { ...this.mo(), target: root, colors: [Motion.C.copper, Motion.C.gold, Motion.C.mint, Motion.C.white] }));
+    const sp = this.props.speed ?? 1, red = !!this.props.reduced;
+    if (s.myBan && !ps.myBan) requestAnimationFrame(() => {
+      const el = root.querySelector('[data-ban="me"]');
+      if (el && !red) {
+        el.animate([{ transform: 'scale(2.4) rotate(-30deg)', opacity: 0 }, { transform: 'scale(.9) rotate(6deg)', opacity: 1, offset: 0.6 }, { transform: 'none', opacity: 1 }], { duration: 560 / sp, easing: Motion.E.sceau });
+        setTimeout(() => { const [x, y] = Motion.center(el); Motion.burst(x, y, { n: 130, speed: 11, glyphs: 14, ringR: 220, ringW: 6, colors: [Motion.C.magenta, Motion.C.rose, Motion.C.white] }); Motion.shake(root, 6, 360); }, 300 / sp);
+      }
+      this.tBan = setTimeout(() => this.setState({ phase: 'pick' }), (red ? 0 : 1100) / sp);
+    });
+    if (s.phase === 'pick' && ps.phase === 'ban') requestAnimationFrame(() => {
+      root.querySelectorAll('[data-spell]').forEach(el => Motion.spell && !red && Motion.spell(el, sp));
+      if (red) return;
+      const pop = [{ opacity: 0, transform: 'scale(.2) rotate(-60deg)' }, { opacity: 1, transform: 'scale(1.15)', offset: 0.7 }, { opacity: 1, transform: 'none' }];
+      root.querySelectorAll('[data-ban^="e"]').forEach((el, i) => {
+        el.animate(pop, { duration: 520 / sp, delay: (i * 120) / sp, easing: Motion.E.ressort, fill: 'backwards' });
+        setTimeout(() => Motion.burstAt(el, { n: 22, speed: 5, ringR: 46, ringW: 3, colors: [Motion.C.rose, Motion.C.violet] }), (i * 120 + 260) / sp);
+      });
+      root.querySelectorAll('[data-epick]').forEach((el, i) => {
+        el.animate(pop, { duration: 640 / sp, delay: (700 + i * 150) / sp, easing: Motion.E.ressort, fill: 'backwards' });
+        setTimeout(() => Motion.burstAt(el, { n: 40, speed: 7, ringR: 90, glyphs: 4, colors: [Motion.C.rose, Motion.C.magenta] }), (950 + i * 150) / sp);
+      });
+    });
+    if (s.locked && s.locked !== ps.locked) { this.fetchSkins(s.locked); if (s.skin !== 0) this.setState({ skin: 0 }); }
+    if (s.locked && s.skins[s.locked] && s.skins[s.locked] !== (ps.skins || {})[s.locked] && !red) requestAnimationFrame(() =>
+      root.querySelectorAll('[data-skin]').forEach((el, i) => el.animate([{ opacity: 0, transform: 'translateY(40px) rotateY(70deg)' }, { opacity: 1, transform: 'none' }], { duration: 560 / sp, delay: (200 + i * 45) / sp, easing: Motion.E.entree, fill: 'backwards' })));
+    if (s.locked && s.skin !== ps.skin && !red) {
+      const img = root.querySelector('[data-splash]');
+      if (img) img.animate([{ opacity: 0, transform: 'scale(1.12)', filter: 'brightness(2.2) saturate(1.6)' }, { opacity: 1, transform: 'scale(1)', filter: 'none' }], { duration: 900 / sp, easing: Motion.E.entree });
+      const card = root.querySelector(`[data-rk="sk-${s.skin}"]`);
+      if (card) { const [x, y] = Motion.center(card); Motion.burst(x, y, { n: 50, speed: 7, glyphs: 6, ringR: 120, colors: [Motion.C.gold, Motion.C.copper, Motion.C.violet] }); }
+    }
+    if (s.grid && !ps.grid) {
+      const g = root.querySelector('[data-grid]');
+      if (g && !red) g.animate([{ clipPath: 'circle(0% at 78% 72%)' }, { clipPath: 'circle(150% at 78% 72%)' }], { duration: 720 / sp, easing: Motion.E.standard });
+      this.qRef.current?.focus();
+      this.animTiles(false);
+    } else if (s.grid && (s.role !== ps.role || s.poolOnly !== ps.poolOnly || s.q !== ps.q)) this.animTiles(true);
+    if (s.hover !== ps.hover && !s.locked && !s.grid) root.querySelectorAll('[data-me]').forEach(el => {
+      Motion.bloom(el, this.mo());
+      if (!this.props.reduced) { const [x, y] = Motion.center(el); Motion.converge(x, y, { n: 26, radius: 340, life: 650 / (this.props.speed ?? 1), colors: [Motion.C.copper, Motion.C.gold, Motion.C.violet] }); }
+    });
+    if (s.page !== ps.page && !s.edit && ps.edit && !this.props.reduced) { const k = root.querySelector('[data-rk="key"]'); Motion.bloom(k, this.mo()); const [x, y] = Motion.center(k); Motion.burst(x, y, { n: 60, speed: 8, glyphs: 8, ringR: 140, colors: [this.state.page ? TREES[this.state.page.p].col : Motion.C.mint] }); Motion.flash(Motion.C.magenta, 0.2, 380); }
+    if (s.edit && !ps.edit) {
+      const ed = root.querySelector('[data-editor]');
+      if (ed && !this.props.reduced) {
+        const sp = this.props.speed ?? 1;
+        ed.animate([{ clipPath: 'circle(0% at 100% 34%)' }, { clipPath: 'circle(160% at 100% 34%)' }], { duration: 760 / sp, easing: Motion.E.standard });
+        ed.querySelectorAll('[data-rk]').forEach((el, i) => el.animate([{ opacity: 0, transform: 'scale(.5)' }, { opacity: 1, transform: 'scale(1)' }], { duration: 480 / sp, delay: (240 + i * 18) / sp, easing: Motion.E.ressort, fill: 'backwards' }));
+      }
+    }
+    if (s.picker !== null && ps.picker === null) {
+      const p = root.querySelector('[data-picker]');
+      if (p && !this.props.reduced) p.animate([{ opacity: 0, transform: 'translateY(-8px) scale(.97)' }, { opacity: 1, transform: 'none' }], { duration: 260, easing: Motion.E.entree });
+    }
+    if (s.bloomKey && s.bloomKey !== ps.bloomKey) {
+      const el = root.querySelector(`[data-rk="${s.bloomKey.split('#')[0]}"]`);
+      Motion.bloom(el, this.mo());
+    }
+  }
+
+  setWc(target) {
+    const from = this.state.shown, t0 = performance.now(), d = this.props.reduced ? 1 : 800 / (this.props.speed ?? 1);
+    cancelAnimationFrame(this.raf);
+    const step = now => {
+      const p = Math.min(1, (now - t0) / d), e = 1 - Math.pow(1 - p, 3);
+      this.setState({ shown: from + (target - from) * e });
+      if (p < 1) this.raf = requestAnimationFrame(step);
+    };
+    this.raf = requestAnimationFrame(step);
+  }
+  hover(id) {
+    if (this.state.locked || this.state.hover === id) return;
+    this.setState({ hover: id });
+    this.setWc(info(id).wp);
+  }
+  bloom(key) { this.setState({ bloomKey: key + '#' + Date.now() }); }
+
+  // --- éditeur de runes ---
+  edPrimary(t) {
+    this.setState(s => {
+      const e = clone(s.edit);
+      if (e.p === t) return null;
+      e.p = t; e.k = 0; e.r = [0, 0, 0];
+      if (e.s === t) { e.s = TREE_ORDER.find(x => x !== t); e.sub = [[0, 0], [1, 0]]; }
+      return { edit: e };
+    });
+  }
+  edSub(t) { this.setState(s => { const e = clone(s.edit); if (e.s === t) return null; e.s = t; e.sub = [[0, 0], [1, 0]]; return { edit: e }; }); }
+  edKey(i) { this.setState(s => { const e = clone(s.edit); e.k = i; return { edit: e }; }); this.bloom(`k${i}`); }
+  edRow(row, i) { this.setState(s => { const e = clone(s.edit); e.r[row] = i; return { edit: e }; }); this.bloom(`r${row}-${i}`); }
+  edSubPick(row, i) {
+    this.setState(s => {
+      const e = clone(s.edit);
+      const same = e.sub.findIndex(([r]) => r === row);
+      if (same >= 0) e.sub[same] = [row, i];
+      else { e.sub.shift(); e.sub.push([row, i]); }
+      return { edit: e };
+    });
+    this.bloom(`s${row}-${i}`);
+  }
+  edShard(row, i) { this.setState(s => { const e = clone(s.edit); e.sh[row] = i; return { edit: e }; }); this.bloom(`f${row}-${i}`); }
+
+  renderVals() {
+    const s = this.state;
+    const cur = s.locked || s.hover;
+    const rec = info(cur);
+    const isBan = s.phase === 'ban';
+    const vsId = s.myBan === 'Darius' ? 'Garen' : 'Darius', vsName = nm(vsId);
+    const ENEMY_NOW = ENEMIES.map(e => (e.role === 'Top' ? { ...e, id: vsId, name: vsName } : e));
+    const locked = !!s.locked;
+    const pg = s.page;
+    const pT = TREES[pg.p], sT = TREES[pg.s];
+    const flags = (sel, col = ON) => ({ bd: sel ? col : OFF, glow: sel ? `0 0 18px ${col}, 0 0 4px ${col}` : 'none', op: sel ? 1 : 0.45, flt: sel ? 'none' : 'grayscale(1)' });
+
+    let ed = null;
+    if (s.edit) {
+      const e = s.edit, T = TREES[e.p], ST = TREES[e.s];
+      ed = {
+        trees: TREE_ORDER.map(k => ({ ...TREES[k], ...flags(k === e.p, TREES[k].col), onPick: () => this.edPrimary(k) })),
+        subTrees: TREE_ORDER.filter(k => k !== e.p).map(k => ({ ...TREES[k], ...flags(k === e.s, TREES[k].col), onPick: () => this.edSub(k) })),
+        keys: T.keys.map((u, i) => ({ ...u, rk: `k${i}`, ...flags(i === e.k, T.col), onPick: () => this.edKey(i) })),
+        rows: T.rows.map((row, ri) => ({ runes: row.map((u, i) => ({ ...u, rk: `r${ri}-${i}`, ...flags(e.r[ri] === i, T.col), onPick: () => this.edRow(ri, i) })) })),
+        subRows: ST.rows.map((row, ri) => ({ runes: row.map((u, i) => ({ ...u, rk: `s${ri}-${i}`, ...flags(e.sub.some(([r, x]) => r === ri && x === i), ST.col), onPick: () => this.edSubPick(ri, i) })) })),
+        shards: SHARDS.map((row, ri) => ({ t: row.t, cur: row.opts[e.sh[ri]].name, opts: row.opts.map((u, i) => ({ ...u, rk: `f${ri}-${i}`, ...flags(e.sh[ri] === i, 'oklch(0.86 0.13 85)'), onPick: () => this.edShard(ri, i) })) })),
+      };
+    }
+
+    const muted = 'oklch(0.62 0.03 160)';
+    const recs = isBan
+      ? BAN_RECS.map((r, i) => {
+          const sel = s.banHover === r.id, done = s.myBan === r.id;
+          return { id: r.id, name: nm(r.id), hc: BAN_HUES[i], img: IMG(r.id), sub1: 'Menace pour ton pool', wpTxt: '+' + fmt(r.g), dTxt: 'pts si banni', up: true, down: false, line: r.why, d: 500 + i * 90, sel, stTxt: done ? 'Banni' : sel ? 'Visé' : 'Viser', stc: sel || done ? 'oklch(0.78 0.2 345)' : muted, onPick: () => this.banPick(r.id) };
+        })
+      : RECS.map((r, i) => {
+          const sel = cur === r.id;
+          return { ...r, hc: HUES[i], img: IMG(r.id), sub1: `${r.games} games`, wpTxt: fmt(r.wp, 2) + ' %', dTxt: (r.delta >= 0 ? '+' : '−') + fmt(Math.abs(r.delta)) + ' pts', up: r.delta >= 0, down: r.delta < 0, line: `Suite attendue : ${r.pv}`, d: 500 + i * 90, sel, stTxt: sel ? (locked ? 'Scellé' : 'Survolé') : 'Survoler', stc: sel ? GOLD : muted, onPick: () => this.hover(r.id) };
+        });
+
+    // grimoire des champions
+    const allyIds = ALLIES.map(a => a.id), enemyIds = isBan ? [] : ENEMY_NOW.filter(e => !e.pending).map(e => e.id);
+    const banned = new Set([...ALLY_BANS, ...(s.myBan ? [s.myBan] : []), ...(isBan ? [] : BANS_E)]);
+    const goneWhy = id => (banned.has(id) ? 'banni' : allyIds.includes(id) ? (isBan ? 'intention alliée' : 'allié') : enemyIds.includes(id) ? 'adverse' : isBan && id === cur ? 'ton intention' : '');
+    const accent = isBan ? MAG : GOLD;
+    let tiles = [];
+    if (s.grid) {
+      const q = norm(s.q.trim());
+      const rank = c => (isBan ? (BAN_RECS.some(b => b.id === c.id) ? 0 : 1) : RECS.some(r => r.id === c.id) ? 0 : POOL.includes(c.id) ? 1 : 2);
+      tiles = CHAMPS
+        .filter(c => (s.role === 'Tous' || c.roles.includes(s.role)) && (!s.poolOnly || POOL.includes(c.id)) && (!q || norm(c.name).includes(q) || norm(c.id).includes(q)))
+        .sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name, 'fr'))
+        .map(c => {
+          const why = goneWhy(c.id), sel = isBan ? s.banHover === c.id : cur === c.id;
+          const r = RECS.find(x => x.id === c.id), b = BAN_RECS.find(x => x.id === c.id), pool = POOL.includes(c.id);
+          return {
+            rk: `c-${c.id}`, name: c.name, img: IMG(c.id), sel, gone: !!why, pool,
+            op: why ? 0.4 : 1, flt: why ? 'grayscale(1)' : 'none', cur: why ? 'not-allowed' : 'pointer', tip: why ? `${c.name} : ${why}` : c.name,
+            bd: sel ? accent : !isBan && r ? 'oklch(0.8 0.12 165 / 0.65)' : isBan && b ? 'oklch(0.72 0.22 345 / 0.6)' : 'oklch(0.74 0.11 55 / 0.3)',
+            glow: sel ? `0 0 22px ${accent}` : 'none',
+            meta: why || (isBan ? (b ? `+${fmt(b.g)} pts` : '') : r ? fmt(r.wp, 1) + ' %' : pool ? 'pool' : ''),
+            mc: why ? 'oklch(0.66 0.03 160)' : isBan ? 'oklch(0.8 0.18 345)' : r ? 'oklch(0.84 0.13 165)' : GOLD,
+            onPick: () => this.gridPick(c.id, !!why),
+            onDbl: () => { if (why) return; this.gridPick(c.id, false); setTimeout(this.act, 0); },
+          };
+        });
+    }
+    const skinList = locked ? s.skins[s.locked] : null;
+    const owns = num => num === 0 || hash(s.locked + num) % 3 !== 0;
+    const skins = (skinList || []).map(k => {
+      const own = owns(k.num), sel = s.skin === k.num, name = k.num === 0 ? 'Classique' : k.name;
+      return {
+        rk: `sk-${k.num}`, name, sel, lockd: !own, tip: own ? name : `${name} · non possédé`,
+        img: `https://ddragon.leagueoflegends.com/cdn/img/champion/loading/${s.locked}_${k.num}.jpg`,
+        bd: sel ? GOLD : own ? 'oklch(0.74 0.11 55 / 0.3)' : 'oklch(1 0 0 / 0.08)', glow: sel ? `0 0 26px ${GOLD}` : 'none',
+        flt: own ? 'none' : 'grayscale(1) brightness(0.45)', cur: own ? 'pointer' : 'not-allowed',
+        onPick: () => { if (own) this.setState({ skin: k.num }); },
+      };
+    });
+    const ownedN = skins.filter(k => !k.lockd).length;
+    const skinName = (skins.find(k => k.sel) || {}).name || 'Classique';
+    const selId = isBan ? s.banHover : cur, selB = BAN_RECS.find(x => x.id === selId), selI = info(selId);
+    const gSelInfo = isBan
+      ? (selB ? `Gain estimé si banni : +${fmt(selB.g)} pts · ${selB.why}` : 'Hors des menaces identifiées pour ton pool')
+      : selI.rec ? `Victoire prédite ${fmt(selI.wp)} % · ${selI.games} games · suite attendue : ${selI.pv}`
+      : selI.pool ? `Pool GRIND · sans données exploitables en top · victoire prédite ${fmt(selI.wp)} % (modèle seul)`
+      : `Hors pool · victoire prédite ${fmt(selI.wp)} % (modèle seul, sans historique perso)`;
+    const slotBase = (id, side) => ({ k: '', rk: '', has: true, img: IMG(id), struck: true, empty: false, sz: 32, flt: 'grayscale(1) brightness(0.6)', op: 1, bd: `1px solid ${side ? 'oklch(0.74 0.12 355 / 0.4)' : 'oklch(0.8 0.1 165 / 0.4)'}`, glow: 'none', c: side ? 'oklch(0.74 0.12 355)' : 'oklch(0.8 0.1 165)', cur: 'default', tip: nm(id), rune: '' });
+    const meSlot = s.myBan
+      ? { ...slotBase(s.myBan, 0), k: 'me', rk: 'ban-me', sz: 40, bd: '2px solid oklch(0.72 0.22 345)', c: 'oklch(0.72 0.22 345)', glow: '0 0 14px oklch(0.72 0.22 345 / 0.6)', tip: `Ton ban : ${nm(s.myBan)}` }
+      : { ...slotBase(s.banHover, 0), k: 'me', rk: 'ban-me', sz: 40, struck: false, flt: 'none', op: 0.5, bd: '2px dashed oklch(0.78 0.2 345)', glow: '0 0 16px oklch(0.72 0.22 345 / 0.7)', cur: 'pointer', tip: 'Ton ban : ouvrir le grimoire', onClick: () => this.setState({ grid: true, edit: null, picker: null }) };
+    const bansA = [meSlot, ...ALLY_BANS.map(id => slotBase(id, 0))];
+    const bansE = BANS_E.map((id, i) => (isBan
+      ? { ...slotBase(id, 1), k: `e${i}`, has: false, struck: false, empty: true, rune: 'ᛜ', bd: '1px dashed oklch(0.74 0.12 355 / 0.5)', c: 'oklch(0.74 0.12 355 / 0.7)', tip: 'Ban adverse caché' }
+      : { ...slotBase(id, 1), k: `e${i}` }));
+    const spellSlots = s.spells.map((id, i) => ({
+      icon: SPELL(id), name: SPELL_NAME[id], key: i ? 'F' : 'D', rk: `sp${i}`, open: s.picker === i,
+      onOpen: () => this.setState(st => ({ picker: st.picker === i ? null : i })),
+    }));
+    const spellChoices = s.picker === null ? [] : SPELLS.map(([id, name]) => {
+      const mine = s.spells[s.picker] === id;
+      return {
+        icon: SPELL(id), name, op: mine ? 1 : 0.7, bd: mine ? 'oklch(0.74 0.11 55)' : 'oklch(0.74 0.11 55 / 0.25)',
+        onPick: () => {
+          this.setState(st => {
+            const sp = [...st.spells], other = 1 - st.picker;
+            if (sp[other] === id) sp[other] = sp[st.picker];
+            sp[st.picker] = id;
+            return { spells: sp, picker: null, modified: true, pushed: false };
+          });
+          this.bloom(`sp${s.picker}`);
+        },
+      };
+    });
+    const tick = s.tick;
+    return {
+      root: this.root, hideImg: e => { e.currentTarget.style.visibility = 'hidden'; },
+      title: isBan ? 'Phase de bans — choisis ton ban' : locked ? 'En attente du support adverse' : 'Phase de picks — à toi de jouer',
+      advice: isBan ? 'Bannis la menace la plus forte contre ton pool' : locked ? 'Finalisez runes, sorts et skin' : "C'est le moment de sécuriser votre champion !",
+      bansALabel: isBan ? 'Bans alliés · ton ban' : 'Bans alliés', bansELabel: isBan ? 'Bans adverses · cachés' : 'Bans adverses',
+      canReplayBans: !isBan, replayBans: () => { clearTimeout(this.tBan); this.setState({ phase: 'ban', myBan: null, banHover: 'Fiora', locked: null, grid: false, hover: 'Sion' }); this.setWc(54.82); },
+      skins, skinsLoading: locked && !skinList,
+      splashImg: locked ? `https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${s.locked}_${s.skin}.jpg` : '', splashOp: locked ? 0.24 : 0,
+      recTitle: isBan ? 'Bans conseillés · menaces pour ton pool' : locked ? `Skin · ${skinName}` : `Recommandations · Top contre ${vsName}`,
+      recSub: isBan ? 'Pool GRIND · gain de victoire estimé si le champion est banni' : locked ? (skinList ? `${ownedN} skins possédés sur ${skins.length} · la sélection part directement dans le client` : 'Chargement des skins…') : 'Pool GRIND · profondeur atteinte : 2 picks anticipés · sans données exploitables en top : Ambessa (38 games)',
+      canAct: isBan ? !s.myBan : !locked, act: this.act,
+      actLabel: isBan ? `Bannir ${nm(s.banHover)}` : `Verrouiller ${rec.name}`, actBg: isBan ? MAG : 'oklch(0.8 0.13 60)',
+      openGrid: () => this.setState({ grid: true, edit: null, picker: null }), closeGrid: () => this.setState({ grid: false }),
+      meClick: () => { if (!locked) this.setState({ grid: true, edit: null, picker: null }); }, meTip: locked ? rec.name : 'Choisir un champion',
+      gridOpen: s.grid, qRef: this.qRef, q: s.q, onQ: e => this.setState({ q: e.target.value }),
+      roleChips: ROLES.map(([label, h]) => { const on = s.role === label; return { label, bd: on ? `oklch(0.78 0.16 ${h})` : `oklch(0.72 0.12 ${h} / 0.35)`, bg: on ? `oklch(0.72 0.17 ${h} / 0.28)` : 'transparent', fg: on ? 'oklch(0.97 0.01 120)' : `oklch(0.82 0.08 ${h})`, onPick: () => this.setState({ role: label }) }; }),
+      togglePool: () => this.setState(st => ({ poolOnly: !st.poolOnly })), poolBd: s.poolOnly ? GOLD : 'oklch(0.86 0.13 85 / 0.35)', poolBg: s.poolOnly ? 'oklch(0.86 0.13 85 / 0.18)' : 'transparent', poolFg: s.poolOnly ? 'oklch(0.97 0.01 120)' : 'oklch(0.88 0.08 85)',
+      tiles, noTiles: s.grid && !tiles.length, gCount: `${tiles.length} champion${tiles.length > 1 ? 's' : ''}`,
+      gKicker: isBan ? 'Ban · un par joueur · bans adverses révélés ensuite' : `Pick · Top contre ${vsName}`, gAccent: accent, gVerb: isBan ? 'bannir' : 'verrouiller',
+      gSelImg: IMG(selId), gSelName: nm(selId), gSelInfo,
+      tick, tickOff: (175.93 * (1 - tick / 30)).toFixed(2),
+      bansA, bansE,
+      allies: ALLIES.map((a, i) => { const p = STAR[[4, 3, 2, 1][i]], lk = a.lock && !isBan; return { ...a, st: isBan ? 'intention' : a.st, img: IMG(a.id), hov: !lk, op: lk ? 1 : 0.55, l: +(260 + p[0] - 46).toFixed(1), t: +(260 + p[1] - 46).toFixed(1), d: 1200 + i * 90 }; }),
+      enemies: ENEMY_NOW.map((a, i) => { const p = STAR[i], pend = isBan || a.pending; return { ...a, name: isBan ? 'Inconnu' : a.name, st: isBan ? 'en attente' : a.st, img: IMG(a.id), pick: !pend, pending: pend, l: +(260 + p[0] - 46).toFixed(1), t: +(260 + p[1] - 46).toFixed(1), d: 1250 + i * 90 }; }),
+      meImg: IMG(cur), meName: rec.name, meOp: locked ? 1 : 0.6, meState: isBan ? 'intention' : locked ? 'verrouillé' : 'survol', locked, unlocked: !locked,
+      wcTxt: fmt(s.shown) + ' %', foeTxt: fmt(100 - s.shown) + ' %', frac: (s.shown / 100).toFixed(4), pct: s.shown.toFixed(2),
+      note: locked ? `${rec.name} verrouillé · fin de draft estimée` : `si ${rec.name} est verrouillé`,
+      recs,
+      lock: () => { if (!this.state.locked) this.setState(st => ({ locked: st.hover })); },
+      unlock: () => this.setState({ locked: null }),
+      finish: () => this.props.go?.('postgame'),
+      back: () => this.props.go?.('accueil'),
+      // loadout
+      pristine: !s.modified, modified: s.modified, otGames: rec.ot,
+      pTree: pT, sTree: sT, pTint: pT.col.replace(')', ' / 0.16)'), sTint: sT.col.replace(')', ' / 0.12)'), pKey: pT.keys[pg.k], pRunes: pg.r.map((i, ri) => pT.rows[ri][i]),
+      sRunes: [...pg.sub].sort((a, b) => a[0] - b[0]).map(([ri, i]) => sT.rows[ri][i]),
+      shardsView: pg.sh.map((i, ri) => SHARDS[ri].opts[i]),
+      shardsTxt: pg.sh.map((i, ri) => SHARDS[ri].opts[i].name).join(' · '),
+      spellSlots, pickerOpen: s.picker !== null, pickerKey: s.picker ? 'F' : 'D', spellChoices,
+      swapSpells: () => { this.setState(st => ({ spells: [st.spells[1], st.spells[0]], modified: true, pushed: false })); this.bloom('sp0'); },
+      items: ITEMS.map(b => ({ t: b.t, ids: b.ids.map(id => ({ icon: ITEM(id) })) })),
+      pushLabel: s.pushed ? 'Envoyé au client ✓' : 'Envoyer au client',
+      pushNote: s.pushed ? 'Page et sorts écrits dans le client LoL.' : s.modified ? 'Tes modifications partiront dans le client à l’envoi ; l’import OneTricks au verrouillage ne les écrasera pas.' : `Import OneTricks automatique au verrouillage de ${rec.name} (SPEC-15).`,
+      push: () => this.setState({ pushed: true }),
+      restore: () => this.setState({ page: clone(OT_PAGE), spells: [...OT_SPELLS], modified: false, pushed: false }),
+      openEditor: () => this.setState(st => ({ edit: clone(st.page), picker: null })),
+      editing: !!s.edit, ed: ed || { trees: [], subTrees: [], keys: [], rows: [], subRows: [], shards: [] },
+      cancelEdit: () => this.setState({ edit: null }),
+      applyEdit: () => this.setState(st => ({ page: st.edit, edit: null, modified: true, pushed: false })),
+    };
+  }
+}
+</script>
+</body>
+</html>

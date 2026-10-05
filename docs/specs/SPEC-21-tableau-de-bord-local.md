@@ -3,8 +3,10 @@
 **Statut** : 🟡 **Réécrite le 2026-10-04** (la version « tableau de bord en lecture seule » est
 remplacée). Forme, périmètre, ordre, temps réel et niveau d'écriture validés par @pj35 (§2). Tâche 48 (spike) faite le
 2026-10-04, mesures en §8. Tâches 49 (socle), 68 (coque, mesures en §9) et 70 (bus, SSE, WebSocket LCU) faites le
-2026-10-04 ; port libre choisi par l'OS validé. Reste à valider : les thèmes et la direction du motion design (§2, §4.3), les écritures du coaching et
-le point d'entrée.
+2026-10-04 ; port libre choisi par l'OS validé. **Plan revu le 2026-10-05** à la réception du handoff de design « Alchimie »
+(`docs/design/client_alchimie/`) : 37 tâches, et une fiche par écran à coder (§4.10, §5). **Validé le
+2026-10-05** : ordre des lots, taille de la fenêtre, thème clair reporté, écrans sans maquette extrapolés
+d'« Alchimie ». Reste à valider : les écritures du coaching et le point d'entrée.
 
 **Origine** : feature candidate 5 du `TODO.md` (ex-tâche #6, `ROADMAP_2026.md` Horizon 3),
 repriorisée le 2026-09-26. Reformulée par @pj35 le 2026-10-04 : « bien plus qu'un rapport HTML en
@@ -15,7 +17,8 @@ coaching, et en revoyant la draft et le post-game avec le Live Coach. » Ajout l
 **la qualité des animations est un objectif de premier rang** (motion design poussé, thèmes à
 discuter avec @pj35).
 
-**Effort** : ~22 jours, 25 tâches, 109 pts, en six lots utilisables chacun seuls (§5).
+**Effort** : ~33 jours, 37 tâches, 163 pts, en six lots utilisables chacun seuls (§5) ; 20 pts
+faits (tâches 48, 49, 68, 70).
 
 ---
 
@@ -86,8 +89,13 @@ post-game revus avec le Live Coach, le tout animé avec soin.
 | Temps réel | **Validé** : WebSocket LCU pour le client, **polling du Live Coach inchangé** ; la boucle de draft publie seulement son état sur un bus interne, en best-effort. |
 | Écriture sur le LCU | **Validé** : lobby, file et draft en écriture ; social en **lecture seule** (ni message, ni invitation). |
 | Customisation | **Validé pour ce lot : thème seul** (couleurs, police, densité, clair/sombre, mémorisés dans les préférences). Mise en page déplaçable et réglages du moteur depuis l'interface : **à rouvrir** (§7) ; la structure en composants ne les interdit pas. |
-| Motion design | **Objectif de premier rang (@pj35, 2026-10-04)** : système de motion dédié (§4.3), pas de décor ajouté en fin de chantier. Les thèmes et leur direction artistique se discutent avec @pj35 **avant** la tâche 69 : **À valider**. |
-| Bibliothèque d'animation | **Tranché par le spike (tâche 48, 2026-10-04)** : CSS + Web Animations API + View Transitions, zéro dépendance. WebView2 est un Chromium 154 qui expose les View Transitions ; 80 cartes animées plus un tracé SVG tiennent un p95 de 6,2 ms par image (§8). Un moteur de ressorts n'est justifié par aucune mesure ; à rouvrir seulement si un effet précis l'exige. |
+| Motion design | **Objectif de premier rang (@pj35, 2026-10-04)** : système de motion dédié (§4.3), pas de décor ajouté en fin de chantier. Direction artistique **fournie le 2026-10-05** : thème « Alchimie » (grimoire d'alchimiste nocturne), handoff dans `docs/design/client_alchimie/` (§4.10). |
+| Reprise du design | **Validé (@pj35, 2026-10-05)** : les écrans sont **recréés** en gabarits Jinja, CSS statique et JS vanilla ; aucun HTML des prototypes `*.dc.html` n'est copié, `support.js` n'est pas porté. `motion.js` est repris presque tel quel dans `static/` (contrat des attributs `data-*`). Polices **embarquées** en woff2 (Cormorant Garamond, Alegreya Sans, Noto Sans Runic, licence OFL) : aucun appel à Google Fonts à l'exécution, l'interface marche hors ligne. |
+| Thème clair | **Validé (@pj35, 2026-10-05)** : le handoff ne définit que « Alchimie » (sombre) et @pj35 retravaillera le design plus tard. Le client livre ce seul thème ; le clair est reporté et rouvert avec ses maquettes (les variables CSS ne l'interdisent pas) ; le réglage « Thème » de la navigation affiche « Alchimie » en lecture seule. Lève « un thème sombre et un clair » de la version du 2026-10-04. |
+| Ordre des lots | **Validé (@pj35, 2026-10-05)** : le handoff conseille coque, motion, draft, file trouvée et transition, puis post-game et écrans du coaching. Les lots sont réordonnés dans cet esprit (§5). La règle « coaching, draft et post-game d'abord » reste vraie, seule la séquence interne change ; la draft passe avant le coaching parce que c'est l'écran clé et celui qui sollicite le plus le motion. |
+| Assets de la draft | **Défaut proposé** : Data Dragon (portraits, runes, sorts, objets, skins) servi par le serveur local depuis un cache disque ; version lue dans la config (14.24.1 dans le prototype, à remplacer par la version du client). Hors ligne, le cache seul répond ; une icône absente rend un emplacement neutre. |
+| Écrans sans maquette | **Validé (@pj35, 2026-10-05)** : Parties, Calibration, Profil, Collection, Lobby, Social, la variante Défaite du post-game et les états vides sont **extrapolés** du système « Alchimie » (jetons, cartes, grilles, courbes) sur le modèle des écrans définis, sans validation préalable. Si une direction manque vraiment, Claude s'arrête et le signale : @pj35 fait alors une pause pour retravailler le design. |
+| Bibliothèque d'animation | **Tranché par le spike (tâche 48, 2026-10-04)** : CSS + Web Animations API + View Transitions, zéro dépendance. WebView2 est un Chromium 154 qui expose les View Transitions ; 80 cartes animées plus un tracé SVG tiennent un p95 de 6,2 ms par image (§8). Un moteur de ressorts n'est justifié par aucune mesure ; à rouvrir seulement si un effet précis l'exige. Le handoff (2026-10-05) ajoute un calque `<canvas>` de particules (1 600 au plus, braises continues) : **non mesuré à ce jour**, la tâche 84 consigne le p95 sur le banc `/_motion` ; leviers de repli au README du handoff (plafond, débit des braises, plume de tracé). |
 | Cadre de la fenêtre | **Validé (@pj35, 2026-10-04) : sans bordure** (`frameless=True`), barre de titre et boutons Réduire/Agrandir/Fermer dessinés en HTML et animés. **Confirmé par le spike** sur le poste de @pj35 (§8) : déplacement par la barre de titre exact, redimensionnement par la poignée d'angle bas-droit exact (aller-retour JS vers Python : 0,7 ms), coins arrondis et bordure fournis par Windows 11. **Deux écarts à traiter en tâche 68** : le bouton Agrandir ne doit pas appeler `maximize()` (la fenêtre recouvre la barre des tâches), il place la fenêtre sur la zone utile de l'écran ; et il n'y a aucun redimensionnement natif par les bords (poignées HTML sur les quatre côtés et quatre coins ; **seuls le coin bas-droit et les bords droit et bas ont été essayés** : gauche et haut exigent `resize()` puis `move()` synchronisés, risque de saut, à mesurer en tâche 68). L'ancrage Win+Flèche est sans objet : @pj35 utilise Komorebi (gestionnaire de fenêtres en mosaïque, dont les barres expliquent la zone utile de 46 à 1032 px), et prévoit un usage surtout en plein écran ; il n'est pas critique (2026-10-04). |
 | Écritures du coaching dans la base | **À valider** : défaut proposé, oui, via une connexion d'écriture distincte et les repositories existants (fixer ou clore un axe, `outcome`) ; la lecture reste en `mode=ro`. Cela lève la règle « lecture seule » de la version précédente. |
 | Point d'entrée | **À valider** : défaut proposé, `python lol_coach.py --client` et option 7 du menu ; démarrage d'office du client plus tard. |
@@ -152,7 +160,8 @@ tant que la console sert de secours.
 | `lcu_events.py` | Client WebSocket LCU (`websockets`), filtre les 937 événements aux préfixes suivis (`/lol-gameflow`, `/lol-lobby`, `/lol-matchmaking`, `/lol-champ-select`, `/lol-chat`, `/lol-end-of-game`, `/lol-ranked`). |
 | `lcu_proxy.py` | Lectures de navigation et actions autorisées : liste blanche d'endpoints, jamais de chemin passé tel quel par le front. |
 | `data.py`, `charts.py` | Fonctions pures : séries prêtes à tracer et SVG (§4.4). |
-| `templates/`, `static/` | Coque, une page par écran, `htmx.min.js` épinglé, `style.css`, `motion.js`, thèmes. |
+| `assets.py` | Data Dragon local : version configurable, cache disque, route `/assets/...` (portraits, runes, sorts, objets, skins), `runesReforged.json` ; best-effort (tâche 86). |
+| `templates/`, `static/` | Coque, une page par écran (§4.10), `htmx.min.js` épinglé, `style.css` (jetons « Alchimie »), `motion.js` (repris du handoff), `shell.js`, `fonts/`, un module JS par écran qui a du comportement (`draft.js`, `champions.js`, `runes.js`, `found.js`). |
 
 ### 4.3 Thème et motion design
 
@@ -162,11 +171,7 @@ Le motion est un **système**, pas des effets : tout passe par des jetons.
   `lent`), courbes (`standard`, `entrée`, `sortie`, ressort), échelons de décalage (`stagger`),
   distances. Un thème surcharge couleurs, police, rayons, ombres **et** le caractère du motion
   (vif ou posé). Aucune valeur de durée en dur dans un gabarit.
-- **Primitives** (`static/motion.js`, une centaine de lignes, testables à la main sur le banc
-  `/_motion`) : transition de page (View Transitions API, repli en fondu), apparition échelonnée
-  d'une liste, compteur numérique qui roule, tracé de courbe SVG (`stroke-dashoffset`), barre de
-  win chance qui glisse, passage de carte au verrouillage d'un champion, pulsation de la file
-  trouvée.
+- **Primitives** (`static/motion.js`, 340 lignes reprises du handoff, contrat `data-*` inchangé, vérifiées à la main sur le banc `/_motion`) : `data-trace` (tracé SVG avec plume d'étincelles), `data-rise`, `data-pop`, `data-fade`, `data-spell` (runes vers lettres), `data-count`, `data-spin`, `data-glow`, `data-tilt`, puis `Motion.seal` (sceau apposé), `impact` (image de choc adoucie), `burst`, `converge`, `embers`, `shake`, `flash`. Seul ajout : `Motion.opts()`, qui lit le réglage Motion de `<html data-motion>`. Les moments signature (transition de page, partie trouvée, sceau, ban, courbes) sont décrits au README du handoff et réalisés par les tâches 87, 88, 93, 94 et 95.
 - **Contraintes de performance** : animer uniquement `transform` et `opacity` (compositeur) ;
   budget 16,7 ms par image mesuré au spike et sur le banc ; aucune animation ne bloque une
   interaction (annulable, jamais modale) ; **`prefers-reduced-motion`** respecté **avec un réglage de remplacement dans le client** (Système / Complet / Réduit, mémorisé dans `user_prefs.json`) : sur le poste de @pj35, Windows a les animations désactivées (`SPI_GETCLIENTAREAANIMATION` = 0) et WebView2 annonce `reduce` (§8) ; un client qui suivrait aveuglément le système n'animerait rien. Défaut proposé : Complet (**à valider**). Durées
@@ -174,9 +179,7 @@ Le motion est un **système**, pas des effets : tout passe par des jetons.
 - **Où le motion compte** : l'entrée dans la draft (picks qui se posent, rôles qui se résolvent,
   recommandation qui change), la file trouvée, la révélation du post-game (courbe de win chance
   qui se trace, impact par événement qui s'empile), les transitions entre sections.
-- **Thèmes** : un fichier par thème (`static/themes/<nom>.css`, variables seulement). Le lot 1
-  livre **un** thème sombre et un clair ; la direction artistique des suivants se décide avec
-  @pj35 avant la tâche 69 (**à valider**). Choix mémorisé dans `user_prefs.json`.
+- **Thème** : variables CSS dans `style.css` (jetons du README du handoff : fonds, texte, accents et leurs complémentaires, arbres de runes, teinte par rôle, ombres), couleurs en OKLCH. Un seul thème, « Alchimie » ; un thème clair serait un second fichier de variables (`static/themes/<nom>.css`), à rouvrir avec ses maquettes (§2). Le réglage Motion est mémorisé dans `user_prefs.json` (champ `motion` de `UserPrefs` : le Live Coach réécrit ce fichier en entier et effacerait une clé étrangère à la dataclass).
 
 ### 4.4 Section Coaching (reprend le contenu de SPEC-21 v1, enrichi)
 
@@ -201,7 +204,7 @@ Les SVG sont construits côté serveur par des fonctions pures (`charts.py` : `l
 `reliability_chart`, `bar_chart`), couleurs par variables CSS, `<title>`/`<desc>` pour
 l'accessibilité, chemins prêts pour l'animation de tracé.
 
-### 4.5 Draft interactive et post-game (lot 2)
+### 4.5 Draft interactive et post-game (lots 2 et 4)
 
 **Donnée avant affichage.** `src/draft/snapshot.py` définit `DraftSnapshot` (dataclass
 sérialisable : phase, picks et bans par camp avec rôle, source et confiance, recommandations
@@ -223,15 +226,15 @@ rapport texte. Y figurent la courbe de win chance, l'impact par événement, les
 à l'objectif (`Finding`), la variation de LP, l'objectif jugé. Il remplace la sortie console du
 rapport en mode client ; la console la garde en mode console.
 
-### 4.6 Navigation (lots 3 à 6)
+### 4.6 Navigation (lots 5 et 6)
 
 | Lot | Écran | Source LCU | Écriture |
 |---|---|---|---|
-| 3 | Profil, rang, régalia, défis | `lol-summoner`, `lol-ranked`, `lol-regalia`, `lol-challenges` | non |
-| 3 | Historique et détail de partie (20 parties au plus, limite du LCU ; les parties capturées ajoutent la timeline et l'impact) | `lol-match-history` | non |
-| 4 | Collection : champions possédés, pages de runes, sets d'items | `lol-champions`, `lol-perks`, `lol-item-sets` | non (l'import de SPEC-15 reste son propre chemin) |
-| 5 | Lobby : files (`lol-game-queues`), postes, membres | `lol-lobby/v2` | **oui** : créer, choisir file et postes, quitter |
-| 5 | File : recherche, annulation, acceptation | `lol-matchmaking` | **oui** : lancer, annuler, accepter |
+| 5 | Profil, rang, régalia, défis | `lol-summoner`, `lol-ranked`, `lol-regalia`, `lol-challenges` | non |
+| 5 | Historique et détail de partie (20 parties au plus, limite du LCU ; les parties capturées ajoutent la timeline et l'impact) | `lol-match-history` | non |
+| 6 | Collection : champions possédés, pages de runes, sets d'items | `lol-champions`, `lol-perks`, `lol-item-sets` | non (l'import de SPEC-15 reste son propre chemin) |
+| 6 | Lobby : files (`lol-game-queues`), postes, membres | `lol-lobby/v2` | **oui** : créer, choisir file et postes, quitter |
+| 6 | File : recherche, annulation, acceptation | `lol-matchmaking` | **oui** : lancer, annuler, accepter |
 | 6 | Social : amis, statuts, conversations | `lol-chat` | **non** (lecture seule) |
 
 Chaque écran suit la même règle : une liste blanche d'endpoints dans `lcu_proxy.py`, un état vide
@@ -278,58 +281,207 @@ route répond 200 sur base remplie **et** vide, et « indisponible » sans LCU ;
 local ; `server.start()` sur un port libre avec `stop()`. Le motion n'est pas testable en pytest :
 il se vérifie sur le banc `/_motion` et à la recette (§6, 10 et 11).
 
+### 4.10 Design « Alchimie » et écrans à coder
+
+Source : `docs/design/client_alchimie/` (`README.md` : jetons, positions, états, motion, sources de
+données ; `*.dc.html` : prototypes, ouvrables avec `python -m http.server` dans ce dossier). Haute
+fidélité : couleurs, polices, tailles, textes et animations sont définitifs ; **les données des
+prototypes sont fictives** (pool GRIND, Sion contre Darius, LP, skins possédés simulés).
+
+**Règles de traduction** (valent pour toutes les tâches d'écran)
+
+- Un écran = un gabarit Jinja, des classes dans `style.css` et au plus un module JS vanilla ; pas de
+  style inline, sauf une valeur que la donnée calcule (teinte, pourcentage, position).
+- Chaque bloc nomme sa source de données (tableau ci-dessous) ; aucune valeur de prototype en dur.
+- Rafraîchissement par zone : un fragment htmx par zone, rechargé sur l'événement du bus (SSE) plutôt
+  que par écran entier ; sur `htmx:load`, `Motion.intro` puis `Motion.ambient` rejouent les animations
+  du fragment, sauf en mode Réduit.
+- Accessibilité : les runes sont décoratives (`aria-hidden`), jamais seules porteuses de sens ; le sens
+  passe par le texte ; Échap ferme les overlays.
+- Chaque écran a son état vide, et les états « client LoL fermé » et « base occupée » de la coque.
+- **Taille de la fenêtre** (**validé, 2026-10-05**) : le handoff est dessiné à 1920×986 et la fenêtre s'ouvre à
+  1280×800 (`WINDOW_SIZE`). Décision : les écrans du coaching sont fluides (colonne principale
+  souple, colonne latérale de 440 px) ; la draft garde les positions et tailles du handoff et se met à
+  l'échelle (`transform: scale()`) sous 1920×986. À régler sur ta fenêtre réelle (Komorebi, usage surtout
+  en plein écran).
+
+**Vue d'ensemble**
+
+| Écran | Route et fragments | Données | Tâches |
+|---|---|---|---|
+| Coque | `base.html`, `partials/nav.html` ; `POST /prefs/motion` | `user_prefs.json`, `LcuProbe` | 69, 84, 94 |
+| Accueil | `/` ; `/accueil/axes` (+ écritures si validées) | `coaching/goals.py`, `findings.py`, `progression.py`, `rank_snapshots`, `game_records` | 71 |
+| Rang | `/rang` | `coaching/ranked.py` (`lp_scale`), `rank_snapshots` | 51 |
+| Progression | `/progression?role=` | `coaching/grid.py`, `metrics.py`, `progression.py` | 52 |
+| Draft | `/draft` ; fragments `/draft/sceaux`, `/draft/bans`, `/draft/rangee`, `/draft/loadout`, `/draft/champions`, `/draft/runes` ; `POST /draft/action/...` | `DraftSnapshot`, `draft/recommendations.py`, `analysis/ban_recommendations.py`, `winprob/`, `draft/loadout.py`, LCU `lol-champ-select`, `lol-champions`, `lol-perks` | 72–74, 85–92 |
+| File trouvée | overlay de la coque, déclenché par la phase gameflow `ReadyCheck` | LCU ready-check, auto-accept du Live Coach (`user_prefs`) | 93 |
+| Transition de page | `shell.js` (navigation htmx) | — | 94 |
+| Post-game | `/postgame` (dernière partie capturée) et `/parties/{id}` ; événement `game_captured` | `winprob/report.py`, `winprob/impact.py`, `coaching/findings.py`, `goals.judge`, `rank_snapshots` | 75, 95 |
+| Parties, Calibration, Profil, Collection, Lobby, Social | sans maquette (§2) | §4.4 et §4.6 | 53, 54, 77–82 |
+
+**Fiches** (les cotes et positions exactes sont au README du handoff, section de l'écran)
+
+- **Coque (69, 84, 93, 94).** Barre de titre de 36 px : logo en pentacle, pastille « Client LoL
+  connecté / fermé » au point pulsé, boutons de 46 px (fermer rouge au survol), liseré dégradé cuivre →
+  violet → menthe → magenta. Zone centrale : « Champ select en cours » (93) ; « Lancer la file »,
+  recherche et « Annuler » viennent avec la tâche 81 (écriture lobby et file). Navigation de 220 px en
+  trois groupes (Coaching, Partie, Client), une rune décorative par entrée, entrée active teintée,
+  entrées sans écran grisées (info-bulle « lot suivant »), masquée pendant la draft. Pied : Thème
+  (« Alchimie », lecture seule) et Motion (Système / Complet / Réduit, mémorisé). Défaut Complet : Windows
+  annonce `reduce` sur le poste de @pj35.
+- **Accueil (71).** En-tête « Coaching · rôle principal X » et état de la base ; deux cartes d'axe
+  (violet, bleu) : origine (proposé par le coach / fixé par toi), métrique, rôle et cible, cinq pastilles
+  tenu / non tenu, « Tenu x fois sur les 5 dernières », « Clore l'axe » ; place libre : proposition
+  (`goals.propose`), « Fixer cet axe », « Choisir une autre métrique ». Tableau des derniers constats
+  (Métrique / Toi / Norme · objectif / Écart / σ, barre divergente centrée sur la norme). Colonne
+  latérale : carte Rang et sparkline sur 30 jours, 10 dernières parties en portraits cerclés, bilan du
+  rôle. États : sans axe, sans partie capturée, base vide. Fixer et clore écrivent en base (§2, à valider).
+- **Rang (51).** Courbe de 1124×560 sur l'échelle continue de `lp_scale()` (100 LP par division),
+  libellés de paliers à gauche, bandes de fond Platine / Émeraude, séparation or à 400 ; Solo en dégradé
+  bleu → vert avec aire, Flex violet → magenta, dernier point lumineux et étiquette « Émeraude II · 47 LP » ;
+  histogramme divergent des LP des 20 dernières parties ; cartes par file (palier, LP en compteur, V / D /
+  taux de victoire, delta sur 30 jours). Sous 2 photos, une file n'a pas de courbe : « pas assez de photos ».
+- **Progression (52).** Puces de rôle (teinte par rôle, nombre de parties) ; grille du rôle, une ligne par
+  métrique de `coaching/grid.py` : losange coloré, poids (●● principal, ● secondaire), Toi, Norme,
+  Objectif, tendance (sparkline de 190×40 : z face à la norme en plein, face à l'objectif en pointillé),
+  verdict en progrès / en recul / stable. Sous `MIN_TREND_SAMPLE` (5) : pas de verdict, pastille en
+  pointillé « n/5 parties, pas de verdict ». Colonne latérale : échantillon, schémas de `patterns()`
+  (pentacle coloré et phrase), légende.
+- **Draft, cadre et sceaux (73).** Plein écran sans navigation (la navigation revient en glissant à la
+  sortie). En-tête : fil d'Ariane, titre qui se transmute (runes → lettres), chrono circulaire de 64 px,
+  bans alliés et adverses (pastilles de 32 px barrées). Sceaux d'équipe : deux anneaux tournants (160 s,
+  sens opposés), pentacle de rayon 190, un rôle par branche, portraits de 92 px ; moi à la pointe haute
+  (104 px, cercle pointillé tournant tant que je ne suis pas verrouillé) ; adversaire inconnu : cercle
+  pointillé rose et rune ᛃ pulsée. Balance : jauge verticale de 46×270 (menthe → bleu pour nous, magenta
+  pour eux, curseur or), pourcentage de 58 px animé sur 800 ms, note « si X est verrouillé ». Écoute le
+  bus par `fetch` avec jeton (`EventSource` n'envoie pas d'en-tête) et recharge le fragment concerné.
+- **Draft, bans (87).** Mon ban : pastille de 40 px, bordure magenta en pointillé lumineux, aperçu de la
+  cible à 50 % ; bans adverses cachés (ᛜ). Rangée basse « Bans conseillés · menaces pour ton pool » : 4
+  cartes (« +2,9 pts si banni » et justification, de `BanRecommender`). Bouton principal « Bannir X »
+  (magenta). Après le ban : tampon, explosion magenta, 1,1 s plus tard révélation des bans adverses en
+  cascade (120 ms) puis apparition des picks adverses (150 ms), puis phase de picks.
+- **Draft, picks (88).** 4 cartes de recommandation (lien de couleur en haut : or, menthe, bleu, violet) :
+  portrait, nom, parties, win % à 2 décimales, delta en points (menthe ou rose), « Suite attendue : … ».
+  Clic = survol (LCU, garde de phase et de tour) ; « Verrouiller X » en haut à droite de la rangée. Survol :
+  éclosion du portrait et 26 runes qui convergent. Verrouillage : sceau apposé (impact frame, 170
+  étincelles, secousse).
+- **Draft, grimoire des champions (89).** Overlay de 1480×950, ouvert par « Tous les champions », mon
+  portrait ou mon emplacement de ban : recherche sans accents, puces de rôle (Top par défaut), « Pool
+  GRIND uniquement », compteur ; grille de portraits de 76 px ; tri recommandations, pool, alphabétique ;
+  méta (win %, « pool », « +x pts » en ban), losange or du pool ; indisponibles à 40 %, en gris, barrés, avec
+  leur raison (banni / allié / adverse / intention alliée / ton intention) ; barre basse (sélection,
+  « Double-clic pour … », « Fermer », action). Échap ferme.
+- **Draft, skins (90).** Après le verrouillage, la rangée basse devient la sélection de skin : cartes de
+  104×188 (art de chargement, nom, cadenas et gris si non possédé, losange or si choisi), splash du skin
+  choisi en fond (opacité 0,24, masque radial), « n skins possédés sur m ». Possession lue dans le LCU
+  (le prototype la simule) ; le choix s'écrit dans le champ select.
+- **Draft, loadout (91).** Colonne de 440 px : carte de page de runes teintée par l'arbre principal (rune
+  majeure de 72 px, 3 de 44 px, arbre secondaire 2 de 36 px, fragments, « Modifier › ») ; sorts
+  d'invocateur (tuiles D et F, popover de 9 sorts, « Échanger D ⇄ F », choisir un sort déjà pris échange les
+  deux) ; objets en lecture seule ; pied : note d'état, « Envoyer au client », « Rétablir OneTricks »,
+  pastille « Modifiée à la main ». **La modification manuelle prime sur l'import automatique** du
+  lock-in (SPEC-15, ADR-003) : le drapeau vit dans le snapshot et l'import le respecte.
+- **Draft, éditeur de runes (92).** Overlay ouvert par un clip-path circulaire, runes qui éclosent en
+  cascade : arbre principal (majeure + 3 rangées), arbre secondaire (2 runes de rangées différentes ; une
+  troisième rangée remplace la plus ancienne), fragments (3 rangées), « Annuler » / « Appliquer la page ».
+  Les chemins de runes écrits à la main dans le prototype sont validés contre `runesReforged.json` (86).
+- **File trouvée (93).** Overlay de la coque : fond radial sombre, pilier de lumière, cercle de 720 px
+  (anneau runique de 60 s, pentacle menthe, pentacle inversé magenta de −90 s), anneau de compte à rebours
+  de 10 s, « Partie trouvée » / « n s pour répondre », « Accepter » (menthe) et « Refuser ». Auto-accept du
+  Live Coach (acceptation à 4 s) signalé s'il est actif. Acceptation : « Acceptée », grosse explosion, éclair,
+  secousse de 16 px, anneaux ×9, effondrement `scale(.2) rotate(160deg)` vers la draft.
+- **Transition de page (94).** Le contenu s'assombrit (560 ms) pendant qu'un cercle runique de 520 px se
+  trace et que 44 runes convergent ; implosion (860 ms), explosion, éclair cuivre, secousse de 8 px,
+  ouverture par `clip-path: circle()` de 0 à 75 % (820 ms). Mode Réduit : changement instantané.
+- **Post-game (75, 95).** Sceau de victoire de 104 px (menthe), titre « Victoire » de 64 px, contexte
+  (champion, matchup, durée, file) ; axes tenu / non tenu ; gain de LP en compteur (dégradé or → menthe) ;
+  courbe de win chance de 1124×430 tracée à l'encre (dégradé bleu → violet → menthe → or), marqueurs par
+  type (Baron violet, tour or, dragon orange, larves violet, héraut bleu, kill menthe, mort rose) ; « Les
+  plus coûteux » et « Les plus rentables » (3 lignes chacun) ; colonne : impact par événement (ΔP de
+  l'équipe, barres divergentes, « toi » pour les miens), impact attribué et résidu, écarts à la norme et à
+  l'objectif. Sans impact : « impact non calculé », courbe affichée si la timeline existe. **La variante
+  Défaite n'est pas maquettée** : défaut proposé, même mise en page, sceau et titre en rose.
+- **Sans maquette (53, 54, 77–82).** Parties, Calibration, Profil, Collection, Lobby, Social : même
+  système (cartes de 6 px, grilles, courbes de `charts.py`), extrapolés sans validation préalable (§2) ; une
+  direction manquante est signalée avant de coder.
+
 ## 5. Tâches
 
-Numéros à la suite du `TODO.md` (dernière : 67). **Les tâches 48 à 56 gardent leur numéro** (elles
-n'étaient pas commencées) et sont réécrites ; les tâches 68 et suivantes s'y ajoutent. L'ordre
-d'exécution est celui des lots.
+Numéros à la suite du `TODO.md` (dernière : 67). Les tâches 48 à 56 et 68 à 83 viennent des versions du
+2026-10-04 ; **84 à 95 sont ajoutées le 2026-10-05** après le handoff de design. L'ordre d'exécution est
+celui des lots, **réordonnés d'après le handoff** (§2, à valider) : coque, motion, draft, file trouvée et
+transition, coaching et post-game, puis la navigation. Les tâches d'écran renvoient à leur fiche du §4.10.
+Les tâches 48, 49, 68 et 70 sont faites.
 
-**Lot 1 — Socle, thème, motion, section Coaching (55 pts)**
+**Lot 1 — Socle, coque et motion (31 pts)** — étapes 1 et 2 du handoff
 
 | # | Tâche | Pts | Dépend de |
 |---|---|---|---|
-| 48 | **Spike d'empaquetage et de fluidité** : fenêtre `pywebview` servie par `uvicorn` depuis l'exe, une animation de test ; `hiddenimports` et `datas` trouvés ; taille, délai de démarrage et temps d'image mesurés et consignés (§8) ; vérifie les quatre points de la fenêtre sans bordure (§2) et tranche la bibliothèque d'animation | 5 | — |
-| 49 | Socle : `config_client.py`, `db.py` (lecture seule), `server.py` (fil, idempotent, best-effort), `app.py` (fabrique), jeton de session et contrôle `Host`/`Origin` + tests | 5 | 48 |
-| 68 | Coque : `window.py`, barre de titre maison (déplacement, poignées de redimensionnement, boutons animés), `base.html`, navigation par sections, transitions de page, états « client LoL fermé » et « base occupée » | 5 | 49 |
-| 69 | Thème et motion : jetons, `motion.js` (primitives §4.3), banc `/_motion`, `prefers-reduced-motion` et réglage de remplacement (Système / Complet / Réduit), deux thèmes (sombre, clair) arrêtés avec @pj35 | 5 | 68 |
-| 70 | Bus et temps réel : `bus.py`, route SSE, `lcu_events.py` (WebSocket LCU, reconnexion), faux serveur de test | 5 | 49 |
-| 50 | `charts.py` : `line_chart`, `reliability_chart`, `bar_chart`, échelles, axes, accessibilité, tracé animable + tests sur le SVG | 5 | 69 |
-| 51 | Écran Rang : `data.rank_series()`, ignorance visible + tests | 3 | 50 |
-| 52 | Écran Progression : `data.metric_series()`, sélecteur de rôle, verdicts, schémas, seuils d'échantillon + tests | 5 | 50 |
-| 53 | Écran Parties : `winprob.report.curve_points()` extraite, liste, page d'une partie, états vides + tests | 5 | 50 |
-| 54 | Écran Calibration : `analysis.calibration.calibration_buckets()` extraite, diagramme de fiabilité, choix de version + test d'identité de `calibration_curve()` | 3 | 50 |
-| 71 | Accueil Coaching : axes de travail, constats, bilan ; fixer/clore un axe (si écriture validée) + tests | 3 | 51–54 |
+| 48 | ✅ **Spike d'empaquetage et de fluidité** : fenêtre `pywebview` servie par `uvicorn` depuis l'exe, une animation de test ; `hiddenimports` et `datas` trouvés ; taille, délai de démarrage et temps d'image mesurés et consignés (§8) ; vérifie les quatre points de la fenêtre sans bordure (§2) et tranche la bibliothèque d'animation | 5 | — |
+| 49 | ✅ Socle : `config_client.py`, `db.py` (lecture seule), `server.py` (fil, idempotent, best-effort), `app.py` (fabrique), jeton de session et contrôle `Host`/`Origin` + tests | 5 | 48 |
+| 68 | ✅ Coque : `window.py`, barre de titre maison (déplacement, poignées de redimensionnement, boutons animés), `base.html`, navigation par sections, transitions de page, états « client LoL fermé » et « base occupée » | 5 | 49 |
+| 70 | ✅ Bus et temps réel : `bus.py`, route SSE, `lcu_events.py` (WebSocket LCU, reconnexion), faux serveur de test | 5 | 49 |
+| 69 | **Jetons, polices et coque « Alchimie »** : jetons OKLCH et `@font-face` locaux dans `style.css` ; `base.html` (barre de titre : logo pentacle, pastille animée, liseré dégradé) ; navigation à trois groupes, entrées sans écran grisées ; pied Thème / Motion ; réglage Motion persisté (`UserPrefs.motion`, `POST /prefs/motion`, `data-motion` sur `<html>`) ; `WINDOW_BACKGROUND` ; tests | 5 | 68 |
+| 84 | **`motion.js` et banc `/_motion`** : reprise de `motion.js` du handoff (+ `Motion.opts()`), `Motion.intro` et `ambient` sur `htmx:load`, braises coupées en Réduit ; banc `/_motion` (p95 du temps d'image par scène : braises, 1 600 particules, tracé, sceau) ; mesures consignées en §10 | 3 | 69 |
 | 55 | Lancement : `--client` et option 7 du menu (Quitter en 8), Live Coach en fil sans entrée console, message `[INFO]`/`[ALERTE]` + tests | 3 | 49, 70 |
-| 56 | Empaquetage du lot : `requirements*.txt`, `.spec`, `build_app.py`, job `build` de la CI, exe vérifié, `README.md`, `docs/PROJECT_STRUCTURE.md`, `CHANGELOG.md` | 3 | 51–55, 71 |
 
-**Lot 2 — Draft interactive et post-game (20 pts)**
-
-| # | Tâche | Pts | Dépend de |
-|---|---|---|---|
-| 72 | `DraftSnapshot` et recommandations structurées ; sortie console **identique** (test d'identité) ; publication best-effort sur le bus | 5 | 70 |
-| 73 | Écran de draft (lecture) : équipes, rôles, bans, recommandations, win chance, loadout, motion de la draft | 5 | 72 |
-| 74 | Actions de draft : survoler, verrouiller, corriger un rôle ; garde de phase et de tour ; tests avec faux LCU | 5 | 73 |
-| 75 | Post-game : événement `game_captured`, page de revue animée (courbe, impact, constats, LP, objectif) | 5 | 72, 53 |
-
-**Lot 3 — Profil et historique (13 pts)**
+**Lot 2 — Draft Alchimie (51 pts)** — étape 3 du handoff, l'écran clé
 
 | # | Tâche | Pts | Dépend de |
 |---|---|---|---|
-| 76 | **Spike des endpoints de navigation** : formes relevées sur le client de @pj35 pour les lots 3 à 6, fixtures, corrections de §4.6 | 3 | 70 |
-| 77 | Profil, rang, régalia, défis | 5 | 76 |
-| 78 | Historique (20 parties) et détail ; liaison aux parties capturées | 5 | 76, 53 |
+| 72 | `DraftSnapshot` et recommandations structurées (phase, tour, picks et bans par camp, recommandations `{champion, score, delta, profondeur, variation, parties, suite attendue}`, écartés et raison, état du loadout) ; sortie console **identique** (test d'identité) ; publication best-effort sur le bus | 5 | 70 |
+| 85 | Bans conseillés et balance dans le snapshot : `BanRecommender` structuré (gain en points, justification), win chance de fin de draft et « si X est verrouillé » (`winprob`) | 3 | 72 |
+| 86 | Assets et formes LCU de la draft : `assets.py` (Data Dragon local, version configurable, cache disque, `/assets/...`, `runesReforged.json`) ; relevé des formes LCU en lecture seule (skins possédés, pages de runes, sorts, actions et bans du champ select) figées en `tests/fixtures/` | 5 | 49 |
+| 74 | Actions de draft : survoler, verrouiller, bannir, corriger un rôle ; garde de phase et de tour ; refus lisible sans appel LCU ; tests avec faux LCU | 5 | 72 |
+| 73 | Draft, cadre : gabarit plein écran sans navigation, en-tête, sceaux d'équipe, balance, chrono, consommateur SSE (`fetch` avec jeton), fragments rechargés sur le bus | 5 | 72, 84, 86 |
+| 87 | Draft, phase de bans : mon ban, aperçu, bans cachés, « Bans conseillés », « Bannir X », tampon, révélation en cascade | 5 | 73, 74, 85 |
+| 88 | Draft, phase de picks : 4 cartes de recommandation, survol (éclosion, runes), « Verrouiller X », sceau apposé | 5 | 73, 74 |
+| 89 | Draft, grimoire des champions : overlay, recherche sans accents, rôle, pool, tri, indisponibles et raison, barre basse | 5 | 88 |
+| 90 | Draft, sélection de skin : rangée basse après verrouillage, possession lue dans le LCU, splash en fond, écriture du choix | 3 | 86, 88 |
+| 91 | Draft, colonne loadout : page de runes, sorts (popover, échange), objets, « Envoyer au client », « Rétablir OneTricks », « Modifiée à la main » qui prime sur l'import | 5 | 86, 88 |
+| 92 | Draft, éditeur de runes : overlay circulaire, arbres, secondaire sur deux rangées, fragments, appliquer / annuler | 5 | 91 |
 
-**Lots 4 à 6 et clôture (21 pts)**
+**Lot 3 — File trouvée et transition de page (8 pts)** — étape 4 du handoff
+
+| # | Tâche | Pts | Dépend de |
+|---|---|---|---|
+| 93 | **File trouvée** : overlay de la coque sur la phase `ReadyCheck`, compte à rebours de 10 s, accepter / refuser (LCU, avec jeton), mention de l'auto-accept, effondrement vers la draft ; « Champ select en cours » dans la barre de titre ; tests avec faux LCU | 5 | 84, 55 |
+| 94 | **Transition de page signature** : cercle runique, runes, implosion, clip-path ; remplace le fondu de View Transitions ; la navigation glisse à la sortie de la draft ; Réduit = instantané ; jamais de clic perdu | 3 | 84, 73 |
+
+**Lot 4 — Coaching et post-game (39 pts)** — étape 5 du handoff
+
+| # | Tâche | Pts | Dépend de |
+|---|---|---|---|
+| 50 | `charts.py` : `line_chart`, `reliability_chart`, `bar_chart`, barres divergentes, sparklines, bandes de paliers ; échelles, axes, accessibilité, tracé à l'encre animable + tests sur le SVG | 5 | 84 |
+| 51 | Écran Rang : `data.rank_series()`, courbes Solo et Flex, histogramme des LP, cartes par file, ignorance visible + tests | 5 | 50 |
+| 52 | Écran Progression : `data.metric_series()`, puces de rôle, grille, verdicts, schémas, seuils d'échantillon + tests | 5 | 50 |
+| 53 | Écran Parties : `winprob.report.curve_points()` extraite, liste, page d'une partie, états vides + tests (sans maquette) | 5 | 50 |
+| 54 | Écran Calibration : `analysis.calibration.calibration_buckets()` extraite, diagramme de fiabilité, choix de version + test d'identité de `calibration_curve()` (sans maquette) | 3 | 50 |
+| 71 | Accueil Coaching : axes, constats, colonne latérale ; fixer / clore un axe (si écriture validée) + tests | 5 | 51–53 |
+| 75 | Post-game, données et page : événement `game_captured`, `/postgame` et `/parties/{id}` en mode revue, impact, constats, LP, objectif jugé, variante Défaite | 5 | 72, 53 |
+| 95 | Post-game, mise en scène : sceau de victoire, courbe de win chance à l'encre, marqueurs, impact empilé, compteurs | 3 | 75, 84 |
+| 56 | Empaquetage : `requirements*.txt`, `.spec` (`templates`, `static`, `fonts`), `build_app.py`, job `build` de la CI, exe vérifié, `README.md`, `docs/PROJECT_STRUCTURE.md`, `CHANGELOG.md` | 3 | 55, 71, 75, 92 |
+
+**Lot 5 — Profil et historique (13 pts)**
+
+| # | Tâche | Pts | Dépend de |
+|---|---|---|---|
+| 76 | **Spike des endpoints de navigation** : formes relevées sur le client de @pj35 pour les lots 5 et 6, fixtures, corrections de §4.6 | 3 | 70 |
+| 77 | Profil, rang, régalia, défis (sans maquette) | 5 | 76 |
+| 78 | Historique (20 parties) et détail ; liaison aux parties capturées (sans maquette) | 5 | 76, 53 |
+
+**Lot 6 — Collection, lobby, file, social et clôture (21 pts)**
 
 | # | Tâche | Pts | Dépend de |
 |---|---|---|---|
 | 79 | Collection : champions possédés, pages de runes, sets d'items (lecture) | 5 | 76 |
 | 80 | Lobby : files, postes, membres ; créer, choisir, quitter | 5 | 76 |
-| 81 | File : lancer, annuler, accepter ; pulsation « partie trouvée » ; cohabitation avec l'auto-accept du Live Coach | 5 | 80 |
+| 81 | File : lancer, annuler, accepter ; barre de titre (« Lancer la file », recherche, chrono, « Annuler ») ; cohabitation avec l'auto-accept du Live Coach | 5 | 80, 93 |
 | 82 | Social en lecture seule : amis, statuts, conversations | 3 | 76 |
-| 83 | Clôture : exe vérifié, `README.md`, `docs/PROJECT_STRUCTURE.md`, `CHANGELOG.md`, statuts, `TODO.md` | 3 | 74, 75, 77–79, 81, 82 |
+| 83 | Clôture : exe vérifié, `README.md`, `docs/PROJECT_STRUCTURE.md`, `CHANGELOG.md`, statuts, `TODO.md` | 3 | 56, 77–79, 81, 82, 95 |
 
-Total : 55 + 20 + 13 + 21 = **109 pts**. Chaque lot se clôt par une recette de @pj35 (§6, 10).
+Total : 31 + 51 + 8 + 39 + 13 + 21 = **163 pts**, 37 tâches, dont 20 pts faits. Chaque lot se clôt par
+une recette de @pj35 (§6, 10).
 
 ## 6. Critères d'acceptation
 
@@ -362,15 +514,19 @@ Total : 55 + 20 + 13 + 21 = **109 pts**. Chaque lot se clôt par une recette de 
    et le tour courants (tests, tâches 72 et 74).
 10. **Recette de bout en bout** (@pj35) : `python build_app.py`, lancer l'exe, ouvrir le client ;
     dérouler une vraie file jusqu'au post-game (acceptation, draft avec survol et verrouillage au
-    clic, revue de partie) ; thème clair et sombre lisibles. Reste ⬜ dans le `TODO.md` tant qu'elle
+    clic, revue de partie) ; chaque écran comparé à son prototype (`docs/design/client_alchimie/`), thème « Alchimie » lisible à 1280×800 et à 1920×986. Reste ⬜ dans le `TODO.md` tant qu'elle
     n'est pas faite.
 11. **Motion** : sur le banc `/_motion` et sur les écrans de draft et de post-game, **p95 du temps
-    d'image ≤ 16,7 ms** sur le poste de @pj35 (mesure consignée en §8) ; en mode Système ou Réduit,
+    d'image ≤ 16,7 ms** (calque de particules et braises compris) sur le poste de @pj35 (mesure consignée en §8) ; en mode Système ou Réduit,
     `prefers-reduced-motion: reduce` coupe les animations non essentielles, en mode Complet elles
     tournent quel que soit le système ; aucune animation ne retarde une action.
 12. Mesures du spike (tâche 48) consignées en §8 : taille de l'exe avant/après, délai de démarrage,
     temps d'image.
 13. `CHANGELOG.md` (`[Unreleased]`), statut de cette spec, `docs/specs/README.md` et `TODO.md` à jour.
+14. **Design** : aucun `*.dc.html` ni `support.js` sous `src/client/` ; polices servies par `/static/fonts/`
+    et aucun gabarit n'appelle un domaine externe (test) ; les jetons de couleur du README du handoff sont
+    dans `style.css` (test) ; `<html data-motion>` reflète `user_prefs.json`, `POST /prefs/motion` répond
+    403 sans jeton et 400 sur une valeur inconnue (tests).
 
 ## 7. Hors périmètre
 
@@ -385,6 +541,8 @@ Total : 55 + 20 + 13 + 21 = **109 pts**. Chaque lot se clôt par une recette de 
   de partie en cours dans le client n'est pas demandé.
 - ❌ **Réécriture de la boucle de draft** : le Live Coach garde son polling ; le client s'y branche
   par un bus, rien de plus.
+- ❌ **Thème clair** : reporté, le handoff ne le définit pas (§2, validé).
+- ❌ **Vitesse du motion réglable** (prop `speed` du prototype) : multiplicateur fixé à 1, pas d'interface.
 - ❌ **Chaîne de build front** (Node, React, Svelte) : écartée (§3).
 - ❌ **Accès réseau** (autre machine, mobile) et authentification : `127.0.0.1` seulement.
 - ❌ **Réécriture des sorties console** : `report.py`, `calibrate_model.py` et l'affichage de draft

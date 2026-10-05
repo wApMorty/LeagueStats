@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Noto+Sans+Runic&display=swap">
+<script src="motion.js"></script>
+<style>
+html, body { margin: 0; background: oklch(0.16 0.02 170); }
+* { box-sizing: border-box; }
+a { color: oklch(0.8 0.09 55); }
+a:hover { color: oklch(0.88 0.08 55); }
+button { font: inherit; }
+</style>
+</helmet>
+<div ref="{{ root }}" data-quake="1" style="position:relative; width:1700px; height:950px; overflow:hidden; color:oklch(0.94 0.012 120); font-family:'Alegreya Sans', sans-serif; background:radial-gradient(ellipse 900px 700px at 100% 10%, oklch(0.25 0.09 290 / 0.75) 0%, transparent 70%), radial-gradient(ellipse 800px 600px at 10% 0%, oklch(0.24 0.07 190 / 0.8) 0%, transparent 70%), radial-gradient(ellipse 700px 500px at 40% 100%, oklch(0.23 0.08 345 / 0.55) 0%, transparent 70%), oklch(0.15 0.02 170);">
+  <!-- en-tête -->
+  <div style="position:absolute; left:48px; right:48px; top:26px; height:110px; display:flex; align-items:center; justify-content:space-between;">
+    <div style="display:flex; align-items:center; gap:22px;">
+      <div style="position:relative; width:104px; height:104px;">
+        <div data-shock="1" style="position:absolute; inset:0; border-radius:50%; border:2px solid oklch(0.8 0.1 165); opacity:0;"></div>
+        <div data-shock="1" style="position:absolute; inset:0; border-radius:50%; border:1px solid oklch(0.74 0.11 55); opacity:0;"></div>
+        <svg data-seal="1" viewBox="-52 -52 104 104" style="position:absolute; inset:0; width:104px; height:104px; overflow:visible; filter:drop-shadow(0 0 18px oklch(0.8 0.1 165 / 0.5));">
+          <circle r="50" style="fill:oklch(0.8 0.1 165);"></circle>
+          <circle r="44" style="fill:none; stroke:oklch(0.16 0.02 170 / 0.5); stroke-width:1;"></circle>
+          <path d="M0,-38 L22.3,30.7 L-36.1,-11.7 L36.1,-11.7 L-22.3,30.7 Z" style="fill:none; stroke:oklch(0.16 0.02 170); stroke-width:2; stroke-linejoin:round;"></path>
+        </svg>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:4px;">
+        <div data-rise="1" data-delay="200" style="font-size:12px; letter-spacing:0.22em; text-transform:uppercase; color:oklch(0.74 0.11 55 / 0.85);">Revue de partie · il y a 2 min</div>
+        <div data-rise="1" data-spell="1" data-delay="300" style="font:600 64px/1 'Cormorant Garamond', serif; color:oklch(0.86 0.09 165); text-shadow:0 0 30px oklch(0.8 0.1 165 / 0.35);">Victoire</div>
+        <div data-rise="1" data-delay="400" style="font-size:16px; color:oklch(0.82 0.015 140);">Sion · Top contre Darius · 31:24 · Classée solo/duo</div>
+      </div>
+    </div>
+    <div style="display:flex; align-items:center; gap:40px;">
+      <div data-rise="1" data-delay="500" style="display:flex; flex-direction:column; gap:8px; align-items:flex-end;">
+        <sc-for list="{{ goals }}" as="g" hint-placeholder-count="2">
+          <span style="display:flex; align-items:center; gap:8px; padding:5px 14px; border-radius:999px; font-size:14px; border:1px solid {{ g.c }}; color:{{ g.c }};"><span style="width:7px; height:7px; border-radius:50%; background:{{ g.c }};"></span>{{ g.t }}</span>
+        </sc-for>
+      </div>
+      <div data-rise="1" data-delay="600" style="display:flex; flex-direction:column; align-items:flex-end;">
+        <span style="font:600 58px/1 'Cormorant Garamond', serif; background:linear-gradient(90deg, oklch(0.9 0.14 95), oklch(0.82 0.15 165)); -webkit-background-clip:text; background-clip:text; color:transparent;">+<span data-count="18" data-delay="700">18</span> LP</span>
+        <span style="font-size:15px; color:oklch(0.82 0.015 140);">Émeraude II · 65 LP</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- courbe de win chance -->
+  <div data-fade="1" data-delay="100" style="position:absolute; left:48px; top:156px; width:1124px; height:430px; border-radius:6px; background:oklch(0.185 0.02 170); border:1px solid oklch(0.74 0.11 55 / 0.18);">
+    <div style="position:absolute; left:24px; top:18px; font:600 24px/1 'Cormorant Garamond', serif;">Chance de victoire</div>
+    <div style="position:absolute; right:24px; top:20px; font-size:13px; color:oklch(0.7 0.02 160);">Prédite en draft : 54,8 % · modèle v3</div>
+    <svg viewBox="0 0 1124 430" style="position:absolute; inset:0; width:1124px; height:430px; overflow:visible;">
+      <defs>
+        <linearGradient id="pgCurve" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="oklch(0.74 0.15 230)"></stop><stop offset="0.35" stop-color="oklch(0.72 0.2 290)"></stop><stop offset="0.7" stop-color="oklch(0.82 0.15 165)"></stop><stop offset="1" stop-color="oklch(0.9 0.14 95)"></stop></linearGradient>
+        <linearGradient id="pgArea" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="oklch(0.82 0.15 165)" stop-opacity="0.3"></stop><stop offset="1" stop-color="oklch(0.72 0.2 290)" stop-opacity="0"></stop></linearGradient>
+      </defs>
+      <rect x="70" y="50" width="1020" height="160" style="fill:oklch(0.82 0.15 165 / 0.05);"></rect>
+      <rect x="70" y="210" width="1020" height="160" style="fill:oklch(0.72 0.21 345 / 0.06);"></rect>
+      <sc-for list="{{ yt }}" as="g" hint-placeholder-count="3">
+        <line x1="70" x2="1090" y1="{{ g.y }}" y2="{{ g.y }}" style="stroke:{{ g.c }}; stroke-width:1; stroke-dasharray:{{ g.dash }};"></line>
+      </sc-for>
+      <path data-fade="1" data-delay="2200" d="{{ area }}" style="fill:url(#pgArea);"></path>
+      <path data-trace="2600" data-delay="400" d="{{ curve }}" style="fill:none; stroke:url(#pgCurve); stroke-width:3; stroke-linejoin:round; stroke-linecap:round; filter:drop-shadow(0 0 8px oklch(0.72 0.2 290 / 0.7));"></path>
+    </svg>
+    <sc-for list="{{ yt }}" as="g" hint-placeholder-count="3"><div style="position:absolute; left:0; width:60px; top:{{ g.ly }}px; text-align:right; font-size:12px; line-height:16px; color:oklch(0.62 0.03 160);">{{ g.t }}</div></sc-for>
+    <sc-for list="{{ xt }}" as="x" hint-placeholder-count="7"><div style="position:absolute; top:394px; left:{{ x.lx }}px; width:80px; text-align:center; font-size:12px; color:oklch(0.62 0.03 160);">{{ x.t }}</div></sc-for>
+    <sc-for list="{{ marks }}" as="m" hint-placeholder-count="10">
+      <div data-pop="1" data-delay="{{ m.d }}" style="position:absolute; left:{{ m.x }}px; top:{{ m.y }}px; width:0; height:0;">
+        <div style="position:absolute; left:-7px; top:-7px; width:14px; height:14px; border-radius:50%; background:oklch(0.185 0.02 170); border:2.5px solid {{ m.c }}; box-shadow:0 0 14px {{ m.c }};"></div>
+        <div style="position:absolute; left:-60px; width:120px; top:{{ m.ly }}px; text-align:center; font-size:12px; line-height:1.2; color:{{ m.c }};">{{ m.short }}</div>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- coûteux / rentables -->
+  <div style="position:absolute; left:48px; top:610px; width:1124px; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:20px;">
+    <sc-for list="{{ tops }}" as="b" hint-placeholder-count="2">
+      <div data-rise="1" data-tilt="1" data-delay="{{ b.d }}" style="padding:20px 24px; border-radius:6px; background:linear-gradient(150deg, {{ b.tint }} 0%, oklch(0.19 0.02 170) 60%); border:1px solid {{ b.bd }}; display:flex; flex-direction:column; gap:4px;">
+        <div style="font-size:12px; letter-spacing:0.18em; text-transform:uppercase; color:{{ b.c }};">{{ b.t }}</div>
+        <sc-for list="{{ b.rows }}" as="e" hint-placeholder-count="3">
+          <div style="display:grid; grid-template-columns:62px minmax(0,1fr) auto; align-items:center; gap:14px; height:62px; border-bottom:1px solid oklch(0.74 0.11 55 / 0.08);">
+            <span style="font-size:14px; color:oklch(0.7 0.02 160); font-variant-numeric:tabular-nums;">{{ e.time }}</span>
+            <div style="display:flex; flex-direction:column;"><span style="font:600 22px/1.05 'Cormorant Garamond', serif;">{{ e.label }}</span><span style="font-size:13px; color:oklch(0.7 0.02 160);">{{ e.who }}</span></div>
+            <span style="font:600 30px/1 'Cormorant Garamond', serif; color:{{ e.c }}; text-shadow:0 0 16px {{ e.c }}; font-variant-numeric:tabular-nums;">{{ e.dTxt }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- impact + écarts -->
+  <aside style="position:absolute; left:1212px; top:156px; width:440px; display:flex; flex-direction:column;">
+    <div data-rise="1" data-delay="300" style="display:flex; align-items:baseline; justify-content:space-between; padding-bottom:10px; border-bottom:1px solid oklch(0.74 0.11 55 / 0.2);"><span style="font:600 26px/1 'Cormorant Garamond', serif;">Impact par événement</span><span style="font-size:12px; color:oklch(0.62 0.03 160);">ΔP équipe, pts</span></div>
+    <sc-for list="{{ events }}" as="e" hint-placeholder-count="10">
+      <div data-stack="1" data-delay="{{ e.sd }}" style="display:grid; grid-template-columns:46px minmax(0,1fr) 120px 46px; align-items:center; gap:10px; height:35px; border-bottom:1px solid oklch(0.74 0.11 55 / 0.07); font-size:14px;">
+        <span style="color:oklch(0.62 0.03 160); font-variant-numeric:tabular-nums;">{{ e.time }}</span>
+        <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ e.label }}<sc-if value="{{ e.mine }}" hint-placeholder-val="{{ false }}"><span style="margin-left:6px; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:oklch(0.74 0.11 55);">toi</span></sc-if></span>
+        <div style="position:relative; height:10px;"><div style="position:absolute; left:50%; top:-4px; bottom:-4px; width:1px; background:oklch(0.74 0.11 55 / 0.4);"></div><div style="position:absolute; top:1px; height:8px; border-radius:4px; left:{{ e.l }}%; width:{{ e.w }}%; background:{{ e.c }}; box-shadow:0 0 10px {{ e.c }};"></div></div>
+        <span style="text-align:right; font-weight:700; color:{{ e.c }}; font-variant-numeric:tabular-nums;">{{ e.dTxt }}</span>
+      </div>
+    </sc-for>
+    <div data-rise="1" data-delay="1600" style="margin-top:12px; display:flex; justify-content:space-between; font-size:14px; color:oklch(0.82 0.015 140);"><span>Ton impact attribué <b style="color:oklch(0.86 0.09 165);">+0,6 pt</b></span><span style="color:oklch(0.62 0.03 160);">Résidu non attribué −0,2</span></div>
+    <div data-rise="1" data-delay="1700" style="margin-top:26px; padding-bottom:10px; border-bottom:1px solid oklch(0.74 0.11 55 / 0.2); font:600 26px/1 'Cormorant Garamond', serif;">Écarts à la norme et à l'objectif</div>
+    <sc-for list="{{ findings }}" as="f" hint-placeholder-count="4">
+      <div data-rise="1" data-delay="{{ f.d }}" style="display:grid; grid-template-columns:minmax(0,1fr) 70px 120px; align-items:center; gap:10px; height:40px; border-bottom:1px solid oklch(0.74 0.11 55 / 0.07); font-size:14px;">
+        <span>{{ f.m }}</span>
+        <span style="text-align:right; font-weight:700; color:{{ f.c }}; font-variant-numeric:tabular-nums;">{{ f.v }}</span>
+        <span style="text-align:right; color:oklch(0.62 0.03 160);">{{ f.ref }}</span>
+      </div>
+    </sc-for>
+  </aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1700, &quot;height&quot;: 950}, &quot;go&quot;: {&quot;editor&quot;: null, &quot;tsType&quot;: &quot;(route: string) =&gt; void&quot;}, &quot;speed&quot;: {&quot;editor&quot;: &quot;range&quot;, &quot;default&quot;: 1, &quot;min&quot;: 0.5, &quot;max&quot;: 2, &quot;step&quot;: 0.1, &quot;tsType&quot;: &quot;number&quot;}, &quot;reduced&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;}}">
+const MINT = 'oklch(0.82 0.14 160)', ROSE = 'oklch(0.72 0.21 345)';
+const KIND = { 'Larves du Néant ×3': 'oklch(0.72 0.2 290)', 'Tour T1 top': 'oklch(0.88 0.14 85)', 'Dragon infernal': 'oklch(0.76 0.18 45)', 'Kill sur Darius': 'oklch(0.82 0.14 160)', 'Héraut': 'oklch(0.76 0.15 230)', 'Baron Nashor': 'oklch(0.74 0.22 310)', 'Inhibiteur mid': 'oklch(0.86 0.15 110)' };
+const WC = [54.8, 54, 53, 49.8, 49, 48.5, 50.7, 50, 48, 44.4, 45, 46, 51.4, 52, 55.2, 55, 56, 59.1, 60, 61.8, 62, 63, 63.5, 73.2, 74, 75, 81.4, 82, 79, 82, 90, 100];
+const EVENTS = [
+  { t: 192, label: 'Mort solo', who: 'toi, tué par Darius', short: 'Mort solo', d: -4.1, mine: true },
+  { t: 400, label: 'Larves du Néant ×3', who: 'Vi, toi', short: 'Larves', d: 2.2, mine: true },
+  { t: 535, label: 'Mort solo', who: 'toi, Darius et Lee Sin', short: 'Mort solo', d: -3.6, mine: true },
+  { t: 690, label: 'Tour T1 top', who: 'toi', short: 'Tour T1', d: 5.4, mine: true },
+  { t: 842, label: 'Dragon infernal', who: 'Vi, Orianna', short: 'Dragon', d: 2.8 },
+  { t: 1065, label: 'Kill sur Darius', who: 'toi, Vi', short: 'Kill', d: 3.1, mine: true },
+  { t: 1210, label: 'Héraut', who: 'Vi', short: 'Héraut', d: 1.8 },
+  { t: 1410, label: 'Baron Nashor', who: 'équipe entière', short: 'Baron', d: 9.7, mine: true },
+  { t: 1565, label: 'Inhibiteur mid', who: 'Orianna, toi', short: 'Inhib.', d: 6.2, mine: true },
+  { t: 1720, label: 'Mort de Jinx', who: 'Jinx, tuée par Kai’Sa', short: 'Mort Jinx', d: -2.4 },
+];
+const X0 = 70, W = 1020, Y0 = 50, H = 320, T = 31.4;
+const xs = m => X0 + (m / T) * W, ys = p => Y0 + H * (1 - p / 100);
+const wcAt = m => { const i = Math.floor(m), f = m - i; return WC[i] + (WC[Math.min(31, i + 1)] - WC[i]) * f; };
+const mmss = s => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+const sgn = d => (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1).replace('.', ',');
+
+class Component extends DCLogic {
+  root = React.createRef();
+  mo() { return { sp: this.props.speed ?? 1, reduced: !!this.props.reduced }; }
+  componentDidMount() {
+    const go = () => {
+      if (!window.Motion) return setTimeout(go, 50);
+      const r = this.root.current, sp = this.props.speed ?? 1;
+      Motion.intro(r, this.mo()); Motion.ambient(r, this.mo());
+      this.t = setTimeout(() => Motion.seal(r, { ...this.mo(), target: r, colors: [Motion.C.mint, Motion.C.gold, Motion.C.white] }), 150 / sp);
+      if (!this.props.reduced) r.querySelectorAll('[data-stack]').forEach(el => el.animate([{ opacity: 0, transform: 'translateY(-26px)' }, { opacity: 1, transform: 'translateY(2px)', offset: 0.75 }, { opacity: 1, transform: 'none' }], { duration: 520 / sp, delay: +el.dataset.delay / sp, easing: Motion.E.ressort, fill: 'backwards' }));
+    };
+    go();
+  }
+  componentWillUnmount() { clearTimeout(this.t); }
+  renderVals() {
+    const curve = WC.map((p, i) => `${i ? 'L' : 'M'}${xs(i === 31 ? T : i).toFixed(1)},${ys(p).toFixed(1)}`).join(' ');
+    const area = `${curve} L${xs(T).toFixed(1)},${ys(0)} L${X0},${ys(0)} Z`;
+    const mx = Math.max(...EVENTS.map(e => Math.abs(e.d)));
+    const ev = EVENTS.map(e => ({ ...e, time: mmss(e.t), dTxt: sgn(e.d), c: e.d >= 0 ? KIND[e.label] || MINT : ROSE }));
+    const costly = [...ev].sort((a, b) => a.d - b.d).slice(0, 3);
+    const best = [...ev].sort((a, b) => b.d - a.d).slice(0, 3);
+    return {
+      root: this.root, curve, area,
+      yt: [[0, 'oklch(0.74 0.11 55 / 0.12)', 'none'], [50, 'oklch(0.74 0.11 55 / 0.45)', '4 5'], [100, 'oklch(0.74 0.11 55 / 0.12)', 'none']].map(([p, c, dash]) => ({ y: ys(p).toFixed(1), ty: (ys(p) + 4).toFixed(1), ly: (ys(p) - 8).toFixed(1), t: `${p} %`, c, dash })),
+      xt: [0, 5, 10, 15, 20, 25, 30].map(m => ({ x: xs(m).toFixed(1), lx: (xs(m) - 40).toFixed(1), t: `${m} min` })),
+      marks: ev.map(e => { const m = e.t / 60; return { ...e, x: xs(m).toFixed(1), y: ys(wcAt(m)).toFixed(1), ly: e.d >= 0 ? -30 : 14, d: 400 + (m / T) * 2600 }; }),
+      events: ev.map((e, i) => { const w = (Math.abs(e.d) / mx) * 50; return { ...e, w: w.toFixed(1), l: (e.d >= 0 ? 50 : 50 - w).toFixed(1), sd: 500 + i * 110 }; }),
+      tops: [{ t: 'Les plus coûteux', c: ROSE, rows: costly, d: 900, tint: 'oklch(0.72 0.21 345 / 0.16)', bd: 'oklch(0.72 0.21 345 / 0.5)' }, { t: 'Les plus rentables', c: MINT, rows: best, d: 1000, tint: 'oklch(0.82 0.14 160 / 0.14)', bd: 'oklch(0.82 0.14 160 / 0.45)' }],
+      goals: [{ t: 'Axe « Morts avant 14 min » : non tenu (2 > 1)', c: ROSE }, { t: "Axe « Écart d'XP @15 » : tenu (+140)", c: MINT }],
+      findings: [
+        { m: 'CS @10', v: '74', ref: 'norme 71 · obj. 78', c: MINT, d: 1800 },
+        { m: "Écart d'or @15", v: '+240', ref: 'norme 0', c: MINT, d: 1860 },
+        { m: 'Morts avant 14 min', v: '2', ref: 'norme 1,1', c: ROSE, d: 1920 },
+        { m: 'Dégâts aux structures / min', v: '412', ref: 'norme 231 · obj. 310', c: MINT, d: 1980 },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>
