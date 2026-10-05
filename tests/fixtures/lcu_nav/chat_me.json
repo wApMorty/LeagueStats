@@ -1,0 +1,19 @@
+{
+  "availability": "chat",
+  "gameName": "Invocateur",
+  "gameTag": "EUW",
+  "icon": 7048,
+  "id": "moi@eu1.pvp.net",
+  "name": "Invocateur",
+  "puuid": "puuid-test-0001",
+  "statusMessage": "Dernier PO avant le split",
+  "summonerId": 2001,
+  "platformId": "EUW1",
+  "lol": {
+    "gameStatus": "outOfGame",
+    "level": "670",
+    "rankedLeagueTier": "DIAMOND",
+    "rankedLeagueDivision": "II",
+    "rankedLeagueQueue": "RANKED_SOLO_5x5"
+  }
+}

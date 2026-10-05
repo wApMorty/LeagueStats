@@ -630,3 +630,34 @@ ne sont pas couvertes.
 **Non vérifié** : le jeton de session sur une requête htmx `POST` (le serveur n'a pas vu la requête dans la
 sonde interrompue) ; à contrôler à la recette.
 
+
+## 10. Relevé des endpoints de navigation (tâche 76, 2026-10-05)
+
+`python scripts/dump_lcu_nav_forms.py` : 19 lectures `GET` sur le client LoL de @pj35 (en partie, aucun lobby ouvert : 3 réponses 404), identités remplacées dans `outputs/lcu_nav_forms/` (ignoré par
+git) ; fixtures réduites et anonymisées dans `tests/fixtures/lcu_nav/`, formes vérifiées par
+`tests/test_client_nav_fixtures.py`. **Aucune écriture, aucun message.**
+
+| Écran | Endpoint (200 sauf mention) | Forme relevée |
+|---|---|---|
+| Profil | `lol-summoner/v1/current-summoner` | `gameName`, `tagLine`, `profileIconId`, `summonerLevel`, `percentCompleteForNextLevel`, `xpSinceLastLevel`, `xpUntilNextLevel`, `privacy` ; `summonerId` et `accountId` sont des entiers (non anonymisés dans les fixtures : ils servent d'URL) |
+| Profil | `lol-ranked/v1/current-ranked-stats` | `queues` (liste) et `queueMap` (par `queueType`) : `tier`, `division`, `leaguePoints`, `wins`, `losses`, `isProvisional`, `provisionalGamesRemaining`, `miniSeriesProgress`, `highestTier` ; **`division` vaut `"NA"` à partir de Maître et `tier` est vide hors classement** ; `RANKED_TFT` y figure aussi (à ignorer) |
+| Profil | `lol-regalia/v2/current-summoner/regalia` | `crestType`, `bannerType`, `selectedPrestigeCrest`, `highestRankedEntry` (`tier`, `division`, `queueType`), `lastSeasonHighestRank` |
+| Profil | `lol-challenges/v1/summary-player-data/local-player` | `overallChallengeLevel`, `totalChallengeScore`, `pointsUntilNextRank`, `positionPercentile`, `categoryProgress` (5 catégories : `current`, `max`, `level`), `title.name`, `topChallenges` (3 : `name`, `descriptionShort`, `currentLevel`, `currentValue`, `nextThreshold`, `percentile`). Les libellés sont dans la langue du client LoL (anglais chez @pj35) |
+| Historique | `lol-match-history/v1/products/lol/current-summoner/matches?begIndex=0&endIndex=19` | `games.games` : **une partie à la fois renvoyée au relevé** (`gameCount` 1, juste après une partie), 20 au plus (SPEC-19) ; chaque entrée : `gameId`, `gameCreation` (ms), `gameDuration` (s), `queueId`, `participants` à **un seul** élément (`championId`, `spell1Id`, `stats.*`, `timeline.lane`) |
+| Historique | `lol-match-history/v1/games/{id}` | 10 `participants` (stats complètes, `item0` à `item6`), `participantIdentities` (noms), `teams` (`win` vaut `"Win"` ou `"Fail"`, `bans`, objectifs) |
+| Collection | `lol-champions/v1/owned-champions-minimal` | 245 champions, **tous possédés** (le point de terminaison ne renvoie que ceux-là) : `id`, `name`, `alias`, `roles`, `purchased`, `freeToPlay` |
+| Collection | `lol-perks/v1/pages` | 14 pages (forme déjà figée par la tâche 86 : `tests/fixtures/lcu_forms/pages.json`) |
+| Collection | `lol-item-sets/v1/item-sets/{summonerId}/sets` | `itemSets` : `title`, `associatedChampions`, `blocks` (`type`, `items` : `id` en **texte**, `count`) |
+| Lobby | `lol-game-queues/v1/queues` | 88 files : `id`, `name`, `category` (`PvP`, `VersusAi`, `Custom`), `gameSelectModeGroup`, `isCustom`, `queueAvailability` (`Available` ou `PlatformDisabled`), `isVisible`, `showPositionSelector` ; 29 sont disponibles et visibles |
+| Lobby | `lol-lobby/v2/lobby`, `.../lobby/members` | **404 hors lobby** (état normal). Formes construites d'après le schéma `/help` du client (`LolLobbyLobbyDto`, `LolLobbyLobbyParticipantDto`), **à confronter à un vrai lobby** |
+| File | `lol-lobby/v2/lobby/matchmaking/search-state` | `searchState` (`Invalid` hors file, `Searching`, `Found`, `Canceled`, `Error`…), `errors`, `lowPriorityData` ; `lol-matchmaking/v1/search` : **404 hors file**, sinon `timeInQueue`, `estimatedQueueTime` (forme d'après `/help`, à confronter) |
+| Social | `lol-chat/v1/me`, `/friends`, `/conversations` | `availability` (`chat`, `away`, `dnd`, `mobile`, `offline`), `gameName`, `gameTag`, `groupName`, `icon`, `statusMessage`, `lol.gameStatus` (`outOfGame`, `inGame`, `hosting_*`, `spectating`), `lol.gameQueueType`, `lol.championId` (texte), `lol.rankedLeagueTier` ; 157 amis, 8 conversations (`lastMessage`, `unreadMessageCount`) |
+
+**Écritures** (noms des fonctions du client, `/help`) : `PostLolLobbyV2Lobby` (`{"queueId": n}`),
+`DeleteLolLobbyV2Lobby`, `PutLolLobbyV2LobbyMembersLocalMemberPositionPreferences`
+(`firstPreference`, `secondPreference`), `PostLolLobbyV2LobbyMatchmakingSearch`,
+`DeleteLolLobbyV2LobbyMatchmakingSearch`. Elles n'ont pas été appelées au relevé.
+
+**Corrections de §4.6** : l'historique peut renvoyer moins de 20 parties ; la collection n'a pas de point de
+terminaison de skins possédés hors champion (hors lot) ; les files de la création de lobby sont limitées aux
+files non personnalisées de la Faille et de l'ARAM (TFT et modes alternatifs hors périmètre, §7).

@@ -1,0 +1,28 @@
+{
+  "queueId": 420,
+  "isCurrentlyInQueue": true,
+  "lobbyId": "party-test-0001",
+  "searchState": "Searching",
+  "timeInQueue": 47.5,
+  "estimatedQueueTime": 190.0,
+  "readyCheck": {
+    "state": "Invalid",
+    "playerResponse": "None",
+    "timer": 0.0,
+    "dodgeWarning": "None",
+    "declinerIds": [],
+    "suppressUx": false
+  },
+  "dodgeData": {
+    "dodgerId": 0,
+    "state": "Invalid"
+  },
+  "errors": [],
+  "lowPriorityData": {
+    "penaltyTimeRemaining": 0.0,
+    "penalizedSummonerIds": [],
+    "reason": "",
+    "penaltyTime": 0.0,
+    "bustedLeaverAccessToken": ""
+  }
+}

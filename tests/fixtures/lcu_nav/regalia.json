@@ -1,0 +1,16 @@
+{
+  "bannerType": "lastSeasonHighestRank",
+  "crestType": "prestige",
+  "highestRankedEntry": {
+    "division": "II",
+    "queueType": "RANKED_SOLO_5x5",
+    "splitRewardLevel": 0,
+    "tier": "DIAMOND"
+  },
+  "lastSeasonHighestRank": "MASTER",
+  "preferredBannerType": "lastSeasonHighestRank",
+  "preferredCrestType": "prestige",
+  "profileIconId": 7048,
+  "selectedPrestigeCrest": 19,
+  "summonerLevel": 670
+}

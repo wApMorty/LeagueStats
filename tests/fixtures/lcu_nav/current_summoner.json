@@ -1,0 +1,24 @@
+{
+  "accountId": 1001,
+  "displayName": "Invocateur",
+  "gameName": "Invocateur",
+  "internalName": "",
+  "nameChangeFlag": false,
+  "percentCompleteForNextLevel": 64,
+  "privacy": "PUBLIC",
+  "profileIconId": 7048,
+  "puuid": "puuid-test-0001",
+  "rerollPoints": {
+    "currentPoints": 0,
+    "maxRolls": 2,
+    "numberOfRolls": 0,
+    "pointsCostToRoll": 250,
+    "pointsToReroll": 250
+  },
+  "summonerId": 2001,
+  "summonerLevel": 670,
+  "tagLine": "EUW",
+  "unnamed": false,
+  "xpSinceLastLevel": 2226,
+  "xpUntilNextLevel": 3456
+}

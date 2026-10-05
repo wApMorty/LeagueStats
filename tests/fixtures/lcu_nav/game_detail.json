@@ -1,0 +1,521 @@
+{
+  "gameCreation": 1791218180358,
+  "gameDuration": 1647,
+  "gameId": 8004684141,
+  "gameMode": "CLASSIC",
+  "gameType": "MATCHED_GAME",
+  "gameVersion": "16.19.823.722",
+  "mapId": 11,
+  "queueId": 420,
+  "platformId": "EUW1",
+  "participants": [
+    {
+      "participantId": 1,
+      "teamId": 100,
+      "championId": 150,
+      "spell1Id": 4,
+      "spell2Id": 14,
+      "stats": {
+        "kills": 7,
+        "deaths": 5,
+        "assists": 1,
+        "champLevel": 16,
+        "totalMinionsKilled": 186,
+        "neutralMinionsKilled": 2,
+        "goldEarned": 11603,
+        "totalDamageDealtToChampions": 28866,
+        "totalDamageTaken": 29393,
+        "visionScore": 15,
+        "wardsPlaced": 5,
+        "win": false,
+        "item0": 3091,
+        "item1": 3071,
+        "item2": 3078,
+        "item3": 3111,
+        "item4": 1029,
+        "item5": 0,
+        "item6": 3340,
+        "perkPrimaryStyle": 8000,
+        "perkSubStyle": 8400
+      },
+      "timeline": {
+        "lane": "JUNGLE",
+        "role": "NONE"
+      }
+    },
+    {
+      "participantId": 2,
+      "teamId": 100,
+      "championId": 517,
+      "spell1Id": 4,
+      "spell2Id": 11,
+      "stats": {
+        "kills": 8,
+        "deaths": 10,
+        "assists": 3,
+        "champLevel": 13,
+        "totalMinionsKilled": 21,
+        "neutralMinionsKilled": 103,
+        "goldEarned": 11590,
+        "totalDamageDealtToChampions": 12183,
+        "totalDamageTaken": 40254,
+        "visionScore": 21,
+        "wardsPlaced": 8,
+        "win": false,
+        "item0": 3152,
+        "item1": 3041,
+        "item2": 2421,
+        "item3": 3111,
+        "item4": 4633,
+        "item5": 0,
+        "item6": 3340,
+        "perkPrimaryStyle": 8000,
+        "perkSubStyle": 8300
+      },
+      "timeline": {
+        "lane": "JUNGLE",
+        "role": "NONE"
+      }
+    },
+    {
+      "participantId": 3,
+      "teamId": 100,
+      "championId": 910,
+      "spell1Id": 12,
+      "spell2Id": 4,
+      "stats": {
+        "kills": 2,
+        "deaths": 5,
+        "assists": 1,
+        "champLevel": 15,
+        "totalMinionsKilled": 236,
+        "neutralMinionsKilled": 0,
+        "goldEarned": 10033,
+        "totalDamageDealtToChampions": 28539,
+        "totalDamageTaken": 18022,
+        "visionScore": 20,
+        "wardsPlaced": 8,
+        "win": false,
+        "item0": 2055,
+        "item1": 2503,
+        "item2": 3171,
+        "item3": 6653,
+        "item4": 3145,
+        "item5": 1058,
+        "item6": 3363,
+        "perkPrimaryStyle": 8200,
+        "perkSubStyle": 8000
+      },
+      "timeline": {
+        "lane": "MIDDLE",
+        "role": "SOLO"
+      }
+    },
+    {
+      "participantId": 4,
+      "teamId": 100,
+      "championId": 110,
+      "spell1Id": 4,
+      "spell2Id": 1,
+      "stats": {
+        "kills": 3,
+        "deaths": 11,
+        "assists": 3,
+        "champLevel": 13,
+        "totalMinionsKilled": 224,
+        "neutralMinionsKilled": 0,
+        "goldEarned": 10635,
+        "totalDamageDealtToChampions": 18507,
+        "totalDamageTaken": 22356,
+        "visionScore": 20,
+        "wardsPlaced": 9,
+        "win": false,
+        "item0": 3302,
+        "item1": 3124,
+        "item2": 0,
+        "item3": 3087,
+        "item4": 0,
+        "item5": 0,
+        "item6": 3363,
+        "perkPrimaryStyle": 8000,
+        "perkSubStyle": 8300
+      },
+      "timeline": {
+        "lane": "BOTTOM",
+        "role": "CARRY"
+      }
+    },
+    {
+      "participantId": 5,
+      "teamId": 100,
+      "championId": 412,
+      "spell1Id": 4,
+      "spell2Id": 14,
+      "stats": {
+        "kills": 1,
+        "deaths": 9,
+        "assists": 13,
+        "champLevel": 12,
+        "totalMinionsKilled": 28,
+        "neutralMinionsKilled": 0,
+        "goldEarned": 8982,
+        "totalDamageDealtToChampions": 9866,
+        "totalDamageTaken": 25309,
+        "visionScore": 83,
+        "wardsPlaced": 29,
+        "win": false,
+        "item0": 3050,
+        "item1": 3869,
+        "item2": 3190,
+        "item3": 3111,
+        "item4": 3082,
+        "item5": 0,
+        "item6": 3364,
+        "perkPrimaryStyle": 8400,
+        "perkSubStyle": 8300
+      },
+      "timeline": {
+        "lane": "BOTTOM",
+        "role": "SUPPORT"
+      }
+    },
+    {
+      "participantId": 6,
+      "teamId": 200,
+      "championId": 14,
+      "spell1Id": 4,
+      "spell2Id": 12,
+      "stats": {
+        "kills": 1,
+        "deaths": 4,
+        "assists": 7,
+        "champLevel": 17,
+        "totalMinionsKilled": 229,
+        "neutralMinionsKilled": 0,
+        "goldEarned": 9907,
+        "totalDamageDealtToChampions": 15408,
+        "totalDamageTaken": 37019,
+        "visionScore": 18,
+        "wardsPlaced": 10,
+        "win": true,
+        "item0": 3211,
+        "item1": 2502,
+        "item2": 3068,
+        "item3": 3047,
+        "item4": 0,
+        "item5": 0,
+        "item6": 3340,
+        "perkPrimaryStyle": 8200,
+        "perkSubStyle": 8400
+      },
+      "timeline": {
+        "lane": "JUNGLE",
+        "role": "NONE"
+      }
+    },
+    {
+      "participantId": 7,
+      "teamId": 200,
+      "championId": 105,
+      "spell1Id": 4,
+      "spell2Id": 11,
+      "stats": {
+        "kills": 13,
+        "deaths": 5,
+        "assists": 10,
+        "champLevel": 16,
+        "totalMinionsKilled": 20,
+        "neutralMinionsKilled": 150,
+        "goldEarned": 13752,
+        "totalDamageDealtToChampions": 18661,
+        "totalDamageTaken": 24579,
+        "visionScore": 29,
+        "wardsPlaced": 7,
+        "win": true,
+        "item0": 3020,
+        "item1": 2031,
+        "item2": 3157,
+        "item3": 3100,
+        "item4": 4645,
+        "item5": 3108,
+        "item6": 3364,
+        "perkPrimaryStyle": 8000,
+        "perkSubStyle": 8300
+      },
+      "timeline": {
+        "lane": "JUNGLE",
+        "role": "NONE"
+      }
+    },
+    {
+      "participantId": 8,
+      "teamId": 200,
+      "championId": 112,
+      "spell1Id": 4,
+      "spell2Id": 12,
+      "stats": {
+        "kills": 10,
+        "deaths": 5,
+        "assists": 14,
+        "champLevel": 16,
+        "totalMinionsKilled": 210,
+        "neutralMinionsKilled": 0,
+        "goldEarned": 13599,
+        "totalDamageDealtToChampions": 35510,
+        "totalDamageTaken": 17721,
+        "visionScore": 17,
+        "wardsPlaced": 10,
+        "win": true,
+        "item0": 3100,
+        "item1": 6655,
+        "item2": 3170,
+        "item3": 4645,
+        "item4": 1058,
+        "item5": 0,
+        "item6": 3340,
+        "perkPrimaryStyle": 8200,
+        "perkSubStyle": 8000
+      },
+      "timeline": {
+        "lane": "MIDDLE",
+        "role": "SOLO"
+      }
+    },
+    {
+      "participantId": 9,
+      "teamId": 200,
+      "championId": 222,
+      "spell1Id": 21,
+      "spell2Id": 4,
+      "stats": {
+        "kills": 9,
+        "deaths": 4,
+        "assists": 11,
+        "champLevel": 14,
+        "totalMinionsKilled": 238,
+        "neutralMinionsKilled": 16,
+        "goldEarned": 15522,
+        "totalDamageDealtToChampions": 34477,
+        "totalDamageTaken": 19384,
+        "visionScore": 41,
+        "wardsPlaced": 14,
+        "win": true,
+        "item0": 1086,
+        "item1": 2523,
+        "item2": 3085,
+        "item3": 3031,
+        "item4": 3036,
+        "item5": 0,
+        "item6": 3363,
+        "perkPrimaryStyle": 8000,
+        "perkSubStyle": 8300
+      },
+      "timeline": {
+        "lane": "BOTTOM",
+        "role": "CARRY"
+      }
+    },
+    {
+      "participantId": 10,
+      "teamId": 200,
+      "championId": 89,
+      "spell1Id": 4,
+      "spell2Id": 3,
+      "stats": {
+        "kills": 7,
+        "deaths": 3,
+        "assists": 23,
+        "champLevel": 12,
+        "totalMinionsKilled": 32,
+        "neutralMinionsKilled": 1,
+        "goldEarned": 11507,
+        "totalDamageDealtToChampions": 14264,
+        "totalDamageTaken": 22167,
+        "visionScore": 100,
+        "wardsPlaced": 33,
+        "win": true,
+        "item0": 3222,
+        "item1": 3190,
+        "item2": 3067,
+        "item3": 3877,
+        "item4": 3111,
+        "item5": 1029,
+        "item6": 3364,
+        "perkPrimaryStyle": 8400,
+        "perkSubStyle": 8000
+      },
+      "timeline": {
+        "lane": "BOTTOM",
+        "role": "SUPPORT"
+      }
+    }
+  ],
+  "participantIdentities": [
+    {
+      "participantId": 1,
+      "player": {
+        "summonerName": "Joueur1",
+        "gameName": "Joueur1",
+        "tagLine": "EUW",
+        "puuid": "puuid-test-0001",
+        "profileIcon": 29
+      }
+    },
+    {
+      "participantId": 2,
+      "player": {
+        "summonerName": "Joueur2",
+        "gameName": "Joueur2",
+        "tagLine": "EUW",
+        "puuid": "puuid-test-0002",
+        "profileIcon": 29
+      }
+    },
+    {
+      "participantId": 3,
+      "player": {
+        "summonerName": "Joueur3",
+        "gameName": "Joueur3",
+        "tagLine": "EUW",
+        "puuid": "puuid-test-0003",
+        "profileIcon": 29
+      }
+    },
+    {
+      "participantId": 4,
+      "player": {
+        "summonerName": "Joueur4",
+        "gameName": "Joueur4",
+        "tagLine": "EUW",
+        "puuid": "puuid-test-0004",
+        "profileIcon": 29
+      }
+    },
+    {
+      "participantId": 5,
+      "player": {
+        "summonerName": "Joueur5",
+        "gameName": "Joueur5",
+        "tagLine": "EUW",
+        "puuid": "puuid-test-0005",
+        "profileIcon": 29
+      }
+    },
+    {
+      "participantId": 6,
+      "player": {
+        "summonerName": "Invocateur",
+        "gameName": "Invocateur",
+        "tagLine": "EUW",
+        "puuid": "puuid-test-0001",
+        "profileIcon": 29
+      }
+    },
+    {
+      "participantId": 7,
+      "player": {
+        "summonerName": "Joueur7",
+        "gameName": "Joueur7",
+        "tagLine": "EUW",
+        "puuid": "puuid-test-0007",
+        "profileIcon": 29
+      }
+    },
+    {
+      "participantId": 8,
+      "player": {
+        "summonerName": "Joueur8",
+        "gameName": "Joueur8",
+        "tagLine": "EUW",
+        "puuid": "puuid-test-0008",
+        "profileIcon": 29
+      }
+    },
+    {
+      "participantId": 9,
+      "player": {
+        "summonerName": "Joueur9",
+        "gameName": "Joueur9",
+        "tagLine": "EUW",
+        "puuid": "puuid-test-0009",
+        "profileIcon": 29
+      }
+    },
+    {
+      "participantId": 10,
+      "player": {
+        "summonerName": "Joueur10",
+        "gameName": "Joueur10",
+        "tagLine": "EUW",
+        "puuid": "puuid-test-0010",
+        "profileIcon": 29
+      }
+    }
+  ],
+  "teams": [
+    {
+      "teamId": 100,
+      "win": "Fail",
+      "bans": [
+        {
+          "championId": 233,
+          "pickTurn": 1
+        },
+        {
+          "championId": 555,
+          "pickTurn": 2
+        },
+        {
+          "championId": 7,
+          "pickTurn": 3
+        },
+        {
+          "championId": 53,
+          "pickTurn": 4
+        },
+        {
+          "championId": 39,
+          "pickTurn": 5
+        }
+      ],
+      "baronKills": 0,
+      "dragonKills": 2,
+      "towerKills": 1,
+      "inhibitorKills": 0,
+      "riftHeraldKills": 1,
+      "hordeKills": 2
+    },
+    {
+      "teamId": 200,
+      "win": "Win",
+      "bans": [
+        {
+          "championId": 429,
+          "pickTurn": 6
+        },
+        {
+          "championId": 360,
+          "pickTurn": 7
+        },
+        {
+          "championId": 23,
+          "pickTurn": 8
+        },
+        {
+          "championId": 238,
+          "pickTurn": 9
+        },
+        {
+          "championId": 804,
+          "pickTurn": 10
+        }
+      ],
+      "baronKills": 0,
+      "dragonKills": 2,
+      "towerKills": 10,
+      "inhibitorKills": 2,
+      "riftHeraldKills": 0,
+      "hordeKills": 1
+    }
+  ]
+}

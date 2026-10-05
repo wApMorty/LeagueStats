@@ -1,0 +1,175 @@
+{
+  "accountId": 1001,
+  "platformId": "EUW1",
+  "games": {
+    "gameBeginDate": "2026-10-05",
+    "gameCount": 3,
+    "gameEndDate": "2026-10-05",
+    "gameIndexBegin": 0,
+    "gameIndexEnd": 2,
+    "games": [
+      {
+        "gameId": 8004684141,
+        "gameCreation": 1791218180358,
+        "gameDuration": 1647,
+        "gameMode": "CLASSIC",
+        "gameType": "MATCHED_GAME",
+        "queueId": 420,
+        "mapId": 11,
+        "participants": [
+          {
+            "participantId": 6,
+            "teamId": 200,
+            "championId": 14,
+            "spell1Id": 4,
+            "spell2Id": 12,
+            "stats": {
+              "kills": 1,
+              "deaths": 4,
+              "assists": 7,
+              "champLevel": 17,
+              "totalMinionsKilled": 229,
+              "neutralMinionsKilled": 0,
+              "goldEarned": 9907,
+              "totalDamageDealtToChampions": 15408,
+              "totalDamageTaken": 37019,
+              "visionScore": 18,
+              "wardsPlaced": 10,
+              "win": true,
+              "item0": 3211,
+              "item1": 2502,
+              "item2": 3068,
+              "item3": 3047,
+              "item4": 0,
+              "item5": 0,
+              "item6": 3340,
+              "perkPrimaryStyle": 8200,
+              "perkSubStyle": 8400
+            },
+            "timeline": {
+              "lane": "JUNGLE",
+              "role": "NONE"
+            }
+          }
+        ],
+        "participantIdentities": [
+          {
+            "participantId": 6,
+            "player": {
+              "summonerName": "Invocateur",
+              "puuid": "puuid-test-0001"
+            }
+          }
+        ]
+      },
+      {
+        "gameId": 8004684104,
+        "gameCreation": 1791214580358,
+        "gameDuration": 1802,
+        "gameMode": "CLASSIC",
+        "gameType": "MATCHED_GAME",
+        "queueId": 420,
+        "mapId": 11,
+        "participants": [
+          {
+            "participantId": 6,
+            "teamId": 200,
+            "championId": 799,
+            "spell1Id": 4,
+            "spell2Id": 12,
+            "stats": {
+              "kills": 1,
+              "deaths": 4,
+              "assists": 7,
+              "champLevel": 17,
+              "totalMinionsKilled": 229,
+              "neutralMinionsKilled": 0,
+              "goldEarned": 9907,
+              "totalDamageDealtToChampions": 15408,
+              "totalDamageTaken": 37019,
+              "visionScore": 18,
+              "wardsPlaced": 10,
+              "win": false,
+              "item0": 3211,
+              "item1": 2502,
+              "item2": 3068,
+              "item3": 3047,
+              "item4": 0,
+              "item5": 0,
+              "item6": 3340,
+              "perkPrimaryStyle": 8200,
+              "perkSubStyle": 8400
+            },
+            "timeline": {
+              "lane": "JUNGLE",
+              "role": "NONE"
+            }
+          }
+        ],
+        "participantIdentities": [
+          {
+            "participantId": 6,
+            "player": {
+              "summonerName": "Invocateur",
+              "puuid": "puuid-test-0001"
+            }
+          }
+        ]
+      },
+      {
+        "gameId": 8004684067,
+        "gameCreation": 1791210980358,
+        "gameDuration": 1275,
+        "gameMode": "ARAM",
+        "gameType": "MATCHED_GAME",
+        "queueId": 450,
+        "mapId": 12,
+        "participants": [
+          {
+            "participantId": 6,
+            "teamId": 200,
+            "championId": 54,
+            "spell1Id": 4,
+            "spell2Id": 12,
+            "stats": {
+              "kills": 1,
+              "deaths": 4,
+              "assists": 7,
+              "champLevel": 17,
+              "totalMinionsKilled": 229,
+              "neutralMinionsKilled": 0,
+              "goldEarned": 9907,
+              "totalDamageDealtToChampions": 15408,
+              "totalDamageTaken": 37019,
+              "visionScore": 18,
+              "wardsPlaced": 10,
+              "win": true,
+              "item0": 3211,
+              "item1": 2502,
+              "item2": 3068,
+              "item3": 3047,
+              "item4": 0,
+              "item5": 0,
+              "item6": 3340,
+              "perkPrimaryStyle": 8200,
+              "perkSubStyle": 8400
+            },
+            "timeline": {
+              "lane": "JUNGLE",
+              "role": "NONE"
+            }
+          }
+        ],
+        "participantIdentities": [
+          {
+            "participantId": 6,
+            "player": {
+              "summonerName": "Invocateur",
+              "puuid": "puuid-test-0001"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
