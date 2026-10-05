@@ -250,3 +250,60 @@ def test_le_parseur_remplit_les_emplacements_survols_et_temps_restant():
     assert mine[2].hover_id == 12  # l'intention d'un allié
     assert [(c.cell_id, c.champion_id) for c in state.enemy_cells] == [(5, 23), (6, 0)]
     assert state.ally_picks == [64] and state.enemy_picks == [23]  # les listes d'avant, inchangées
+
+
+# ---------- bans conseillés et balance (tâche 85) ----------
+
+
+def test_bans_conseilles_structures_pendant_la_phase_de_bans(monitor):
+    monitor.pool_name = None
+    monitor.assistant.get_ban_recommendations.return_value = [
+        ("Zed", 2.94, 1.5, "Aatrox", 12),
+        ("Yone", 1.2, -0.4, "Darius", 8),
+    ]
+    state = DraftState(phase="BAN_PICK", current_actor=1, local_player_cell_id=1)
+    _, payload = snapshot_of(monitor, state, [])
+    assert payload["ban_advice"] == [
+        {"champion": "Zed", "gain": 2.94, "best_response": "Aatrox", "best_response_value": 1.5, "matchups": 12},
+        {"champion": "Yone", "gain": 1.2, "best_response": "Darius", "best_response_value": -0.4, "matchups": 8},
+    ]
+    # le snapshot en demande plus que la console (3), qui garde son nombre
+    assert monitor.assistant.get_ban_recommendations.call_args.kwargs["num_bans"] == 4
+
+
+def test_bans_conseilles_ignores_les_bans_precalcules_indisponibles(monitor):
+    monitor.pool_name, monitor.pool_lane = "Ma pool", "top"
+    monitor.assistant.db.get_pool_ban_recommendations.return_value = [
+        ("Aatrox", 3.0, 1.0, "Garen", 5),  # déjà banni
+        ("Zed", 2.0, 1.0, "Garen", 5),
+    ]
+    state = DraftState(phase="BAN_PICK", ally_bans=[266])
+    _, payload = snapshot_of(monitor, state, [])
+    assert [b["champion"] for b in payload["ban_advice"]] == ["Zed"]
+
+
+def test_pas_de_bans_conseilles_hors_phase_de_bans(monitor):
+    _, payload = snapshot_of(monitor, pick_state(), RANKED)
+    assert payload["ban_advice"] == []
+    monitor.assistant.get_ban_recommendations.assert_not_called()
+
+
+def test_bans_conseilles_en_panne_laissent_le_reste_du_snapshot(monitor):
+    monitor.pool_name = None
+    monitor.assistant.get_ban_recommendations.side_effect = RuntimeError("base")
+    _, payload = snapshot_of(monitor, DraftState(phase="BAN_PICK"), [])
+    assert payload["ban_advice"] == [] and payload["kind"] == "ban"
+
+
+def test_balance_actuelle_et_projetee(monitor):
+    _, payload = snapshot_of(monitor, pick_state(), RANKED)
+    assert payload["projected_probability"] == pytest.approx(0.5731)
+    assert payload["base_probability"] is not None
+
+
+def test_balance_en_phase_de_bans_est_la_position_vide(monitor):
+    monitor.pool_name = None
+    monitor.assistant.get_ban_recommendations.return_value = []
+    _, payload = snapshot_of(monitor, DraftState(phase="BAN_PICK"), [])
+    assert payload["base_probability"] == pytest.approx(0.5)
+    assert payload["projected_probability"] == pytest.approx(0.5)

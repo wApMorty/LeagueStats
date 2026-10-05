@@ -257,6 +257,8 @@ class DraftConfig:
 
     # Polling and interaction
     POLL_INTERVAL: float = 1.0  # Check draft state every N seconds
+    # SPEC-21 : bans conseillés que le snapshot de draft porte (la console en affiche 3).
+    SNAPSHOT_BAN_COUNT: int = 4
     AUTO_HOVER_DELAY: float = 0.5  # Delay before auto-hovering champion
 
     # Feature toggles

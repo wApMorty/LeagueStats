@@ -9,6 +9,7 @@ et des fragments).
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+from ..config_constants import draft_config
 from .search import SearchResult
 from .state import Cell, DraftState
 
@@ -64,6 +65,17 @@ class SnapshotSkipped:
 
 
 @dataclass
+class SnapshotBanAdvice:
+    """Un ban conseillé : la menace de `BanRecommender`, en points de victoire pour 100 parties."""
+
+    champion: str
+    gain: float  # points gagnés si le champion est banni
+    best_response: str  # la meilleure réponse de la pool face à lui
+    best_response_value: float  # sa valeur contre lui, en points
+    matchups: int  # matchups mesurés derrière le chiffre
+
+
+@dataclass
 class DraftSnapshot:
     phase: str = ""
     kind: Optional[str] = None  # "ban" | "pick" : ce qui se joue maintenant
@@ -80,6 +92,9 @@ class DraftSnapshot:
     skipped: List[SnapshotSkipped] = field(default_factory=list)
     depth: int = 0
     base_probability: Optional[float] = None  # position actuelle, côté allié (0 à 1)
+    # Fin de draft attendue si l'on joue le premier du classement (la position actuelle sans lui).
+    projected_probability: Optional[float] = None
+    ban_advice: List[SnapshotBanAdvice] = field(default_factory=list)
     pool_name: Optional[str] = None
     pool: List[str] = field(default_factory=list)
     advice: Optional[str] = None
@@ -161,6 +176,10 @@ def build_snapshot(
         skipped=[SnapshotSkipped(champion, count) for champion, count in analysis.skipped],
         depth=results[0].depth if results else 0,
         base_probability=base,
+        projected_probability=results[0].win_probability if results else base,
+        ban_advice=monitor.ban_advisor.advice(state, draft_config.SNAPSHOT_BAN_COUNT)
+        if is_ban
+        else [],
         pool_name=getattr(monitor, "pool_name", None),
         pool=list(getattr(monitor, "current_pool", []) or []),
         advice=advice,

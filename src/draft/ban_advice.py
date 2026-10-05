@@ -25,6 +25,7 @@ import sys
 from typing import List, Optional
 
 from ..analysis.pool_value import dominant_lane
+from .snapshot import SnapshotBanAdvice
 from .state import DraftState
 
 # Candidats lus en base avant filtrage des indisponibles : assez pour qu'il en
@@ -61,7 +62,9 @@ class BanAdvisor:
             print(f"[WARNING] Lane dominante du pool introuvable, bans toutes lanes : {e}")
             return None
 
-    def _recommendations(self, state: Optional[DraftState] = None) -> List[tuple]:
+    def _recommendations(
+        self, state: Optional[DraftState] = None, limit: int = _SHOWN_BANS
+    ) -> List[tuple]:
         """Les meilleurs bans disponibles pour la pool, pire menace d'abord.
 
         Les bans précalculés en base ne servent que pour un pool à rôle déclaré :
@@ -78,14 +81,34 @@ class BanAdvisor:
             if usable:
                 if self.m.verbose:
                     print(f"[DEBUG] Using pre-calculated bans for pool '{self.m.pool_name}'")
-                return usable[:_SHOWN_BANS]
+                return usable[:limit]
 
         return self.m.assistant.get_ban_recommendations(
             self.m.current_pool,
-            num_bans=_SHOWN_BANS,
+            num_bans=limit,
             lane=self._ban_lane(state),
             exclude_champions=unavailable,
         )
+
+    def advice(self, state: DraftState, limit: int) -> List[SnapshotBanAdvice]:
+        """Les bans conseillés, structurés pour le client (SPEC-21 tâche 85). Ne lève jamais."""
+        try:
+            return [
+                SnapshotBanAdvice(
+                    champion=enemy,
+                    gain=threat,
+                    best_response=best_champion,
+                    best_response_value=best_value,
+                    matchups=matchups,
+                )
+                for enemy, threat, best_value, best_champion, matchups in (
+                    row[:5] for row in self._recommendations(state, limit)
+                )
+            ]
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            if self.m.verbose is True:
+                print(f"[WARNING] Bans conseillés indisponibles: {e}")
+            return []
 
     def handle_auto_ban_hover(self, state: DraftState) -> None:
         """Handle auto-ban-hover when it's our turn to ban."""

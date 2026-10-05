@@ -167,6 +167,10 @@ class DraftRecommender:
     def _publish(self, state: DraftState, analysis: Analysis) -> None:
         """Snapshot du tick sur le bus, s'il y en a un. Best-effort : jamais d'exception."""
         try:
+            if analysis.base_probability is None:  # phase de bans, ou aucun ennemi
+                analysis.base_probability = self._base_probability(
+                    self._placed(state.ally_picks, state), self._placed(state.enemy_picks, state)
+                )
             snapshot = build_snapshot(self.m, state, analysis, self._advice(state))
             self.m.last_snapshot = snapshot
             bus = getattr(self.m, "bus", None)

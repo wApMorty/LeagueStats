@@ -132,7 +132,7 @@ SPEC-21 §5 :
 | 55 | Lancement : `--client`, option 7 du menu (Quitter en 8), Live Coach en fil sans entrée console, message `[INFO]`/`[ALERTE]` + tests | 3 | 49, 70 | ✅ 2026-10-05 : 14 tests ; point d'entrée validé par @pj35 ; `DraftMonitor(console_input=False)`, le fil attend le client LoL (15 s) ; `LcuEvents` lancé ; **recette @pj35** : `python lol_coach.py --client` avec le vrai client LoL ouvert puis fermé |
 | **Lot 2 — Draft Alchimie (51 pts)** | | | | |
 | 72 | `DraftSnapshot`, recommandations structurées, sortie console identique | 5 | 70 | ✅ 2026-10-05 : 11 tests ; sortie console identique (chaînes relevées avant la refonte) ; `DraftSnapshot` publié sur le bus (sujet `draft`), delta face à la position actuelle (`GameEvaluator.win_probability`) ; emplacements, survols et temps restant lus dans le champ select |
-| 85 | Bans conseillés et balance dans le snapshot | 3 | 72 | ⬜ |
+| 85 | Bans conseillés et balance dans le snapshot | 3 | 72 | ✅ 2026-10-05 : 6 tests ; `ban_advice` structuré (gain, meilleure réponse, matchups ; 4 bans, la console en garde 3), balance actuelle et projetée (`GameEvaluator`, pas `winprob` qui reste le modèle de partie) ; « si X est verrouillé » = la probabilité du classement de X |
 | 86 | Assets Data Dragon locaux et formes LCU de la draft | 5 | 49 | ⬜ |
 | 74 | Actions de draft : survoler, verrouiller, bannir, corriger un rôle | 5 | 72 | ⬜ |
 | 73 | Draft, cadre : en-tête, sceaux, balance, consommateur SSE | 5 | 72, 84, 86 | ⬜ |
