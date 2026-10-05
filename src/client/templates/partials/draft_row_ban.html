@@ -1,0 +1,35 @@
+{#- Phase de bans : les bans conseillés pour la pool, et le bouton « Bannir X » (libellé et cible
+    posés par draft.js d'après la sélection). -#}
+<div class="d-row-head" data-key="row-head" data-sig="{{ [v.phase, v.pool_name, v.state.my_ban_id]|sig }}">
+  <div class="d-row-titles">
+    <span class="d-row-title">Bans conseillés · menaces pour ton pool</span>
+    <span class="d-row-sub">{% if v.pool_name %}Pool {{ v.pool_name }} · {% endif %}gain de victoire estimé si le champion est banni</span>
+  </div>
+  <div class="d-row-actions">
+    {% if v.state.my_ban_id %}
+    <span class="d-done" data-banned>{{ v.strips.me.name }} banni</span>
+    {% else %}
+    <button type="button" class="d-act d-act-ban" data-act="ban" disabled>Bannir</button>
+    {% endif %}
+  </div>
+</div>
+<div class="d-cards d-cards-ban" data-key="cards" data-sig="{{ v.ban_cards|sig }}">
+  {% for c in v.ban_cards %}
+  <div class="d-card" data-rise data-tilt data-delay="{{ c.delay if v.intro else 0 }}" data-champ="{{ c.champion_id or '' }}"
+       style="--hc: {{ c.hue }}" role="button" tabindex="0">
+    <span class="d-card-line" aria-hidden="true"></span>
+    <span class="d-card-corner d-c1" aria-hidden="true"></span><span class="d-card-corner d-c2" aria-hidden="true"></span>
+    <span class="d-card-corner d-c3" aria-hidden="true"></span><span class="d-card-corner d-c4" aria-hidden="true"></span>
+    <div class="d-card-top">
+      <div class="d-card-portrait">{% if c.img %}<img src="{{ c.img }}" alt="">{% endif %}</div>
+      <div class="d-card-id"><div class="d-card-name">{{ c.name }}</div><div class="d-card-sub">Menace pour ton pool</div></div>
+      <div class="d-card-score"><div class="d-card-big">{{ c.gain }}</div><div class="d-card-delta up">pts si banni</div></div>
+    </div>
+    <div class="d-card-text">{{ c.line }}</div>
+    <div class="d-card-state" data-state>Viser</div>
+  </div>
+  {% endfor %}
+  {% if not v.ban_cards %}
+  <div class="d-empty-row">Aucune menace identifiée pour ton pool : ouvre le grimoire pour choisir à la main.</div>
+  {% endif %}
+</div>

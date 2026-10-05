@@ -1,3 +1,6 @@
-{#- Rangée basse : bans conseillés (tâche 87), recommandations (88), skins (90). Ses enfants sont
-    synchronisés par clé ; la ligne de conseil est toujours là. -#}
+{#- Rangée basse : bans conseillés (phase de bans, tâche 87), recommandations (picks, 88), skins (90).
+    Chaque enfant est synchronisé par clé ; la ligne de conseil est toujours là. -#}
+{% if v.phase == 'ban' %}
+{% include "partials/draft_row_ban.html" %}
+{% endif %}
 <div class="d-advice" data-key="advice" data-sig="{{ v.advice|sig }}"><span>« {{ v.advice }} »</span></div>

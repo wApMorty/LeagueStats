@@ -54,9 +54,14 @@
     const template = document.createElement("template");
     template.innerHTML = html;
     const fresh = [];
+    const previousKind = ctx.state?.kind;
     sync(ctx.sync, template.content, fresh);
-    fresh.forEach(animate);
     readState();
+    const reveal = previousKind === "ban" && ctx.state && ctx.state.kind !== "ban";
+    if (reveal) staggerReveal(fresh);
+    fresh.forEach(animate);
+    if (reveal) revealBans(fresh);
+    paintRow();
     listeners.forEach((listener) => listener(ctx.state, fresh));
   }
 
@@ -187,6 +192,93 @@
     ctx.raf = requestAnimationFrame(step);
   }
 
+  // ---------- phase de bans (tâche 87) ----------
+
+  const POP = [
+    { opacity: 0, transform: "scale(.2) rotate(-60deg)" },
+    { opacity: 1, transform: "scale(1.15)", offset: 0.7 },
+    { opacity: 1, transform: "none" },
+  ];
+
+  /** Sélection et libellés de la rangée : cartes de ban, bouton « Bannir X ». */
+  function paintRow() {
+    const state = ctx.state;
+    if (!state) return;
+    if (state.kind !== "ban") ctx.banSel = null;
+    else if (state.my_ban_id) ctx.banSel = state.my_ban_id;
+    else if (!ctx.banSel) ctx.banSel = state.ban_hover_id || state.bans[0] || null;
+    ctx.stage.querySelectorAll(".d-cards-ban .d-card").forEach((card) => {
+      const id = +card.dataset.champ;
+      const selected = id === ctx.banSel;
+      card.classList.toggle("is-sel", selected);
+      card.querySelector("[data-state]").textContent =
+        id === state.my_ban_id ? "Banni" : selected ? "Visé" : "Viser";
+    });
+    const button = ctx.stage.querySelector('[data-act="ban"]');
+    if (button) {
+      const name = state.names[String(ctx.banSel)] || ctx.banName;
+      button.textContent = name ? `Bannir ${name}` : "Bannir";
+      button.disabled = !ctx.banSel || !name;
+    }
+  }
+
+  /** Vise un ban (carte ou grimoire) : l'aperçu part dans le client par un survol de ban. */
+  function aimBan(id, name) {
+    if (!ctx.state || ctx.state.kind !== "ban" || ctx.state.my_ban_id || ctx.banSel === id) return;
+    ctx.banSel = id;
+    ctx.banName = name;
+    paintRow();
+    if (!Motion.opts().reduced) Motion.bloom(ctx.stage.querySelector("[data-ban-me]"), Motion.opts());
+    post("/draft/action/hover_ban", { champion_id: id });
+  }
+
+  /** Tampon sur mon ban : retour d'échelle, explosion magenta, secousse de l'écran. */
+  function banStamp() {
+    const el = ctx.stage.querySelector("[data-ban-me]");
+    if (!el || Motion.opts().reduced) return;
+    el.animate(
+      [
+        { transform: "scale(2.4) rotate(-30deg)", opacity: 0 },
+        { transform: "scale(.9) rotate(6deg)", opacity: 1, offset: 0.6 },
+        { transform: "none", opacity: 1 },
+      ],
+      { duration: 560, easing: Motion.E.sceau },
+    );
+    setTimeout(() => {
+      const [x, y] = Motion.center(el);
+      const C = Motion.C;
+      Motion.burst(x, y, { n: 130, speed: 11, glyphs: 14, ringR: 220, ringW: 6, colors: [C.magenta, C.rose, C.white] });
+      Motion.shake(ctx.stage, 6, 360);
+    }, 300);
+  }
+
+  async function confirmBan() {
+    if (!ctx.banSel) return;
+    const done = await post("/draft/action/ban", { champion_id: ctx.banSel });
+    if (done) banStamp();
+  }
+
+  /** Les picks adverses arrivent après les bans : 700 ms puis 150 ms d'écart (README, « Ban »). */
+  function staggerReveal(fresh) {
+    if (Motion.opts().reduced) return;
+    let index = 0;
+    fresh
+      .flatMap((node) => [...(node.matches(".d-member-enemy") ? [node] : []), ...node.querySelectorAll(".d-member-enemy")])
+      .forEach((node) => (node.dataset.delay = String(700 + index++ * 150)));
+  }
+
+  /** Les bans adverses se révèlent en cascade de 120 ms, chacun avec sa gerbe. */
+  function revealBans(fresh) {
+    if (Motion.opts().reduced) return;
+    const C = Motion.C;
+    fresh
+      .flatMap((node) => [...node.querySelectorAll(".d-ban-foe.d-ban-done")])
+      .forEach((el, i) => {
+        el.animate(POP, { duration: 520, delay: i * 120, easing: Motion.E.ressort, fill: "backwards" });
+        setTimeout(() => Motion.burstAt(el, { n: 22, speed: 5, ringR: 46, ringW: 3, colors: [C.rose, C.violet] }), i * 120 + 260);
+      });
+  }
+
   // ---------- mise à l'échelle ----------
 
   function fit() {
@@ -256,6 +348,12 @@
     };
     fit();
     readState();
+    paintRow();
+    stage.addEventListener("click", (event) => {
+      const card = event.target.closest(".d-cards-ban .d-card");
+      if (card) return aimBan(+card.dataset.champ, card.querySelector(".d-card-name").textContent);
+      if (event.target.closest('[data-act="ban"]')) confirmBan();
+    });
     addEventListener("resize", () => ctx.alive() && fit());
     const timer = setInterval(() => {
       if (ctx.alive()) return tick();
@@ -281,6 +379,7 @@
       return ctx?.scale ?? 1;
     },
     select,
+    aimBan,
     post,
     toast,
     refresh,

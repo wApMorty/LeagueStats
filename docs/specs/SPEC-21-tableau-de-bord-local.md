@@ -434,7 +434,7 @@ Les tâches 48, 49, 55, 68, 69, 70 et 84 sont faites (84 : la mesure du p95 rest
 | 86 | ✅ Assets et formes LCU de la draft : `assets.py` (Data Dragon local, version configurable, cache disque, `/assets/...`, `runesReforged.json`) ; relevé des formes LCU en lecture seule (skins possédés, pages de runes, sorts, actions et bans du champ select) figées en `tests/fixtures/` | 5 | 49 |
 | 74 | ✅ Actions de draft : survoler, verrouiller, bannir, corriger un rôle ; garde de phase et de tour ; refus lisible sans appel LCU ; tests avec faux LCU | 5 | 72 |
 | 73 | ✅ Draft, cadre : gabarit plein écran sans navigation, en-tête, sceaux d'équipe, balance, chrono, consommateur SSE (`fetch` avec jeton), fragments rechargés sur le bus | 5 | 72, 84, 86 |
-| 87 | Draft, phase de bans : mon ban, aperçu, bans cachés, « Bans conseillés », « Bannir X », tampon, révélation en cascade | 5 | 73, 74, 85 |
+| 87 | ✅ Draft, phase de bans : mon ban, aperçu, bans cachés, « Bans conseillés », « Bannir X », tampon, révélation en cascade | 5 | 73, 74, 85 |
 | 88 | Draft, phase de picks : 4 cartes de recommandation, survol (éclosion, runes), « Verrouiller X », sceau apposé | 5 | 73, 74 |
 | 89 | Draft, grimoire des champions : overlay, recherche sans accents, rôle, pool, tri, indisponibles et raison, barre basse | 5 | 88 |
 | 90 | Draft, sélection de skin : rangée basse après verrouillage, possession lue dans le LCU, splash en fond, écriture du choix | 3 | 86, 88 |

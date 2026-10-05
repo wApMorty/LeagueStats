@@ -58,6 +58,11 @@ def fr(value: float, digits: int = 1) -> str:
     return f"{value:.{digits}f}".replace(".", ",")
 
 
+def signed(value: float, digits: int = 1) -> str:
+    """Écart signé : « + » ou « − » (vrai signe moins), virgule décimale."""
+    return ("+" if value >= 0 else "−") + fr(abs(value), digits)
+
+
 def games_short(games: Optional[int]) -> str:
     if games is None:
         return "—"
@@ -262,7 +267,7 @@ def recommendations(snapshot: Dict[str, Any], champions: Champions) -> List[Dict
                 "delta": (
                     None
                     if delta is None
-                    else ("+" if delta >= 0 else "−") + fr(abs(delta)) + " pts"
+                    else signed(delta) + " pts"
                 ),
                 "up": delta is None or delta >= 0,
                 "line": f"Suite attendue : {variation}" if variation else "Suite attendue : —",
@@ -283,7 +288,7 @@ def ban_cards(snapshot: Dict[str, Any], champions: Champions) -> List[Dict[str, 
                 "img": champions.image(advice["champion_id"]),
                 "hue": BAN_HUES[index % len(BAN_HUES)],
                 "gain": "+" + fr(advice["gain"]),
-                "line": f"Ta meilleure réponse : {advice['best_response']} ({fr(advice['best_response_value'])} pts)",
+                "line": f"Ta meilleure réponse : {advice['best_response']} ({signed(advice['best_response_value'])} pts)",
                 "delay": 500 + index * 90,
             }
         )

@@ -370,3 +370,94 @@ def test_aides_de_format():
 def test_script_servi_et_chargé_par_la_coque(client):
     assert client.get("/static/draft.js").status_code == 200
     assert 'src="/static/draft.js"' in client.get("/").text
+# ---------- phase de bans (tâche 87) ----------
+
+
+def advice(champion, champion_id, gain, response="Aatrox", value=1.5):
+    from src.draft.snapshot import SnapshotBanAdvice
+
+    return SnapshotBanAdvice(champion, champion_id, gain, response, value, 12)
+
+
+def test_bans_conseilles_cartes_gain_et_justification(client, bus):
+    bus.publish(
+        "draft",
+        ban_snapshot(
+            ban_advice=[
+                asdict(advice("Darius", 122, 2.94)),
+                asdict(advice("Yone", 777, 1.2, "Garen", -0.4)),
+            ],
+            pool_name="GRIND",
+        ),
+    )
+    html = client.get("/draft/stage").text
+    assert "Bans conseillés · menaces pour ton pool" in html and "Pool GRIND" in html
+    assert html.count('class="d-card"') == 2
+    assert "+2,9" in html and "pts si banni" in html and "+1,2" in html
+    assert (
+        "Ta meilleure réponse : Aatrox (+1,5 pts)" in html and "Garen (−0,4 pts)" in html
+    )
+    assert 'data-champ="122"' in html and 'src="/assets/champion/Darius.png"' in html
+    assert (
+        '<button type="button" class="d-act d-act-ban" data-act="ban" disabled>' in html
+    )
+
+
+def test_bans_conseilles_etat_du_script(client, bus):
+    bus.publish("draft", ban_snapshot(ban_advice=[asdict(advice("Darius", 122, 2.9))]))
+    state = state_of(client.get("/draft/stage").text)
+    assert state["bans"] == [122] and state["names"]["122"] == "Darius"
+    assert state["kind"] == "ban" and state["my_ban_id"] == 0
+
+
+def test_ban_pose_remplace_le_bouton_par_le_constat(client, bus):
+    bus.publish(
+        "draft",
+        ban_snapshot(
+            my_ban=asdict(SnapshotBan(122, "Darius", "ally")),
+            ban_advice=[asdict(advice("Darius", 122, 2.9))],
+        ),
+    )
+    html = client.get("/draft/stage").text
+    assert "Darius banni" in html and 'data-act="ban"' not in html
+    assert state_of(html)["my_ban_id"] == 122
+
+
+def test_sans_menace_identifiee_le_message_propose_le_grimoire(client, bus):
+    bus.publish("draft", ban_snapshot(ban_advice=[]))
+    html = client.get("/draft/stage").text
+    assert "Aucune menace identifiée" in html and 'class="d-card"' not in html
+
+
+def test_rangee_de_bans_absente_en_phase_de_picks(client, bus):
+    bus.publish("draft", pick_snapshot())
+    html = client.get("/draft/stage").text
+    assert "Bans conseillés" not in html and 'data-act="ban"' not in html
+
+
+def test_noms_de_ban_echappes(client, bus):
+    bus.publish(
+        "draft",
+        ban_snapshot(ban_advice=[asdict(advice("<b>x</b>", 1, 1.0, "<i>y</i>"))]),
+    )
+    html = client.get("/draft/stage").text
+    assert (
+        "<b>x</b>" not in html
+        and "&lt;b&gt;x&lt;/b&gt;" in html
+        and "<i>y</i>" not in html
+    )
+
+
+def test_js_servi_sans_erreur_de_syntaxe():
+    import shutil
+    import subprocess
+    from pathlib import Path
+
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node absent")
+    path = Path(__file__).parent.parent / "src" / "client" / "static" / "draft.js"
+    assert (
+        subprocess.run([node, "--check", str(path)], capture_output=True).returncode
+        == 0
+    )
