@@ -1,73 +1,198 @@
-/* Coque du client LeagueStats (SPEC-21 tâche 68).
-   Les jetons de couleur et de motion ci-dessous sont provisoires : la tâche 69 les remplace par
-   le système de thèmes et de motion (SPEC-21 §4.3). */
+/* Client LeagueStats, thème « Alchimie » (SPEC-21, docs/design/client_alchimie/README.md).
+   Couleurs en OKLCH : source de vérité du thème. Les courbes de motion reprennent `Motion.E`
+   (motion.js) ; les durées propres aux animations sont dans motion.js. */
+
+@font-face { font-family: "Cormorant Garamond"; font-weight: 600; font-style: normal;
+  font-display: swap; src: url("/static/fonts/cormorant-garamond-600.woff2") format("woff2"); }
+@font-face { font-family: "Cormorant Garamond"; font-weight: 500; font-style: italic;
+  font-display: swap; src: url("/static/fonts/cormorant-garamond-500-italic.woff2") format("woff2"); }
+@font-face { font-family: "Alegreya Sans"; font-weight: 400; font-style: normal;
+  font-display: swap; src: url("/static/fonts/alegreya-sans-400.woff2") format("woff2"); }
+@font-face { font-family: "Alegreya Sans"; font-weight: 500; font-style: normal;
+  font-display: swap; src: url("/static/fonts/alegreya-sans-500.woff2") format("woff2"); }
+@font-face { font-family: "Alegreya Sans"; font-weight: 700; font-style: normal;
+  font-display: swap; src: url("/static/fonts/alegreya-sans-700.woff2") format("woff2"); }
+@font-face { font-family: "Noto Sans Runic"; font-weight: 400; font-style: normal;
+  font-display: swap; src: url("/static/fonts/noto-sans-runic.woff2") format("woff2"); }
+
 :root {
   color-scheme: dark;
-  --bg: #0b0d12;
-  --surface: #11141b;
-  --line: #1d2230;
-  --text: #e6e9f0;
-  --muted: #8b93a7;
-  --accent: #3b6cff;
-  --ok: #3ecf8e;
-  --alert: #e5484d;
-  --bar-h: 36px;
+
+  /* Fonds */
+  --bg: oklch(0.15 0.02 170);
+  --bg-chrome: oklch(0.13 0.018 170);
+  --bg-nav: oklch(0.14 0.018 170);
+  --surface: oklch(0.195 0.02 170);
+  --surface-2: oklch(0.185 0.02 170);
+  --surface-pop: oklch(0.23 0.022 170);
+  --overlay: oklch(0.13 0.018 170 / 0.97);
+
+  /* Texte */
+  --ink: oklch(0.94 0.012 120);
+  --ink-2: oklch(0.82 0.015 140);
+  --muted: oklch(0.70 0.02 160);
+  --muted-2: oklch(0.62 0.03 160);
+
+  /* Accents (chaque couleur a sa complémentaire : cuivre/violet, or/bleu, menthe/magenta) */
+  --copper: oklch(0.74 0.11 55);
+  --gold: oklch(0.86 0.13 85);
+  --mint: oklch(0.82 0.13 165);
+  --rose: oklch(0.72 0.21 345);
+  --violet: oklch(0.72 0.20 290);
+  --blue: oklch(0.74 0.15 230);
+  --magenta: oklch(0.70 0.27 345);
+  --rule: oklch(0.74 0.11 55 / 0.2);
+
+  /* Arbres de runes */
+  --tree-precision: oklch(0.86 0.13 85);
+  --tree-domination: oklch(0.70 0.21 20);
+  --tree-sorcellerie: oklch(0.72 0.17 280);
+  --tree-volonte: oklch(0.78 0.15 150);
+  --tree-inspiration: oklch(0.80 0.12 210);
+
+  /* Teinte (H) par rôle */
+  --hue-top: 55;
+  --hue-jungle: 150;
+  --hue-mid: 290;
+  --hue-bot: 85;
+  --hue-support: 230;
+
+  /* Typographie */
+  --font-title: "Cormorant Garamond", Georgia, serif;
+  --font-ui: "Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+  --font-rune: "Noto Sans Runic", serif;
+
+  /* Rayons, ombres, lueurs */
+  --r-card: 6px;
+  --r-tile: 8px;
+  --glow-mint: 0 0 22px oklch(0.8 0.1 165 / 0.35);
+  --shadow-pop: 0 20px 40px oklch(0.08 0.02 170 / 0.6);
+
+  /* Motion : mêmes courbes que `Motion.E` */
+  --ease-standard: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-entree: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-ressort: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-sceau: cubic-bezier(0.3, 0, 0.2, 1);
   --d-rapide: 140ms;
   --d-normal: 260ms;
-  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Cadre */
+  --bar-h: 36px;
+  --nav-w: 220px;
 }
 
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
-  font: 14px/1.5 "Segoe UI", system-ui, sans-serif; overflow: hidden; }
-a { color: var(--accent); }
-h1 { margin: 0 0 12px; font-size: 22px; font-weight: 600; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+  font: 16px/1.5 var(--font-ui); overflow: hidden; }
+a { color: oklch(0.8 0.09 55); }
+a:hover { color: oklch(0.88 0.08 55); }
+button { font: inherit; }
+h1 { margin: 0 0 12px; font: 600 46px/1 var(--font-title); }
 .muted { color: var(--muted); }
+.rune { font-family: var(--font-rune); }
 
 /* Barre de titre dessinée en HTML (fenêtre sans bordure) */
 .titlebar { position: fixed; inset: 0 0 auto 0; height: var(--bar-h); display: flex;
-  align-items: center; background: var(--surface); border-bottom: 1px solid var(--line);
-  z-index: 10; user-select: none; }
-.titlebar-drag { flex: 1; height: 100%; display: flex; align-items: center; padding-left: 14px; }
-.brand { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  align-items: center; z-index: 20; user-select: none;
+  background: linear-gradient(90deg, oklch(0.14 0.03 290), var(--bg-chrome) 30%,
+    var(--bg-chrome) 70%, oklch(0.14 0.03 345)); }
+.titlebar::after { content: ""; position: absolute; inset: auto 0 -1px 0; height: 1px;
+  background: linear-gradient(90deg, var(--copper), oklch(0.7 0.2 290) 30%,
+    oklch(0.8 0.1 165) 60%, oklch(0.72 0.22 345)); }
+.titlebar-drag { flex: 1; height: 100%; display: flex; align-items: center; }
+.brand { width: var(--nav-w); display: flex; align-items: center; gap: 10px; padding-left: 14px;
+  font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.72 0.04 60); }
+.brand svg { width: 16px; height: 16px; overflow: visible; fill: none; stroke: var(--copper);
+  stroke-width: 1; stroke-linejoin: round; }
 .titlebar-buttons { display: flex; height: 100%; }
-.tb-btn { width: 46px; height: 100%; border: 0; background: transparent; color: var(--text);
+.tb-btn { width: 46px; height: 100%; border: 0; background: transparent; color: var(--ink);
   display: grid; place-items: center; cursor: default;
-  transition: background-color var(--d-rapide) var(--ease), color var(--d-rapide) var(--ease); }
+  transition: background-color var(--d-rapide) var(--ease-entree); }
 .tb-btn svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.2; }
-.tb-btn:hover { background: var(--line); }
-.tb-btn:active { background: var(--accent); }
-.tb-close:hover { background: var(--alert); }
+.tb-btn:hover { background: oklch(0.74 0.11 55 / 0.12); }
+.tb-close:hover { background: oklch(0.6 0.19 25); }
 .no-chrome .titlebar-drag, .no-chrome .titlebar-buttons, .no-chrome .resize-handle { display: none; }
 .no-chrome .titlebar { justify-content: flex-end; }
 
 /* Pastille d'état du client LoL */
-.chip { display: inline-flex; align-items: center; gap: 6px; margin-right: 10px; padding: 2px 10px;
+.chip { display: inline-flex; align-items: center; gap: 7px; margin-right: 12px; padding: 2px 12px;
   border-radius: 999px; font-size: 12px; color: var(--muted); background: var(--bg);
-  border: 1px solid var(--line); }
-.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--alert);
-  transition: background-color var(--d-normal) var(--ease); }
-.chip-ok { color: var(--text); }
-.chip-ok .dot { background: var(--ok); }
+  border: 1px solid var(--rule); }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--rose);
+  box-shadow: 0 0 8px var(--rose); }
+.chip-ok { color: var(--ink); }
+.chip-ok .dot { background: oklch(0.8 0.1 165); box-shadow: 0 0 8px oklch(0.8 0.1 165);
+  animation: pulse 2200ms ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
 
 /* Navigation et page : seules `page` et `nav` ont un nom de transition (View Transitions) */
 .view { position: fixed; inset: var(--bar-h) 0 0 0; display: flex; }
-.nav { width: 200px; flex: none; padding: 12px 8px; background: var(--surface);
-  border-right: 1px solid var(--line); view-transition-name: nav; }
-.nav a { display: block; padding: 8px 12px; border-radius: 8px; color: var(--muted);
-  text-decoration: none; transition: background-color var(--d-rapide) var(--ease),
-    color var(--d-rapide) var(--ease); }
-.nav a:hover { background: var(--line); color: var(--text); }
-.nav a[aria-current="page"] { background: var(--line); color: var(--text); }
-.page { flex: 1; min-width: 0; overflow: auto; padding: 24px 28px; view-transition-name: page; }
+.nav { width: var(--nav-w); flex: none; padding: 22px 12px; display: flex; flex-direction: column;
+  gap: 22px; overflow: hidden auto; view-transition-name: nav;
+  border-right: 1px solid oklch(0.7 0.2 290 / 0.22);
+  background: linear-gradient(180deg, oklch(0.16 0.04 290) 0%, var(--bg-nav) 42%,
+    var(--bg-nav) 62%, oklch(0.15 0.035 345) 100%); }
+.nav-group { display: flex; flex-direction: column; gap: 2px; }
+.nav-title { padding: 0 12px 6px; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: oklch(0.74 0.12 var(--h)); }
+.nav-item { position: relative; display: flex; align-items: center; gap: 12px; height: 38px;
+  padding: 0 12px; border-radius: var(--r-card); font-size: 15px; color: oklch(0.82 0.02 140);
+  text-decoration: none; transition: background-color var(--d-rapide) var(--ease-entree); }
+.nav-item:hover { background: oklch(0.74 0.11 55 / 0.06); }
+.nav-item .rune { width: 18px; text-align: center; font-size: 16px; line-height: 1;
+  color: oklch(0.82 0.16 var(--h)); text-shadow: 0 0 10px oklch(0.72 0.18 var(--h) / 0.2); }
+.nav-item[aria-current="page"] { background: linear-gradient(90deg, oklch(0.72 0.18 var(--h) / 0.2),
+  transparent 85%); box-shadow: inset 0 0 0 1px oklch(0.78 0.16 var(--h) / 0.55),
+  0 0 18px oklch(0.72 0.18 var(--h) / 0.2); }
+.nav-item[aria-disabled="true"] { color: oklch(0.55 0.02 160); cursor: default; }
+.nav-item[aria-disabled="true"]:hover { background: none; }
+.nav-item[aria-disabled="true"] .rune { color: oklch(0.6 0.08 var(--h)); text-shadow: none; }
 
-::view-transition-old(page) { animation: page-out var(--d-rapide) var(--ease) both; }
-::view-transition-new(page) { animation: page-in var(--d-normal) var(--ease) both; }
+/* Pied de navigation : thème et réglage Motion */
+.nav-foot { margin-top: auto; display: flex; flex-direction: column; gap: 10px; padding: 0 12px;
+  font-size: 13px; color: var(--muted-2); }
+.nav-foot .row { display: flex; justify-content: space-between; }
+.nav-foot .row b { font-weight: 400; color: oklch(0.8 0.09 55); }
+.seg { display: flex; margin-top: 6px; padding: 2px; border-radius: 15px;
+  border: 1px solid oklch(0.74 0.11 55 / 0.25); }
+.seg button { flex: 1; height: 24px; border: 0; border-radius: 12px; background: transparent;
+  color: oklch(0.75 0.02 150); font-size: 12px; cursor: pointer; }
+:root[data-motion="systeme"] .seg [data-mode="systeme"],
+:root[data-motion="complet"] .seg [data-mode="complet"],
+:root[data-motion="reduit"] .seg [data-mode="reduit"] { background: var(--copper);
+  color: var(--bg); }
+
+/* Page : halos de fond (violet, cyan, magenta) posés sur `--bg` ; la position varie par écran */
+.page { flex: 1; min-width: 0; overflow: auto; padding: 30px 48px; view-transition-name: page;
+  --halo-1: 88% 100%; --halo-2: 0% 0%; --halo-3: 60% 40%;
+  background:
+    radial-gradient(ellipse 900px 700px at var(--halo-1), oklch(0.25 0.09 290 / 0.75), transparent 70%),
+    radial-gradient(ellipse 800px 600px at var(--halo-2), oklch(0.24 0.07 190 / 0.8), transparent 70%),
+    radial-gradient(ellipse 700px 500px at var(--halo-3), oklch(0.23 0.08 345 / 0.55), transparent 70%),
+    var(--bg);
+  background-attachment: local; }
+
+::view-transition-old(page) { animation: page-out var(--d-rapide) var(--ease-entree) both; }
+::view-transition-new(page) { animation: page-in var(--d-normal) var(--ease-entree) both; }
 @keyframes page-out { to { opacity: 0; transform: translateY(-4px); } }
 @keyframes page-in { from { opacity: 0; transform: translateY(8px); } }
 /* Repli sans View Transitions : fondu à l'apparition de la page */
 @supports not (view-transition-name: none) {
-  .page { animation: page-in var(--d-normal) var(--ease) both; }
+  .page { animation: page-in var(--d-normal) var(--ease-entree) both; }
+}
+
+/* Motion réduit : tout est coupé, le changement d'écran devient instantané (SPEC-21 §4.3).
+   « Système » ne coupe que si Windows le demande ; « Complet » anime dans tous les cas. */
+:root[data-motion="reduit"] *, :root[data-motion="reduit"] *::before,
+:root[data-motion="reduit"] *::after, :root[data-motion="reduit"]::view-transition-group(*),
+:root[data-motion="reduit"]::view-transition-old(*), :root[data-motion="reduit"]::view-transition-new(*) {
+  animation: none !important; transition: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  :root[data-motion="systeme"] *, :root[data-motion="systeme"] *::before,
+  :root[data-motion="systeme"] *::after, :root[data-motion="systeme"]::view-transition-group(*),
+  :root[data-motion="systeme"]::view-transition-old(*),
+  :root[data-motion="systeme"]::view-transition-new(*) {
+    animation: none !important; transition: none !important; }
 }
 
 /* Poignées de redimensionnement (les 4 côtés et les 4 coins) */

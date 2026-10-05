@@ -17,8 +17,8 @@ coaching, et en revoyant la draft et le post-game avec le Live Coach. » Ajout l
 **la qualité des animations est un objectif de premier rang** (motion design poussé, thèmes à
 discuter avec @pj35).
 
-**Effort** : ~33 jours, 37 tâches, 163 pts, en six lots utilisables chacun seuls (§5) ; 20 pts
-faits (tâches 48, 49, 68, 70).
+**Effort** : ~33 jours, 37 tâches, 163 pts, en six lots utilisables chacun seuls (§5) ; 25 pts
+faits (tâches 48, 49, 68, 69, 70).
 
 ---
 
@@ -179,7 +179,7 @@ Le motion est un **système**, pas des effets : tout passe par des jetons.
 - **Où le motion compte** : l'entrée dans la draft (picks qui se posent, rôles qui se résolvent,
   recommandation qui change), la file trouvée, la révélation du post-game (courbe de win chance
   qui se trace, impact par événement qui s'empile), les transitions entre sections.
-- **Thème** : variables CSS dans `style.css` (jetons du README du handoff : fonds, texte, accents et leurs complémentaires, arbres de runes, teinte par rôle, ombres), couleurs en OKLCH. Un seul thème, « Alchimie » ; un thème clair serait un second fichier de variables (`static/themes/<nom>.css`), à rouvrir avec ses maquettes (§2). Le réglage Motion est mémorisé dans `user_prefs.json` (champ `motion` de `UserPrefs` : le Live Coach réécrit ce fichier en entier et effacerait une clé étrangère à la dataclass).
+- **Thème** : variables CSS dans `style.css` (jetons du README du handoff : fonds, texte, accents et leurs complémentaires, arbres de runes, teinte par rôle, ombres), couleurs en OKLCH. Un seul thème, « Alchimie » ; un thème clair serait un second fichier de variables (`static/themes/<nom>.css`), à rouvrir avec ses maquettes (§2). Le réglage Motion est mémorisé dans `user_prefs.json` (clé `motion`, hors de `UserPrefs` : `save_user_prefs` la reporte quand le Live Coach réécrit le fichier, et un fichier créé par le seul client laisse le Live Coach poser ses questions habituelles).
 
 ### 4.4 Section Coaching (reprend le contenu de SPEC-21 v1, enrichi)
 
@@ -411,7 +411,7 @@ Numéros à la suite du `TODO.md` (dernière : 67). Les tâches 48 à 56 et 68 �
 2026-10-04 ; **84 à 95 sont ajoutées le 2026-10-05** après le handoff de design. L'ordre d'exécution est
 celui des lots, **réordonnés d'après le handoff** (§2, à valider) : coque, motion, draft, file trouvée et
 transition, coaching et post-game, puis la navigation. Les tâches d'écran renvoient à leur fiche du §4.10.
-Les tâches 48, 49, 68 et 70 sont faites.
+Les tâches 48, 49, 68, 69 et 70 sont faites.
 
 **Lot 1 — Socle, coque et motion (31 pts)** — étapes 1 et 2 du handoff
 
@@ -421,7 +421,7 @@ Les tâches 48, 49, 68 et 70 sont faites.
 | 49 | ✅ Socle : `config_client.py`, `db.py` (lecture seule), `server.py` (fil, idempotent, best-effort), `app.py` (fabrique), jeton de session et contrôle `Host`/`Origin` + tests | 5 | 48 |
 | 68 | ✅ Coque : `window.py`, barre de titre maison (déplacement, poignées de redimensionnement, boutons animés), `base.html`, navigation par sections, transitions de page, états « client LoL fermé » et « base occupée » | 5 | 49 |
 | 70 | ✅ Bus et temps réel : `bus.py`, route SSE, `lcu_events.py` (WebSocket LCU, reconnexion), faux serveur de test | 5 | 49 |
-| 69 | **Jetons, polices et coque « Alchimie »** : jetons OKLCH et `@font-face` locaux dans `style.css` ; `base.html` (barre de titre : logo pentacle, pastille animée, liseré dégradé) ; navigation à trois groupes, entrées sans écran grisées ; pied Thème / Motion ; réglage Motion persisté (`UserPrefs.motion`, `POST /prefs/motion`, `data-motion` sur `<html>`) ; `WINDOW_BACKGROUND` ; tests | 5 | 68 |
+| 69 | ✅ **Jetons, polices et coque « Alchimie »** : jetons OKLCH et `@font-face` locaux dans `style.css` ; `base.html` (barre de titre : logo pentacle, pastille animée, liseré dégradé) ; navigation à trois groupes, entrées sans écran grisées ; pied Thème / Motion ; réglage Motion persisté (`save_motion`, `POST /prefs/motion`, `data-motion` sur `<html>`) ; `WINDOW_BACKGROUND` ; tests | 5 | 68 |
 | 84 | **`motion.js` et banc `/_motion`** : reprise de `motion.js` du handoff (+ `Motion.opts()`), `Motion.intro` et `ambient` sur `htmx:load`, braises coupées en Réduit ; banc `/_motion` (p95 du temps d'image par scène : braises, 1 600 particules, tracé, sceau) ; mesures consignées en §10 | 3 | 69 |
 | 55 | Lancement : `--client` et option 7 du menu (Quitter en 8), Live Coach en fil sans entrée console, message `[INFO]`/`[ALERTE]` + tests | 3 | 49, 70 |
 
@@ -480,7 +480,7 @@ Les tâches 48, 49, 68 et 70 sont faites.
 | 82 | Social en lecture seule : amis, statuts, conversations | 3 | 76 |
 | 83 | Clôture : exe vérifié, `README.md`, `docs/PROJECT_STRUCTURE.md`, `CHANGELOG.md`, statuts, `TODO.md` | 3 | 56, 77–79, 81, 82, 95 |
 
-Total : 31 + 51 + 8 + 39 + 13 + 21 = **163 pts**, 37 tâches, dont 20 pts faits. Chaque lot se clôt par
+Total : 31 + 51 + 8 + 39 + 13 + 21 = **163 pts**, 37 tâches, dont 25 pts faits. Chaque lot se clôt par
 une recette de @pj35 (§6, 10).
 
 ## 6. Critères d'acceptation

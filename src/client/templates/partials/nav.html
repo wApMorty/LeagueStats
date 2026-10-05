@@ -1,0 +1,30 @@
+{#- Navigation : une entrée sans chemin n'a pas encore d'écran, elle reste visible mais grisée. -#}
+{% macro body(item) -%}
+<span class="rune" aria-hidden="true">{{ item.rune }}</span><span>{{ item.label }}</span>
+{%- endmacro %}
+<nav class="nav" aria-label="Sections">
+  {% for group in nav %}
+  <div class="nav-group" style="--h: {{ group.hue }}">
+    <div class="nav-title">{{ group.label }}</div>
+    {% for item in group.items %}
+    {% if item.href %}
+    <a class="nav-item" href="{{ item.href }}" style="--h: {{ item.hue }}"{% if item.key == active %} aria-current="page"{% endif %}>{{ body(item) }}</a>
+    {% else %}
+    <span class="nav-item" aria-disabled="true" title="Lot suivant de SPEC-21" style="--h: {{ item.hue }}">{{ body(item) }}</span>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% endfor %}
+  <div class="nav-foot">
+    <div class="row"><span>Thème</span><b>Alchimie</b></div>
+    <div>
+      <span>Motion</span>
+      <div class="seg" role="group" aria-label="Motion">
+        {% for mode, label in motion_modes %}
+        <button type="button" data-mode="{{ mode }}" aria-pressed="{{ 'true' if mode == motion else 'false' }}"
+                hx-post="/prefs/motion?mode={{ mode }}" hx-swap="none">{{ label }}</button>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</nav>

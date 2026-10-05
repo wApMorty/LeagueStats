@@ -1,18 +1,23 @@
-"""Coque du client LeagueStats (SPEC-21 tâche 68) : pages, états, fenêtre."""
+"""Coque du client LeagueStats (SPEC-21 tâches 68 et 69) : pages, navigation, thème, états, fenêtre."""
 
 import json
 import re
 import sqlite3
 import sys
 import types
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
 from src.client import window
-from src.client.app import SECTIONS, create_app
+from src.client.app import NAV, create_app
 from src.client.lcu_status import LcuProbe
 from src.config_client import client_config
+from src.user_prefs import UserPrefs, load_motion, load_user_prefs, save_motion, save_user_prefs
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+CLIENT_DIR = PROJECT_ROOT / "src" / "client"
 
 LOCAL = "http://127.0.0.1"
 
@@ -38,6 +43,12 @@ def _probe_sans_cache(monkeypatch):
     monkeypatch.setattr(client_config, "LCU_PROBE_TTL_S", 0.0)
 
 
+@pytest.fixture(autouse=True)
+def _prefs_isolees(monkeypatch, tmp_path):
+    """Le réglage Motion vit dans `user_prefs.json` : jamais celui du dépôt."""
+    monkeypatch.setattr("src.user_prefs.get_user_prefs_path", lambda: str(tmp_path / "prefs.json"))
+
+
 def make_client(temp_db, lcu=None) -> TestClient:
     return TestClient(create_app(temp_db, lcu=lcu), base_url=LOCAL, raise_server_exceptions=False)
 
@@ -50,7 +61,7 @@ def test_accueil_est_la_coque(temp_db):
     response = client.get("/")
     html = response.text
     assert response.status_code == 200
-    assert 'aria-current="page"' in html and SECTIONS[0][1] in html
+    assert html.count('aria-current="page"') == 1 and 'href="/" style' in html
     assert html.count('class="resize-handle"') == 8  # 4 côtés, 4 coins
     assert all(f'id="{i}"' in html for i in ("tb-min", "tb-max", "tb-close", "titlebar-drag"))
     assert "pywebview-drag-region" in html
@@ -80,8 +91,104 @@ def test_statiques_servis(temp_db, path, kind):
     assert response.status_code == 200 and kind in response.headers["content-type"]
 
 
+@pytest.mark.parametrize("font", sorted(p.name for p in (CLIENT_DIR / "static/fonts").glob("*")))
+def test_polices_embarquees_servies(temp_db, font):
+    response = make_client(temp_db).get(f"/static/fonts/{font}")
+    assert response.status_code == 200 and len(response.content) > 1000
+
+
 def test_statique_hors_dossier_refuse(temp_db):
     assert make_client(temp_db).get("/static/../app.py").status_code == 404
+
+
+# ---------- navigation et thème « Alchimie » ----------
+
+
+def test_navigation_trois_groupes_et_entrees_sans_ecran_grisees(temp_db):
+    html = make_client(temp_db).get("/").text
+    for group in NAV:
+        assert f'<div class="nav-title">{group.label}</div>' in html
+    items = [item for group in NAV for item in group.items]
+    assert [i.label for i in items if i.href] == ["Accueil"]
+    assert html.count('aria-disabled="true"') == len([i for i in items if not i.href])
+    assert all(f"{i.label}</span>" in html for i in items)
+    assert 'class="rune" aria-hidden="true"' in html  # les runes ne portent jamais le sens
+
+
+def test_pied_de_navigation_theme_et_motion(temp_db):
+    html = make_client(temp_db).get("/").text
+    assert "<b>Alchimie</b>" in html
+    for mode in client_config.MOTION_MODES:
+        assert f'hx-post="/prefs/motion?mode={mode}"' in html
+
+
+def test_jetons_du_handoff_presents_dans_le_css():
+    """Les couleurs OKLCH du README du handoff sont la source de vérité du thème."""
+    readme = (PROJECT_ROOT / "docs/design/client_alchimie/README.md").read_text(encoding="utf-8")
+    tokens = re.findall(r"\| `(--[\w-]+)` \| `(oklch\([^`]+\))`", readme)
+    assert len(tokens) >= 18  # fonds, texte et accents
+    css = (CLIENT_DIR / "static/style.css").read_text(encoding="utf-8")
+    missing = [f"{name}: {value}" for name, value in tokens if f"{name}: {value};" not in css]
+    assert missing == []
+
+
+def test_aucun_calque_du_prototype_ni_appel_externe():
+    assert not list(CLIENT_DIR.rglob("*.dc.html")) and not list(CLIENT_DIR.rglob("support.js"))
+    for path in [*CLIENT_DIR.rglob("*.html"), CLIENT_DIR / "static/style.css"]:
+        assert not re.search(r"https?://(?!127\.0\.0\.1)", path.read_text(encoding="utf-8")), path
+
+
+# ---------- réglage Motion ----------
+
+
+def post_motion(client, mode, token=True):
+    headers = {client_config.TOKEN_HEADER: client.app.state.session_token} if token else {}
+    return client.post(f"/prefs/motion?mode={mode}", headers=headers)
+
+
+def test_motion_complet_par_defaut(temp_db):
+    html = make_client(temp_db).get("/").text
+    assert '<html lang="fr" class="no-chrome" data-motion="complet">' in html
+
+
+def test_motion_choisi_est_memorise_et_rendu(temp_db):
+    client = make_client(temp_db)
+    assert post_motion(client, "reduit").status_code == 204
+    assert load_motion() == "reduit"
+    html = client.get("/").text
+    assert 'data-motion="reduit"' in html
+    assert 'data-mode="reduit" aria-pressed="true"' in html
+
+
+def test_motion_sans_jeton_403_et_rien_n_est_ecrit(temp_db):
+    client = make_client(temp_db)
+    assert post_motion(client, "reduit", token=False).status_code == 403
+    assert load_motion() == client_config.MOTION_DEFAULT
+
+
+def test_motion_valeur_inconnue_400(temp_db):
+    client = make_client(temp_db)
+    assert post_motion(client, "turbo").status_code == 400
+    assert load_motion() == client_config.MOTION_DEFAULT
+
+
+def test_motion_inconnu_dans_le_fichier_retombe_sur_le_defaut(tmp_path):
+    (tmp_path / "prefs.json").write_text('{"motion": "turbo"}', encoding="utf-8")
+    assert load_motion() == client_config.MOTION_DEFAULT
+
+
+def test_motion_garde_les_prefs_du_draft_coach_et_inversement():
+    save_user_prefs(UserPrefs(auto_hover=True, pool_name="GRIND"))
+    assert save_motion("systeme") is True
+    assert load_user_prefs() == UserPrefs(auto_hover=True, pool_name="GRIND")
+    # le draft coach réécrit le fichier en fin de session : le réglage Motion survit
+    save_user_prefs(UserPrefs(auto_hover=False, pool_name="GRIND"))
+    assert load_motion() == "systeme"
+
+
+def test_motion_seul_laisse_le_draft_coach_poser_ses_questions():
+    assert save_motion("reduit") is True
+    assert load_user_prefs() is None  # comme sans fichier : les questions habituelles
 
 
 # ---------- état du client LoL ----------

@@ -1,5 +1,5 @@
-// Coque du client LeagueStats (SPEC-21 tâche 68) : jeton de session, boutons de la barre de
-// titre, redimensionnement par poignées. La classe `no-chrome` (barre de titre et poignées
+// Coque du client LeagueStats (SPEC-21 tâches 68 et 69) : jeton de session, réglage Motion, boutons
+// de la barre de titre, redimensionnement par poignées. La classe `no-chrome` (barre de titre et poignées
 // masquées) n'est retirée que si pywebview annonce une fenêtre sans bordure : en navigateur de
 // repli ou en fenêtre standard, le cadre est celui du système.
 (() => {
@@ -9,6 +9,24 @@
   // Toute requête htmx porte le jeton injecté dans la page (SPEC-21 §4.7).
   document.addEventListener("htmx:configRequest", (event) => {
     event.detail.headers[meta("token-header")] = meta("session-token");
+  });
+
+  // Réglage Motion : appliqué tout de suite ; le `hx-post` du bouton le mémorise (user_prefs.json).
+  document.addEventListener("click", (event) => {
+    const button = event.target.closest(".seg [data-mode]");
+    if (!button) return;
+    root.dataset.motion = button.dataset.mode;
+    button.parentElement.querySelectorAll("[data-mode]").forEach((other) =>
+      other.setAttribute("aria-pressed", String(other === button)),
+    );
+  });
+
+  // La pastille du client LoL est rechargée toutes les quelques secondes : sa pulsation se cale
+  // sur l'horloge du document, sinon elle repartirait de zéro à chaque rechargement.
+  document.addEventListener("htmx:load", (event) => {
+    event.target.getAnimations?.({ subtree: true }).forEach((animation) => {
+      if (animation.animationName === "pulse") animation.startTime = 0;
+    });
   });
 
   const ready = new Promise((resolve) =>

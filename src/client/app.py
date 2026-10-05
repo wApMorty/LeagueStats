@@ -4,22 +4,68 @@ import json
 import secrets
 import sqlite3
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, NamedTuple, Optional, Tuple, Union
 from urllib.parse import urlsplit
 
 import anyio
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sse_starlette.sse import EventSourceResponse
 
 from ..config import get_resource_path
 from ..config_client import client_config
+from ..user_prefs import load_motion, save_motion
 from .lcu_status import LcuProbe
 
-# Sections de la navigation : (clé, libellé, chemin). Chaque écran s'y ajoute à sa tâche.
-SECTIONS = (("coaching", "Coaching", "/"),)
+
+class NavItem(NamedTuple):
+    """Entrée de la navigation ; sans `href`, l'écran n'existe pas encore (entrée grisée)."""
+
+    key: str
+    label: str
+    rune: str  # décorative : toujours accompagnée du libellé
+    hue: int
+    href: Optional[str] = None
+
+
+class NavGroup(NamedTuple):
+    label: str
+    hue: int
+    items: Tuple[NavItem, ...]
+
+
+# Chaque écran reçoit son `href` à sa tâche (SPEC-21 §4.10).
+NAV = (
+    NavGroup(
+        "Coaching",
+        165,
+        (
+            NavItem("accueil", "Accueil", "ᚨ", 165, "/"),
+            NavItem("rang", "Rang", "ᚱ", 245),
+            NavItem("progression", "Progression", "ᛏ", 290),
+            NavItem("parties", "Parties", "ᛗ", 85),
+            NavItem("calibration", "Calibration", "ᛉ", 345),
+        ),
+    ),
+    NavGroup(
+        "Partie",
+        55,
+        (NavItem("draft", "Draft", "ᛟ", 55), NavItem("postgame", "Post-game", "ᛞ", 345)),
+    ),
+    NavGroup(
+        "Client",
+        245,
+        (
+            NavItem("profil", "Profil", "ᛒ", 245),
+            NavItem("collection", "Collection", "ᚲ", 85),
+            NavItem("lobby", "Lobby", "ᚹ", 290),
+            NavItem("social", "Social", "ᛜ", 165),
+        ),
+    ),
+)
+MOTION_LABELS = {"systeme": "Système", "complet": "Complet", "reduit": "Réduit"}
 
 CLIENT_DIR = "src/client"
 
@@ -61,15 +107,19 @@ def create_app(db_path: Union[str, Path], bus: Any = None, lcu: Any = None) -> F
         path = request.url.path
         active = next(
             (
-                k
-                for k, _, href in SECTIONS
-                if path == href or (href != "/" and path.startswith(href))
+                item.key
+                for group in NAV
+                for item in group.items
+                if item.href
+                and (path == item.href or (item.href != "/" and path.startswith(item.href)))
             ),
             None,
         )
         context.update(
-            sections=SECTIONS,
+            nav=NAV,
             active=active,
+            motion=load_motion(),
+            motion_modes=[(m, MOTION_LABELS[m]) for m in client_config.MOTION_MODES],
             lcu_open=probe.is_open(),
             token=app.state.session_token,
             token_header=client_config.TOKEN_HEADER,
@@ -129,6 +179,14 @@ def create_app(db_path: Union[str, Path], bus: Any = None, lcu: Any = None) -> F
     @app.get("/", response_class=HTMLResponse)
     def accueil(request: Request):
         return render(request, "accueil.html")
+
+    @app.post("/prefs/motion")
+    def prefs_motion(mode: str):
+        if mode not in client_config.MOTION_MODES:
+            return JSONResponse({"detail": "mode inconnu"}, status_code=400)
+        if not save_motion(mode):
+            return JSONResponse({"detail": "préférences non enregistrées"}, status_code=500)
+        return Response(status_code=204)
 
     @app.get("/etat/client", response_class=HTMLResponse)
     def etat_client(request: Request):

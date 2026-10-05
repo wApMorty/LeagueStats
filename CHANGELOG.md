@@ -6,6 +6,13 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Feature
 
+- **Client LeagueStats, thème « Alchimie » et coque (SPEC-21 tâche 69)** — jetons de couleur OKLCH du
+  handoff de design, polices embarquées (Cormorant Garamond, Alegreya Sans, Noto Sans Runic, sans appel
+  réseau), barre de titre au pentacle avec liseré dégradé, navigation en trois groupes (les entrées sans
+  écran sont grisées), réglage Motion Système / Complet / Réduit mémorisé dans `user_prefs.json` (clé
+  `motion`, conservée quand le draft coach réécrit le fichier). Le mode Réduit coupe animations et
+  transitions. Le client n'est pas encore lancé depuis le menu (tâche 55) : rien ne change à l'usage.
+
 - **Client LeagueStats, socle, coque et temps réel (SPEC-21 tâches 49, 68 et 70)** — nouveau paquet
   `src/client/` : serveur FastAPI local en fil daemon sur un port libre de `127.0.0.1`, garde `Host`/`Origin`
   et jeton de session sur toute écriture et sur le flux SSE, base ouverte en lecture seule à chaque

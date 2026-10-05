@@ -23,7 +23,12 @@ class ClientConfig:
     WINDOW_TITLE: str = "LeagueStats"
     WINDOW_SIZE: Tuple[int, int] = (1280, 800)
     WINDOW_MIN_SIZE: Tuple[int, int] = (960, 600)
-    WINDOW_BACKGROUND: str = "#0b0d12"
+    WINDOW_BACKGROUND: str = "#030e0a"  # équivalent hexadécimal de `--bg` (style.css)
+
+    # Réglage Motion (SPEC-21 §4.3) : « systeme » suit `prefers-reduced-motion`, « reduit » coupe
+    # tout, « complet » anime quel que soit le système (Windows annonce `reduce` chez @pj35).
+    MOTION_MODES: Tuple[str, ...] = ("systeme", "complet", "reduit")
+    MOTION_DEFAULT: str = "complet"
 
     # État du client LoL (sonde légère, mise en cache) et rafraîchissement de la pastille.
     LCU_PROBE_ENDPOINT: str = "/lol-gameflow/v1/gameflow-phase"
