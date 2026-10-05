@@ -119,7 +119,16 @@ class ClientConfig:
     # (taille du handoff), événements marqués sur la courbe, lignes des « plus coûteux / rentables ».
     PARTIES_LIMIT: int = 50
     GAME_QUEUE_NAMES: Dict[int, str] = field(
-        default_factory=lambda: {420: "Classée solo/duo", 440: "Classée flexible"}
+        default_factory=lambda: {
+            400: "Normale (draft)",
+            420: "Classée solo/duo",
+            430: "Normale (à l'aveugle)",
+            440: "Classée flexible",
+            450: "ARAM",
+            480: "Partie rapide",
+            700: "Clash",
+            1700: "Arena",
+        }
     )
     GAME_CURVE_SIZE: Tuple[int, int] = (1124, 430)
     GAME_CURVE_MARGIN: Tuple[int, int, int, int] = (70, 50, 34, 60)
@@ -147,6 +156,9 @@ class ClientConfig:
             "IMAGINATION": "Imagination",
         }
     )
+
+    # Historique (SPEC-21 tâche 78) : parties demandées au LCU (il en sert 20 au plus, SPEC-19).
+    HISTORY_COUNT: int = 20
 
     # Live Coach lancé en fil par le client : attente du client LoL (secondes) entre deux essais
     # et délai d'arrêt à la fermeture de la fenêtre.

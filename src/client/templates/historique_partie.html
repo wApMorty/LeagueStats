@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% import "partials/lcu_state.html" as lcu %}
+{% block title %}Partie · LeagueStats{% endblock %}
+{% block page_class %} page-client page-historique{% endblock %}
+{% block content %}
+<header class="page-head" data-rise="1">
+  <div class="page-titles">
+    <div class="kicker"><a href="/historique">Historique</a>{% if v.queue %} · {{ v.queue }} · {{ v.duration }} · {{ v.date }}{% endif %}</div>
+    <h1 data-spell="1">{% if v.state %}Partie{% else %}{{ v.result or "Partie" }}{% endif %}</h1>
+  </div>
+  {% if v.captured %}<a class="btn-ghost" href="/parties/{{ v.game_id }}">Voir l'analyse du Live Coach</a>{% endif %}
+</header>
+
+{% if v.state %}
+{{ lcu.message(v.state) }}
+{% else %}
+<div class="teams">
+  {% for team in v.teams %}
+  <section class="panel team {{ 'win' if team.win else 'loss' }}" data-rise="1" data-delay="{{ 100 + loop.index0 * 150 }}">
+    <div class="panel-head">
+      <h2>{{ team.name }} · {{ "victoire" if team.win else "défaite" }}</h2>
+      <span class="muted">{% for count, label in team.objectives %}{{ count }} {{ label }}{% if not loop.last %} · {% endif %}{% endfor %}</span>
+    </div>
+    <div class="players" role="table" aria-label="{{ team.name }}">
+      {% for p in team.players %}
+      <div class="player{{ ' mine' if p.mine }}" role="row">
+        <span class="game-who" role="cell">
+          <span class="portrait {{ 'win' if team.win else 'loss' }}">{% if p.portrait %}<img src="{{ p.portrait }}" alt="">{% endif %}</span>
+          <span><b>{{ p.champion }}</b><i>{{ p.name }}{% if p.tag %}#{{ p.tag }}{% endif %} · niv. {{ p.level }}</i></span>
+        </span>
+        <span class="tab" role="cell">{{ p.kda }}</span>
+        <span class="tab" role="cell">{{ p.cs }} <i class="muted-2">({{ p.cs_min }}/min)</i></span>
+        <span class="tab" role="cell">{{ p.gold }} or</span>
+        <span class="dmg" role="cell"><i style="width: {{ p.damage_percent }}%"></i><b class="tab">{{ p.damage }}</b></span>
+        <span class="items" role="cell">{% for item in p.build %}<img src="/assets/item/{{ item }}.png" alt="">{% endfor %}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% if team.bans %}
+    <div class="team-bans"><span class="muted">Bannissements</span>{% for ban in team.bans %}<span class="portrait loss" title="{{ ban.name }}">{% if ban.portrait %}<img src="{{ ban.portrait }}" alt="{{ ban.name }}">{% endif %}</span>{% endfor %}</div>
+    {% endif %}
+  </section>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

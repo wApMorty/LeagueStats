@@ -41,6 +41,7 @@ from .draft_skins import SkinBook, select_skin
 from .draft_view import Champions, signature, stage_view
 from .lcu_proxy import LcuProxy
 from .lcu_status import LcuProbe
+from .historique import read_game, read_history
 from .profil import read_profile
 from .review import game_page, games_view, load_model
 
@@ -87,6 +88,7 @@ NAV = (
         245,
         (
             NavItem("profil", "Profil", "ᛒ", 245, "/profil"),
+            NavItem("historique", "Historique", "ᛁ", 55, "/historique"),
             NavItem("collection", "Collection", "ᚲ", 85),
             NavItem("lobby", "Lobby", "ᚹ", 290),
             NavItem("social", "Social", "ᛜ", 165),
@@ -237,6 +239,9 @@ def create_app(
             view = view or {"state": "unavailable"}
         return render(request, template, v=view or {"state": "closed"}, **context)
 
+    def captured_ids() -> set:
+        return coaching(lambda repo: repo.captured_game_ids(), set)
+
     @app.get("/sante")
     def sante() -> dict:
         return {"ok": True}
@@ -324,6 +329,24 @@ def create_app(
     @app.get("/profil", response_class=HTMLResponse)
     def profil(request: Request):
         return screen(request, "profil.html", lambda: read_profile(proxy))
+
+    @app.get("/historique", response_class=HTMLResponse)
+    def historique(request: Request):
+        champions, now = Champions(app.state.assets), datetime.now(timezone.utc)
+        return screen(
+            request,
+            "historique.html",
+            lambda: read_history(proxy, captured_ids(), champions, now),
+        )
+
+    @app.get("/historique/{game_id}", response_class=HTMLResponse)
+    def historique_partie(request: Request, game_id: int):
+        champions, now = Champions(app.state.assets), datetime.now(timezone.utc)
+        return screen(
+            request,
+            "historique_partie.html",
+            lambda: read_game(proxy, game_id, captured_ids(), champions, now),
+        )
 
     @app.get("/postgame", response_class=HTMLResponse)
     def postgame(request: Request):

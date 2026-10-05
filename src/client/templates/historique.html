@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% import "partials/lcu_state.html" as lcu %}
+{% block title %}Historique · LeagueStats{% endblock %}
+{% block page_class %} page-client page-historique{% endblock %}
+{% block content %}
+<header class="page-head" data-rise="1">
+  <div class="page-titles">
+    <div class="kicker">Client{% if v.summary %} · {{ v.summary }}{% endif %}</div>
+    <h1 data-spell="1">Historique</h1>
+  </div>
+</header>
+
+{% if v.state %}
+{{ lcu.message(v.state) }}
+{% elif v.empty %}
+<p class="empty">Le client LoL ne liste aucune partie pour l'instant.</p>
+{% else %}
+<div class="games history" role="table" aria-label="Historique des parties">
+  <div class="game-row game-head" role="row">
+    <span role="columnheader">Partie</span><span role="columnheader">Résultat</span><span role="columnheader">KDA</span>
+    <span role="columnheader">Sbires</span><span role="columnheader">Durée</span><span role="columnheader">File</span>
+    <span class="r" role="columnheader">Analyse</span>
+  </div>
+  {% for r in v.rows %}
+  <a class="game-row game-link" href="{{ r.href }}" role="row" data-row="1" data-delay="{{ [loop.index0 * 30, 600]|min }}">
+    <span class="game-who" role="cell">
+      <span class="portrait {{ 'win' if r.win else 'loss' }}">{% if r.portrait %}<img src="{{ r.portrait }}" alt="">{% endif %}</span>
+      <span><b>{{ r.champion }}</b><i>{{ r.date }} · {{ r.ago }}</i></span>
+    </span>
+    <span class="game-result {{ 'win' if r.win else 'loss' }}" role="cell">{{ "Victoire" if r.win else "Défaite" }}</span>
+    <span class="tab" role="cell">{{ r.kda }}</span>
+    <span class="tab" role="cell">{{ r.cs }}</span>
+    <span class="tab" role="cell">{{ r.duration }}</span>
+    <span role="cell">{{ r.queue }}</span>
+    <span class="r" role="cell">{% if r.captured %}<span class="badge">Capturée</span>{% else %}—{% endif %}</span>
+  </a>
+  {% endfor %}
+</div>
+<p class="fine" data-rise="1" data-delay="400">Le client LoL sert ses 20 dernières parties au plus. Une partie « capturée » a aussi été enregistrée par le Live Coach : sa page d'analyse (win chance, impact) est liée depuis son détail.</p>
+{% endif %}
+{% endblock %}

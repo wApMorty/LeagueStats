@@ -992,3 +992,19 @@ h2 { margin: 0; font: 600 24px/1 var(--font-title); }
   border: 1px solid oklch(0.74 0.11 55 / 0.2); background: var(--surface); }
 .top-challenge b { font: 600 20px/1.1 var(--font-title); }
 .top-challenge .fine { flex: 1; }
+
+/* Historique */
+.history .game-row { grid-template-columns: minmax(0, 1.6fr) 100px 110px 130px 70px 160px 100px; }
+.teams { display: flex; flex-direction: column; gap: 24px; }
+.team.win { border-color: oklch(0.82 0.13 165 / 0.35); }
+.team.loss { border-color: oklch(0.72 0.21 345 / 0.35); }
+.player { display: grid; grid-template-columns: minmax(0, 1.5fr) 100px 140px 90px minmax(120px, 0.9fr) 250px; align-items: center; gap: 0 12px;
+  min-height: 54px; padding: 0 8px; border-bottom: 1px solid oklch(0.74 0.11 55 / 0.08); font-size: 15px; }
+.player.mine { background: oklch(0.74 0.11 55 / 0.1); border-radius: var(--r-card); }
+.dmg { position: relative; height: 24px; display: flex; align-items: center; }
+.dmg i { position: absolute; left: 0; top: 4px; bottom: 4px; border-radius: 3px; background: oklch(0.72 0.2 290 / 0.35); }
+.dmg b { position: relative; padding-left: 6px; font-weight: 500; }
+.items { display: flex; gap: 3px; }
+.items img { width: 32px; height: 32px; border-radius: 4px; border: 1px solid var(--rule); }
+.team-bans { margin-top: 12px; display: flex; align-items: center; gap: 8px; }
+.team-bans .portrait { width: 30px; height: 30px; }

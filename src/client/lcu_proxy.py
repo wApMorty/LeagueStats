@@ -22,6 +22,8 @@ READS: Tuple[Pattern[str], ...] = tuple(
         r"/lol-ranked/v1/current-ranked-stats",
         r"/lol-regalia/v2/current-summoner/regalia",
         r"/lol-challenges/v1/summary-player-data/local-player",
+        r"/lol-match-history/v1/products/lol/current-summoner/matches\?begIndex=\d+&endIndex=\d+",
+        r"/lol-match-history/v1/games/\d+",
     )
 )
 

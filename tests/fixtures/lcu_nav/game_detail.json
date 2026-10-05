@@ -357,7 +357,7 @@
         "summonerName": "Joueur1",
         "gameName": "Joueur1",
         "tagLine": "EUW",
-        "puuid": "puuid-test-0001",
+        "puuid": "puuid-test-0201",
         "profileIcon": 29
       }
     },
@@ -367,7 +367,7 @@
         "summonerName": "Joueur2",
         "gameName": "Joueur2",
         "tagLine": "EUW",
-        "puuid": "puuid-test-0002",
+        "puuid": "puuid-test-0202",
         "profileIcon": 29
       }
     },
@@ -377,7 +377,7 @@
         "summonerName": "Joueur3",
         "gameName": "Joueur3",
         "tagLine": "EUW",
-        "puuid": "puuid-test-0003",
+        "puuid": "puuid-test-0203",
         "profileIcon": 29
       }
     },
@@ -387,7 +387,7 @@
         "summonerName": "Joueur4",
         "gameName": "Joueur4",
         "tagLine": "EUW",
-        "puuid": "puuid-test-0004",
+        "puuid": "puuid-test-0204",
         "profileIcon": 29
       }
     },
@@ -397,7 +397,7 @@
         "summonerName": "Joueur5",
         "gameName": "Joueur5",
         "tagLine": "EUW",
-        "puuid": "puuid-test-0005",
+        "puuid": "puuid-test-0205",
         "profileIcon": 29
       }
     },
@@ -417,7 +417,7 @@
         "summonerName": "Joueur7",
         "gameName": "Joueur7",
         "tagLine": "EUW",
-        "puuid": "puuid-test-0007",
+        "puuid": "puuid-test-0207",
         "profileIcon": 29
       }
     },
@@ -427,7 +427,7 @@
         "summonerName": "Joueur8",
         "gameName": "Joueur8",
         "tagLine": "EUW",
-        "puuid": "puuid-test-0008",
+        "puuid": "puuid-test-0208",
         "profileIcon": 29
       }
     },
@@ -437,7 +437,7 @@
         "summonerName": "Joueur9",
         "gameName": "Joueur9",
         "tagLine": "EUW",
-        "puuid": "puuid-test-0009",
+        "puuid": "puuid-test-0209",
         "profileIcon": 29
       }
     },
@@ -447,7 +447,7 @@
         "summonerName": "Joueur10",
         "gameName": "Joueur10",
         "tagLine": "EUW",
-        "puuid": "puuid-test-0010",
+        "puuid": "puuid-test-0210",
         "profileIcon": 29
       }
     }

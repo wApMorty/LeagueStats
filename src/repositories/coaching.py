@@ -224,6 +224,10 @@ class CoachingRepository:
         )
         return dict(zip(self._GAME_KEYS + ("timeline",), rows[0])) if rows else None
 
+    def captured_game_ids(self) -> set:
+        """Les identifiants de toutes les parties capturées (pour relier l'historique du LCU)."""
+        return {row[0] for row in self._rows("SELECT game_id FROM game_records")}
+
     def latest_game_id(self) -> Optional[int]:
         rows = self._rows(
             "SELECT game_id FROM game_records ORDER BY game_creation_utc DESC LIMIT 1"
