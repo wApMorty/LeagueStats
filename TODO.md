@@ -147,7 +147,7 @@ SPEC-21 §5 :
 | 94 | Transition de page signature | 3 | 84, 73 | ✅ 2026-10-05 : 9 tests ; `transition.js` remplace les View Transitions : cercle runique tracé et 44 runes en convergence pendant que le contenu s'assombrit, implosion de 860 ms (= `hx-swap swap:860ms` de #view), puis explosion, éclair cuivre, secousse de 8 px et ouverture par `clip-path` ; la navigation glisse à la sortie de la draft ; Réduit = remplacement instantané ; le voile ne capte aucun clic et un nouveau clic relance la transition ; durées en config ; **rendu à voir par @pj35** (l'extension Chrome était déconnectée, pas de capture) |
 | **Lot 4 — Coaching et post-game (39 pts)** | | | | |
 | 50 | `charts.py` : graphiques SVG purs, tracé animable | 5 | 84 | ✅ 2026-10-05 : 23 tests ; `line_chart` (bandes, filets gradués, repères, dernier point lumineux), `sparkline`, `bar_chart` divergent, `reliability_chart`, `diverging` ; dégradés en `userSpaceOnUse` (une courbe plate ne serait pas dessinée en `objectBoundingBox`) ; classes CSS des graphiques (`ch-*`, `spark-*`) posées avec le premier écran qui les utilise (tâche 51) |
-| 51 | Écran Rang | 5 | 50 | ⬜ |
+| 51 | Écran Rang | 5 | 50 | ✅ 2026-10-05 : 18 tests ; `data.rank_view` (courbes Solo et Flex sur l'échelle de `lp_scale()`, photos qui répètent leur voisine omises de la courbe, histogramme des LP, cartes par file), `/rang`, `CoachingRepository.rank_history()`, `coaching.js` (barres, lignes, pile) ; lecture en `mode=ro`, tables absentes = état vide ; **rendu à voir par @pj35** (aucun test d'interface sans ton accord) |
 | 52 | Écran Progression | 5 | 50 | ⬜ |
 | 53 | Écran Parties : win chance, impact par événement | 5 | 50 | ⬜ |
 | 54 | Écran Calibration | 3 | 50 | ⬜ |

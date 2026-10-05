@@ -17,8 +17,11 @@ from sse_starlette.sse import EventSourceResponse
 from ..config import get_resource_path
 from ..config_client import client_config
 from ..pool_manager import get_user_data_path
+from ..repositories.coaching import CoachingRepository
 from ..user_prefs import load_motion, save_motion
 from .assets import PLACEHOLDER, Assets
+from .data import rank_view
+from .db import read_only
 from .draft_grimoire import grimoire_view
 from .draft_loadout import normalize_page, plan as loadout_plan, runes_payload, send as send_loadout
 from . import found
@@ -52,7 +55,7 @@ NAV = (
         165,
         (
             NavItem("accueil", "Accueil", "ᚨ", 165, "/"),
-            NavItem("rang", "Rang", "ᚱ", 245),
+            NavItem("rang", "Rang", "ᚱ", 245, "/rang"),
             NavItem("progression", "Progression", "ᛏ", 290),
             NavItem("parties", "Parties", "ᛗ", 85),
             NavItem("calibration", "Calibration", "ᛉ", 345),
@@ -196,6 +199,16 @@ def create_app(
             detail=f"{type(exc).__name__} : {exc}",
         )
 
+    def coaching(reader: Callable[[CoachingRepository], Any], empty: Callable[[], Any]) -> Any:
+        """Lit la base en lecture seule ; tables absentes (base non migrée) : l'état vide, pas une 500."""
+        try:
+            with read_only(app.state.db_path) as db:
+                return reader(CoachingRepository(db))
+        except sqlite3.OperationalError as error:
+            if "no such table" not in str(error):
+                raise
+            return empty()
+
     @app.get("/sante")
     def sante() -> dict:
         return {"ok": True}
@@ -203,6 +216,11 @@ def create_app(
     @app.get("/", response_class=HTMLResponse)
     def accueil(request: Request):
         return render(request, "accueil.html")
+
+    @app.get("/rang", response_class=HTMLResponse)
+    def rang(request: Request):
+        view = coaching(lambda repo: rank_view(repo.rank_history()), lambda: rank_view([]))
+        return render(request, "rang.html", v=view)
 
     def draft_snapshot() -> Optional[dict]:
         return bus.latest("draft") if bus is not None else None

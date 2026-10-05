@@ -133,6 +133,25 @@ class CoachingRepository:
         )
         return dict(rows)
 
+    def rank_history(self) -> List[dict]:
+        """Photos de classement complètes (V/D, variation de LP, partie), de la plus ancienne à la plus récente."""
+        keys = (
+            "captured",
+            "queue",
+            "tier",
+            "division",
+            "lp",
+            "wins",
+            "losses",
+            "lp_delta",
+            "game_id",
+        )
+        rows = self._rows(
+            "SELECT captured_utc, queue, tier, division, lp, wins, losses, lp_delta, game_id "
+            "FROM rank_snapshots ORDER BY id"
+        )
+        return [dict(zip(keys, row)) for row in rows]
+
     def rank_snapshots(self) -> List[tuple]:
         """(captured_utc, queue, tier, division, lp), de la plus ancienne à la plus récente."""
         return self._rows(

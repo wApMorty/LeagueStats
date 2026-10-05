@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Rang · LeagueStats{% endblock %}
+{% block page_class %} page-coaching page-rang{% endblock %}
+{% block content %}
+<header class="page-head" data-rise="1">
+  <div class="page-titles">
+    <div class="kicker">Coaching · {{ v.kicker }}</div>
+    <h1 data-spell="1">Rang</h1>
+  </div>
+  <div class="legend">
+    {% for card in v.cards %}
+    <span><i class="legend-line" style="background: linear-gradient(90deg, {{ card.stops|join(', ') }})"></i>{{ card.name }}</span>
+    {% endfor %}
+  </div>
+</header>
+
+{% if v.empty %}
+<p class="empty">Aucune photo de rang pour l'instant : le Live Coach en prend une à son démarrage et une après chaque partie classée.</p>
+{% else %}
+<div class="cols">
+  <div class="main">
+    <section class="panel panel-chart" data-fade="1" data-delay="100">
+      {% if v.chart %}
+      {{ v.chart }}
+      {% else %}
+      <p class="empty">Pas assez de photos pour tracer une courbe : il en faut au moins 2 par file.</p>
+      {% endif %}
+    </section>
+    <section class="panel panel-bars" data-rise="1" data-delay="600">
+      {% if v.bars %}
+      <div class="panel-head"><h2>{{ v.bars.title }}</h2><span class="muted">{{ v.bars.mean }}</span></div>
+      {{ v.bars.svg }}
+      {% else %}
+      <div class="panel-head"><h2>LP par partie</h2></div>
+      <p class="empty">Aucune variation de LP enregistrée : elle n'est lisible qu'après une partie classée.</p>
+      {% endif %}
+    </section>
+  </div>
+  <aside class="side">
+    {% for card in v.cards %}
+    <article class="queue-card" data-rise="1" data-tilt="1" data-delay="{{ 200 + loop.index0 * 120 }}" style="--hue: {{ card.hue }}">
+      <svg class="queue-orbit" data-spin="{{ card.spin }}" viewBox="-60 -60 120 120" aria-hidden="true"><circle r="56"/><path d="M0,-56 L32.9,45.3 L-53.3,-17.3 L53.3,-17.3 L-32.9,45.3 Z"/></svg>
+      <div class="queue-name">{{ card.name }}</div>
+      {% if card.empty %}
+      <p class="muted">Pas encore de photo de rang dans cette file.</p>
+      {% else %}
+      <div class="queue-rank">
+        <svg viewBox="-30 -30 60 60" aria-hidden="true"><circle data-trace="1200" data-delay="{{ 200 + loop.index0 * 120 }}" r="27"/><path data-trace="1400" data-delay="{{ 500 + loop.index0 * 120 }}" d="M0,-20 L17,0 L0,20 L-17,0 Z"/><circle class="queue-core" r="4"/></svg>
+        <div><span class="queue-tier">{{ card.tier }}</span><span class="queue-lp"><span data-count="{{ card.lp }}" data-delay="{{ 200 + loop.index0 * 120 }}">{{ card.lp }}</span> LP</span></div>
+      </div>
+      {% if card.stats %}
+      <div class="queue-stats">
+        {% for value, label in card.stats %}<div><b>{{ value }}</b><span>{{ label }}</span></div>{% endfor %}
+      </div>
+      {% endif %}
+      <div class="queue-note">{{ card.note }}{% if not card.curve %} · pas assez de photos pour une courbe{% endif %}</div>
+      {% endif %}
+    </article>
+    {% endfor %}
+    <p class="fine" data-rise="1" data-delay="500">Échelle continue : 100 LP par division, 400 par palier. Une photo par fin de partie classée ; sous deux photos, une file n'a pas de courbe.</p>
+  </aside>
+</div>
+{% endif %}
+{% endblock %}

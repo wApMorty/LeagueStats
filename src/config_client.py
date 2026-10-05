@@ -4,8 +4,8 @@ Réexportées par config_constants.py comme config_coaching.py
 (`from .config_constants import client_config` reste valable).
 """
 
-from dataclasses import dataclass
-from typing import Tuple
+from dataclasses import dataclass, field
+from typing import Dict, Tuple
 
 
 @dataclass
@@ -62,6 +62,51 @@ class ClientConfig:
     # Partie trouvée (SPEC-21 tâche 93) : secondes laissées pour répondre ; le compte à rebours part de
     # là, moins le `timer` du LCU (forme non relevée : à confirmer en partie réelle).
     FOUND_SECONDS: float = 10.0
+
+    # Écran Rang (SPEC-21 tâche 51) : files suivies, seuil de photos sous lequel une file n'a pas de
+    # courbe (README du handoff), fenêtre du delta de LP, parties de l'histogramme, taille de la courbe.
+    RANK_QUEUE_NAMES: Dict[str, str] = field(
+        default_factory=lambda: {
+            "RANKED_SOLO_5x5": "Classée solo/duo",
+            "RANKED_FLEX_SR": "Classée flexible",
+        }
+    )
+    RANK_MIN_PHOTOS: int = 2
+    RANK_DELTA_DAYS: int = 30
+    RANK_BARS: int = 20
+    RANK_CHART_SIZE: Tuple[int, int] = (1124, 560)
+    RANK_BARS_SIZE: Tuple[int, int] = (1076, 120)
+    RANK_X_TICKS: int = 5
+    RANK_SPARK_SIZE: Tuple[int, int] = (392, 70)
+    # Teinte (H d'OKLCH) de la bande et du libellé de chaque palier.
+    TIER_HUES: Dict[str, int] = field(
+        default_factory=lambda: {
+            "IRON": 40,
+            "BRONZE": 55,
+            "SILVER": 230,
+            "GOLD": 85,
+            "PLATINUM": 215,
+            "EMERALD": 155,
+            "DIAMOND": 250,
+            "MASTER": 310,
+            "GRANDMASTER": 20,
+            "CHALLENGER": 195,
+        }
+    )
+    TIER_NAMES: Dict[str, str] = field(
+        default_factory=lambda: {
+            "IRON": "Fer",
+            "BRONZE": "Bronze",
+            "SILVER": "Argent",
+            "GOLD": "Or",
+            "PLATINUM": "Platine",
+            "EMERALD": "Émeraude",
+            "DIAMOND": "Diamant",
+            "MASTER": "Maître",
+            "GRANDMASTER": "Grand Maître",
+            "CHALLENGER": "Challenger",
+        }
+    )
 
     # Live Coach lancé en fil par le client : attente du client LoL (secondes) entre deux essais
     # et délai d'arrêt à la fermeture de la fenêtre.

@@ -204,7 +204,7 @@ def line_chart(
             elif s.dots:
                 out.append(
                     f'<circle class="ch-dot" data-fade="1" data-delay="{when}" cx="{_n(x)}" '
-                    f'cy="{_n(y)}" r="4"/>'
+                    f'cy="{_n(y)}" r="4" style="stroke:{esc(s.stops[len(s.stops) // 2])}"/>'
                 )
 
     for mark in marks:
