@@ -339,6 +339,8 @@ def _verdict(trend, games: int) -> dict:
         kind, text = VERDICT_LABELS[trend.verdict]
         return {"kind": kind, "text": text}
     sample = coaching_config.MIN_TREND_SAMPLE
+    if games >= 2 * sample:  # assez de parties, mais aucun écart entre les deux moitiés à comparer
+        return {"kind": "none", "text": f"{games} parties, écart nul : pas de verdict"}
     needed = sample * (2 if games >= sample else 1)
     return {"kind": "none", "text": f"{games}/{needed} parties, pas de verdict"}
 

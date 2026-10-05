@@ -186,7 +186,7 @@ Le motion est un **système**, pas des effets : tout passe par des jetons.
 ### 4.4 Section Coaching (reprend le contenu de SPEC-21 v1, enrichi)
 
 1. **Accueil** : axes de travail (`coaching_goals`), derniers constats, résumé du bilan,
-   fraîcheur des données. Fixer ou clore un axe : écriture DB (§2, à valider).
+   fraîcheur des données. Fixer ou clore un axe : écriture DB (§2, validée).
 2. **Rang** : une courbe par file sur l'échelle `lp_scale()`, graduée en paliers ; sous deux photos
    par file : « pas assez de photos » (ignorance visible).
 3. **Progression** : sélecteur de rôle (défaut : le plus joué, `player_roles()`), tableau
@@ -337,7 +337,7 @@ prototypes sont fictives** (pool GRIND, Sion contre Darius, LP, skins possédés
   (`goals.propose`), « Fixer cet axe », « Choisir une autre métrique ». Tableau des derniers constats
   (Métrique / Toi / Norme · objectif / Écart / σ, barre divergente centrée sur la norme). Colonne
   latérale : carte Rang et sparkline sur 30 jours, 10 dernières parties en portraits cerclés, bilan du
-  rôle. États : sans axe, sans partie capturée, base vide. Fixer et clore écrivent en base (§2, à valider).
+  rôle. États : sans axe, sans partie capturée, base vide. Fixer et clore écrivent en base (§2, validé).
 - **Rang (51).** Courbe de 1124×560 sur l'échelle continue de `lp_scale()` (100 LP par division),
   libellés de paliers à gauche, bandes de fond Platine / Émeraude, séparation or à 400 ; Solo en dégradé
   bleu → vert avec aire, Flex violet → magenta, dernier point lumineux et étiquette « Émeraude II · 47 LP » ;
@@ -482,7 +482,7 @@ Les tâches 48, 49, 55, 68, 69, 70 et 84 (lot 1), puis 72, 73, 74 et 85 à 92 (l
 | 82 | Social en lecture seule : amis, statuts, conversations | 3 | 76 |
 | 83 | Clôture : exe vérifié, `README.md`, `docs/PROJECT_STRUCTURE.md`, `CHANGELOG.md`, statuts, `TODO.md` | 3 | 56, 77–79, 81, 82, 95 |
 
-Total : 31 + 51 + 8 + 39 + 13 + 21 = **163 pts**, 37 tâches, dont 25 pts faits. Chaque lot se clôt par
+Total : 31 + 51 + 8 + 39 + 13 + 21 = **163 pts**, 37 tâches, dont 129 pts faits (lots 1 à 4). Chaque lot se clôt par
 une recette de @pj35 (§6, 10).
 
 ## 6. Critères d'acceptation

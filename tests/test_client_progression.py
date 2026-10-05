@@ -147,6 +147,14 @@ def test_sous_les_seuils_pas_de_verdict_et_l_echantillon_est_dit(games, text):
     assert verdict == {"kind": "none", "text": text}
 
 
+def test_assez_de_parties_mais_aucun_ecart_le_texte_ne_pretend_pas_manquer_de_parties():
+    constant = rows(
+        "cs_10", [70.0] * 12
+    )  # deux moitiés identiques : `trends()` n'a pas de dispersion
+    verdict = row_of(progression_view({"top": 12}, constant, "top"), "cs_10")["verdict"]
+    assert verdict == {"kind": "none", "text": "12 parties, écart nul : pas de verdict"}
+
+
 def test_tendance_en_moyenne_glissante_avec_la_ligne_d_objectif_en_pointille():
     history = rows("cs_10", [70] * 8, z=0.5, objective=75.0, z_objective=-0.2)
     spark = str(row_of(progression_view({"top": 8}, history, "top"), "cs_10")["spark"])
