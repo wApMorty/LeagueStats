@@ -168,7 +168,7 @@ def test_action_ou_champion_invalide(pick, name, champion):
 @pytest.mark.parametrize(
     "endpoint",
     [
-        "/lol-chat/v1/friends",
+        "/lol-chat/v1/friend-groups",  # /friends est lisible depuis la tâche 82 (Social)
         "/lol-champ-select/v1/session/../x",
         "/lol-champ-select/v1/session?x=1",
         "/lol-champ-select/v1/session/actions/1",  # lecture non listée
