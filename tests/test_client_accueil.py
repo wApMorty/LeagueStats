@@ -153,6 +153,20 @@ def test_derniers_constats_avec_barre_divergente(db, temp_db, assets):
     assert view["findings"]["win"] is True and view["findings"]["href"] == "/parties/1"
 
 
+def test_un_brut_illisible_ne_fait_pas_tomber_l_accueil(db, temp_db, assets):
+    capture(db, game_id=1, pid=1, raw="{}")
+    repo = CoachingRepository(db)
+    repo.insert_metrics(
+        [
+            (1, 1, "cs_10", 1, "top", 2, 74.0, 71.0, 6.0, NORM_N, 0.5)
+            + (None, None, None, None, coaching_config.GRID_VERSION)
+        ]
+    )
+    repo.insert_findings([(1, "cs_10", "positive", 1.8, "norm", 1)])
+    response = client(temp_db, assets).get("/")
+    assert response.status_code == 200 and "Pas encore de constat" in response.text
+
+
 def test_une_norme_en_construction_n_est_pas_affichee(db, assets):
     capture(db, game_id=1, pid=1)
     repo = CoachingRepository(db)

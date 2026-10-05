@@ -6,7 +6,9 @@ remplacée). Forme, périmètre, ordre, temps réel et niveau d'écriture valid�
 2026-10-04 ; port libre choisi par l'OS validé. **Plan revu le 2026-10-05** à la réception du handoff de design « Alchimie »
 (`docs/design/client_alchimie/`) : 37 tâches, et une fiche par écran à coder (§4.10, §5). **Validé le
 2026-10-05** : ordre des lots, taille de la fenêtre, thème clair reporté, écrans sans maquette extrapolés
-d'« Alchimie ». Point d'entrée validé le 2026-10-05. Reste à valider : les écritures du coaching.
+d'« Alchimie ». Point d'entrée et **écritures du coaching validés le 2026-10-05**. **Lot 4 (coaching et post-game) fait le
+2026-10-05** : tâches 50 à 54, 71, 75, 95 et 56 ; reste la recette de @pj35 (rendu des écrans, clic sur les axes, partie
+réelle) puis les lots 5 et 6.
 
 **Origine** : feature candidate 5 du `TODO.md` (ex-tâche #6, `ROADMAP_2026.md` Horizon 3),
 repriorisée le 2026-09-26. Reformulée par @pj35 le 2026-10-04 : « bien plus qu'un rapport HTML en
@@ -17,8 +19,8 @@ coaching, et en revoyant la draft et le post-game avec le Live Coach. » Ajout l
 **la qualité des animations est un objectif de premier rang** (motion design poussé, thèmes à
 discuter avec @pj35).
 
-**Effort** : ~33 jours, 37 tâches, 163 pts, en six lots utilisables chacun seuls (§5) ; 25 pts
-faits (tâches 48, 49, 68, 69, 70).
+**Effort** : ~33 jours, 37 tâches, 163 pts, en six lots utilisables chacun seuls (§5) ; 129 pts
+faits (lots 1 à 4).
 
 ---
 
@@ -97,7 +99,7 @@ post-game revus avec le Live Coach, le tout animé avec soin.
 | Écrans sans maquette | **Validé (@pj35, 2026-10-05)** : Parties, Calibration, Profil, Collection, Lobby, Social, la variante Défaite du post-game et les états vides sont **extrapolés** du système « Alchimie » (jetons, cartes, grilles, courbes) sur le modèle des écrans définis, sans validation préalable. Si une direction manque vraiment, Claude s'arrête et le signale : @pj35 fait alors une pause pour retravailler le design. |
 | Bibliothèque d'animation | **Tranché par le spike (tâche 48, 2026-10-04)** : CSS + Web Animations API + View Transitions, zéro dépendance. WebView2 est un Chromium 154 qui expose les View Transitions ; 80 cartes animées plus un tracé SVG tiennent un p95 de 6,2 ms par image (§8). Un moteur de ressorts n'est justifié par aucune mesure ; à rouvrir seulement si un effet précis l'exige. Le handoff (2026-10-05) ajoute un calque `<canvas>` de particules (1 600 au plus, braises continues) : **non mesuré à ce jour**, la tâche 84 consigne le p95 sur le banc `/_motion` ; leviers de repli au README du handoff (plafond, débit des braises, plume de tracé). |
 | Cadre de la fenêtre | **Validé (@pj35, 2026-10-04) : sans bordure** (`frameless=True`), barre de titre et boutons Réduire/Agrandir/Fermer dessinés en HTML et animés. **Confirmé par le spike** sur le poste de @pj35 (§8) : déplacement par la barre de titre exact, redimensionnement par la poignée d'angle bas-droit exact (aller-retour JS vers Python : 0,7 ms), coins arrondis et bordure fournis par Windows 11. **Deux écarts à traiter en tâche 68** : le bouton Agrandir ne doit pas appeler `maximize()` (la fenêtre recouvre la barre des tâches), il place la fenêtre sur la zone utile de l'écran ; et il n'y a aucun redimensionnement natif par les bords (poignées HTML sur les quatre côtés et quatre coins ; **seuls le coin bas-droit et les bords droit et bas ont été essayés** : gauche et haut exigent `resize()` puis `move()` synchronisés, risque de saut, à mesurer en tâche 68). L'ancrage Win+Flèche est sans objet : @pj35 utilise Komorebi (gestionnaire de fenêtres en mosaïque, dont les barres expliquent la zone utile de 46 à 1032 px), et prévoit un usage surtout en plein écran ; il n'est pas critique (2026-10-04). |
-| Écritures du coaching dans la base | **À valider** : défaut proposé, oui, via une connexion d'écriture distincte et les repositories existants (fixer ou clore un axe, `outcome`) ; la lecture reste en `mode=ro`. Cela lève la règle « lecture seule » de la version précédente. |
+| Écritures du coaching dans la base | **Validé (@pj35, 2026-10-05)** : oui, via une connexion d'écriture distincte (`db.writable()`, `mode=rw`, jamais créée) et les repositories existants ; la lecture reste en `mode=ro`. Réalisé : fixer et clore un axe (`POST /accueil/axe`, `POST /accueil/axe/{id}/clore`, derrière le jeton et le contrôle `Origin`). `outcome` n'est pas écrit par le client. Cela lève la règle « lecture seule » de la version précédente. |
 | Point d'entrée | **Validé (@pj35, 2026-10-05)** : `python lol_coach.py --client` et option 7 du menu ; démarrage d'office du client plus tard. |
 | Port | **À valider** : défaut proposé, port libre choisi par l'OS (la fenêtre locale n'a pas besoin d'un port connu), affiché en `[INFO]`. |
 | Taille de l'exe | **Validé** : pas de limite ; le spike mesure et consigne (§8). |
@@ -411,7 +413,7 @@ Numéros à la suite du `TODO.md` (dernière : 67). Les tâches 48 à 56 et 68 �
 2026-10-04 ; **84 à 95 sont ajoutées le 2026-10-05** après le handoff de design. L'ordre d'exécution est
 celui des lots, **réordonnés d'après le handoff** (§2, à valider) : coque, motion, draft, file trouvée et
 transition, coaching et post-game, puis la navigation. Les tâches d'écran renvoient à leur fiche du §4.10.
-Les tâches 48, 49, 55, 68, 69, 70 et 84 (lot 1), puis 72, 73, 74 et 85 à 92 (lot 2), 93 et 94 (lot 3) sont faites ; la mesure du p95 (84) et le rendu des écrans restent à la recette de @pj35.
+Les tâches 48, 49, 55, 68, 69, 70 et 84 (lot 1), puis 72, 73, 74 et 85 à 92 (lot 2), 93 et 94 (lot 3), puis 50 à 54, 56, 71, 75 et 95 (lot 4) sont faites ; la mesure du p95 (84) et le rendu des écrans restent à la recette de @pj35.
 
 **Lot 1 — Socle, coque et motion (31 pts)** — étapes 1 et 2 du handoff
 
@@ -452,15 +454,15 @@ Les tâches 48, 49, 55, 68, 69, 70 et 84 (lot 1), puis 72, 73, 74 et 85 à 92 (l
 
 | # | Tâche | Pts | Dépend de |
 |---|---|---|---|
-| 50 | `charts.py` : `line_chart`, `reliability_chart`, `bar_chart`, barres divergentes, sparklines, bandes de paliers ; échelles, axes, accessibilité, tracé à l'encre animable + tests sur le SVG | 5 | 84 |
-| 51 | Écran Rang : `data.rank_series()`, courbes Solo et Flex, histogramme des LP, cartes par file, ignorance visible + tests | 5 | 50 |
-| 52 | Écran Progression : `data.metric_series()`, puces de rôle, grille, verdicts, schémas, seuils d'échantillon + tests | 5 | 50 |
-| 53 | Écran Parties : `winprob.report.curve_points()` extraite, liste, page d'une partie, états vides + tests (sans maquette) | 5 | 50 |
-| 54 | Écran Calibration : `analysis.calibration.calibration_buckets()` extraite, diagramme de fiabilité, choix de version + test d'identité de `calibration_curve()` (sans maquette) | 3 | 50 |
-| 71 | Accueil Coaching : axes, constats, colonne latérale ; fixer / clore un axe (si écriture validée) + tests | 5 | 51–53 |
-| 75 | Post-game, données et page : événement `game_captured`, `/postgame` et `/parties/{id}` en mode revue, impact, constats, LP, objectif jugé, variante Défaite | 5 | 72, 53 |
-| 95 | Post-game, mise en scène : sceau de victoire, courbe de win chance à l'encre, marqueurs, impact empilé, compteurs | 3 | 75, 84 |
-| 56 | Empaquetage : `requirements*.txt`, `.spec` (`templates`, `static`, `fonts`), `build_app.py`, job `build` de la CI, exe vérifié, `README.md`, `docs/PROJECT_STRUCTURE.md`, `CHANGELOG.md` | 3 | 55, 71, 75, 92 |
+| 50 | ✅ `charts.py` : `line_chart`, `reliability_chart`, `bar_chart`, barres divergentes, sparklines, bandes de paliers ; échelles, axes, accessibilité, tracé à l'encre animable + tests sur le SVG | 5 | 84 |
+| 51 | ✅ Écran Rang : `data.rank_view()`, courbes Solo et Flex, histogramme des LP, cartes par file, ignorance visible + tests | 5 | 50 |
+| 52 | ✅ Écran Progression : `data.progression_view()`, puces de rôle, grille, verdicts, schémas, seuils d'échantillon + tests | 5 | 50 |
+| 53 | ✅ Écran Parties : `winprob.report.curve_points()` extraite, liste, page d'une partie, états vides + tests (sans maquette) | 5 | 50 |
+| 54 | ✅ Écran Calibration : `analysis.calibration.calibration_buckets()` extraite, diagramme de fiabilité, choix de version + test d'identité de `calibration_curve()` (sans maquette) | 3 | 50 |
+| 71 | ✅ Accueil Coaching : axes, constats, colonne latérale ; fixer / clore un axe (si écriture validée) + tests | 5 | 51–53 |
+| 75 | ✅ Post-game, données et page : événement `game_captured`, `/postgame` et `/parties/{id}` en mode revue, impact, constats, LP, objectif jugé, variante Défaite | 5 | 72, 53 |
+| 95 | ✅ Post-game, mise en scène : sceau de victoire, courbe de win chance à l'encre, marqueurs, impact empilé, compteurs | 3 | 75, 84 |
+| 56 | ✅ Empaquetage : `requirements*.txt`, `.spec` (`templates`, `static`, `fonts`), `build_app.py`, job `build` de la CI, exe vérifié, `README.md`, `docs/PROJECT_STRUCTURE.md`, `CHANGELOG.md` | 3 | 55, 71, 75, 92 |
 
 **Lot 5 — Profil et historique (13 pts)**
 

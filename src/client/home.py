@@ -21,7 +21,7 @@ from ..config_constants import coaching_config
 from ..repositories.coaching import CoachingRepository
 from .charts import SparkLine, diverging, sparkline
 from .data import ago, default_role, finding_reference, parse_utc, plural, rank_view, scale_of
-from .draft_view import ROLE_LABELS, Champions, fr, signed
+from .draft_view import ROLE_LABELS, Champions, signed
 
 GOAL_HUES = (290, 230)  # violet puis bleu : un axe par couleur
 ORIGINS = ("proposed", "player")
@@ -134,8 +134,11 @@ def _findings(repo: CoachingRepository, champions: Champions, now: datetime) -> 
                 "delay": 480 + i * 70,
             }
         )
-    game = json.loads(record["game"])
-    me = next(p for p in game["participants"] if p["participantId"] == record["pid"])
+    try:
+        game = json.loads(record["game"])
+        me = next(p for p in game["participants"] if p["participantId"] == record["pid"])
+    except (KeyError, TypeError, ValueError, StopIteration):
+        return None  # brut illisible : pas de tableau, plutôt qu'un accueil en erreur
     return {
         "game_id": latest["game_id"],
         "href": f"/parties/{latest['game_id']}",
@@ -204,9 +207,10 @@ def _review(repo: CoachingRepository, role: Optional[str]) -> Optional[dict]:
     if role is None:
         return None
     means = profile(repo.player_history(role), role)  # du plus faible au plus fort
-    describe = lambda rows: [
-        {"label": METRICS[m].label, "z": f"{signed(z, 1)} σ"} for m, z, _ in rows
-    ]
+
+    def describe(rows: list) -> List[dict]:
+        return [{"label": METRICS[m].label, "z": f"{signed(z, 1)} σ"} for m, z, _ in rows]
+
     return {
         "role": role,
         "label": ROLE_LABELS[role],
