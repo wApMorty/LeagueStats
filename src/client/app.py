@@ -142,6 +142,7 @@ def create_app(
             nav=NAV,
             active=active,
             motion=load_motion(),
+            transition=client_config.transition(),
             motion_modes=[(m, MOTION_LABELS[m]) for m in client_config.MOTION_MODES],
             lcu_open=probe.is_open(),
             token=app.state.session_token,

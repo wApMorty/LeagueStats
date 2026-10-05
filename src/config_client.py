@@ -49,6 +49,16 @@ class ClientConfig:
     # Skins du champion verrouillé : durée de garde de la liste lue dans le LCU.
     SKINS_TTL_S: float = 60.0
 
+    # Transition de page (SPEC-21 tâche 94, README du handoff) : le contenu s'assombrit en `DARKEN`, le
+    # remplacement attend `SWAP` (le cercle implose), la page s'ouvre en `OPEN` ; la navigation glisse en
+    # `SLIDE` à la sortie de la draft.
+    TRANSITION_DARKEN_MS: int = 560
+    TRANSITION_SWAP_MS: int = 860
+    TRANSITION_OPEN_MS: int = 820
+    TRANSITION_SLIDE_MS: int = 520
+    TRANSITION_RUNES: int = 44
+    NAV_WIDTH_PX: int = 220  # `--nav-w` de style.css
+
     # Partie trouvée (SPEC-21 tâche 93) : secondes laissées pour répondre ; le compte à rebours part de
     # là, moins le `timer` du LCU (forme non relevée : à confirmer en partie réelle).
     FOUND_SECONDS: float = 10.0
@@ -104,6 +114,17 @@ class ClientConfig:
     # Méthodes qui modifient quelque chose, et lectures qui exigent aussi le jeton (SSE).
     TOKEN_METHODS: Tuple[str, ...] = ("POST", "PUT", "PATCH", "DELETE")
     TOKEN_PATHS: Tuple[str, ...] = ("/events",)
+
+    def transition(self) -> dict:
+        """Les durées de la transition de page, telles que `transition.js` les lit."""
+        return {
+            "darken": self.TRANSITION_DARKEN_MS,
+            "swap": self.TRANSITION_SWAP_MS,
+            "open": self.TRANSITION_OPEN_MS,
+            "slide": self.TRANSITION_SLIDE_MS,
+            "runes": self.TRANSITION_RUNES,
+            "nav_width": self.NAV_WIDTH_PX,
+        }
 
 
 client_config = ClientConfig()

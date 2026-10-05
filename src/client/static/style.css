@@ -125,10 +125,9 @@ h1 { margin: 0 0 12px; font: 600 46px/1 var(--font-title); }
   animation: pulse 2200ms ease-in-out infinite; }
 @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
 
-/* Navigation et page : seules `page` et `nav` ont un nom de transition (View Transitions) */
 .view { position: fixed; inset: var(--bar-h) 0 0 0; display: flex; }
 .nav { width: var(--nav-w); flex: none; padding: 22px 12px; display: flex; flex-direction: column;
-  gap: 22px; overflow: hidden auto; view-transition-name: nav;
+  gap: 22px; overflow: hidden auto;
   border-right: 1px solid oklch(0.7 0.2 290 / 0.22);
   background: linear-gradient(180deg, oklch(0.16 0.04 290) 0%, var(--bg-nav) 42%,
     var(--bg-nav) 62%, oklch(0.15 0.035 345) 100%); }
@@ -163,7 +162,7 @@ h1 { margin: 0 0 12px; font: 600 46px/1 var(--font-title); }
   color: var(--bg); }
 
 /* Page : halos de fond (violet, cyan, magenta) posés sur `--bg` ; la position varie par écran */
-.page { flex: 1; min-width: 0; overflow: auto; padding: 30px 48px; view-transition-name: page;
+.page { flex: 1; min-width: 0; overflow: auto; padding: 30px 48px;
   --halo-1: 88% 100%; --halo-2: 0% 0%; --halo-3: 60% 40%;
   background:
     radial-gradient(ellipse 900px 700px at var(--halo-1), oklch(0.25 0.09 290 / 0.75), transparent 70%),
@@ -172,26 +171,14 @@ h1 { margin: 0 0 12px; font: 600 46px/1 var(--font-title); }
     var(--bg);
   background-attachment: local; }
 
-::view-transition-old(page) { animation: page-out var(--d-rapide) var(--ease-entree) both; }
-::view-transition-new(page) { animation: page-in var(--d-normal) var(--ease-entree) both; }
-@keyframes page-out { to { opacity: 0; transform: translateY(-4px); } }
-@keyframes page-in { from { opacity: 0; transform: translateY(8px); } }
-/* Repli sans View Transitions : fondu à l'apparition de la page */
-@supports not (view-transition-name: none) {
-  .page { animation: page-in var(--d-normal) var(--ease-entree) both; }
-}
-
 /* Motion réduit : tout est coupé, le changement d'écran devient instantané (SPEC-21 §4.3).
    « Système » ne coupe que si Windows le demande ; « Complet » anime dans tous les cas. */
 :root[data-motion="reduit"] *, :root[data-motion="reduit"] *::before,
-:root[data-motion="reduit"] *::after, :root[data-motion="reduit"]::view-transition-group(*),
-:root[data-motion="reduit"]::view-transition-old(*), :root[data-motion="reduit"]::view-transition-new(*) {
+:root[data-motion="reduit"] *::after {
   animation: none !important; transition: none !important; }
 @media (prefers-reduced-motion: reduce) {
   :root[data-motion="systeme"] *, :root[data-motion="systeme"] *::before,
-  :root[data-motion="systeme"] *::after, :root[data-motion="systeme"]::view-transition-group(*),
-  :root[data-motion="systeme"]::view-transition-old(*),
-  :root[data-motion="systeme"]::view-transition-new(*) {
+  :root[data-motion="systeme"] *::after {
     animation: none !important; transition: none !important; }
 }
 
@@ -670,3 +657,16 @@ h1 { margin: 0 0 12px; font: 600 46px/1 var(--font-title); }
 .f-decline { height: 56px; padding: 0 30px; border-radius: 28px; border: 1px solid oklch(1 0 0 / 0.2); background: transparent;
   color: oklch(0.86 0.01 140); font-size: 16px; cursor: pointer; }
 .f-auto { font-size: 13px; color: var(--muted); }
+
+/* Transition de page (tâche 94) : voile posé sur la zone sous la barre de titre, jamais cliquable */
+.tr-veil { position: fixed; inset: var(--bar-h) 0 0 0; z-index: 15; display: grid; place-items: center; pointer-events: none; opacity: 0; }
+.tr-glow { position: absolute; left: 50%; top: 50%; width: 900px; height: 900px; margin: -450px 0 0 -450px; border-radius: 50%; opacity: 0;
+  background: radial-gradient(circle, oklch(0.8 0.13 55 / 0.6) 0%, oklch(0.6 0.24 290 / 0.35) 32%, oklch(0.6 0.24 290 / 0.08) 50%, transparent 66%); }
+.tr-sig { position: relative; width: 520px; height: 520px; overflow: visible; filter: drop-shadow(0 0 16px oklch(0.8 0.13 55 / 0.8)); }
+.tr-sig circle, .tr-sig path { fill: none; }
+.tr-a { stroke: oklch(0.8 0.13 55); stroke-width: 2; }
+.tr-b { stroke: oklch(0.86 0.11 165); stroke-width: 1.4; }
+.tr-c { stroke: oklch(0.9 0.12 70); stroke-width: 1.4; }
+.tr-star { stroke: oklch(0.9 0.12 70); stroke-width: 2.2; stroke-linejoin: round; }
+.tr-star-inv { stroke: oklch(0.68 0.24 290); stroke-width: 1.6; stroke-linejoin: round; }
+.tr-text { font: 17px var(--font-rune); fill: oklch(0.9 0.1 85); }

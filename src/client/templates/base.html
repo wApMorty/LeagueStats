@@ -6,6 +6,7 @@
 <title>{% block title %}LeagueStats{% endblock %}</title>
 <meta name="session-token" content="{{ token }}">
 <meta name="token-header" content="{{ token_header }}">
+<meta name="page-transition" content='{{ transition|tojson }}'>
 {#- Les pages d'erreur doivent s'afficher : htmx 2 n'échange pas les 4xx/5xx par défaut. -#}
 <meta name="htmx-config" content='{"historyCacheSize":0,"allowEval":false,"allowScriptTags":false,"responseHandling":[{"code":"204","swap":false},{"code":"[23]..","swap":true},{"code":"[45]..","swap":true,"error":true},{"code":"...","swap":false}]}'>
 <link rel="stylesheet" href="/static/style.css">
@@ -19,6 +20,7 @@
 <script src="/static/rune_logic.js" defer></script>
 <script src="/static/runes.js" defer></script>
 <script src="/static/found.js" defer></script>
+<script src="/static/transition.js" defer></script>
 {% block head %}{% endblock %}
 </head>
 <body>
@@ -45,7 +47,7 @@
 </header>
 
 <div id="view" class="view" hx-boost="true" hx-target="#view" hx-select="#view"
-     hx-swap="outerHTML transition:true">
+     hx-swap="{{ 'outerHTML' if motion == 'reduit' else 'outerHTML swap:%dms'|format(transition.swap) }}">
   {% block nav %}{% include "partials/nav.html" %}{% endblock %}
   <main class="page{% block page_class %}{% endblock %}">
     {% block content %}{% endblock %}
