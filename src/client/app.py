@@ -264,7 +264,9 @@ def create_app(
         return Response(status_code=204)
 
     @app.post("/draft/loadout/send")
-    def draft_loadout_send(primary: int, sub: int, perks: str, shards: str, spell1: int, spell2: int):
+    def draft_loadout_send(
+        primary: int, sub: int, perks: str, shards: str, spell1: int, spell2: int
+    ):
         """Écrit la page et les sorts choisis dans le client ; ils priment alors sur l'import du lock-in."""
         styles = app.state.assets.rune_styles()
         try:
@@ -279,8 +281,19 @@ def create_app(
                 raise Refusal("Page de runes incomplète")
             snapshot = draft_snapshot() or {}
             me = next((p for p in snapshot.get("allies", []) if p["is_local"]), None)
-            shown = next((c for c in snapshot.get("champions", []) if me and c["champion_id"] == (me["champion_id"] or me["hover_id"])), None)
-            label = f"{shown['champion']} {snapshot.get('local_role') or ''}".strip() if shown else "Page"
+            shown = next(
+                (
+                    c
+                    for c in snapshot.get("champions", [])
+                    if me and c["champion_id"] == (me["champion_id"] or me["hover_id"])
+                ),
+                None,
+            )
+            label = (
+                f"{shown['champion']} {snapshot.get('local_role') or ''}".strip()
+                if shown
+                else "Page"
+            )
             outcome = send_loadout(proxy, styles, page, [spell1, spell2], label)
         except ValueError:
             return JSONResponse({"detail": "Identifiants de runes illisibles"}, status_code=409)
@@ -316,7 +329,9 @@ def create_app(
             return JSONResponse({"detail": "ressource inconnue"}, status_code=404)
         data = store.image(kind, name)
         if data is None:
-            return Response(PLACEHOLDER, media_type="image/gif", headers={"Cache-Control": "no-store"})
+            return Response(
+                PLACEHOLDER, media_type="image/gif", headers={"Cache-Control": "no-store"}
+            )
         media_type = "image/jpeg" if name.endswith(".jpg") else "image/png"
         cache = f"max-age={client_config.ASSETS_BROWSER_CACHE_S}"
         return Response(data, media_type=media_type, headers={"Cache-Control": cache})

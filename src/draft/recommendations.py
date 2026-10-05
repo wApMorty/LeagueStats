@@ -171,7 +171,9 @@ class DraftRecommender:
         """Victoire prédite si je prenais chacun des champions encore libres, sur ma lane (grimoire)."""
         try:
             lane = state.ally_positions.get(state.local_player_cell_id)
-            mine = next((c for c in state.ally_cells if c.cell_id == state.local_player_cell_id), None)
+            mine = next(
+                (c for c in state.ally_cells if c.cell_id == state.local_player_cell_id), None
+            )
             if not lane or (mine is not None and mine.champion_id) or self.m._is_ban_phase(state):
                 return
             allies = self._placed(state.ally_picks, state)
@@ -189,7 +191,8 @@ class DraftRecommender:
     def _signature(state: DraftState) -> tuple:
         """Ce que le client dessine et que la liste des picks ne dit pas : survols, tour, bans."""
         cells = [
-            (c.cell_id, c.champion_id, c.hover_id, c.skin_id) for c in state.ally_cells + state.enemy_cells
+            (c.cell_id, c.champion_id, c.hover_id, c.skin_id)
+            for c in state.ally_cells + state.enemy_cells
         ]
         return (
             state.phase,

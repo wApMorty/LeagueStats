@@ -6,6 +6,20 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Feature
 
+- **Client LeagueStats, lancement et écran de draft (SPEC-21 tâches 55, 72 à 74 et 84 à 92)** —
+  `python lol_coach.py --client` ou l'option 7 du menu (Quitter passe en 8) ouvre la fenêtre : serveur local,
+  WebSocket du LCU et Live Coach en fil, sans lecture de la console. L'écran **Draft** (`/draft`, plein écran,
+  mis à l'échelle sous 1920×950) suit le champ select en direct : sceaux d'équipe, balance de victoire
+  prédite, chrono, phase de bans (bans conseillés, « Bannir X »), phase de picks (recommandations, survol,
+  « Verrouiller X »), grimoire de tous les champions (rôles, pool, victoire prédite et gain de ban de
+  chacun), sélection de skin (possession lue dans le LCU), colonne loadout (page de runes, sorts, objets,
+  « Envoyer au client ») et éditeur de runes. Une page de runes choisie à la main **prime** sur l'import
+  OneTricks du lock-in (« Rétablir OneTricks » le rend). Le Live Coach publie désormais un `DraftSnapshot`
+  structuré sur le bus du client ; **sa sortie console est strictement identique** (test d'identité). Tout appel
+  du client vers le LCU passe par une liste blanche (`lcu_proxy.py`) ; images et données de Data Dragon sont
+  servies depuis un cache disque (`data/client_assets/`, version configurable, hors ligne le cache seul répond).
+  `/_motion` est le banc de mesure du temps d'image (à lancer par toi : critère 11 de la spec).
+
 - **Client LeagueStats, thème « Alchimie » et coque (SPEC-21 tâche 69)** — jetons de couleur OKLCH du
   handoff de design, polices embarquées (Cormorant Garamond, Alegreya Sans, Noto Sans Runic, sans appel
   réseau), barre de titre au pentacle avec liseré dégradé, navigation en trois groupes (les entrées sans

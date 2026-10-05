@@ -411,7 +411,7 @@ Numéros à la suite du `TODO.md` (dernière : 67). Les tâches 48 à 56 et 68 �
 2026-10-04 ; **84 à 95 sont ajoutées le 2026-10-05** après le handoff de design. L'ordre d'exécution est
 celui des lots, **réordonnés d'après le handoff** (§2, à valider) : coque, motion, draft, file trouvée et
 transition, coaching et post-game, puis la navigation. Les tâches d'écran renvoient à leur fiche du §4.10.
-Les tâches 48, 49, 55, 68, 69, 70 et 84 sont faites (84 : la mesure du p95 reste à la recette).
+Les tâches 48, 49, 55, 68, 69, 70 et 84 (lot 1), puis 72, 73, 74 et 85 à 92 (lot 2) sont faites ; la mesure du p95 (84) et le rendu des écrans restent à la recette de @pj35.
 
 **Lot 1 — Socle, coque et motion (31 pts)** — étapes 1 et 2 du handoff
 
@@ -422,7 +422,7 @@ Les tâches 48, 49, 55, 68, 69, 70 et 84 sont faites (84 : la mesure du p95 rest
 | 68 | ✅ Coque : `window.py`, barre de titre maison (déplacement, poignées de redimensionnement, boutons animés), `base.html`, navigation par sections, transitions de page, états « client LoL fermé » et « base occupée » | 5 | 49 |
 | 70 | ✅ Bus et temps réel : `bus.py`, route SSE, `lcu_events.py` (WebSocket LCU, reconnexion), faux serveur de test | 5 | 49 |
 | 69 | ✅ **Jetons, polices et coque « Alchimie »** : jetons OKLCH et `@font-face` locaux dans `style.css` ; `base.html` (barre de titre : logo pentacle, pastille animée, liseré dégradé) ; navigation à trois groupes, entrées sans écran grisées ; pied Thème / Motion ; réglage Motion persisté (`save_motion`, `POST /prefs/motion`, `data-motion` sur `<html>`) ; `WINDOW_BACKGROUND` ; tests | 5 | 68 |
-| 84 | 🟡 **`motion.js` et banc `/_motion`** (`motion.js` repris et branché le 2026-10-05 ; reste le banc et la mesure) : reprise de `motion.js` du handoff (+ `Motion.opts()`), `Motion.intro` et `ambient` sur `htmx:load`, braises coupées en Réduit ; banc `/_motion` (p95 du temps d'image par scène : braises, 1 600 particules, tracé, sceau) ; mesures consignées en §10 | 3 | 69 |
+| 84 | ✅ **`motion.js` et banc `/_motion`** (`motion.js` repris et branché, banc fait le 2026-10-05 ; reste la mesure du p95 par @pj35) : reprise de `motion.js` du handoff (+ `Motion.opts()`), `Motion.intro` et `ambient` sur `htmx:load`, braises coupées en Réduit ; banc `/_motion` (p95 du temps d'image par scène : braises, 1 600 particules, tracé, sceau) ; mesures consignées en §10 | 3 | 69 |
 | 55 | ✅ Lancement : `--client` et option 7 du menu (Quitter en 8), Live Coach en fil sans entrée console, message `[INFO]`/`[ALERTE]` + tests | 3 | 49, 70 |
 
 **Lot 2 — Draft Alchimie (51 pts)** — étape 3 du handoff, l'écran clé

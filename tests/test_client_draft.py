@@ -863,6 +863,8 @@ def test_skin_choisi_republie_le_snapshot(monkeypatch):
     a = DraftState(ally_cells=[Cell(cell_id=0, champion_id=1, skin_id=0)])
     b = DraftState(ally_cells=[Cell(cell_id=0, champion_id=1, skin_id=1002)])
     assert DraftRecommender._signature(a) != DraftRecommender._signature(b)
+
+
 # ---------- colonne loadout (tâche 91) ----------
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
@@ -936,9 +938,7 @@ def test_normaliser_une_page_ordonnee_par_identifiant():
 def test_page_incomplete_ou_incoherente_refusee(perks):
     from src.client.draft_loadout import normalize_page
 
-    assert (
-        normalize_page(tree_from_lcu(), 8000, 8300, perks, [5005, 5008, 5011]) is None
-    )
+    assert normalize_page(tree_from_lcu(), 8000, 8300, perks, [5005, 5008, 5011]) is None
 
 
 def good_page():
@@ -1001,9 +1001,7 @@ def jinx_snapshot(**overrides):
 def onetricks(monkeypatch):
     from src.draft import loadout
 
-    page = json.loads(
-        (FIXTURES_DIR / "onetricks_jinx_bot.json").read_text(encoding="utf-8")
-    )
+    page = json.loads((FIXTURES_DIR / "onetricks_jinx_bot.json").read_text(encoding="utf-8"))
     calls = []
 
     def fake(champion, lane, opponent=None):
@@ -1027,18 +1025,14 @@ def test_page_prevue_depuis_onetricks(client, bus, runes_assets, onetricks):
     assert onetricks == [("Jinx", "bottom", None)]
 
 
-def test_duel_inconnu_retombe_sur_la_build_generale(
-    client, bus, runes_assets, onetricks
-):
+def test_duel_inconnu_retombe_sur_la_build_generale(client, bus, runes_assets, onetricks):
     bus.publish("draft", jinx_snapshot(versus="Draven"))
     plan = client.get("/draft/loadout", params={"champion_id": 222}).json()
     assert plan["available"] and plan["opponent"] is None
     assert ("Jinx", "bottom", "Draven") in onetricks
 
 
-def test_page_deja_ecrite_dans_le_client_sans_reseau(
-    client, bus, runes_assets, onetricks
-):
+def test_page_deja_ecrite_dans_le_client_sans_reseau(client, bus, runes_assets, onetricks):
     applied = {
         "champion_id": 222,
         "label": "Jinx bottom",
@@ -1055,9 +1049,7 @@ def test_page_deja_ecrite_dans_le_client_sans_reseau(
     }
     bus.publish("draft", jinx_snapshot(loadout=applied))
     plan = client.get("/draft/loadout", params={"champion_id": 222}).json()
-    assert (
-        plan["source"] == "client" and plan["games"] == 321 and plan["spells"] == [4, 7]
-    )
+    assert plan["source"] == "client" and plan["games"] == 321 and plan["spells"] == [4, 7]
     assert [b["title"] for b in plan["items"]] == ["Départ", "Core"]
     assert onetricks == []
 
@@ -1079,10 +1071,7 @@ def test_page_indisponible(client, bus, runes_assets, monkeypatch):
 
 
 def test_loadout_sans_champ_select(client):
-    assert (
-        client.get("/draft/loadout", params={"champion_id": 222}).json()["available"]
-        is False
-    )
+    assert client.get("/draft/loadout", params={"champion_id": 222}).json()["available"] is False
 
 
 class FauxLcuLoadout:
@@ -1151,9 +1140,7 @@ def test_envoyer_la_page_et_les_sorts(loadout_client, bus):
     writes = [(m, e) for m, e, _ in lcu.calls if m != "GET"]
     assert ("POST", "/lol-perks/v1/pages") in writes
     assert ("PATCH", "/lol-champ-select/v1/session/my-selection") in writes
-    created = next(
-        d for m, e, d in lcu.calls if (m, e) == ("POST", "/lol-perks/v1/pages")
-    )
+    created = next(d for m, e, d in lcu.calls if (m, e) == ("POST", "/lol-perks/v1/pages"))
     assert created["selectedPerkIds"][:6] == [
         8008,
         8009,
@@ -1161,7 +1148,9 @@ def test_envoyer_la_page_et_les_sorts(loadout_client, bus):
         8017,
         8321,
         8313,
-    ] and created["selectedPerkIds"][6:] == [5005, 5008, 5011]
+    ] and created[
+        "selectedPerkIds"
+    ][6:] == [5005, 5008, 5011]
     assert created["primaryStyleId"] == 8000 and created["subStyleId"] == 8300
     assert lignes == ["loadout manual"]  # le Live Coach n'écrasera plus la page
 
@@ -1287,16 +1276,15 @@ def test_runes_js_sans_erreur_de_syntaxe():
     if node is None:
         pytest.skip("node absent")
     path = Path(__file__).parent.parent / "src" / "client" / "static" / "runes.js"
-    assert (
-        subprocess.run([node, "--check", str(path)], capture_output=True).returncode
-        == 0
-    )
+    assert subprocess.run([node, "--check", str(path)], capture_output=True).returncode == 0
 
 
 def test_la_colonne_est_vide_cote_serveur_et_appartient_au_script(client, bus):
     bus.publish("draft", pick_snapshot())
     html = client.get("/draft/stage").text
     assert '<aside class="d-loadout"' in html and "Runes &amp; sorts" not in html
+
+
 # ---------- éditeur de runes (tâche 92) ----------
 
 import shutil  # noqa: E402
@@ -1342,9 +1330,7 @@ def test_changer_d_arbre_principal_reprend_les_premieres_runes():
     assert page["primary"] == 8100
     assert page["keystone"] == domination["slots"][0]["runes"][0]["id"]
     assert page["rows"] == [domination["slots"][i]["runes"][0]["id"] for i in (1, 2, 3)]
-    assert (
-        page["sub"] == 8300 and page["subs"] == good_page()["subs"]
-    )  # le secondaire ne bouge pas
+    assert page["sub"] == 8300 and page["subs"] == good_page()["subs"]  # le secondaire ne bouge pas
 
 
 def test_arbre_principal_pris_au_secondaire_le_deplace_ailleurs():
@@ -1352,16 +1338,12 @@ def test_arbre_principal_pris_au_secondaire_le_deplace_ailleurs():
     assert page["primary"] == 8300 and page["sub"] != 8300
     sub_tree = next(s for s in tree_from_lcu() if s["id"] == page["sub"])
     rows = [[r["id"] for r in slot["runes"]] for slot in sub_tree["slots"]]
-    assert [
-        next(i for i, row in enumerate(rows) if rune in row) for rune in page["subs"]
-    ] == [1, 2]
+    assert [next(i for i, row in enumerate(rows) if rune in row) for rune in page["subs"]] == [1, 2]
 
 
 def test_choisir_le_meme_arbre_ne_change_rien():
     page = good_page()
-    log = run_logic([["setPrimary", 8000], ["setSub", 8300], ["setSub", 8000]], page)[
-        "log"
-    ]
+    log = run_logic([["setPrimary", 8000], ["setSub", 8300], ["setSub", 8000]], page)["log"]
     assert (
         log[0] == page and log[1] == page and log[2] == page
     )  # le secondaire ne peut pas être le principal
@@ -1445,7 +1427,4 @@ def test_rune_logic_js_sans_erreur_de_syntaxe():
     node = shutil.which("node")
     if node is None:
         pytest.skip("node absent")
-    assert (
-        subprocess.run([node, "--check", str(LOGIC)], capture_output=True).returncode
-        == 0
-    )
+    assert subprocess.run([node, "--check", str(LOGIC)], capture_output=True).returncode == 0

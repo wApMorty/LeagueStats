@@ -268,11 +268,28 @@ def test_bans_conseilles_structures_pendant_la_phase_de_bans(monitor):
     state = DraftState(phase="BAN_PICK", current_actor=1, local_player_cell_id=1)
     _, payload = snapshot_of(monitor, state, [])
     assert payload["ban_advice"] == [
-        {"champion": "Zed", "champion_id": None, "gain": 2.94, "best_response": "Aatrox", "best_response_value": 1.5, "matchups": 12},
-        {"champion": "Yone", "champion_id": None, "gain": 1.2, "best_response": "Darius", "best_response_value": -0.4, "matchups": 8},
+        {
+            "champion": "Zed",
+            "champion_id": None,
+            "gain": 2.94,
+            "best_response": "Aatrox",
+            "best_response_value": 1.5,
+            "matchups": 12,
+        },
+        {
+            "champion": "Yone",
+            "champion_id": None,
+            "gain": 1.2,
+            "best_response": "Darius",
+            "best_response_value": -0.4,
+            "matchups": 8,
+        },
     ]
     # le snapshot en demande plus que la console (3), qui garde son nombre
-    assert monitor.assistant.get_ban_recommendations.call_args.kwargs["num_bans"] == draft_config.GRIMOIRE_BAN_ROWS
+    assert (
+        monitor.assistant.get_ban_recommendations.call_args.kwargs["num_bans"]
+        == draft_config.GRIMOIRE_BAN_ROWS
+    )
 
 
 def test_bans_conseilles_ignores_les_bans_precalcules_indisponibles(monitor):
@@ -349,9 +366,18 @@ def test_le_parseur_lit_le_ban_du_joueur_local_pose_ou_survole():
     lcu = Mock()
     lcu.get_assigned_positions.return_value = {}
     base = {"localPlayerCellId": 0, "myTeam": [{"cellId": 0}], "theirTeam": []}
-    survol = {**base, "actions": [[{"type": "ban", "actorCellId": 0, "championId": 266, "completed": False}]]}
-    pose = {**base, "actions": [[{"type": "ban", "actorCellId": 0, "championId": 266, "completed": True}]]}
-    autre = {**base, "actions": [[{"type": "ban", "actorCellId": 3, "championId": 266, "completed": True}]]}
+    survol = {
+        **base,
+        "actions": [[{"type": "ban", "actorCellId": 0, "championId": 266, "completed": False}]],
+    }
+    pose = {
+        **base,
+        "actions": [[{"type": "ban", "actorCellId": 0, "championId": 266, "completed": True}]],
+    }
+    autre = {
+        **base,
+        "actions": [[{"type": "ban", "actorCellId": 3, "championId": 266, "completed": True}]],
+    }
     parse = lambda data: DraftStateParser(lcu, str).parse(data, {}, {})[0]
     assert (parse(survol).my_ban_hover_id, parse(survol).my_ban_id) == (266, 0)
     assert (parse(pose).my_ban_hover_id, parse(pose).my_ban_id) == (0, 266)

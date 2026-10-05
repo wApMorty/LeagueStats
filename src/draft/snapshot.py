@@ -131,7 +131,9 @@ class Analysis:
     results: Sequence[SearchResult] = ()
     games_by_champion: Dict[str, int] = field(default_factory=dict)
     skipped: List[Tuple[str, int]] = field(default_factory=list)
-    candidates: Dict[int, float] = field(default_factory=dict)  # championId -> victoire si je le prends
+    candidates: Dict[int, float] = field(
+        default_factory=dict
+    )  # championId -> victoire si je le prends
 
 
 def _team(
@@ -162,7 +164,9 @@ def _team(
     return players
 
 
-def _champion_table(monitor, analysis: "Analysis", ban_gains: Dict[int, float]) -> List[SnapshotChampion]:
+def _champion_table(
+    monitor, analysis: "Analysis", ban_gains: Dict[int, float]
+) -> List[SnapshotChampion]:
     """Tous les champions connus, annotés pour le grimoire (rôles de `lane_distributions`)."""
     distributions = getattr(monitor, "lane_distributions", None) or {}
     rows = []
@@ -195,7 +199,11 @@ def build_snapshot(
     base = analysis.base_probability
     games = analysis.games_by_champion
     ids = {n.lower(): i for i, n in monitor.champion_id_to_name.items()}
-    ban_rows, gains = monitor.ban_advisor.advice(state, draft_config.SNAPSHOT_BAN_COUNT, ids) if is_ban else ([], {})
+    ban_rows, gains = (
+        monitor.ban_advisor.advice(state, draft_config.SNAPSHOT_BAN_COUNT, ids)
+        if is_ban
+        else ([], {})
+    )
     return DraftSnapshot(
         phase=state.phase,
         kind="ban" if is_ban else ("pick" if state.phase else None),
@@ -206,12 +214,14 @@ def build_snapshot(
         versus=analysis.direct_counter,
         time_left_ms=state.time_left_ms,
         time_total_ms=state.time_total_ms,
-        my_ban=SnapshotBan(state.my_ban_id, name(state.my_ban_id), ALLY)
-        if state.my_ban_id
-        else None,
-        my_ban_hover=SnapshotBan(state.my_ban_hover_id, name(state.my_ban_hover_id), ALLY)
-        if state.my_ban_hover_id
-        else None,
+        my_ban=(
+            SnapshotBan(state.my_ban_id, name(state.my_ban_id), ALLY) if state.my_ban_id else None
+        ),
+        my_ban_hover=(
+            SnapshotBan(state.my_ban_hover_id, name(state.my_ban_hover_id), ALLY)
+            if state.my_ban_hover_id
+            else None
+        ),
         allies=_team(ALLY, state.ally_cells, state.ally_picks, state, name),
         enemies=_team(ENEMY, state.enemy_cells, state.enemy_picks, state, name),
         ally_bans=[SnapshotBan(c, name(c), ALLY) for c in state.ally_bans],
@@ -229,7 +239,10 @@ def build_snapshot(
             )
             for r in results
         ],
-        skipped=[SnapshotSkipped(champion, count, champion_id=ids.get(champion.lower())) for champion, count in analysis.skipped],
+        skipped=[
+            SnapshotSkipped(champion, count, champion_id=ids.get(champion.lower()))
+            for champion, count in analysis.skipped
+        ],
         depth=results[0].depth if results else 0,
         base_probability=base,
         projected_probability=results[0].win_probability if results else base,

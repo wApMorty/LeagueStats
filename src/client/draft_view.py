@@ -269,11 +269,7 @@ def recommendations(snapshot: Dict[str, Any], champions: Champions) -> List[Dict
                 "hue": REC_HUES[index % len(REC_HUES)],
                 "games": f"{games_short(rec['games'])} games",
                 "win": fr(rec["win_probability"] * 100, 2) + " %",
-                "delta": (
-                    None
-                    if delta is None
-                    else signed(delta) + " pts"
-                ),
+                "delta": (None if delta is None else signed(delta) + " pts"),
                 "up": delta is None or delta >= 0,
                 "line": f"Suite attendue : {variation}" if variation else "Suite attendue : —",
                 "delay": 500 + index * 90,
@@ -308,7 +304,9 @@ def _phase(snapshot: Dict[str, Any], me: Optional[Dict[str, Any]]) -> str:
     return "pick_turn" if snapshot.get("my_turn") else "pick_wait"
 
 
-def skin_row(snapshot: Dict[str, Any], champions: Champions, skins: Optional[List[Dict[str, Any]]]) -> Dict[str, Any]:
+def skin_row(
+    snapshot: Dict[str, Any], champions: Champions, skins: Optional[List[Dict[str, Any]]]
+) -> Dict[str, Any]:
     """La sélection de skin du champion verrouillé : cartes, skin choisi, possession (README : « Skins »)."""
     me = next((p for p in snapshot["allies"] if p["is_local"]), None)
     champion_id = (me or {}).get("champion_id") or 0
@@ -386,7 +384,9 @@ def stage_view(
         parts.append(f"profondeur atteinte : {snapshot['depth']} pick(s) anticipé(s)")
     if skipped:
         where = f" en {role}" if role else ""
-        listed = ", ".join(f"{s['champion']} ({format_games_count(s['games'])} games)" for s in skipped)
+        listed = ", ".join(
+            f"{s['champion']} ({format_games_count(s['games'])} games)" for s in skipped
+        )
         parts.append(f"sans données exploitables{where} : {listed}")
     return {
         "empty": False,
