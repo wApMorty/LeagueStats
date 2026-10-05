@@ -1,4 +1,4 @@
-"""Lobby et file d'attente du client : voir, créer, choisir ses postes, quitter (SPEC-21 tâche 80).
+"""Lobby et file d'attente du client : voir, créer, choisir ses postes, quitter, lancer, annuler (SPEC-21 tâches 80 et 81).
 
 Les lectures et les écritures passent par `LcuProxy` (liste blanche). Une action n'est acceptée que dans la
 phase du client où elle a un sens, lue au moment de l'appel : sinon `Refusal`, avec une raison lisible et
@@ -9,6 +9,7 @@ files non personnalisées de la Faille et de l'ARAM (SPEC-21 §10) ; jamais une 
 from typing import Any, Dict, List, Optional, Sequence
 
 from ..config_client import client_config
+from ..user_prefs import load_user_prefs
 from .draft_actions import Refusal
 from .lcu_proxy import LcuProxy
 
@@ -29,6 +30,10 @@ POSITION_LABELS = {
     "FILL": "Remplissage",
 }
 CATEGORIES = {"PvP": "Joueur contre joueur", "VersusAi": "Contre l'IA"}
+
+
+def _clock(seconds: float) -> str:
+    return f"{int(seconds) // 60}:{int(seconds) % 60:02d}"
 
 
 def _position(code: Optional[str]) -> str:
@@ -137,12 +142,15 @@ def _search_info(proxy: LcuProxy, phase: Optional[str]) -> Optional[dict]:
         return None
     state = proxy.get(SEARCH_STATE) or {}
     queue = proxy.get(MATCHMAKING) or {}
-    return {
+    info = {
         "state": state.get("searchState") or queue.get("searchState"),
         "elapsed": float(queue.get("timeInQueue") or 0.0),
         "estimated": float(queue.get("estimatedQueueTime") or 0.0),
         "errors": [str(e.get("message") or e.get("errorType")) for e in state.get("errors") or []],
     }
+    info["elapsed_text"] = _clock(info["elapsed"])
+    info["estimated_text"] = _clock(info["estimated"]) if info["estimated"] else None
+    return info
 
 
 def read_lobby(proxy: LcuProxy) -> dict:
@@ -207,3 +215,57 @@ def set_positions(proxy: LcuProxy, first: str, second: str) -> Dict[str, Any]:
         proxy.send("PUT", POSITIONS, {"firstPreference": first, "secondPreference": second}),
         "Le client LoL a refusé ces postes",
     )
+
+
+# ---------- file d'attente (tâche 81) ----------
+
+
+def file_state(proxy: LcuProxy) -> Dict[str, Any]:
+    """Ce que la barre de titre affiche : lancer, la recherche en cours, ou rien."""
+    phase = _phase(proxy)
+    lobby = proxy.get(LOBBY) if phase in ("Lobby", "Matchmaking") else None
+    search = _search_info(proxy, phase)
+    local = (lobby or {}).get("localMember") or {}
+    prefs = load_user_prefs()
+    return {
+        "phase": phase,
+        "in_lobby": lobby is not None,
+        "can_start": bool(
+            phase == "Lobby"
+            and lobby
+            and lobby["canStartActivity"]
+            and local.get("allowedStartActivity")
+        ),
+        "searching": phase == "Matchmaking",
+        "elapsed": search["elapsed"] if search else 0.0,
+        "estimated": search["estimated"] if search else 0.0,
+        "queue": _queue_name(lobby, proxy.get(QUEUES) or []) if lobby else None,
+        "auto_accept": bool(prefs and prefs.auto_accept_queue),
+    }
+
+
+def start(proxy: LcuProxy) -> Dict[str, Any]:
+    """Lance la recherche de partie du lobby ; réservée au chef du groupe, hors recherche."""
+    phase = _phase(proxy)
+    if phase == "Matchmaking":
+        raise Refusal("La recherche est déjà lancée")
+    if phase != "Lobby":
+        raise Refusal("Ouvre d'abord un lobby")
+    lobby = proxy.get(LOBBY)
+    if not lobby:
+        raise Refusal("Ouvre d'abord un lobby")
+    if not lobby["localMember"].get("allowedStartActivity"):
+        raise Refusal("Seul le chef du groupe lance la recherche")
+    if not lobby["canStartActivity"]:
+        codes = ", ".join(
+            str(r.get("restrictionCode", "?")) for r in lobby.get("restrictions") or []
+        )
+        raise Refusal("Le lobby ne peut pas lancer la recherche" + (f" ({codes})" if codes else ""))
+    return _refused(proxy.send("POST", SEARCH), "Le client LoL a refusé de lancer la recherche")
+
+
+def cancel(proxy: LcuProxy) -> Dict[str, Any]:
+    """Annule la recherche de partie en cours ; refusée hors recherche (jamais une partie trouvée)."""
+    if _phase(proxy) != "Matchmaking":
+        raise Refusal("Aucune recherche en cours")
+    return _refused(proxy.send("DELETE", SEARCH), "Le client LoL a refusé d'annuler la recherche")

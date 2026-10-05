@@ -1055,3 +1055,8 @@ a.chip-btn { display: inline-flex; align-items: center; text-decoration: none; }
   color: var(--ink); font: inherit; font-size: 15px; }
 .pos-pick select:disabled { opacity: 0.5; }
 .lobby-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.tb-search { gap: 10px; }
+.tb-search[hidden] { display: none; }
+.tb-search .tb-cancel { padding: 0 8px; border: 1px solid var(--rule); border-radius: 10px; background: transparent; color: var(--ink-2);
+  font: inherit; font-size: 12px; cursor: pointer; }
+.tb-search .tb-cancel:hover { background: oklch(0.6 0.19 25 / 0.3); color: var(--ink); }

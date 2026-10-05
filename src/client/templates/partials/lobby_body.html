@@ -43,8 +43,14 @@
     {% endif %}
     <section class="panel lobby-actions">
       {% if v.can_leave %}<button type="button" class="btn-ghost" data-lobby-action="/lobby/quitter">Quitter le lobby</button>{% endif %}
-      {% if v.searching %}<p class="muted">Recherche de partie en cours : annule-la depuis la barre de titre avant de quitter.</p>{% endif %}
-      {% if not v.can_leave and not v.searching %}<p class="muted">Aucune action disponible dans cette phase du client.</p>{% endif %}
+      {% if v.can_start %}<button type="button" class="btn-primary" data-lobby-action="/file/lancer">Lancer la file</button>{% endif %}
+      {% if v.searching %}
+      <p class="muted">Recherche de partie en cours{% if v.search %} depuis {{ v.search.elapsed_text }}{% if v.search.estimated_text %} (estimée à {{ v.search.estimated_text }}){% endif %}{% endif %}.</p>
+      {% if v.search and v.search.errors %}<p class="notice">{{ v.search.errors|join(", ") }}</p>{% endif %}
+      <button type="button" class="btn-ghost" data-lobby-action="/file/annuler">Annuler la recherche</button>
+      {% endif %}
+      {% if not v.can_leave and not v.searching and not v.can_start %}<p class="muted">Aucune action disponible dans cette phase du client.</p>{% endif %}
+      {% if v.in_lobby and not v.can_start and not v.searching and not v.leader %}<p class="fine">Seul le chef du groupe lance la recherche.</p>{% endif %}
     </section>
   </aside>
 </div>

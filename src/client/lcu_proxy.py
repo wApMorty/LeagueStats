@@ -33,7 +33,7 @@ READS: Tuple[Pattern[str], ...] = tuple(
     )
 )
 
-# Écritures : (méthode, motif complet). Draft, partie trouvée, lobby ; la file à la tâche 81.
+# Écritures : (méthode, motif complet). Draft, partie trouvée, lobby et file.
 WRITES: Tuple[Tuple[str, Pattern[str]], ...] = tuple(
     (method, re.compile(pattern))
     for method, pattern in (
@@ -43,6 +43,8 @@ WRITES: Tuple[Tuple[str, Pattern[str]], ...] = tuple(
         ("POST", r"/lol-lobby/v2/lobby"),  # ouvrir un lobby
         ("DELETE", r"/lol-lobby/v2/lobby"),  # le quitter
         ("PUT", r"/lol-lobby/v2/lobby/members/localMember/position-preferences"),  # mes postes
+        ("POST", r"/lol-lobby/v2/lobby/matchmaking/search"),  # lancer la file
+        ("DELETE", r"/lol-lobby/v2/lobby/matchmaking/search"),  # l'annuler
         ("POST", r"/lol-perks/v1/pages"),  # page de runes du loadout
         ("DELETE", r"/lol-perks/v1/pages/\d+"),  # la page « LS » précédente seulement
     )

@@ -40,7 +40,15 @@ from .draft_actions import Refusal, role_command, run as run_draft_action
 from .draft_skins import SkinBook, select_skin
 from .draft_view import Champions, signature, stage_view
 from .lcu_proxy import LcuProxy
-from .lobby import create as create_lobby, leave as leave_lobby, read_lobby, set_positions
+from .lobby import (
+    cancel as cancel_search,
+    create as create_lobby,
+    file_state,
+    leave as leave_lobby,
+    read_lobby,
+    set_positions,
+    start as start_search,
+)
 from .lcu_status import LcuProbe
 from .collection import VIEWS, read_collection
 from .historique import read_game, read_history
@@ -385,6 +393,21 @@ def create_app(
     @app.post("/lobby/postes")
     def lobby_positions(first: str, second: str):
         return lobby_action(lambda: set_positions(proxy, first, second))
+
+    @app.get("/file/state")
+    def file_status() -> dict:
+        """Ce que la barre de titre affiche : lancer la file, la recherche en cours (temps, estimation)."""
+        return file_state(proxy)
+
+    @app.post("/file/lancer")
+    def file_start():
+        """Lance la recherche du lobby ; refusé (409) hors lobby, hors chef de groupe, ou déjà en file."""
+        return lobby_action(lambda: start_search(proxy))
+
+    @app.post("/file/annuler")
+    def file_cancel():
+        """Annule la recherche ; refusé (409) hors recherche, jamais pendant une partie trouvée."""
+        return lobby_action(lambda: cancel_search(proxy))
 
     @app.get("/postgame", response_class=HTMLResponse)
     def postgame(request: Request):

@@ -21,6 +21,7 @@
 <script src="/static/runes.js" defer></script>
 <script src="/static/found.js" defer></script>
 <script src="/static/lobby.js" defer></script>
+<script src="/static/file.js" defer></script>
 <script src="/static/transition.js" defer></script>
 <script src="/static/coaching.js" defer></script>
 {% block head %}{% endblock %}
@@ -34,6 +35,8 @@
     </span>
   </div>
   <button type="button" class="chip chip-ok tb-pill" id="tb-center" hidden title="Ouvrir la draft"><span class="dot"></span>Champ select en cours</button>
+  <button type="button" class="chip chip-ok tb-pill" id="tb-file-start" hidden title="Lancer la recherche de partie du lobby">Lancer la file</button>
+  <span class="chip chip-ok tb-pill tb-search" id="tb-file-search" hidden><span class="dot"></span><span id="tb-file-text">En file</span><button type="button" class="tb-cancel" id="tb-file-cancel">Annuler</button></span>
   {% include "partials/client_state.html" %}
   <div class="titlebar-buttons">
     <button class="tb-btn" id="tb-min" type="button" title="Réduire" aria-label="Réduire">
