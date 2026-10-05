@@ -67,6 +67,9 @@ class CommandListener:
             if getattr(self.m, "_pending_calibration", None) and stripped.lower() in ("o", "n"):
                 self.handle_calibration_answer(stripped.lower() == "o")
                 continue
+            if stripped.lower() in ("loadout manual", "loadout auto"):
+                self.m.loadout.set_manual(stripped.lower().endswith("manual"))  # SPEC-21
+                continue
             if stripped.lower().startswith("outcome"):
                 # Never affects the draft display, so it doesn't set `applied`.
                 self.handle_outcome_command(stripped)

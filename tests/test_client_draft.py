@@ -12,8 +12,10 @@ from src.client import draft_view
 from src.client.app import create_app
 from src.client.assets import Assets
 from src.client.bus import EventBus
+from src.client.draft_actions import Refusal
 from src.client.draft_grimoire import grimoire_view, plain
 from src.config_client import client_config
+from src.draft.state import DraftState
 from src.draft.snapshot import (
     DraftSnapshot,
     SnapshotBan,
@@ -861,3 +863,437 @@ def test_skin_choisi_republie_le_snapshot(monkeypatch):
     a = DraftState(ally_cells=[Cell(cell_id=0, champion_id=1, skin_id=0)])
     b = DraftState(ally_cells=[Cell(cell_id=0, champion_id=1, skin_id=1002)])
     assert DraftRecommender._signature(a) != DraftRecommender._signature(b)
+# ---------- colonne loadout (tâche 91) ----------
+
+FIXTURES_DIR = Path(__file__).parent / "fixtures"
+
+
+def tree_from_lcu():
+    """Arbres au format Data Dragon (`runesReforged.json`) reconstruits sur les ids du LCU relevé."""
+    lcu_styles = json.loads(
+        (FIXTURES_DIR / "lcu_forms" / "styles.json").read_text(encoding="utf-8")
+    )
+    return [
+        {
+            "id": style["id"],
+            "key": style["idName"],
+            "name": style["name"],
+            "icon": f"perk-images/Styles/{style['id']}_{style['idName']}.png",
+            "slots": [
+                {
+                    "runes": [
+                        {
+                            "id": rid,
+                            "name": f"Rune {rid}",
+                            "icon": f"perk-images/Styles/{style['idName']}/{rid}.png",
+                        }
+                        for rid in slot["perks"]
+                    ]
+                }
+                for slot in style["slots"][:4]
+            ],
+        }
+        for style in lcu_styles
+    ]
+
+
+JINX_PAGE = dict(
+    primary=8000,
+    sub=8300,
+    perks=[8008, 8009, 8017, 8313, 8321, 9103],
+    shards=[5005, 5008, 5011],
+)
+
+
+@pytest.fixture
+def runes_assets(tmp_path, monkeypatch, assets):
+    monkeypatch.setattr(Assets, "rune_styles", lambda self: tree_from_lcu())
+    return assets
+
+
+def test_normaliser_une_page_ordonnee_par_identifiant():
+    from src.client.draft_loadout import normalize_page
+
+    page = normalize_page(tree_from_lcu(), **JINX_PAGE)
+    assert page == {
+        "primary": 8000,
+        "sub": 8300,
+        "keystone": 8008,
+        "rows": [8009, 9103, 8017],
+        "subs": [8321, 8313],
+        "shards": [5005, 5008, 5011],
+    }
+
+
+@pytest.mark.parametrize(
+    "perks",
+    [
+        [8008, 8009, 8017, 8313, 8321],
+        [8008, 8009, 9103, 8313, 8321, 8304],
+        [9101, 8009, 9103, 8017, 8313, 8321],
+    ],
+)
+def test_page_incomplete_ou_incoherente_refusee(perks):
+    from src.client.draft_loadout import normalize_page
+
+    assert (
+        normalize_page(tree_from_lcu(), 8000, 8300, perks, [5005, 5008, 5011]) is None
+    )
+
+
+def good_page():
+    from src.client.draft_loadout import normalize_page
+
+    return normalize_page(tree_from_lcu(), **JINX_PAGE)
+
+
+@pytest.mark.parametrize(
+    "change, message",
+    [
+        ({"keystone": 9101}, "majeure"),
+        ({"rows": [8009, 8009, 8017]}, "principal"),
+        ({"subs": [8321, 8306]}, "rangées différentes"),
+        ({"sub": 8000}, "incompatibles"),
+        ({"primary": 1}, "incompatibles"),
+        ({"shards": [5005, 5008, 9999]}, "Fragment"),
+    ],
+)
+def test_validation_d_une_page(change, message):
+    from src.client.draft_loadout import validate_page
+
+    with pytest.raises(Refusal, match=message):
+        validate_page(tree_from_lcu(), {**good_page(), **change})
+
+
+def test_une_page_valide_passe():
+    from src.client.draft_loadout import validate_page
+
+    validate_page(tree_from_lcu(), good_page())
+
+
+def test_charge_utile_des_runes(client, runes_assets):
+    payload = client.get("/draft/runes").json()
+    assert [s["id"] for s in payload["styles"]] == [8000, 8100, 8200, 8300, 8400]
+    precision = payload["styles"][0]
+    assert precision["color"].startswith("oklch") and len(precision["slots"]) == 4
+    assert [r["title"] for r in payload["shards"]] == [
+        "Offensif",
+        "Flexible",
+        "Défensif",
+    ]
+    assert (
+        len(payload["spells"]) == 9
+        and {"id": 4, "key": "SummonerFlash", "name": "Flash"} in payload["spells"]
+    )
+
+
+def jinx_snapshot(**overrides):
+    snap = pick_snapshot(
+        champions=[asdict(SnapshotChampion(222, "Jinx", ["bottom"], 0.52, None))],
+        versus=None,
+        local_role="bottom",
+    )
+    snap.update(overrides)
+    return snap
+
+
+@pytest.fixture
+def onetricks(monkeypatch):
+    from src.draft import loadout
+
+    page = json.loads(
+        (FIXTURES_DIR / "onetricks_jinx_bot.json").read_text(encoding="utf-8")
+    )
+    calls = []
+
+    def fake(champion, lane, opponent=None):
+        calls.append((champion, lane, opponent))
+        return page if opponent is None else None
+
+    monkeypatch.setattr(loadout, "get_page", fake)
+    return calls
+
+
+def test_page_prevue_depuis_onetricks(client, bus, runes_assets, onetricks):
+    bus.publish("draft", jinx_snapshot())
+    plan = client.get("/draft/loadout", params={"champion_id": 222}).json()
+    assert plan["available"] and plan["source"] == "onetricks" and plan["games"] > 0
+    assert plan["page"]["primary"] == 8000 and plan["page"]["keystone"] == 8008
+    assert len(plan["spells"]) == 2 and [b["title"] for b in plan["items"]] == [
+        "Départ",
+        "Core",
+        "Bottes",
+    ]
+    assert onetricks == [("Jinx", "bottom", None)]
+
+
+def test_duel_inconnu_retombe_sur_la_build_generale(
+    client, bus, runes_assets, onetricks
+):
+    bus.publish("draft", jinx_snapshot(versus="Draven"))
+    plan = client.get("/draft/loadout", params={"champion_id": 222}).json()
+    assert plan["available"] and plan["opponent"] is None
+    assert ("Jinx", "bottom", "Draven") in onetricks
+
+
+def test_page_deja_ecrite_dans_le_client_sans_reseau(
+    client, bus, runes_assets, onetricks
+):
+    applied = {
+        "champion_id": 222,
+        "label": "Jinx bottom",
+        "primary_style": 8000,
+        "sub_style": 8300,
+        "perks": [8008, 8009, 8017, 8313, 8321, 9103],
+        "shards": [5005, 5008, 5011],
+        "spells": [4, 7],
+        "item_blocks": [
+            {"title": "Départ (40%)", "items": [1055]},
+            {"title": "Core (50%)", "items": [3031]},
+        ],
+        "games": 321,
+    }
+    bus.publish("draft", jinx_snapshot(loadout=applied))
+    plan = client.get("/draft/loadout", params={"champion_id": 222}).json()
+    assert (
+        plan["source"] == "client" and plan["games"] == 321 and plan["spells"] == [4, 7]
+    )
+    assert [b["title"] for b in plan["items"]] == ["Départ", "Core"]
+    assert onetricks == []
+
+
+def test_page_indisponible(client, bus, runes_assets, monkeypatch):
+    from src.draft import loadout
+
+    monkeypatch.setattr(loadout, "get_page", lambda *a, **k: None)
+    bus.publish("draft", jinx_snapshot())
+    plan = client.get("/draft/loadout", params={"champion_id": 222}).json()
+    assert plan == {
+        "available": False,
+        "reason": "Page OneTricks indisponible pour ce champion",
+    }
+    assert (
+        client.get("/draft/loadout", params={"champion_id": 1}).json()["reason"]
+        == "Champion inconnu"
+    )
+
+
+def test_loadout_sans_champ_select(client):
+    assert (
+        client.get("/draft/loadout", params={"champion_id": 222}).json()["available"]
+        is False
+    )
+
+
+class FauxLcuLoadout:
+    """LCU des runes et des sorts : mémorise chaque appel."""
+
+    def __init__(self):
+        self.credentials = object()
+        self.calls = []
+        self.session = {
+            "localPlayerCellId": 0,
+            "myTeam": [{"cellId": 0, "spell1Id": 4, "spell2Id": 14}],
+        }
+
+    def find_lcu_credentials(self):
+        return self.credentials
+
+    def _make_request(self, endpoint, method="GET", data=None):
+        self.calls.append((method, endpoint, data))
+        if endpoint == "/lol-champ-select/v1/session":
+            if method == "PATCH":
+                return {}
+            return self.session
+        if method == "PATCH":
+            return {}
+        if endpoint == "/lol-perks/v1/pages" and method == "GET":
+            return []
+        if endpoint == "/lol-perks/v1/inventory":
+            return {"ownedPageCount": 5}
+        if endpoint == "/lol-perks/v1/styles":
+            return json.loads(
+                (FIXTURES_DIR / "lcu_forms" / "styles.json").read_text(encoding="utf-8")
+            )
+        return {"id": 1}
+
+
+@pytest.fixture
+def loadout_client(temp_db, bus, runes_assets):
+    lcu = FauxLcuLoadout()
+    lignes = []
+    app = create_app(
+        temp_db,
+        bus=bus,
+        lcu=lcu,
+        assets=runes_assets,
+        commands=lambda line: lignes.append(line) or True,
+    )
+    client = TestClient(app, base_url=LOCAL, raise_server_exceptions=False)
+    return client, lcu, lignes
+
+
+SEND = dict(
+    primary=8000,
+    sub=8300,
+    perks="8008,8009,9103,8017,8321,8313",
+    shards="5005,5008,5011",
+    spell1=4,
+    spell2=7,
+)
+
+
+def test_envoyer_la_page_et_les_sorts(loadout_client, bus):
+    client, lcu, lignes = loadout_client
+    bus.publish("draft", jinx_snapshot())
+    response = post(client, "/draft/loadout/send", **SEND)
+    assert response.status_code == 200
+    writes = [(m, e) for m, e, _ in lcu.calls if m != "GET"]
+    assert ("POST", "/lol-perks/v1/pages") in writes
+    assert ("PATCH", "/lol-champ-select/v1/session/my-selection") in writes
+    created = next(
+        d for m, e, d in lcu.calls if (m, e) == ("POST", "/lol-perks/v1/pages")
+    )
+    assert created["selectedPerkIds"][:6] == [
+        8008,
+        8009,
+        9103,
+        8017,
+        8321,
+        8313,
+    ] and created["selectedPerkIds"][6:] == [5005, 5008, 5011]
+    assert created["primaryStyleId"] == 8000 and created["subStyleId"] == 8300
+    assert lignes == ["loadout manual"]  # le Live Coach n'écrasera plus la page
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"perks": "8008,8009,9103,8017,8321"},
+        {"perks": "8008,8009,9103,8017,8321,8313,1"},
+        {"shards": "5005,5008"},
+        {"shards": "5005,5008,1"},
+        {"perks": "a,b"},
+        {"spell1": 4, "spell2": 4},
+        {"spell1": 4, "spell2": 99},
+        {"sub": 8000},
+    ],
+)
+def test_envoi_invalide_refuse_sans_ecriture(loadout_client, bus, change):
+    client, lcu, lignes = loadout_client
+    bus.publish("draft", jinx_snapshot())
+    response = post(client, "/draft/loadout/send", **{**SEND, **change})
+    assert response.status_code == 409
+    assert [c for c in lcu.calls if c[0] != "GET"] == [] and lignes == []
+
+
+def test_envoi_sans_jeton_403(loadout_client, bus):
+    client, lcu, lignes = loadout_client
+    assert post(client, "/draft/loadout/send", token=False, **SEND).status_code == 403
+    assert lcu.calls == [] and lignes == []
+
+
+def test_marquer_la_page_a_la_main_puis_la_rendre(loadout_client):
+    client, _, lignes = loadout_client
+    assert post(client, "/draft/loadout/manual", on=1).status_code == 204
+    assert post(client, "/draft/loadout/manual", on=0).status_code == 204
+    assert lignes == ["loadout manual", "loadout auto"]
+
+
+def test_manuel_sans_live_coach_503(client):
+    assert post(client, "/draft/loadout/manual", on=1).status_code == 503
+
+
+def test_les_ecritures_de_runes_sortent_par_la_liste_blanche():
+    from src.client.lcu_proxy import ForbiddenEndpoint, LcuProxy
+
+    lcu = FauxLcuLoadout()
+    proxy = LcuProxy(lcu)
+    proxy.send("POST", "/lol-perks/v1/pages", {})
+    proxy.send("DELETE", "/lol-perks/v1/pages/12", None)
+    with pytest.raises(ForbiddenEndpoint):
+        proxy.send("PUT", "/lol-perks/v1/pages/12", {})
+    with pytest.raises(ForbiddenEndpoint):
+        proxy.send("DELETE", "/lol-perks/v1/pages", None)
+
+
+# ---------- import automatique : la main prime ----------
+
+
+def test_la_page_manuelle_arrete_l_import_du_lock_in(monkeypatch):
+    from unittest.mock import Mock
+
+    from src.config_constants import draft_config
+    from src.draft.loadout_import import LoadoutImporter
+
+    monkeypatch.setattr(draft_config, "AUTO_IMPORT_LOADOUT", True)
+    importer = LoadoutImporter(Mock())
+    importer._import = Mock()
+    session = {
+        "localPlayerCellId": 0,
+        "actions": [[{"type": "pick", "actorCellId": 0, "completed": True}]],
+        "myTeam": [{"cellId": 0, "championId": 222}],
+    }
+    state = DraftState(inferred_roles={222: "bottom"})
+    importer.set_manual(True)
+    importer.on_tick(session, state)
+    importer._import.assert_not_called()
+    importer.set_manual(False)  # « Rétablir OneTricks » : le tick suivant réimporte
+    importer.on_tick(session, state)
+    importer._import.assert_called_once()
+
+
+def test_nouvelle_draft_rend_la_main_a_l_import():
+    from unittest.mock import Mock
+
+    from src.draft.loadout_import import LoadoutImporter
+
+    importer = LoadoutImporter(Mock())
+    importer.set_manual(True)
+    importer.reset()
+    assert importer.manual is False
+
+
+def test_les_commandes_loadout_arrivent_jusqu_a_l_importeur():
+    from unittest.mock import Mock
+
+    from src.draft.commands import CommandListener
+    from src.draft.state import DraftState as State
+
+    monitor = Mock()
+    monitor.console_input = False
+    monitor._command_queue.get_nowait.side_effect = [
+        "loadout manual",
+        "loadout auto",
+        __import__("queue").Empty(),
+    ]
+    CommandListener(monitor).apply_pending(State())
+    assert [c.args[0] for c in monitor.loadout.set_manual.call_args_list] == [
+        True,
+        False,
+    ]
+
+
+def test_scripts_de_la_colonne_loadout(client):
+    assert client.get("/static/runes.js").status_code == 200
+    assert 'src="/static/runes.js"' in client.get("/").text
+
+
+def test_runes_js_sans_erreur_de_syntaxe():
+    import shutil
+    import subprocess
+
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node absent")
+    path = Path(__file__).parent.parent / "src" / "client" / "static" / "runes.js"
+    assert (
+        subprocess.run([node, "--check", str(path)], capture_output=True).returncode
+        == 0
+    )
+
+
+def test_la_colonne_est_vide_cote_serveur_et_appartient_au_script(client, bus):
+    bus.publish("draft", pick_snapshot())
+    html = client.get("/draft/stage").text
+    assert '<aside class="d-loadout"' in html and "Runes &amp; sorts" not in html

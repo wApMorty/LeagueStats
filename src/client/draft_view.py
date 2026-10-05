@@ -371,6 +371,7 @@ def stage_view(
         "hover_id": (sealed["me"] or {}).get("champion_id") or snapshot_hover(snapshot),
         "locked_id": (sealed["me"] or {}).get("champion_id") or 0,
         "skin_id": skin["chosen_id"],
+        "loadout": bool(snapshot.get("loadout")),
         "my_ban_id": (snapshot.get("my_ban") or {}).get("champion_id") or 0,
         "ban_hover_id": (snapshot.get("my_ban_hover") or {}).get("champion_id") or 0,
         "recs": [r["champion_id"] for r in recs],

@@ -185,7 +185,7 @@ def test_lecture_hors_liste_blanche_refusee_sans_appel(pick, endpoint):
     [
         ("POST", "/lol-chat/v1/conversations/x/messages"),  # pas de message
         ("POST", "/lol-lobby/v2/lobby/invitations"),  # pas d'invitation
-        ("DELETE", "/lol-perks/v1/pages/1"),
+        ("DELETE", "/lol-perks/v1/pages"),
         ("PUT", "/lol-champ-select/v1/session/actions/1"),
         ("PATCH", "/lol-champ-select/v1/session/actions/x"),
         ("PATCH", "/lol-champ-select/v1/session/actions/1/../2"),
@@ -199,7 +199,7 @@ def test_ecriture_hors_liste_blanche_refusee_sans_appel(pick, method, endpoint):
 
 def test_les_ecritures_listees_sont_celles_de_la_draft_seulement():
     """Critère 6 : lobby, file et draft, rien d'autre (aucune route de message ni d'invitation)."""
-    allowed_prefixes = ("/lol-champ-select/", "/lol-lobby/", "/lol-matchmaking/")
+    allowed_prefixes = ("/lol-champ-select/", "/lol-lobby/", "/lol-matchmaking/", "/lol-perks/")
     assert all(pattern.pattern.startswith(allowed_prefixes) for _, pattern in WRITES)
     assert not any(
         "chat" in pattern.pattern or "invitation" in pattern.pattern for _, pattern in WRITES

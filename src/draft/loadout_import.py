@@ -54,10 +54,18 @@ class LoadoutImporter:
 
     def reset(self) -> None:
         """Nouvelle draft : rien n'a encore été écrit."""
+        self.manual = False  # SPEC-21 : page choisie à la main, elle prime sur l'import
         self._last_key: Optional[ImportKey] = None
         # Ce qui est écrit dans le client : (championId, libellé, build). Le
         # champion en fait partie : la page et le set portent son nom et son id.
         self._applied: Optional[Tuple[int, str, Build]] = None
+
+    def set_manual(self, manual: bool) -> None:
+        """La page est choisie à la main (l'import du lock-in s'efface) ou rendue à l'import."""
+        if self.manual and not manual:
+            self._last_key = None  # le prochain tick réimporte la build OneTricks
+            self._applied = None
+        self.manual = manual
 
     def state(self) -> Optional[Dict]:
         """Ce qui est écrit dans le client (SPEC-21 : le snapshot de draft), None avant le lock-in."""
@@ -90,7 +98,7 @@ class LoadoutImporter:
 
     def on_tick(self, champ_select_data: Dict, state: DraftState) -> None:
         """Appelé à chaque tick de champ select ; ne lève jamais."""
-        if not draft_config.AUTO_IMPORT_LOADOUT:
+        if not draft_config.AUTO_IMPORT_LOADOUT or self.manual:
             return
         try:
             champion_id = locked_champion(champ_select_data)

@@ -17,6 +17,7 @@ READS: Tuple[Pattern[str], ...] = tuple(
         r"/lol-champ-select/v1/(session|pickable-champion-ids|bannable-champion-ids)",
         r"/lol-summoner/v1/current-summoner",
         r"/lol-champions/v1/inventories/\d+/champions/\d+/skins",
+        r"/lol-perks/v1/(pages|inventory|styles|currentpage)",
     )
 )
 
@@ -26,6 +27,8 @@ WRITES: Tuple[Tuple[str, Pattern[str]], ...] = tuple(
     for method, pattern in (
         ("PATCH", r"/lol-champ-select/v1/session/actions/\d+"),  # survoler, verrouiller, bannir
         ("PATCH", r"/lol-champ-select/v1/session/my-selection"),  # skin, sorts
+        ("POST", r"/lol-perks/v1/pages"),  # page de runes du loadout
+        ("DELETE", r"/lol-perks/v1/pages/\d+"),  # la page « LS » précédente seulement
     )
 )
 

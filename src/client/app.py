@@ -20,6 +20,7 @@ from ..pool_manager import get_user_data_path
 from ..user_prefs import load_motion, save_motion
 from .assets import PLACEHOLDER, Assets
 from .draft_grimoire import grimoire_view
+from .draft_loadout import normalize_page, plan as loadout_plan, runes_payload, send as send_loadout
 from .draft_actions import Refusal, role_command, run as run_draft_action
 from .draft_skins import SkinBook, select_skin
 from .draft_view import signature, stage_view
@@ -238,6 +239,55 @@ def create_app(
         """Le grimoire des champions, ouvert par le script au clic."""
         view = grimoire_view(draft_snapshot(), app.state.assets)
         return templates.TemplateResponse(request, "partials/draft_grimoire.html", {"g": view})
+
+    @app.get("/draft/runes")
+    def draft_runes() -> dict:
+        """Arbres de runes, fragments et sorts, pour la page de runes et son éditeur."""
+        return runes_payload(app.state.assets.rune_styles())
+
+    @app.get("/draft/loadout")
+    def draft_loadout(champion_id: int) -> dict:
+        """La page de runes, les sorts et les objets prévus pour ce champion (OneTricks, ou déjà dans le client)."""
+        snapshot = draft_snapshot()
+        if not snapshot:
+            return {"available": False, "reason": "Pas de champ select en cours"}
+        return loadout_plan(snapshot, champion_id, app.state.assets.rune_styles())
+
+    def tell_live_coach(line: str) -> bool:
+        return commands is not None and commands(line)
+
+    @app.post("/draft/loadout/manual")
+    def draft_loadout_manual(on: int):
+        """La page est modifiée à la main (l'import du lock-in s'efface) ou rétablie (il reprend)."""
+        if not tell_live_coach("loadout manual" if on else "loadout auto"):
+            return JSONResponse({"detail": "Live Coach inactif"}, status_code=503)
+        return Response(status_code=204)
+
+    @app.post("/draft/loadout/send")
+    def draft_loadout_send(primary: int, sub: int, perks: str, shards: str, spell1: int, spell2: int):
+        """Écrit la page et les sorts choisis dans le client ; ils priment alors sur l'import du lock-in."""
+        styles = app.state.assets.rune_styles()
+        try:
+            ids = [int(x) for x in perks.split(",")]
+            fragments = [int(x) for x in shards.split(",")]
+            page = (
+                normalize_page(styles, primary, sub, ids, fragments)
+                if len(ids) == 6 and len(set(ids)) == 6
+                else None
+            )
+            if page is None:
+                raise Refusal("Page de runes incomplète")
+            snapshot = draft_snapshot() or {}
+            me = next((p for p in snapshot.get("allies", []) if p["is_local"]), None)
+            shown = next((c for c in snapshot.get("champions", []) if me and c["champion_id"] == (me["champion_id"] or me["hover_id"])), None)
+            label = f"{shown['champion']} {snapshot.get('local_role') or ''}".strip() if shown else "Page"
+            outcome = send_loadout(proxy, styles, page, [spell1, spell2], label)
+        except ValueError:
+            return JSONResponse({"detail": "Identifiants de runes illisibles"}, status_code=409)
+        except Refusal as refusal:
+            return JSONResponse({"detail": str(refusal)}, status_code=409)
+        tell_live_coach("loadout manual")
+        return outcome
 
     @app.post("/draft/action/{name}")
     def draft_action(name: str, champion_id: int):

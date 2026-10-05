@@ -109,7 +109,6 @@
   {% include "partials/draft_row.html" %}
 </div>
 
-<aside class="d-loadout" data-key="loadout" data-sig="loadout" data-sync>
-  {% include "partials/draft_loadout.html" %}
-</aside>
+{#- Colonne loadout : son contenu appartient à runes.js ; seul un changement de rôle la remplace. -#}
+<aside class="d-loadout" data-key="loadout" data-sig="{{ v.role|sig }}" data-role="{{ v.role }}"></aside>
 {% endif %}

@@ -462,6 +462,7 @@
     fit();
     readState();
     paintRow();
+    listeners.forEach((listener) => listener(ctx.state, []));
     stage.addEventListener("click", (event) => {
       const name = (card) => card.querySelector(".d-card-name").textContent;
       const ban = event.target.closest(".d-cards-ban .d-card");
