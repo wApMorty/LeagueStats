@@ -6,6 +6,22 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Feature
 
+- **Client LeagueStats, coaching et post-game (SPEC-21 tâches 50 à 54, 56, 71, 75 et 95)** — la navigation
+  « Coaching » a ses écrans. **Accueil** : axes de travail avec leurs cinq pastilles tenu / non tenu, places
+  libres et proposition du coach (« Fixer cet axe », « Choisir une autre métrique », « Clore l'axe » : **première
+  écriture du client dans la base**, par une connexion à part, derrière le jeton de session), derniers constats
+  en barres divergentes, rang, dix dernières parties et bilan du poste. **Rang** : courbes Solo et Flex sur
+  l'échelle continue de `lp_scale()`, histogramme des LP par partie, cartes par file (une file sous 2 photos n'a
+  pas de courbe). **Progression** : grille du poste avec Toi / Norme / Objectif, tendance et verdict de
+  `trends()`, schémas ; sous 5 parties, pas de verdict (« n/5 »). **Parties** et page d'une partie : courbe de win
+  chance, marqueurs, événements les plus coûteux et les plus rentables. **Calibration** : diagramme de fiabilité,
+  Brier et n par version du modèle, jamais mélangées. **Post-game** : à la fin d'une partie classée, la fenêtre
+  bascule sur `/postgame` (sauf pendant une draft) : sceau de victoire ou de défaite apposé, LP, axes jugés,
+  pile des événements, impact attribué et résidu, écarts à la norme ; **dans le client, cette revue remplace le
+  rapport console de fin de partie** (la console le garde). `calibration_curve()` et `curve()` gardent une
+  sortie identique (tests d'identité). L'exe embarque gabarits, statiques et polices ;
+  `scripts/check_exe_assets.py` le vérifie sans le lancer (étape de la CI).
+
 - **Client LeagueStats, file trouvée et transition de page (SPEC-21 tâches 93 et 94)** — quand le client
   LoL trouve une partie, un overlay « Partie trouvée » couvre la fenêtre : compte à rebours de 10 s, boutons
   Accepter / Refuser (écrits dans le client par la liste blanche), mention de l'auto-accept du Live Coach,

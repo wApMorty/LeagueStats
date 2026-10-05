@@ -1,6 +1,6 @@
 # Structure du Projet — LeagueStats Coach
 
-**Dernière mise à jour** : 2026-09-04 (réécrit, la version précédente décrivait une
+**Dernière mise à jour** : 2026-10-05 (`src/client/` ajouté : SPEC-21 lots 1 à 4 ; réécrit le 2026-09-04, la version précédente décrivait une
 arborescence pré-refactor et des scripts de build qui n'existent plus).
 
 ## Racine
@@ -68,6 +68,18 @@ src/
 │   ├── findings.py, report.py             # Constats de fin de partie, sorties console
 │   └── progression.py, goals.py            # Schémas, tendances, LP, axes de travail
 │
+├── client/                  # Client LeagueStats : fenêtre pywebview sur un serveur FastAPI local (SPEC-21)
+│   ├── launch.py, server.py, window.py   # Lancement (--client, menu 7), serveur en fil daemon, fenêtre sans bordure
+│   ├── app.py                             # Fabrique FastAPI : routes, garde Host/Origin et jeton de session, SSE
+│   ├── db.py                               # Lecture seule par requête ; `writable()` pour fixer/clore un axe
+│   ├── bus.py, lcu_events.py                # Bus d'événements, WebSocket du client LoL
+│   ├── lcu_proxy.py, lcu_status.py           # Liste blanche des appels au LCU, sonde « client ouvert »
+│   ├── charts.py                              # Graphiques SVG purs (courbes, sparklines, histogramme, fiabilité)
+│   ├── data.py, home.py, review.py             # Données des écrans du coaching : rang, progression, calibration ; accueil ; parties et post-game
+│   ├── draft_*.py, found.py, assets.py          # Draft interactive, partie trouvée, Data Dragon local
+│   ├── templates/                                # Jinja : coque, un gabarit par écran, fragments htmx dans partials/
+│   └── static/                                    # style.css (jetons « Alchimie »), motion.js, un module JS par écran, fonts/
+│
 ├── ui/                       # Un module par menu/domaine
 │   ├── menu_system.py          # Boucle de menu principale
 │   ├── draft_coach_ui.py        # Menu 1 (Live Coach)
@@ -113,6 +125,7 @@ logs/update_all.log          # Log actif du pipeline (voir aussi runbook_scrapin
 tests/                        # Suite pytest (couverture sur tout src/, seuil 45 %)
 tests/regression/              # Tests de régression par bug corrigé
 docs/specs/                     # Spécifications d'implémentation par chantier
+docs/design/client_alchimie/     # Handoff de design du client (prototypes .dc.html, motion.js, jetons)
 docs/archive/                    # Documents de travail entièrement exécutés
 ```
 

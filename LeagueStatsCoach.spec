@@ -4,7 +4,14 @@ a = Analysis(
     ['lol_coach.py'],
     pathex=[],
     binaries=[],
-    datas=[('data/db.db', '.'), ('README.md', '.')],
+    # Client LeagueStats (SPEC-21) : gabarits et statiques (polices comprises), lus par
+    # `config.get_resource_path("src/client/...")` ; aucun `hiddenimports` pour uvicorn ni pywebview.
+    datas=[
+        ('data/db.db', '.'),
+        ('README.md', '.'),
+        ('src/client/templates', 'src/client/templates'),
+        ('src/client/static', 'src/client/static'),
+    ],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

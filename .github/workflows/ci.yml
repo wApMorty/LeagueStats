@@ -191,6 +191,13 @@ jobs:
         run: |
           python build_app.py
 
+      # The client (SPEC-21) reads its templates, static files and fonts at run time: check
+      # they are in the executable, along with the server and window modules (no window opened)
+      - name: Verify the client is packaged
+        run: |
+          python scripts/check_exe_assets.py dist/LeagueStatsCoach.exe
+        shell: pwsh
+
       # Verify build succeeded
       - name: Verify build and measure size
         run: |

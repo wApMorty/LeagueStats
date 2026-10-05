@@ -21,7 +21,7 @@ Menu principal :
 4. **Analyse & Tournoi** — analyse statistique, coaching manuel de tournoi et bilan du coach de gameplay
 5. **Constructeur d'équipe** — recherche des meilleures combinaisons de champions (duos/trios)
 6. **Gérer les pools** — création et gestion de pools de champions personnalisées
-7. **Client LeagueStats** — fenêtre native (aussi `python lol_coach.py --client`) : sert le Live Coach et le LCU dans une interface dédiée (en construction, SPEC-21)
+7. **Client LeagueStats** — fenêtre native (aussi `python lol_coach.py --client`) qui parle au client League of Legends : **draft interactive** (bans, picks, grimoire des champions, skins, runes et sorts, clic pour survoler et verrouiller), **partie trouvée**, section **Coaching** (accueil avec axes de travail, rang, progression, parties, calibration) et **revue de partie** à la fin de chaque partie classée. Profil, collection, lobby et social arrivent avec les lots suivants de SPEC-21 ; `python build_app.py` l'embarque dans l'exécutable.
 8. Quitter
 
 ## Mise à jour des données
