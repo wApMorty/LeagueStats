@@ -6,6 +6,17 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Feature
 
+- **Client LeagueStats, collection, lobby, file et social (SPEC-21 tâches 79 à 83)** — le groupe « Client »
+  est complet. **Collection** : champions possédés (filtre par classe), pages de runes, sets d'objets, en
+  lecture seule. **Lobby** : les files de la Faille et de l'ARAM que le client propose, ouvrir un lobby,
+  voir ses membres, choisir ses deux postes, le quitter. **File d'attente** : « Lancer la file » puis le temps
+  écoulé et l'estimation du client LoL dans la barre de titre, avec « Annuler » (aussi sur l'écran Lobby) ;
+  chaque action n'est acceptée que dans la phase du client où elle a un sens, sinon un refus lisible sans
+  écriture. **Social** : amis par état (en partie, connectés, hors ligne), statut, conversations ; **aucun
+  message ni invitation** (la liste blanche n'ouvre aucune écriture sur le chat). Les formes du lobby et de la
+  file sont construites d'après le schéma du client (aucun lobby n'était ouvert au relevé) : à confirmer en
+  vraie file. `python build_app.py` : exe de 82,9 Mo, les 48 fichiers du client et les 8 modules y sont.
+
 - **Client LeagueStats, profil et historique (SPEC-21 tâches 76 à 78)** — le groupe « Client » de la
   navigation s'ouvre. **Profil** (`/profil`) : identité et progression du niveau, cartes de rang Solo et Flex
   (série de promotion, placement), régalia, défis (catégories et trois meilleurs). **Historique**

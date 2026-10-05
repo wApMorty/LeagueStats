@@ -1,6 +1,6 @@
 # Structure du Projet — LeagueStats Coach
 
-**Dernière mise à jour** : 2026-10-05 (`src/client/` ajouté : SPEC-21 lots 1 à 4 ; réécrit le 2026-09-04, la version précédente décrivait une
+**Dernière mise à jour** : 2026-10-05 (`src/client/` ajouté : SPEC-21 lots 1 à 6 ; réécrit le 2026-09-04, la version précédente décrivait une
 arborescence pré-refactor et des scripts de build qui n'existent plus).
 
 ## Racine
@@ -77,6 +77,8 @@ src/
 │   ├── charts.py                              # Graphiques SVG purs (courbes, sparklines, histogramme, fiabilité)
 │   ├── data.py, home.py, review.py             # Données des écrans du coaching : rang, progression, calibration ; accueil ; parties et post-game
 │   ├── draft_*.py, found.py, assets.py          # Draft interactive, partie trouvée, Data Dragon local
+│   ├── profil.py, historique.py, collection.py   # Écrans du groupe Client lus dans le LCU : profil, historique, collection
+│   ├── lobby.py, social.py                        # Lobby et file d'attente (écriture gardée par la phase), social en lecture seule
 │   ├── templates/                                # Jinja : coque, un gabarit par écran, fragments htmx dans partials/
 │   └── static/                                    # style.css (jetons « Alchimie »), motion.js, un module JS par écran, fonts/
 │
