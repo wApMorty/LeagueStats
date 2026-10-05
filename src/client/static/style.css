@@ -620,3 +620,9 @@ h1 { margin: 0 0 12px; font: 600 46px/1 var(--font-title); }
 .ed-shard-options .ed-rune img { padding: 20%; }
 .ed-shard-current { font-size: 13px; }
 .ed-note { margin-top: auto; font-size: 13px; line-height: 1.45; color: var(--muted); text-wrap: pretty; }
+
+.ed-cell { display: flex; flex-direction: column; align-items: center; gap: 5px; width: var(--w); text-align: center; cursor: pointer; opacity: 0.45; }
+.ed-cell.is-on, .ed-cell:hover { opacity: 1; }
+.ed-cell .ed-rune { opacity: 1; }
+.ed-rune-name { font-size: 12px; line-height: 1.2; }
+.ed-keys .ed-rune-name { font-size: 13px; }

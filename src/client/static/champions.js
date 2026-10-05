@@ -125,7 +125,7 @@
       applyFilters(true);
     });
     // L'aperçu de départ : ma cible actuelle, sinon rien.
-    const current = ban ? state.ban_hover_id : state.hover_id;
+    const current = ban ? Draft.banSelected || state.ban_hover_id : Draft.selected || state.hover_id;
     const start = current && element.querySelector(`.g-tile[data-id="${current}"]`);
     if (start && !start.dataset.gone) {
       start.classList.add("is-sel");

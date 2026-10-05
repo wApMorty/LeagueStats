@@ -308,6 +308,8 @@
     ctx.hoverUntil = performance.now() + 3000;
     select(id);
     paintRow();
+    const caption = ctx.stage.querySelector(".d-name-me");
+    if (caption) caption.textContent = name;
     const portrait = ctx.stage.querySelector("img[data-me]");
     if (portrait && image) {
       portrait.src = image;
@@ -498,6 +500,9 @@
     },
     get selected() {
       return ctx?.sel;
+    },
+    get banSelected() {
+      return ctx?.banSel;
     },
     get scale() {
       return ctx?.scale ?? 1;

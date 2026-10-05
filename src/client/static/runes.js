@@ -313,8 +313,8 @@
   const OFF = "oklch(0.74 0.11 55 / 0.25)";
 
   /** Un disque cliquable de l'éditeur : bordure et lueur de l'arbre quand il est choisi, grisé sinon. */
-  function pick(rune, size, color, selected, key, onpick, ring = 1.5) {
-    return el(
+  function pick(rune, size, color, selected, key, onpick, ring = 1.5, width = 0) {
+    const disc = el(
       "div",
       {
         class: `ed-rune${selected ? " is-on" : ""}`,
@@ -323,11 +323,14 @@
         tabindex: "0",
         title: rune.name,
         style: `--s:${size}px;--c:${selected ? color : OFF};${selected ? `box-shadow:0 0 18px ${color}, 0 0 4px ${color}` : ""};border-width:${ring}px`,
-        onclick: onpick,
+        onclick: width ? null : onpick,
       },
       initials(rune.name),
       el("img", { src: perk(rune.icon), alt: "" }),
     );
+    if (!width) return disc;
+    // Avec un libellé : le nom sous le disque, le tout cliquable et grisé ensemble.
+    return el("div", { class: `ed-cell${selected ? " is-on" : ""}`, style: `--w:${width}px`, onclick: onpick }, disc, el("span", { class: "ed-rune-name" }, rune.name));
   }
 
   function treeButton(style, selected, size, onpick) {
@@ -356,9 +359,9 @@
       { class: "ed-col" },
       el("div", { class: "ed-label" }, "Arbre principal"),
       el("div", { class: "ed-trees" }, styles.map((style) => treeButton(style, style.id === page.primary, 50, () => set(L.setPrimary(styles, page, style.id), `t${style.id}`)))),
-      el("div", { class: "ed-keys" }, primary.slots[0].map((rune) => pick(rune, 74, primary.color, rune.id === page.keystone, `k${rune.id}`, () => set(L.setKeystone(styles, page, rune.id), `k${rune.id}`), 2))),
+      el("div", { class: "ed-keys" }, primary.slots[0].map((rune) => pick(rune, 74, primary.color, rune.id === page.keystone, `k${rune.id}`, () => set(L.setKeystone(styles, page, rune.id), `k${rune.id}`), 2, 110))),
       [1, 2, 3].map((row) =>
-        el("div", { class: "ed-row" }, primary.slots[row].map((rune) => pick(rune, 52, primary.color, page.rows[row - 1] === rune.id, `r${rune.id}`, () => set(L.setRow(styles, page, row - 1, rune.id), `r${rune.id}`)))),
+        el("div", { class: "ed-row" }, primary.slots[row].map((rune) => pick(rune, 52, primary.color, page.rows[row - 1] === rune.id, `r${rune.id}`, () => set(L.setRow(styles, page, row - 1, rune.id), `r${rune.id}`), 1.5, 110))),
       ),
     );
     const middle = el(
@@ -370,7 +373,7 @@
         "div",
         { class: "ed-subrows" },
         [1, 2, 3].map((row) =>
-          el("div", { class: "ed-row" }, secondary.slots[row].map((rune) => pick(rune, 46, secondary.color, page.subs.includes(rune.id), `s${rune.id}`, () => set(L.setSubRune(styles, page, rune.id), `s${rune.id}`)))),
+          el("div", { class: "ed-row" }, secondary.slots[row].map((rune) => pick(rune, 46, secondary.color, page.subs.includes(rune.id), `s${rune.id}`, () => set(L.setSubRune(styles, page, rune.id), `s${rune.id}`), 1.5, 100))),
         ),
       ),
     );

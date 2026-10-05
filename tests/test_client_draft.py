@@ -500,7 +500,7 @@ def test_sans_recommandation_le_message_remplace_les_cartes(client, bus):
 def test_pas_mon_tour_les_cartes_restent_mais_pas_de_survol_serveur(client, bus):
     bus.publish("draft", pick_snapshot(my_turn=False))
     html = client.get("/draft/stage").text
-    assert 'class="d-card"' in html and "Phase de picks — en attente de ton tour" in html
+    assert 'class="d-card"' in html and "Phase de picks — en attente" in html
     assert state_of(html)["my_turn"] is False
 
 

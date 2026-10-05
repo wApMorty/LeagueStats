@@ -41,9 +41,9 @@ BAN_HUES = (
 PHASE_TITLES = {
     "ban": "Phase de bans — choisis ton ban",
     "pick_turn": "Phase de picks — à toi de jouer",
-    "pick_wait": "Phase de picks — en attente de ton tour",
-    "locked": "Verrouillé — en attente des autres joueurs",
-    "final": "Finalisation — runes, sorts et skin",
+    "pick_wait": "Phase de picks — en attente",
+    "locked": "Verrouillé — en attente",
+    "final": "Finalisation — runes et skin",
 }
 PHASE_ADVICE = {
     "ban": "Bannis la menace la plus forte contre ton pool",
