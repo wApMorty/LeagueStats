@@ -90,12 +90,15 @@ class BanAdvisor:
             exclude_champions=unavailable,
         )
 
-    def advice(self, state: DraftState, limit: int) -> List[SnapshotBanAdvice]:
+    def advice(
+        self, state: DraftState, limit: int, ids: Optional[dict] = None
+    ) -> List[SnapshotBanAdvice]:
         """Les bans conseillés, structurés pour le client (SPEC-21 tâche 85). Ne lève jamais."""
         try:
             return [
                 SnapshotBanAdvice(
                     champion=enemy,
+                    champion_id=(ids or {}).get(enemy.lower()),
                     gain=threat,
                     best_response=best_champion,
                     best_response_value=best_value,

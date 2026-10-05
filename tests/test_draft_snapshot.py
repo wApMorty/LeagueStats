@@ -137,6 +137,7 @@ def test_snapshot_classement_avec_ecarts_profondeur_et_suite(monitor):
     _, payload = snapshot_of(monitor, pick_state(), RANKED)
     first = payload["recommendations"][0]
     assert first["champion"] == "Aatrox" and first["lane"] == "top"
+    assert first["champion_id"] == 266
     assert first["win_probability"] == pytest.approx(0.5731)
     assert first["games"] == 12500 and first["depth"] == 2
     assert first["variation"] == [
@@ -152,7 +153,9 @@ def test_snapshot_classement_avec_ecarts_profondeur_et_suite(monitor):
         "Garen",
         "Sett",
     ]  # tout le classement, la console n'en montre que 3
-    assert payload["skipped"] == [{"champion": "Malphite", "games": 0, "reason": "no_data"}]
+    assert payload["skipped"] == [
+        {"champion": "Malphite", "games": 0, "reason": "no_data", "champion_id": 54}
+    ]
     assert payload["depth"] == 2 and payload["pool"] == POOL
 
 
@@ -264,8 +267,8 @@ def test_bans_conseilles_structures_pendant_la_phase_de_bans(monitor):
     state = DraftState(phase="BAN_PICK", current_actor=1, local_player_cell_id=1)
     _, payload = snapshot_of(monitor, state, [])
     assert payload["ban_advice"] == [
-        {"champion": "Zed", "gain": 2.94, "best_response": "Aatrox", "best_response_value": 1.5, "matchups": 12},
-        {"champion": "Yone", "gain": 1.2, "best_response": "Darius", "best_response_value": -0.4, "matchups": 8},
+        {"champion": "Zed", "champion_id": None, "gain": 2.94, "best_response": "Aatrox", "best_response_value": 1.5, "matchups": 12},
+        {"champion": "Yone", "champion_id": None, "gain": 1.2, "best_response": "Darius", "best_response_value": -0.4, "matchups": 8},
     ]
     # le snapshot en demande plus que la console (3), qui garde son nombre
     assert monitor.assistant.get_ban_recommendations.call_args.kwargs["num_bans"] == 4
@@ -307,3 +310,48 @@ def test_balance_en_phase_de_bans_est_la_position_vide(monitor):
     _, payload = snapshot_of(monitor, DraftState(phase="BAN_PICK"), [])
     assert payload["base_probability"] == pytest.approx(0.5)
     assert payload["projected_probability"] == pytest.approx(0.5)
+
+
+# ---------- republication à chaque tick (tâche 73) ----------
+
+
+def with_hover(state, hover_id):
+    from src.draft.state import Cell
+
+    state.ally_cells = [Cell(cell_id=0, hover_id=hover_id), Cell(cell_id=1, champion_id=12)]
+    return state
+
+
+def test_refresh_republie_quand_un_survol_change_et_pas_sinon(monitor):
+    bus = EventBus()
+    monitor.bus = bus
+    with bus.subscribe([TOPIC]) as subscription:
+        with patch.object(monitor.search, "rank", return_value=RANKED):
+            monitor._provide_recommendations(with_hover(pick_state(), 0))
+        assert subscription.get(1) is not None
+        monitor.recommender.refresh(with_hover(pick_state(), 0))  # rien n'a changé
+        assert subscription.get(0.05) is None
+        monitor.recommender.refresh(with_hover(pick_state(), 266))
+        topic, payload = subscription.get(1)
+    assert payload["allies"][0]["hover_id"] == 266
+    assert payload["recommendations"][0]["champion"] == "Aatrox"  # le classement du dernier calcul
+
+
+def test_refresh_sans_bus_ou_sans_calcul_ne_fait_rien(monitor):
+    monitor.recommender.refresh(pick_state())  # pas de bus
+    monitor.bus = Mock()
+    monitor.recommender.refresh(pick_state())  # aucun snapshot calculé encore
+    monitor.bus.publish.assert_not_called()
+
+
+def test_le_parseur_lit_le_ban_du_joueur_local_pose_ou_survole():
+    lcu = Mock()
+    lcu.get_assigned_positions.return_value = {}
+    base = {"localPlayerCellId": 0, "myTeam": [{"cellId": 0}], "theirTeam": []}
+    survol = {**base, "actions": [[{"type": "ban", "actorCellId": 0, "championId": 266, "completed": False}]]}
+    pose = {**base, "actions": [[{"type": "ban", "actorCellId": 0, "championId": 266, "completed": True}]]}
+    autre = {**base, "actions": [[{"type": "ban", "actorCellId": 3, "championId": 266, "completed": True}]]}
+    parse = lambda data: DraftStateParser(lcu, str).parse(data, {}, {})[0]
+    assert (parse(survol).my_ban_hover_id, parse(survol).my_ban_id) == (266, 0)
+    assert (parse(pose).my_ban_hover_id, parse(pose).my_ban_id) == (0, 266)
+    assert (parse(autre).my_ban_hover_id, parse(autre).my_ban_id) == (0, 0)

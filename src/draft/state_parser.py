@@ -55,6 +55,7 @@ class DraftStateParser:
 
         timer = champ_select_data.get("timer", {})
         state.time_left_ms = timer.get("adjustedTimeLeftInPhase")
+        state.time_total_ms = timer.get("totalTimeInPhase")
 
         # SPEC-04 B3: cellId -> lane, for allies whose role is assigned by the queue
         state.ally_positions = self.lcu.get_assigned_positions(champ_select_data)
@@ -108,6 +109,17 @@ class DraftStateParser:
             and not action.get("completed", False)
             and action.get("championId", 0) > 0
         }
+        for action_set in actions:
+            for action in action_set:
+                if (
+                    action.get("type") == "ban"
+                    and action.get("actorCellId") == state.local_player_cell_id
+                    and action.get("championId", 0) > 0
+                ):
+                    if action.get("completed", False):
+                        state.my_ban_id = action["championId"]
+                    else:
+                        state.my_ban_hover_id = action["championId"]
         for team, cells in ((my_team, state.ally_cells), (their_team, state.enemy_cells)):
             for player in team:
                 cell_id = player.get("cellId")

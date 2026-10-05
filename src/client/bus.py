@@ -7,7 +7,7 @@ monitoring). Les éditeurs sont des fils, le consommateur est le flux SSE du ser
 
 import queue
 import threading
-from typing import Any, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from ..config_client import client_config
 
@@ -61,11 +61,13 @@ class EventBus:
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._subscriptions: List[Subscription] = []
+        self._latest: Dict[str, Any] = {}
 
     def publish(self, topic: str, payload: Any) -> None:
         """Dépose l'événement chez chaque abonné du sujet ; ne bloque ni ne lève jamais."""
         try:
             with self._lock:
+                self._latest[topic] = payload
                 targets = [s for s in self._subscriptions if s.accepts(topic)]
         except Exception:  # pylint: disable=broad-exception-caught
             return
@@ -74,6 +76,11 @@ class EventBus:
                 subscription.put((topic, payload))
             except Exception:  # pylint: disable=broad-exception-caught
                 pass
+
+    def latest(self, topic: str) -> Optional[Any]:
+        """Dernière charge utile publiée sur `topic` (l'état à afficher à l'ouverture d'un écran)."""
+        with self._lock:
+            return self._latest.get(topic)
 
     def subscribe(self, topics: Optional[Iterable[str]] = None) -> Subscription:
         """Abonnement aux `topics` (tous si None) ; à fermer, ou à utiliser dans un `with`."""

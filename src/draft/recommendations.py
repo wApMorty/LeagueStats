@@ -33,6 +33,8 @@ class DraftRecommender:
 
     def __init__(self, monitor) -> None:
         self.m = monitor
+        self._last_analysis: Optional[Analysis] = None
+        self._last_key = None
 
     # ---------- préparation de la position ----------
 
@@ -164,9 +166,39 @@ class DraftRecommender:
             print(f"[WARNING] Erreur lors de la génération des recommandations: {e}")
         self._publish(state, analysis)
 
+    @staticmethod
+    def _signature(state: DraftState) -> tuple:
+        """Ce que le client dessine et que la liste des picks ne dit pas : survols, tour, bans."""
+        cells = [
+            (c.cell_id, c.champion_id, c.hover_id) for c in state.ally_cells + state.enemy_cells
+        ]
+        return (
+            state.phase,
+            state.current_actor,
+            tuple(cells),
+            tuple(state.ally_bans),
+            tuple(state.enemy_bans),
+            state.my_ban_id,
+            state.my_ban_hover_id,
+        )
+
+    def refresh(self, state: DraftState) -> None:
+        """Republie le dernier classement avec l'état à jour quand un survol ou un tour a changé.
+
+        Appelé à chaque tick où la draft n'a pas changé (la console, elle, ne se redessine pas).
+        """
+        try:
+            if getattr(self.m, "bus", None) is None or self._last_analysis is None:
+                return
+            if self._signature(state) != self._last_key:
+                self._publish(state, self._last_analysis)
+        except Exception:  # pylint: disable=broad-exception-caught
+            pass
+
     def _publish(self, state: DraftState, analysis: Analysis) -> None:
         """Snapshot du tick sur le bus, s'il y en a un. Best-effort : jamais d'exception."""
         try:
+            self._last_analysis, self._last_key = analysis, self._signature(state)
             if analysis.base_probability is None:  # phase de bans, ou aucun ennemi
                 analysis.base_probability = self._base_probability(
                     self._placed(state.ally_picks, state), self._placed(state.enemy_picks, state)

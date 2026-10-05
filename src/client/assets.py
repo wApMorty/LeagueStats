@@ -61,6 +61,7 @@ class Assets:
         self._fetch = fetch or _http_get
         self._lock = threading.Lock()
         self._failed: Dict[str, float] = {}
+        self._memo: Dict[Tuple[str, str], Any] = {}  # données lues, par (nom, version)
 
     # ---------- version ----------
 
@@ -153,10 +154,13 @@ class Assets:
 
     def champions(self) -> List[Dict[str, Any]]:
         """Tous les champions : `{key, id, name, tags}`, `key` étant l'identifiant numérique Riot."""
+        version = self.version()
+        if (cached := self._memo.get(("champions", version))) is not None:
+            return cached
         data = self._json(_DATA["champions"])
         if not isinstance(data, dict):
             return []
-        return [
+        champions = [
             {
                 "key": int(champion["key"]),
                 "id": champion["id"],
@@ -165,6 +169,8 @@ class Assets:
             }
             for champion in data.get("data", {}).values()
         ]
+        self._memo[("champions", version)] = champions
+        return champions
 
     def skins(self, champion: str) -> List[Dict[str, Any]]:
         """Les skins d'un champion (`champion` : son `id` Data Dragon) : `{num, name}`, base comprise."""
@@ -179,5 +185,11 @@ class Assets:
 
     def rune_styles(self) -> List[Dict[str, Any]]:
         """`runesReforged.json` : les cinq arbres, leurs rangées et leurs runes (icônes comprises)."""
+        version = self.version()
+        if (cached := self._memo.get(("runes", version))) is not None:
+            return cached
         data = self._json(_DATA["runes"])
-        return data if isinstance(data, list) else []
+        if not isinstance(data, list):
+            return []
+        self._memo[("runes", version)] = data
+        return data

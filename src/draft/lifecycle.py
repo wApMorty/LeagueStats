@@ -106,6 +106,8 @@ class MonitorLifecycle:
                 if not self.m.has_analyzed_final_draft:
                     self.m._handle_draft_change(current_state)
                 self.m.last_draft_state = current_state
+            else:
+                self.m.recommender.refresh(current_state)  # survols et tour (SPEC-21)
 
             # SPEC-15: runes/items/sorts pushed at lock-in, refined at the duel.
             self.m.loadout.on_tick(champ_select_data, current_state)

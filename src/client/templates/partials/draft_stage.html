@@ -1,0 +1,115 @@
+{#- Contenu synchronisé de l'écran de draft : chaque enfant direct d'un conteneur `data-sync` porte
+    `data-key` et `data-sig` ; le script ne remplace que les nœuds dont l'empreinte a changé. -#}
+{% macro ban_slot(slot, side, me=false) -%}
+<div class="d-ban d-ban-{{ side }} d-ban-{{ slot.state }}{{ ' d-ban-me' if me }}"{% if me %} data-ban-me{% endif %}
+     title="{{ slot.name or ('Ton ban : ouvrir le grimoire' if me else 'Ban caché') }}">
+  {% if slot.img %}<img src="{{ slot.img }}" alt="">{% endif %}
+  {% if slot.state == 'done' %}<span class="d-ban-strike"></span>{% endif %}
+  {% if slot.state in ('hidden', 'open') %}<span class="d-ban-rune rune" data-glow="2200" aria-hidden="true">ᛜ</span>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro member(m, i) -%}
+<div class="d-member d-member-{{ m.team }}" data-key="m-{{ m.team }}-{{ i }}" data-sig="{{ m|sig }}"
+     data-pop data-delay="{{ m.delay }}" style="--l: {{ m.left }}px; --t: {{ m.top }}px" data-champion="{{ m.champion_id or '' }}">
+  {% if m.pending %}
+  <div class="d-portrait d-pending" data-glow="2600"><span class="rune" aria-hidden="true">ᛃ</span></div>
+  {% else %}
+  <div class="d-portrait{{ ' d-hover' if m.hovering }}">{% if m.img %}<img src="{{ m.img }}" alt="">{% endif %}</div>
+  {% endif %}
+  {% if m.hovering %}<svg class="d-dashring" data-spin="10" viewBox="0 0 112 112" aria-hidden="true"><circle cx="56" cy="56" r="54"/></svg>{% endif %}
+  <div class="d-caption"><div class="d-name">{{ m.name }}</div><div class="d-sub">{{ m.role }} · {{ m.status }}</div></div>
+</div>
+{%- endmacro %}
+
+{% macro rings(ring_id, spin, delay, runes, foe=false) -%}
+<svg class="d-rings" data-spin="{{ spin }}" viewBox="-260 -260 520 520" aria-hidden="true">
+  <circle data-trace="1600" data-delay="{{ delay }}" r="252" class="d-ring-a"/>
+  <circle data-trace="1600" data-delay="{{ delay + 150 }}" r="222" class="d-ring-b"/>
+  <path id="{{ ring_id }}" d="M0,-237 A237,237 0 1,1 0,237 A237,237 0 1,1 0,-237" fill="none"/>
+  <text data-fade data-delay="{{ delay + 500 }}" data-ring="1489" class="d-ring-text"><textPath href="#{{ ring_id }}">{{ runes }}</textPath></text>
+</svg>
+<svg class="d-pentacle{{ ' d-pentacle-foe' if foe }}" viewBox="-260 -260 520 520" aria-hidden="true">
+  <circle r="200" class="d-pent-glow"/>
+  {% if not foe %}<path data-flash d="M0,-190 L111.7,153.7 L-180.7,-58.7 L180.7,-58.7 L-111.7,153.7 Z" class="d-pent-flash"/>{% endif %}
+  <circle data-trace="1400" data-delay="{{ delay + 400 }}" r="190" class="d-pent-circle"/>
+  <path data-trace="2000" data-delay="{{ delay + 600 }}" d="M0,-190 L111.7,153.7 L-180.7,-58.7 L180.7,-58.7 L-111.7,153.7 Z" class="d-pent-star"/>
+</svg>
+{%- endmacro %}
+
+{% if v.empty %}
+<div class="d-empty" data-key="empty" data-sig="empty">
+  <svg viewBox="-60 -60 120 120" aria-hidden="true"><circle data-trace="1400" r="52"/><path data-trace="1800" d="M0,-48 L28.2,38.8 L-45.6,-14.8 L45.6,-14.8 L-28.2,38.8 Z"/></svg>
+  <h1 data-spell>Pas de champ select en cours</h1>
+  <p class="muted">L'écran s'ouvre dès que le client LoL entre en champ select, Live Coach lancé.</p>
+  <a href="/">‹ Retour au coaching</a>
+</div>
+{% else %}
+{% set s = v.seals %}
+<div class="d-data" hidden data-key="data" data-sig="{{ v.state|sig }}" data-state='{{ v.state|tojson }}'></div>
+
+<div class="d-splash" data-key="splash" data-sig="splash"><img data-splash alt=""></div>
+
+<div class="d-head" data-key="head" data-sig="head" data-sync>
+  <div class="d-head-left" data-key="head-left" data-sig="{{ [v.title, v.phase]|sig }}">
+    <div class="d-crumb">
+      <a href="/"><span aria-hidden="true">‹</span>Coaching</a>
+      <span class="d-diamond" aria-hidden="true"></span>
+      <span>Champ select · Classée solo/duo</span>
+    </div>
+    <div class="d-title" data-spell>{{ v.title }}</div>
+  </div>
+  <div class="d-head-bans" data-key="head-bans" data-sig="{{ v.strips|sig }}">
+    <div class="d-bans-group">
+      <div class="d-bans-label d-ally-ink">{{ 'Bans alliés · ton ban' if v.phase == 'ban' else 'Bans alliés' }}</div>
+      <div class="d-bans">{{ ban_slot(v.strips.me, 'ally', true) }}{% for slot in v.strips.allies %}{{ ban_slot(slot, 'ally') }}{% endfor %}</div>
+    </div>
+    <div class="d-bans-group">
+      <div class="d-bans-label d-foe-ink">{{ 'Bans adverses · cachés' if v.phase == 'ban' else 'Bans adverses' }}</div>
+      <div class="d-bans">{% for slot in v.strips.foes %}{{ ban_slot(slot, 'foe') }}{% endfor %}</div>
+    </div>
+  </div>
+  <div class="d-tick" data-key="head-tick" data-sig="tick">
+    <svg viewBox="-32 -32 64 64" aria-hidden="true"><circle r="28" class="d-tick-bg"/><circle r="28" class="d-tick-fg" id="d-tick-ring"/></svg>
+    <div class="d-tick-n" id="d-tick-n">–</div>
+  </div>
+</div>
+
+<div class="d-seal d-seal-ally" data-key="seal-ally" data-sig="seal-ally" data-sync>
+  <div data-key="rings" data-sig="rings" class="d-seal-fx">{{ rings('dRing1', 160, 0, 'ᚠ ᚢ ᚦ ᚨ ᚱ ᚲ ᚷ ᚹ ᚺ ᚾ ᛁ ᛃ ᛇ ᛈ ᛉ ᛊ ᛏ ᛒ ᛖ ᛗ ᛚ ᛜ ᛞ ᛟ ᚠ ᚢ ᚦ ᚨ ᚱ ᚲ ᚷ ᚹ ᚺ ᚾ ᛁ ᛃ ᛇ ᛈ ᛉ ᛊ ᛏ ᛒ ᛖ ᛗ ᛚ ᛜ ᛞ ᛟ') }}</div>
+  {% for m in s.allies %}{{ member(m, loop.index0) }}{% endfor %}
+  {% if s.me %}
+  <div class="d-me" data-key="me" data-sig="{{ s.me|sig }}" title="{{ s.me.name }}">
+    <div class="d-shock" data-shock></div><div class="d-shock d-shock-b" data-shock></div>
+    <div class="d-portrait d-portrait-me" data-pop data-delay="{{ 1000 if v.intro else 0 }}">{% if s.me.img %}<img data-me src="{{ s.me.img }}" alt="" style="opacity: {{ s.me.opacity }}">{% endif %}</div>
+    {% if not s.me.locked %}<svg class="d-dashring d-dashring-me" data-spin="8" viewBox="0 0 128 128" aria-hidden="true"><circle cx="64" cy="64" r="62"/></svg>{% endif %}
+    {% if s.me.locked %}<svg class="d-lock" data-seal viewBox="-20 -20 40 40" aria-hidden="true"><circle r="18"/><path d="M0,-11 L6.47,8.9 L-10.46,-3.4 L10.46,-3.4 L-6.47,8.9 Z"/></svg>{% endif %}
+    <div class="d-me-caption"><div class="d-kicker">Toi · {{ s.me.role }}</div><div class="d-name d-name-me">{{ s.me.name }}</div><div class="d-sub">{{ s.me.state }}</div></div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="d-balance" data-key="balance" data-sig="balance" data-fade data-delay="{{ 1200 if v.intro else 0 }}">
+  <div class="d-bal-foe d-foe-ink">Eux · <span id="d-bal-foe">–</span></div>
+  <div class="d-gauge">
+    <div class="d-gauge-track"><div class="d-gauge-fill" id="d-bal-fill"></div></div>
+    <div class="d-gauge-cursor" id="d-bal-cursor"><span class="d-cursor-line"></span><span class="d-cursor-dot d-cursor-l"></span><span class="d-cursor-dot d-cursor-r"></span></div>
+  </div>
+  <div class="d-bal-pct" id="d-bal-pct">–</div>
+  <div class="d-bal-label d-ally-ink">Nous · victoire prédite</div>
+  <div class="d-bal-note" id="d-bal-note"></div>
+</div>
+
+<div class="d-seal d-seal-foe" data-key="seal-foe" data-sig="seal-foe" data-sync>
+  <div data-key="rings" data-sig="rings" class="d-seal-fx">{{ rings('dRing2', -160, 100, 'ᛟ ᛞ ᛜ ᛚ ᛗ ᛖ ᛒ ᛏ ᛊ ᛉ ᛈ ᛇ ᛃ ᛁ ᚾ ᚺ ᚹ ᚷ ᚲ ᚱ ᚨ ᚦ ᚢ ᚠ ᛟ ᛞ ᛜ ᛚ ᛗ ᛖ ᛒ ᛏ ᛊ ᛉ ᛈ ᛇ ᛃ ᛁ ᚾ ᚺ ᚹ ᚷ ᚲ ᚱ ᚨ ᚦ ᚢ ᚠ', true) }}</div>
+  {% for m in s.foes %}{{ member(m, loop.index0) }}{% endfor %}
+</div>
+
+<div class="d-row" data-key="row" data-sig="row" data-sync>
+  {% include "partials/draft_row.html" %}
+</div>
+
+<aside class="d-loadout" data-key="loadout" data-sig="loadout" data-sync>
+  {% include "partials/draft_loadout.html" %}
+</aside>
+{% endif %}

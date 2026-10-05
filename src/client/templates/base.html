@@ -13,6 +13,7 @@
 <script src="/static/htmx.min.js" defer></script>
 <script src="/static/motion.js" defer></script>
 <script src="/static/shell.js" defer></script>
+<script src="/static/draft.js" defer></script>
 {% block head %}{% endblock %}
 </head>
 <body>
@@ -39,8 +40,8 @@
 
 <div id="view" class="view" hx-boost="true" hx-target="#view" hx-select="#view"
      hx-swap="outerHTML transition:true">
-  {% include "partials/nav.html" %}
-  <main class="page">
+  {% block nav %}{% include "partials/nav.html" %}{% endblock %}
+  <main class="page{% block page_class %}{% endblock %}">
     {% block content %}{% endblock %}
   </main>
 </div>

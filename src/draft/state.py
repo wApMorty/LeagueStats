@@ -61,6 +61,10 @@ class DraftState:
     ally_cells: List[Cell] = field(default_factory=list)
     enemy_cells: List[Cell] = field(default_factory=list)
     time_left_ms: Optional[int] = None
+    time_total_ms: Optional[int] = None
+    # Le ban du joueur local : posé (my_ban_id) ou seulement survolé (my_ban_hover_id).
+    my_ban_id: int = 0
+    my_ban_hover_id: int = 0
 
     def get_all_picks(self) -> List[str]:
         """Get all picked champions."""

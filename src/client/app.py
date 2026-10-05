@@ -20,6 +20,7 @@ from ..pool_manager import get_user_data_path
 from ..user_prefs import load_motion, save_motion
 from .assets import PLACEHOLDER, Assets
 from .draft_actions import Refusal, role_command, run as run_draft_action
+from .draft_view import signature, stage_view
 from .lcu_proxy import LcuProxy
 from .lcu_status import LcuProbe
 
@@ -56,7 +57,7 @@ NAV = (
     NavGroup(
         "Partie",
         55,
-        (NavItem("draft", "Draft", "ᛟ", 55), NavItem("postgame", "Post-game", "ᛞ", 345)),
+        (NavItem("draft", "Draft", "ᛟ", 55, "/draft"), NavItem("postgame", "Post-game", "ᛞ", 345)),
     ),
     NavGroup(
         "Client",
@@ -117,6 +118,8 @@ def create_app(
     app.mount(
         "/static", StaticFiles(directory=get_resource_path(f"{CLIENT_DIR}/static")), name="static"
     )
+
+    templates.env.filters["sig"] = signature
 
     def render(request: Request, name: str, status_code: int = 200, **context: Any) -> HTMLResponse:
         path = request.url.path
@@ -194,6 +197,20 @@ def create_app(
     @app.get("/", response_class=HTMLResponse)
     def accueil(request: Request):
         return render(request, "accueil.html")
+
+    def draft_snapshot() -> Optional[dict]:
+        return bus.latest("draft") if bus is not None else None
+
+    @app.get("/draft", response_class=HTMLResponse)
+    def draft_page(request: Request):
+        view = stage_view(draft_snapshot(), app.state.assets, intro=True)
+        return render(request, "draft.html", v=view, stage_size=client_config.DRAFT_STAGE_SIZE)
+
+    @app.get("/draft/stage", response_class=HTMLResponse)
+    def draft_stage(request: Request):
+        """Le contenu synchronisé de l'écran, rechargé par le script à chaque snapshot du bus."""
+        view = stage_view(draft_snapshot(), app.state.assets)
+        return templates.TemplateResponse(request, "partials/draft_stage.html", {"v": view})
 
     @app.post("/draft/action/{name}")
     def draft_action(name: str, champion_id: int):

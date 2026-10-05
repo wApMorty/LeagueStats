@@ -41,6 +41,11 @@ class ClientConfig:
     ASSETS_RETRY_S: float = 300.0  # délai avant de retenter un téléchargement échoué
     ASSETS_BROWSER_CACHE_S: int = 86400
 
+    # Écran de draft (SPEC-21 tâches 73 à 92) : recommandations de pick affichées, mise à l'échelle
+    # sous la taille de référence du handoff.
+    DRAFT_REC_COUNT: int = 4
+    DRAFT_STAGE_SIZE: Tuple[int, int] = (1920, 950)
+
     # Live Coach lancé en fil par le client : attente du client LoL (secondes) entre deux essais
     # et délai d'arrêt à la fermeture de la fenêtre.
     LIVE_COACH_RETRY_S: float = 15.0
