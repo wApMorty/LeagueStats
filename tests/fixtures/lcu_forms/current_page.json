@@ -1,0 +1,108 @@
+{
+  "autoModifiedSelections": [],
+  "current": true,
+  "id": 1033683870,
+  "isActive": false,
+  "isDeletable": true,
+  "isEditable": true,
+  "isRecommendationOverride": false,
+  "isTemporary": false,
+  "isValid": true,
+  "lastModified": 1791151495375,
+  "name": "anon",
+  "order": 13,
+  "pageKeystone": {
+    "iconPath": "/lol-game-data/assets/v1/perk-images/Styles/Resolve/GraspOfTheUndying/GraspOfTheUndying.png",
+    "id": 8437,
+    "name": "anon",
+    "slotType": "kKeyStone",
+    "styleId": 8400
+  },
+  "primaryStyleIconPath": "/lol-game-data/assets/v1/perk-images/Styles/Resolve/resolve_icon_16.svg",
+  "primaryStyleId": 8400,
+  "primaryStyleName": "Resolve",
+  "quickPlayChampionIds": [],
+  "recommendationChampionId": 0,
+  "recommendationIndex": -1,
+  "runeRecommendationId": "",
+  "secondaryStyleIconPath": "/lol-game-data/assets/v1/perk-images/Styles/Inspiration/inspiration_icon_16.svg",
+  "secondaryStyleName": "Inspiration",
+  "selectedPerkIds": [
+    8437,
+    8401,
+    8444,
+    8451,
+    8345,
+    8410,
+    5005,
+    5001,
+    5001
+  ],
+  "subStyleId": 8300,
+  "tooltipBgPath": "/lol-game-data/assets/v1/perk-images/Styles/Resolve/p8400_s8300_k8437.jpg",
+  "uiPerks": [
+    {
+      "iconPath": "/lol-game-data/assets/v1/perk-images/Styles/Resolve/GraspOfTheUndying/GraspOfTheUndying.png",
+      "id": 8437,
+      "name": "anon",
+      "slotType": "kKeyStone",
+      "styleId": 8400
+    },
+    {
+      "iconPath": "/lol-game-data/assets/v1/perk-images/Styles/Resolve/MirrorShell/MirrorShell.png",
+      "id": 8401,
+      "name": "anon",
+      "slotType": "kMixedRegularSplashable",
+      "styleId": 8400
+    },
+    {
+      "iconPath": "/lol-game-data/assets/v1/perk-images/Styles/Resolve/SecondWind/SecondWind.png",
+      "id": 8444,
+      "name": "anon",
+      "slotType": "kMixedRegularSplashable",
+      "styleId": 8400
+    },
+    {
+      "iconPath": "/lol-game-data/assets/v1/perk-images/Styles/Resolve/Overgrowth/Overgrowth.png",
+      "id": 8451,
+      "name": "anon",
+      "slotType": "kMixedRegularSplashable",
+      "styleId": 8400
+    },
+    {
+      "iconPath": "/lol-game-data/assets/v1/perk-images/Styles/Inspiration/BiscuitDelivery/BiscuitDelivery.png",
+      "id": 8345,
+      "name": "anon",
+      "slotType": "kMixedRegularSplashable",
+      "styleId": 8300
+    },
+    {
+      "iconPath": "/lol-game-data/assets/v1/perk-images/Styles/Resolve/ApproachVelocity/ApproachVelocity.png",
+      "id": 8410,
+      "name": "anon",
+      "slotType": "kMixedRegularSplashable",
+      "styleId": 8300
+    },
+    {
+      "iconPath": "/lol-game-data/assets/v1/perk-images/StatMods/StatModsAttackSpeedIcon.png",
+      "id": 5005,
+      "name": "anon",
+      "slotType": "kStatMod",
+      "styleId": 8400
+    },
+    {
+      "iconPath": "/lol-game-data/assets/v1/perk-images/StatMods/StatModsHealthPlusIcon.png",
+      "id": 5001,
+      "name": "anon",
+      "slotType": "kStatMod",
+      "styleId": 8400
+    },
+    {
+      "iconPath": "/lol-game-data/assets/v1/perk-images/StatMods/StatModsHealthPlusIcon.png",
+      "id": 5001,
+      "name": "anon",
+      "slotType": "kStatMod",
+      "styleId": 8400
+    }
+  ]
+}
