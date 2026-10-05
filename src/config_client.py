@@ -30,6 +30,17 @@ class ClientConfig:
     MOTION_MODES: Tuple[str, ...] = ("systeme", "complet", "reduit")
     MOTION_DEFAULT: str = "complet"
 
+    # Data Dragon (SPEC-21 tâche 86) : images et données de la draft, mises en cache sur disque.
+    # Version vide = la plus récente de `versions.json` (renouvelée une fois par jour).
+    DDRAGON_BASE: str = "https://ddragon.leagueoflegends.com"
+    DDRAGON_VERSION: str = ""
+    DDRAGON_LOCALE: str = "fr_FR"
+    ASSETS_DIR: str = "data/client_assets"
+    ASSETS_TIMEOUT_S: float = 10.0
+    ASSETS_VERSIONS_TTL_S: int = 86400
+    ASSETS_RETRY_S: float = 300.0  # délai avant de retenter un téléchargement échoué
+    ASSETS_BROWSER_CACHE_S: int = 86400
+
     # Live Coach lancé en fil par le client : attente du client LoL (secondes) entre deux essais
     # et délai d'arrêt à la fermeture de la fenêtre.
     LIVE_COACH_RETRY_S: float = 15.0

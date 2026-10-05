@@ -133,7 +133,7 @@ SPEC-21 §5 :
 | **Lot 2 — Draft Alchimie (51 pts)** | | | | |
 | 72 | `DraftSnapshot`, recommandations structurées, sortie console identique | 5 | 70 | ✅ 2026-10-05 : 11 tests ; sortie console identique (chaînes relevées avant la refonte) ; `DraftSnapshot` publié sur le bus (sujet `draft`), delta face à la position actuelle (`GameEvaluator.win_probability`) ; emplacements, survols et temps restant lus dans le champ select |
 | 85 | Bans conseillés et balance dans le snapshot | 3 | 72 | ✅ 2026-10-05 : 6 tests ; `ban_advice` structuré (gain, meilleure réponse, matchups ; 4 bans, la console en garde 3), balance actuelle et projetée (`GameEvaluator`, pas `winprob` qui reste le modèle de partie) ; « si X est verrouillé » = la probabilité du classement de X |
-| 86 | Assets Data Dragon locaux et formes LCU de la draft | 5 | 49 | ⬜ |
+| 86 | Assets Data Dragon locaux et formes LCU de la draft | 5 | 49 | ✅ 2026-10-05 : 26 tests ; `assets.py` (cache disque, version auto ou de la config, `/assets/{kind}/{name}`, noms validés, image absente = emplacement neutre) ; **relevé des formes LCU non fait : le client LoL était fermé** — `scripts/dump_lcu_draft_forms.py` le fait client ouvert, en champ select (les fixtures `tests/fixtures/lcu_forms/` seront écrites avec leurs consommateurs, tâches 74, 90, 91, d'après les formes connues du LCU, à confronter au relevé) |
 | 74 | Actions de draft : survoler, verrouiller, bannir, corriger un rôle | 5 | 72 | ⬜ |
 | 73 | Draft, cadre : en-tête, sceaux, balance, consommateur SSE | 5 | 72, 84, 86 | ⬜ |
 | 87 | Draft, phase de bans | 5 | 73, 74, 85 | ⬜ |

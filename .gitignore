@@ -7,6 +7,7 @@ node_modules
 champion_pools.json
 user_prefs.json
 calibration.json
+data/client_assets/
 
 *.db
 *.db-journal

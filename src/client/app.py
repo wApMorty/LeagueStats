@@ -16,7 +16,9 @@ from sse_starlette.sse import EventSourceResponse
 
 from ..config import get_resource_path
 from ..config_client import client_config
+from ..pool_manager import get_user_data_path
 from ..user_prefs import load_motion, save_motion
+from .assets import PLACEHOLDER, Assets
 from .lcu_status import LcuProbe
 
 
@@ -85,7 +87,9 @@ def _host_allowed(value: str, scheme: Optional[str] = None) -> bool:
         return False
 
 
-def create_app(db_path: Union[str, Path], bus: Any = None, lcu: Any = None) -> FastAPI:
+def create_app(
+    db_path: Union[str, Path], bus: Any = None, lcu: Any = None, assets: Optional[Assets] = None
+) -> FastAPI:
     """Construit l'application ; `bus` et `lcu` sont ceux que les écrans liront.
 
     Tout passe par un garde : `Host` et `Origin` sur la boucle locale (sinon 403), et le jeton de
@@ -96,6 +100,7 @@ def create_app(db_path: Union[str, Path], bus: Any = None, lcu: Any = None) -> F
     app.state.db_path = Path(db_path)
     app.state.bus = bus
     app.state.lcu = lcu
+    app.state.assets = assets or Assets(Path(get_user_data_path(client_config.ASSETS_DIR)))
     app.state.session_token = secrets.token_urlsafe(client_config.SESSION_TOKEN_BYTES)
     probe = LcuProbe(lcu)
     templates = Jinja2Templates(directory=get_resource_path(f"{CLIENT_DIR}/templates"))
@@ -179,6 +184,19 @@ def create_app(db_path: Union[str, Path], bus: Any = None, lcu: Any = None) -> F
     @app.get("/", response_class=HTMLResponse)
     def accueil(request: Request):
         return render(request, "accueil.html")
+
+    @app.get("/assets/{kind}/{name:path}")
+    def asset(kind: str, name: str):
+        """Image de Data Dragon depuis le cache ; absente, un emplacement neutre (jamais d'erreur)."""
+        store: Assets = app.state.assets
+        if not store.accepts(kind, name):
+            return JSONResponse({"detail": "ressource inconnue"}, status_code=404)
+        data = store.image(kind, name)
+        if data is None:
+            return Response(PLACEHOLDER, media_type="image/gif", headers={"Cache-Control": "no-store"})
+        media_type = "image/jpeg" if name.endswith(".jpg") else "image/png"
+        cache = f"max-age={client_config.ASSETS_BROWSER_CACHE_S}"
+        return Response(data, media_type=media_type, headers={"Cache-Control": cache})
 
     @app.get("/_motion", response_class=HTMLResponse)
     def banc_motion(request: Request):
