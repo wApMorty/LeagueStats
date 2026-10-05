@@ -30,6 +30,10 @@ class ClientConfig:
     MOTION_MODES: Tuple[str, ...] = ("systeme", "complet", "reduit")
     MOTION_DEFAULT: str = "complet"
 
+    # Banc `/_motion` (critère 11) : budget par image (60 Hz) et durée d'une scène.
+    MOTION_BUDGET_MS: float = 16.7
+    MOTION_BENCH_SCENE_S: int = 3
+
     # État du client LoL (sonde légère, mise en cache) et rafraîchissement de la pastille.
     LCU_PROBE_ENDPOINT: str = "/lol-gameflow/v1/gameflow-phase"
     LCU_PROBE_TTL_S: float = 3.0

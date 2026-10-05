@@ -180,6 +180,15 @@ def create_app(db_path: Union[str, Path], bus: Any = None, lcu: Any = None) -> F
     def accueil(request: Request):
         return render(request, "accueil.html")
 
+    @app.get("/_motion", response_class=HTMLResponse)
+    def banc_motion(request: Request):
+        return render(
+            request,
+            "motion_bench.html",
+            budget_ms=client_config.MOTION_BUDGET_MS,
+            scene_s=client_config.MOTION_BENCH_SCENE_S,
+        )
+
     @app.post("/prefs/motion")
     def prefs_motion(mode: str):
         if mode not in client_config.MOTION_MODES:

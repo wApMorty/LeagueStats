@@ -144,6 +144,16 @@ def test_aucun_calque_du_prototype_ni_appel_externe():
         assert not re.search(r"https?://(?!127\.0\.0\.1)", path.read_text(encoding="utf-8")), path
 
 
+def test_banc_motion_rend_ses_scenes_et_son_budget(temp_db):
+    response = make_client(temp_db).get("/_motion")
+    html = response.text
+    assert response.status_code == 200
+    for scene in ("braises", "particules", "trace", "sceau"):
+        assert f'data-scene="{scene}"' in html
+    assert f'data-budget="{client_config.MOTION_BUDGET_MS}"' in html
+    assert 'src="/static/motion_bench.js"' in html
+
+
 # ---------- réglage Motion ----------
 
 

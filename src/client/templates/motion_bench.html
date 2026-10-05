@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Banc motion · LeagueStats{% endblock %}
+{% block head %}<script src="/static/motion_bench.js" defer></script>{% endblock %}
+{% block content %}
+<h1>Banc motion</h1>
+<p class="muted">Temps d'image par scène (critère 11 de SPEC-21 : p95 ≤ {{ budget_ms }} ms). Chaque scène dure
+{{ scene_s }} s ; le réglage Motion est ignoré pendant la mesure. Ouvrir cette page directement, sans
+navigation htmx (le script du banc n'est chargé qu'au premier affichage).</p>
+<p>
+  <button type="button" class="bench-btn" data-scene="braises">Braises</button>
+  <button type="button" class="bench-btn" data-scene="particules">1 600 particules</button>
+  <button type="button" class="bench-btn" data-scene="trace">Tracé et plume</button>
+  <button type="button" class="bench-btn" data-scene="sceau">Sceau</button>
+  <button type="button" class="bench-btn" id="bench-all">Tout mesurer</button>
+</p>
+<table class="bench" id="bench-results" data-budget="{{ budget_ms }}" data-scene-ms="{{ scene_s * 1000 }}">
+  <thead><tr><th>Scène</th><th>Images</th><th>Médiane</th><th>p95</th><th>p99</th><th>Max</th><th>&gt; budget</th></tr></thead>
+  <tbody></tbody>
+</table>
+<svg id="bench-stage" viewBox="0 0 600 120" width="600" height="120" aria-hidden="true">
+  <path d="M10,100 C100,10 200,110 300,60 S500,10 590,90 S400,115 200,30" fill="none" stroke="var(--copper)" stroke-width="3" data-bench-trace/>
+</svg>
+<div id="bench-seal" class="bench-seal" aria-hidden="true"><span class="rune" data-bench-seal>ᛞ</span></div>
+{% endblock %}
