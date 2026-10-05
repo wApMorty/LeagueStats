@@ -381,6 +381,8 @@ def create_app(
             return action()
         except Refusal as refusal:
             return JSONResponse({"detail": str(refusal)}, status_code=409)
+        except (KeyError, TypeError, ValueError, IndexError, AttributeError):
+            return JSONResponse({"detail": "Réponse inattendue du client LoL"}, status_code=409)
 
     @app.post("/lobby/creer")
     def lobby_create(queue_id: int):
@@ -398,7 +400,11 @@ def create_app(
     @app.get("/file/state")
     def file_status() -> dict:
         """Ce que la barre de titre affiche : lancer la file, la recherche en cours (temps, estimation)."""
-        return file_state(proxy)
+        try:
+            return file_state(proxy)
+        except (KeyError, TypeError, ValueError, IndexError, AttributeError):
+            # forme inattendue du lobby après un patch : rien à proposer, pas une 500 toutes les 4 s
+            return {"phase": None, "in_lobby": False, "can_start": False, "searching": False}
 
     @app.post("/file/lancer")
     def file_start():

@@ -208,3 +208,21 @@ def test_file_js_sans_erreur_de_syntaxe():
         subprocess.run([node, "--check", str(STATIC / "file.js")], capture_output=True).returncode
         == 0
     )
+
+
+# ---------- forme inattendue du lobby (après un patch du client) ----------
+
+
+@pytest.mark.parametrize("lobby", ["x", {"a": 1}, [1]])
+def test_etat_de_la_file_sur_un_lobby_de_forme_inattendue_n_est_pas_une_500(
+    temp_db, tmp_path, lobby
+):
+    response = web(temp_db, tmp_path, lcu_in("Lobby", **{LOBBY: lobby})).get("/file/state")
+    assert response.status_code == 200 and response.json()["can_start"] is False
+
+
+@pytest.mark.parametrize("path", ["/file/lancer", "/lobby/postes?first=TOP&second=JUNGLE"])
+def test_action_sur_un_lobby_de_forme_inattendue_est_refusee_sans_ecriture(temp_db, tmp_path, path):
+    lcu = lcu_in("Lobby", **{LOBBY: {"a": 1}})
+    assert post(web(temp_db, tmp_path, lcu), path).status_code == 409
+    assert lcu.writes == []
