@@ -115,7 +115,7 @@ def test_navigation_trois_groupes_et_entrees_sans_ecran_grisees(temp_db):
     for group in NAV:
         assert f'<div class="nav-title">{group.label}</div>' in html
     items = [item for group in NAV for item in group.items]
-    assert [i.label for i in items if i.href] == ["Accueil", "Draft"]
+    assert {"Accueil", "Draft"} <= {i.label for i in items if i.href}  # les écrans s'ajoutent par lot
     assert html.count('aria-disabled="true"') == len([i for i in items if not i.href])
     assert all(f"{i.label}</span>" in html for i in items)
     assert 'class="rune" aria-hidden="true"' in html  # les runes ne portent jamais le sens

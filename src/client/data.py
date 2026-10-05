@@ -7,14 +7,18 @@ est testable avec des listes de dictionnaires. Les valeurs de réglage sont dans
 """
 
 from datetime import datetime, timezone
-from typing import List, Sequence, Tuple
+from statistics import mean
+from typing import Dict, List, Optional, Sequence, Tuple
 
 from markupsafe import Markup
 
-from ..coaching.progression import DIVISIONS, TIERS, lp_scale
+from ..coaching.grid import GRID
+from ..coaching.metrics import METRICS, format_value
+from ..coaching.progression import DIVISIONS, TIERS, lp_scale, patterns, trends
 from ..config_client import client_config
-from .charts import Band, Series, Tick, bar_chart, line_chart
-from .draft_view import fr, signed
+from ..config_constants import coaching_config
+from .charts import Band, Series, SparkLine, Tick, bar_chart, line_chart, sparkline
+from .draft_view import ROLE_LABELS, signed
 
 FR_MONTHS = (
     "janv.",
@@ -259,3 +263,169 @@ def rank_view(history: List[dict]) -> dict:
             ),
         }
     return view
+
+
+# ---------- progression ----------
+
+ROLE_ORDER = tuple(ROLE_LABELS)  # top, jungle, middle, bottom, support
+ROLE_HUES = {"top": 55, "jungle": 150, "middle": 290, "bottom": 85, "support": 230}
+ROW_HUES = (165, 230, 290, 345, 55, 85, 200, 120, 260, 20, 180, 310)
+VERDICT_LABELS = {
+    "progrès": ("up", "en progrès"),
+    "recul": ("down", "en recul"),
+    "stable": ("flat", "stable"),
+}
+
+
+def rolling(values: Sequence[float], window: int) -> List[float]:
+    """Moyenne glissante : chaque point moyenne les `window` valeurs qui le précèdent (lui compris)."""
+    return [mean(values[max(0, i + 1 - window) : i + 1]) for i in range(len(values))]
+
+
+def default_role(roles: Dict[str, int]) -> str:
+    """Le poste le plus joué (le premier de l'ordre des postes à égalité), Top sans partie."""
+    played = {role: n for role, n in roles.items() if role in ROLE_ORDER and n}
+    return max(ROLE_ORDER, key=lambda r: played.get(r, 0)) if played else ROLE_ORDER[0]
+
+
+def _reference(history: Sequence[dict], metric: str) -> Tuple[str, str]:
+    """(norme, objectif) les plus récents de la métrique, « — » quand il n'y en a pas : une norme
+    sous `MIN_NORM_SAMPLE` parties est en construction, et la plupart des métriques n'ont pas d'objectif.
+    """
+    norm = next(
+        (
+            r["norm_mean"]
+            for r in history
+            if r["norm_mean"] is not None and (r["norm_n"] or 0) >= coaching_config.MIN_NORM_SAMPLE
+        ),
+        None,
+    )
+    objective = next(
+        (r["objective_value"] for r in history if r["objective_value"] is not None), None
+    )
+    if norm is None:
+        shown = "—"
+    else:
+        shown = "0" if METRICS[metric].zero_sum and norm == 0 else format_value(metric, norm)
+    return shown, "—" if objective is None else format_value(metric, objective)
+
+
+def _verdict(trend, games: int) -> dict:
+    """Le verdict de `trends()`, ou la raison de son absence (`trends()` compare deux moitiés de
+    `MIN_TREND_SAMPLE` parties : il en faut donc le double)."""
+    if trend is not None:
+        kind, text = VERDICT_LABELS[trend.verdict]
+        return {"kind": kind, "text": text}
+    sample = coaching_config.MIN_TREND_SAMPLE
+    needed = sample * (2 if games >= sample else 1)
+    return {"kind": "none", "text": f"{games}/{needed} parties, pas de verdict"}
+
+
+def _metric_row(metric: str, weight: int, series: List[dict], trend, index: int) -> dict:
+    """Une ligne de la grille ; `series` : les lignes de la métrique, de la plus récente à la plus ancienne."""
+    cfg, hue = client_config, ROW_HUES[index % len(ROW_HUES)]
+    color = f"oklch(0.8 0.15 {hue})"
+    recent = [r["value"] for r in series[: coaching_config.RECURRENCE_WINDOW]]
+    chrono = series[::-1]
+    norm_z = [
+        r["z_norm"]
+        for r in chrono
+        if r["z_norm"] is not None and (r["norm_n"] or 0) >= coaching_config.MIN_NORM_SAMPLE
+    ]
+    objective_z = [r["z_objective"] for r in chrono if r["z_objective"] is not None]
+    lines = [
+        SparkLine(
+            rolling(zs, cfg.PROGRESSION_SPARK_WINDOW)[-cfg.PROGRESSION_SPARK_POINTS :], c, dashed
+        )
+        for zs, c, dashed in ((norm_z, color, False), (objective_z, "var(--copper)", True))
+        if len(zs) >= 2
+    ]
+    norm, objective = _reference(series, metric)
+    label = METRICS[metric].label
+    delay = 120 + index * 55
+    return {
+        "metric": metric,
+        "label": label,
+        "color": color,
+        "weight": "●●" if weight == 2 else "●",
+        "you": format_value(metric, mean(recent)) if recent else "—",
+        "norm": norm,
+        "objective": objective,
+        "verdict": _verdict(trend, len(series)),
+        "spark": Markup(
+            sparkline(
+                lines,
+                size=cfg.PROGRESSION_SPARK_SIZE,
+                uid=f"prog-{metric}",
+                title=f"Tendance de {label}",
+                desc="Moyenne glissante de l'écart à la norme (trait plein) et à l'objectif (pointillé)",
+                y_domain=(-cfg.PROGRESSION_Z_RANGE, cfg.PROGRESSION_Z_RANGE),
+                baseline=0,
+                delay_ms=delay,
+            )
+        ),
+        "delay": delay,
+    }
+
+
+def _pattern_lines(found: list, role: str, games: int) -> List[dict]:
+    if found:
+        return [
+            {
+                "text": (
+                    f"{'Faiblesse' if p.polarity == 'negative' else 'Force'} : "
+                    f"{METRICS[p.metric].label}, "
+                    f"{'sous' if p.polarity == 'negative' else 'au-dessus de'} la norme dans "
+                    f"{p.count} parties sur {p.games}."
+                ),
+                "tone": "bad" if p.polarity == "negative" else "good",
+            }
+            for p in found
+        ]
+    if games < coaching_config.MIN_TREND_SAMPLE:
+        text = f"Pas assez de parties en {ROLE_LABELS[role]} pour dégager un schéma."
+    else:
+        text = f"Aucun schéma significatif sur les {coaching_config.RECURRENCE_WINDOW} dernières parties."
+    return [{"text": text, "tone": "muted"}]
+
+
+def progression_view(roles: Dict[str, int], history: List[dict], role: Optional[str]) -> dict:
+    """L'écran Progression d'un poste : grille, verdicts de `trends()`, schémas de `patterns()`.
+
+    `roles` : `player_roles()` ; `history` : `player_history(role)` du poste affiché ; `role` absent
+    ou inconnu : le poste le plus joué. Sous `MIN_TREND_SAMPLE` parties : aucun verdict.
+    """
+    role = role if role in ROLE_ORDER else default_role(roles)
+    games = roles.get(role, 0)
+    trend_of = {t.metric: t for t in trends(history, role)} if games else {}
+    rows = [
+        _metric_row(
+            metric, weight, [r for r in history if r["metric"] == metric], trend_of.get(metric), i
+        )
+        for i, (metric, weight) in enumerate(GRID[role].items())
+    ]
+    sample = coaching_config.MIN_TREND_SAMPLE
+    return {
+        "role": role,
+        "role_label": ROLE_LABELS[role],
+        "chips": [
+            {
+                "key": r,
+                "label": ROLE_LABELS[r],
+                "n": roles.get(r, 0),
+                "hue": ROLE_HUES[r],
+                "on": r == role,
+            }
+            for r in ROLE_ORDER
+        ],
+        "games": games,
+        "empty": games == 0,
+        "rows": rows if games else [],
+        "sample_note": (
+            f"Tendance sur une moyenne glissante de {client_config.PROGRESSION_SPARK_WINDOW} "
+            f"parties ; verdict à partir de {2 * sample} parties."
+            if games >= sample
+            else f"Sous {sample} parties, la grille s'affiche sans verdict."
+        ),
+        "patterns": _pattern_lines(patterns(history, role) if games else [], role, games),
+    }

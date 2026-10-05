@@ -272,8 +272,10 @@ def sparkline(
         dash = ";stroke-dasharray:4 4" if line.dashed else ""
         trace = "" if line.dashed else f' data-trace="{trace_ms}" data-delay="{delay_ms}"'
         fade = f' data-fade="1" data-delay="{delay_ms + 600}"' if line.dashed else ""
+        # La plume d'étincelles de `motion.js` peint un canvas : une couleur littérale, pas `var(--x)`.
+        pen = "" if line.color.startswith("var(") else f' data-pen="{esc(line.color)}"'
         out.append(
-            f'<path class="spark-line"{trace}{fade} d="{_path(points)}" data-pen="{esc(line.color)}" '
+            f'<path class="spark-line"{trace}{fade} d="{_path(points)}"{pen} '
             f'style="stroke:{esc(line.color)};stroke-width:{line.width:g}{dash}"/>'
         )
     out.append("</svg>")

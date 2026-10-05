@@ -20,7 +20,7 @@ from ..pool_manager import get_user_data_path
 from ..repositories.coaching import CoachingRepository
 from ..user_prefs import load_motion, save_motion
 from .assets import PLACEHOLDER, Assets
-from .data import rank_view
+from .data import ROLE_ORDER, default_role, progression_view, rank_view
 from .db import read_only
 from .draft_grimoire import grimoire_view
 from .draft_loadout import normalize_page, plan as loadout_plan, runes_payload, send as send_loadout
@@ -56,7 +56,7 @@ NAV = (
         (
             NavItem("accueil", "Accueil", "ᚨ", 165, "/"),
             NavItem("rang", "Rang", "ᚱ", 245, "/rang"),
-            NavItem("progression", "Progression", "ᛏ", 290),
+            NavItem("progression", "Progression", "ᛏ", 290, "/progression"),
             NavItem("parties", "Parties", "ᛗ", 85),
             NavItem("calibration", "Calibration", "ᛉ", 345),
         ),
@@ -221,6 +221,17 @@ def create_app(
     def rang(request: Request):
         view = coaching(lambda repo: rank_view(repo.rank_history()), lambda: rank_view([]))
         return render(request, "rang.html", v=view)
+
+    @app.get("/progression", response_class=HTMLResponse)
+    def progression(request: Request, role: Optional[str] = None):
+        def read(repo: CoachingRepository) -> dict:
+            roles = repo.player_roles()
+            shown = role if role in ROLE_ORDER else default_role(roles)
+            return progression_view(roles, repo.player_history(shown), shown)
+
+        return render(
+            request, "progression.html", v=coaching(read, lambda: progression_view({}, [], role))
+        )
 
     def draft_snapshot() -> Optional[dict]:
         return bus.latest("draft") if bus is not None else None

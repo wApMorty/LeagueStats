@@ -108,6 +108,13 @@ class ClientConfig:
         }
     )
 
+    # Écran Progression (SPEC-21 tâche 52) : tendance d'une métrique = moyenne glissante de son z sur
+    # `WINDOW` parties, les `POINTS` dernières ; échelle verticale de ±`Z_RANGE` écarts-types.
+    PROGRESSION_SPARK_WINDOW: int = 10
+    PROGRESSION_SPARK_POINTS: int = 16
+    PROGRESSION_SPARK_SIZE: Tuple[int, int] = (190, 40)
+    PROGRESSION_Z_RANGE: float = 2.0
+
     # Live Coach lancé en fil par le client : attente du client LoL (secondes) entre deux essais
     # et délai d'arrêt à la fermeture de la fenêtre.
     LIVE_COACH_RETRY_S: float = 15.0

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Progression · LeagueStats{% endblock %}
+{% block page_class %} page-coaching page-progression{% endblock %}
+{% block content %}
+<div id="prog">
+<header class="page-head" data-rise="1">
+  <div class="page-titles">
+    <div class="kicker">Coaching · grille du rôle</div>
+    <h1 data-spell="1">Progression</h1>
+  </div>
+  <nav class="chips" aria-label="Poste">
+    {% for chip in v.chips %}
+    <a class="role-chip" href="/progression?role={{ chip.key }}" style="--hue: {{ chip.hue }}"
+       hx-get="/progression?role={{ chip.key }}" hx-target="#prog" hx-select="#prog" hx-swap="outerHTML" hx-push-url="true"
+       {% if chip.on %}aria-current="true"{% endif %}>{{ chip.label }}<span>{{ chip.n }}</span></a>
+    {% endfor %}
+  </nav>
+</header>
+
+<div class="cols">
+  <div class="main">
+    {% if v.empty %}
+    <p class="empty">Aucune partie analysée en {{ v.role_label }} : la grille se remplit après chaque partie classée capturée par le Live Coach.</p>
+    {% else %}
+    <div class="grid-table" role="table" aria-label="Grille du rôle {{ v.role_label }}">
+      <div class="grid-row grid-head" role="row">
+        <span role="columnheader">Métrique</span><span role="columnheader">Poids</span>
+        <span class="r" role="columnheader">Toi</span><span class="r" role="columnheader">Norme</span><span class="r" role="columnheader">Objectif</span>
+        <span class="c" role="columnheader">Tendance (z glissant)</span><span class="r" role="columnheader">Verdict</span>
+      </div>
+      {% for row in v.rows %}
+      <div class="grid-row" role="row" data-row="1" data-delay="{{ row.delay }}">
+        <span class="metric" role="cell"><i class="diamond" style="background: {{ row.color }}; box-shadow: 0 0 10px {{ row.color }}"></i>{{ row.label }}</span>
+        <span class="weight" role="cell" title="{{ 'métrique principale' if row.weight == '●●' else 'métrique secondaire' }}">{{ row.weight }}</span>
+        <span class="r you" role="cell">{{ row.you }}</span>
+        <span class="r ref" role="cell">{{ row.norm }}</span>
+        <span class="r ref" role="cell">{{ row.objective }}</span>
+        <span role="cell">{{ row.spark }}</span>
+        <span class="r" role="cell"><span class="verdict verdict-{{ row.verdict.kind }}">{{ row.verdict.text }}</span></span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  <aside class="side">
+    <section class="sample" data-rise="1" data-delay="200">
+      <div class="queue-name">Échantillon · {{ v.role_label }}</div>
+      <div class="sample-line"><b>{{ v.games }}</b><span>parties analysées</span></div>
+      <div class="sample-note">{{ v.sample_note }}</div>
+    </section>
+    <section class="patterns" data-rise="1" data-delay="320">
+      <h2>Schémas</h2>
+      {% for p in v.patterns %}
+      <div class="pattern pattern-{{ p.tone }}">
+        <svg viewBox="-10 -10 20 20" aria-hidden="true"><circle r="8"/><path d="M0,-6 L3.5,4.85 L-5.7,-1.85 L5.7,-1.85 L-3.5,4.85 Z"/></svg>
+        {{ p.text }}
+      </div>
+      {% endfor %}
+    </section>
+    <section class="legend-notes" data-rise="1" data-delay="440">
+      <span><i class="key-solid"></i>z face à la norme (pairs du même poste)</span>
+      <span><i class="key-dashed"></i>z face à l'objectif (OneTricks, si publié)</span>
+      <span>Poids : ●● métrique principale, ● secondaire.</span>
+    </section>
+  </aside>
+</div>
+</div>
+{% endblock %}

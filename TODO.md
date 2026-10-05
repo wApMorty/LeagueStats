@@ -148,7 +148,7 @@ SPEC-21 §5 :
 | **Lot 4 — Coaching et post-game (39 pts)** | | | | |
 | 50 | `charts.py` : graphiques SVG purs, tracé animable | 5 | 84 | ✅ 2026-10-05 : 23 tests ; `line_chart` (bandes, filets gradués, repères, dernier point lumineux), `sparkline`, `bar_chart` divergent, `reliability_chart`, `diverging` ; dégradés en `userSpaceOnUse` (une courbe plate ne serait pas dessinée en `objectBoundingBox`) ; classes CSS des graphiques (`ch-*`, `spark-*`) posées avec le premier écran qui les utilise (tâche 51) |
 | 51 | Écran Rang | 5 | 50 | ✅ 2026-10-05 : 18 tests ; `data.rank_view` (courbes Solo et Flex sur l'échelle de `lp_scale()`, photos qui répètent leur voisine omises de la courbe, histogramme des LP, cartes par file), `/rang`, `CoachingRepository.rank_history()`, `coaching.js` (barres, lignes, pile) ; lecture en `mode=ro`, tables absentes = état vide ; **rendu à voir par @pj35** (aucun test d'interface sans ton accord) |
-| 52 | Écran Progression | 5 | 50 | ⬜ |
+| 52 | Écran Progression | 5 | 50 | ✅ 2026-10-05 : 21 tests ; `data.progression_view` (puces de poste, grille de `coaching/grid.py`, Toi / Norme / Objectif, tendance = moyenne glissante du z sur 10 parties, verdict de `trends()`, schémas de `patterns()`), `/progression?role=` ; puces rechargées par htmx sans transition de page ; **`trends()` compare deux moitiés de 5 parties : sous 5 parties « n/5 », de 5 à 9 « n/10 », le message le dit** ; rendu à voir par @pj35 |
 | 53 | Écran Parties : win chance, impact par événement | 5 | 50 | ⬜ |
 | 54 | Écran Calibration | 3 | 50 | ⬜ |
 | 71 | Accueil Coaching : axes, constats, colonne latérale | 5 | 51–53 | ⬜ |
