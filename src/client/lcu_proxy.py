@@ -21,6 +21,7 @@ READS: Tuple[Pattern[str], ...] = tuple(
         r"/lol-matchmaking/v1/ready-check",
         r"/lol-champions/v1/owned-champions-minimal",
         r"/lol-item-sets/v1/item-sets/\d+/sets",
+        r"/lol-chat/v1/(me|friends|conversations)",  # lecture seule : aucune écriture sur le chat
         r"/lol-game-queues/v1/queues",
         r"/lol-lobby/v2/lobby",
         r"/lol-lobby/v2/lobby/matchmaking/search-state",

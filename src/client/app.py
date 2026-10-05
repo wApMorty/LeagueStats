@@ -53,6 +53,7 @@ from .lcu_status import LcuProbe
 from .collection import VIEWS, read_collection
 from .historique import read_game, read_history
 from .profil import read_profile
+from .social import read_social
 from .review import game_page, games_view, load_model
 
 
@@ -101,7 +102,7 @@ NAV = (
             NavItem("historique", "Historique", "ᛁ", 55, "/historique"),
             NavItem("collection", "Collection", "ᚲ", 85, "/collection"),
             NavItem("lobby", "Lobby", "ᚹ", 290, "/lobby"),
-            NavItem("social", "Social", "ᛜ", 165),
+            NavItem("social", "Social", "ᛜ", 165, "/social"),
         ),
     ),
 )
@@ -408,6 +409,12 @@ def create_app(
     def file_cancel():
         """Annule la recherche ; refusé (409) hors recherche, jamais pendant une partie trouvée."""
         return lobby_action(lambda: cancel_search(proxy))
+
+    @app.get("/social", response_class=HTMLResponse)
+    def social(request: Request):
+        """Amis, statuts et conversations : lecture seule, aucune route d'écriture (SPEC-21 §2)."""
+        champions = Champions(app.state.assets)
+        return screen(request, "social.html", lambda: read_social(proxy, champions))
 
     @app.get("/postgame", response_class=HTMLResponse)
     def postgame(request: Request):
