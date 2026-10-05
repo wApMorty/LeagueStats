@@ -95,3 +95,76 @@ def test_la_transition_ne_touche_que_les_navigations_boostees():
     source = (STATIC / "transition.js").read_text(encoding="utf-8")
     assert "requestConfig?.boosted" in source  # les fragments (pastille, draft) ne déclenchent rien
     assert 'event.target.id !== "view"' in source
+
+
+# ---------- un clic pendant la transition n'est pas perdu (écart relevé par la vérification) ----------
+
+HARNESS = r"""
+const fs = require('fs');
+const handlers = {};
+const calls = { ajax: [], pushed: [], prevented: 0 };
+const node = () => ({
+  style: {}, animate: () => ({}), getAnimations: () => [], querySelector: () => node(), querySelectorAll: () => [],
+  setAttribute() {}, getAttribute: () => 'outerHTML swap:30ms', appendChild() {}, isConnected: true, id: 'view',
+});
+const meta = { content: JSON.stringify({ darken: 5, swap: 20, open: 30, slide: 5, runes: 4, nav_width: 220 }) };
+global.document = {
+  addEventListener: (name, fn) => (handlers[name] = [...(handlers[name] || []), fn]),
+  querySelector: (sel) => (sel.startsWith('meta') ? meta : null),
+  getElementById: () => node(),
+  createElement: () => ({ ...node(), innerHTML: '', querySelector: () => node() }),
+  body: { appendChild() {} },
+};
+global.addEventListener = () => {};
+global.matchMedia = () => ({ addEventListener() {} });
+global.history = { pushState: (...args) => calls.pushed.push(args[2]) };
+global.htmx = { ajax: (...args) => calls.ajax.push(args.slice(0, 2).join(' ')) };
+global.Motion = {
+  opts: () => ({ sp: 1, reduced: false }), trace() {}, fixRings() {}, center: () => [0, 0], converge() {}, burst() {},
+  flash() {}, shake() {}, E: {}, C: {},
+};
+eval(fs.readFileSync(process.argv[1], 'utf8'));
+const fire = (name, detail, target) => {
+  const event = { detail, target: target || {}, preventDefault: () => calls.prevented++ };
+  (handlers[name] || []).forEach((fn) => fn(event));
+};
+const boosted = (path) => ({ requestConfig: { boosted: true, path }, pathInfo: { requestPath: path } });
+(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  fire('htmx:beforeRequest', boosted('/a'));          // clic A : la transition démarre
+  await wait(5);
+  fire('htmx:beforeRequest', boosted('/b'));          // clic B pendant la transition
+  fire('htmx:beforeRequest', boosted('/c'));          // clic C : seul le dernier est gardé
+  const afterClicks = { ...calls, ajax: [...calls.ajax] };
+  await wait(20);
+  fire('htmx:load', {}, { id: 'view' });              // la page A est en place
+  await wait(60);                                     // fin de l'ouverture
+  console.log(JSON.stringify({ afterClicks, calls }));
+})();
+"""
+
+
+def test_un_clic_pendant_la_transition_est_rejoue_apres_pas_perdu():
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node absent")
+    done = subprocess.run(
+        [node, "-e", HARNESS, str(STATIC / "transition.js")],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    result = json.loads(done.stdout)
+    assert (
+        result["afterClicks"]["prevented"] == 2
+    )  # B et C n'ont pas lancé de requête qui viserait un #view détaché
+    assert result["afterClicks"]["ajax"] == []  # rien n'est parti avant la fin de l'ouverture
+    assert result["calls"]["ajax"] == ["GET /c"] and result["calls"]["pushed"] == ["/c"]
+
+
+def test_refus_du_joueur_ne_rouvre_pas_l_overlay():
+    source = (STATIC / "found.js").read_text(encoding="utf-8")
+    assert 'response !== "Declined"' in source
+    assert (
+        "acceptation automatique à 4 s" not in source
+    )  # le Live Coach accepte dès le tick suivant

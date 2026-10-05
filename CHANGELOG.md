@@ -6,6 +6,15 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Feature
 
+- **Client LeagueStats, file trouvée et transition de page (SPEC-21 tâches 93 et 94)** — quand le client
+  LoL trouve une partie, un overlay « Partie trouvée » couvre la fenêtre : compte à rebours de 10 s, boutons
+  Accepter / Refuser (écrits dans le client par la liste blanche), mention de l'auto-accept du Live Coach,
+  puis effondrement vers la draft. La barre de titre affiche « Champ select en cours » (cliquable). Chaque
+  navigation joue désormais la transition signature (cercle runique qui se trace, implosion, ouverture
+  circulaire de la nouvelle page) à la place du fondu ; en mode Réduit, le changement d'écran reste
+  instantané et les clics ne sont jamais perdus. Le décompte lit le `timer` du ready-check : sa forme exacte
+  reste à confirmer en partie réelle.
+
 - **Client LeagueStats, lancement et écran de draft (SPEC-21 tâches 55, 72 à 74 et 84 à 92)** —
   `python lol_coach.py --client` ou l'option 7 du menu (Quitter passe en 8) ouvre la fenêtre : serveur local,
   WebSocket du LCU et Live Coach en fil, sans lecture de la console. L'écran **Draft** (`/draft`, plein écran,

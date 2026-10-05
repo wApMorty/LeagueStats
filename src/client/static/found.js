@@ -66,7 +66,7 @@
     <button type="button" class="f-accept" id="f-accept">Accepter</button>
     <button type="button" class="f-decline" id="f-decline">Refuser</button>
   </div>
-  <span class="f-auto"${auto ? "" : " hidden"}>Auto-accept du Live Coach actif · acceptation automatique à 4 s</span>
+  <span class="f-auto"${auto ? "" : " hidden"}>Auto-accept du Live Coach actif · acceptation automatique</span>
 </div>`;
   }
 
@@ -180,7 +180,10 @@
 
   function apply(state) {
     pill(state.phase === "ChampSelect");
-    const found = state.phase === "ReadyCheck" && state.ready_check?.state === "InProgress";
+    const found =
+      state.phase === "ReadyCheck" &&
+      state.ready_check?.state === "InProgress" &&
+      state.ready_check.response !== "Declined";
     if (found && !overlay) show(state);
     else if (found && overlay && state.ready_check.response === "Accepted") acceptedSequence();
     else if (!found && overlay) {

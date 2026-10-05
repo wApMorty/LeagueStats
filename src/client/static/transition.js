@@ -12,6 +12,7 @@
 
   let veil = null;
   let pending = null; // { fromDraft, timers } pendant une navigation
+  let queued = null; // chemin d'un clic arrivé pendant la transition : joué juste après, jamais perdu
   const view = () => document.getElementById("view");
 
   function syncSwap() {
@@ -38,7 +39,15 @@
     return veil;
   }
 
+  /** Lance une navigation en gardant la transition (clic mis en attente). */
+  function go(path) {
+    start();
+    history.pushState({}, "", path);
+    htmx.ajax("GET", path, { target: "#view", select: "#view", swap: view().getAttribute("hx-swap") });
+  }
+
   function clear() {
+    queued = null;
     if (!pending) return;
     pending.timers.forEach(clearTimeout);
     pending = null;
@@ -104,12 +113,23 @@
       setTimeout(() => {
         layer.style.opacity = 0;
         pending = null;
+        const next = queued;
+        queued = null;
+        if (next) go(next);
       }, config.open),
     ];
   }
 
   document.addEventListener("htmx:beforeRequest", (event) => {
-    if (event.detail.requestConfig?.boosted && !Motion.opts().reduced) start();
+    if (!event.detail.requestConfig?.boosted || Motion.opts().reduced) return;
+    if (pending) {
+      // Le remplacement de la page est déjà programmé : une seconde requête viserait un #view détaché.
+      // On retient le dernier clic et on le joue dès que la page est ouverte.
+      event.preventDefault();
+      queued = event.detail.pathInfo?.requestPath ?? event.detail.requestConfig.path;
+      return;
+    }
+    start();
   });
   document.addEventListener("htmx:load", (event) => {
     if (event.target.id !== "view") return;
