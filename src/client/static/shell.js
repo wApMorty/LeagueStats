@@ -1,4 +1,4 @@
-// Coque du client LeagueStats (SPEC-21 tâches 68 et 69) : jeton de session, réglage Motion, boutons
+// Coque du client LeagueStats (SPEC-21 tâches 68, 69 et 84) : jeton de session, réglage Motion, boutons
 // de la barre de titre, redimensionnement par poignées. La classe `no-chrome` (barre de titre et poignées
 // masquées) n'est retirée que si pywebview annonce une fenêtre sans bordure : en navigateur de
 // repli ou en fenêtre standard, le cadre est celui du système.
@@ -11,11 +11,18 @@
     event.detail.headers[meta("token-header")] = meta("session-token");
   });
 
+  // Braises : montantes en continu (0,35 par image) sauf en mode Réduit, qui coupe tout.
+  const EMBER_RATE = 0.35;
+  const syncEmbers = () => Motion.embers(Motion.opts().reduced ? 0 : EMBER_RATE);
+  syncEmbers();
+  matchMedia("(prefers-reduced-motion: reduce)").addEventListener("change", syncEmbers);
+
   // Réglage Motion : appliqué tout de suite ; le `hx-post` du bouton le mémorise (user_prefs.json).
   document.addEventListener("click", (event) => {
     const button = event.target.closest(".seg [data-mode]");
     if (!button) return;
     root.dataset.motion = button.dataset.mode;
+    syncEmbers();
     button.parentElement.querySelectorAll("[data-mode]").forEach((other) =>
       other.setAttribute("aria-pressed", String(other === button)),
     );
@@ -23,7 +30,10 @@
 
   // La pastille du client LoL est rechargée toutes les quelques secondes : sa pulsation se cale
   // sur l'horloge du document, sinon elle repartirait de zéro à chaque rechargement.
+  // Chaque fragment chargé (page, pastille, écran de draft…) joue ses animations `data-*`.
   document.addEventListener("htmx:load", (event) => {
+    Motion.intro(event.target, Motion.opts());
+    Motion.ambient(event.target, Motion.opts());
     event.target.getAnimations?.({ subtree: true }).forEach((animation) => {
       if (animation.animationName === "pulse") animation.startTime = 0;
     });

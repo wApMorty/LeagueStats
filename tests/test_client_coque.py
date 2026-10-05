@@ -84,7 +84,13 @@ def test_configuration_htmx_valide_et_echange_les_erreurs(temp_db):
 
 
 @pytest.mark.parametrize(
-    "path, kind", [("htmx.min.js", "javascript"), ("shell.js", "javascript"), ("style.css", "css")]
+    "path, kind",
+    [
+        ("htmx.min.js", "javascript"),
+        ("shell.js", "javascript"),
+        ("motion.js", "javascript"),
+        ("style.css", "css"),
+    ],
 )
 def test_statiques_servis(temp_db, path, kind):
     response = make_client(temp_db).get(f"/static/{path}")

@@ -422,7 +422,7 @@ Les tâches 48, 49, 68, 69 et 70 sont faites.
 | 68 | ✅ Coque : `window.py`, barre de titre maison (déplacement, poignées de redimensionnement, boutons animés), `base.html`, navigation par sections, transitions de page, états « client LoL fermé » et « base occupée » | 5 | 49 |
 | 70 | ✅ Bus et temps réel : `bus.py`, route SSE, `lcu_events.py` (WebSocket LCU, reconnexion), faux serveur de test | 5 | 49 |
 | 69 | ✅ **Jetons, polices et coque « Alchimie »** : jetons OKLCH et `@font-face` locaux dans `style.css` ; `base.html` (barre de titre : logo pentacle, pastille animée, liseré dégradé) ; navigation à trois groupes, entrées sans écran grisées ; pied Thème / Motion ; réglage Motion persisté (`save_motion`, `POST /prefs/motion`, `data-motion` sur `<html>`) ; `WINDOW_BACKGROUND` ; tests | 5 | 68 |
-| 84 | **`motion.js` et banc `/_motion`** : reprise de `motion.js` du handoff (+ `Motion.opts()`), `Motion.intro` et `ambient` sur `htmx:load`, braises coupées en Réduit ; banc `/_motion` (p95 du temps d'image par scène : braises, 1 600 particules, tracé, sceau) ; mesures consignées en §10 | 3 | 69 |
+| 84 | 🟡 **`motion.js` et banc `/_motion`** (`motion.js` repris et branché le 2026-10-05 ; reste le banc et la mesure) : reprise de `motion.js` du handoff (+ `Motion.opts()`), `Motion.intro` et `ambient` sur `htmx:load`, braises coupées en Réduit ; banc `/_motion` (p95 du temps d'image par scène : braises, 1 600 particules, tracé, sceau) ; mesures consignées en §10 | 3 | 69 |
 | 55 | Lancement : `--client` et option 7 du menu (Quitter en 8), Live Coach en fil sans entrée console, message `[INFO]`/`[ALERTE]` + tests | 3 | 49, 70 |
 
 **Lot 2 — Draft Alchimie (51 pts)** — étape 3 du handoff, l'écran clé
