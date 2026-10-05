@@ -31,7 +31,8 @@ def _saved_pool(name: Optional[str]) -> Optional[str]:
 class LiveCoachThread:
     """Le Live Coach en fil daemon : préférences de `user_prefs.json`, aucune question à la console."""
 
-    def __init__(self, verbose: bool = False) -> None:
+    def __init__(self, bus: EventBus, verbose: bool = False) -> None:
+        self._bus = bus
         self._verbose = verbose
         self._stopping = threading.Event()
         self._monitor: Optional[DraftMonitor] = None
@@ -61,6 +62,7 @@ class LiveCoachThread:
                 auto_ban_hover=prefs.auto_ban_hover,
                 preselected_pool_name=pool,
                 console_input=False,
+                bus=self._bus,
             )
             waiting = False
             while not self._stopping.is_set():
@@ -96,7 +98,7 @@ def run_client(verbose: bool = False) -> bool:
         return False
     print(f"[INFO] Client LeagueStats sur {url}")
     events = LcuEvents(bus, LCUClient(verbose=verbose).find_lcu_credentials)
-    coach = LiveCoachThread(verbose)
+    coach = LiveCoachThread(bus, verbose)
     try:
         events.start()
         coach.start()

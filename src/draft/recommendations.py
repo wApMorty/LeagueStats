@@ -17,12 +17,14 @@ the monitor instance and counts calls — they must be invoked via
 self.m.<method>, not sibling methods here.
 """
 
+from dataclasses import asdict
 from typing import List, Optional, Sequence, Tuple
 
 from ..analysis.game_eval import Placed
 from ..config_constants import draft_config, ui_config
 from ..utils.display import format_games_count
 from .search import PickTurn, SearchResult
+from .snapshot import TOPIC, Analysis, build_snapshot
 from .state import DraftState
 
 
@@ -134,117 +136,149 @@ class DraftRecommender:
 
     # ---------- entrée principale ----------
 
+    def _advice(self, state: DraftState) -> Optional[str]:
+        """Conseil propre à la phase (selon l'état réel de la draft)."""
+        if state.phase == "PLANNING":
+            return "[PLAN] Réfléchissez à la composition d'équipe et aux priorités de ban"
+        if state.phase == "BAN_PICK":
+            # BAN_PICK phase includes both bans and picks - detect which we're in
+            if self.m._is_ban_phase(state):
+                return "[BAN] Concentrez-vous sur les bans des forces adverses"
+            return "[PICK] C'est le moment de sécuriser votre champion !"
+        if state.phase == "PICK":
+            return "[PICK] C'est le moment de sécuriser votre champion !"
+        if state.phase == "FINALIZATION":
+            return "[FINAL] Finalisez runes et sorts d'invocateur"
+        return None
+
     def provide(self, state: DraftState) -> None:
-        """Provide coaching recommendations based on current draft."""
+        """Provide coaching recommendations based on current draft.
+
+        Le calcul remplit une `Analysis`, imprimée comme avant puis reprise dans le snapshot que le
+        client dessine (SPEC-21 tâche 72).
+        """
+        analysis = Analysis()
         try:
-            enemy_picks = state.enemy_picks
-            ally_picks = state.ally_picks
-
-            if self.m.verbose:
-                print(
-                    f"[DEBUG] _provide_recommendations called: Phase='{state.phase}', "
-                    f"Enemies={len(enemy_picks)}, Allies={len(ally_picks)}"
-                )
-
-            # Skip recommendations if draft hasn't started yet (bans already shown in initial hover)
-            if not enemy_picks and not ally_picks:
-                if self.m.verbose:
-                    print(f"[DEBUG] Waiting for picks to start (bans already shown at start)")
-                return
-
-            if enemy_picks:
-                print(f"\n[PICKS] RECOMMANDATIONS DE COUNTERPICK :")
-                print("-" * 50)
-
-                # SPEC-04 B4 §4.3 : notre lane (LCU) et celles inférées côté
-                # ennemi, qui pondèrent les paires dans l'évaluateur.
-                player_lane = state.ally_positions.get(state.local_player_cell_id)
-                allies = self._placed(ally_picks, state)
-                enemies = self._placed(enemy_picks, state)
-                banned = [
-                    self.m._get_display_name(ban_id)
-                    for ban_id in state.ally_bans + state.enemy_bans
-                ]
-
-                # SPEC-04 B5 : l'ennemi qui partage notre lane, affiché « vs X ».
-                direct_counter_name = next(
-                    (name for name, lane in enemies if lane and lane == player_lane), None
-                )
-
-                if self.m.verbose and banned:
-                    print(f"[DEBUG] Bans: {banned}")
-
-                playable, skipped, games_by_champion = self._split_pool(state, player_lane)
-                turns = self._turns_from_our_next_pick(state)
-
-                results: List[SearchResult] = []
-                if playable and turns:
-                    results = self.m.search.rank(
-                        allies=allies,
-                        enemies=enemies,
-                        pool=playable,
-                        remaining_turns=turns,
-                        banned=banned,
-                        player_lane=player_lane,
-                    )
-
-                top_recommendation = self._print_results(
-                    results, games_by_champion, player_lane, direct_counter_name
-                )
-
-                # Auto-hover top recommendation if enabled
-                if (
-                    self.m.auto_hover
-                    and top_recommendation
-                    and top_recommendation != self.m.last_recommendation
-                ):
-                    is_our_turn = self.m._is_player_turn(state)
-                    enemy_changed = self.m._enemy_picks_changed(state)
-
-                    if is_our_turn or enemy_changed:
-                        reason = (
-                            "À vous de jouer" if is_our_turn else "Mise à jour d'un pick ennemi"
-                        )
-                        self.m._auto_hover_champion(top_recommendation, reason)
-                        self.m.last_recommendation = top_recommendation
-
-                # « Plus de tour » passe avant « pas de données » : c'est
-                # l'explication la plus spécifique de la liste vide.
-                if not results and not turns:
-                    print("  [DATA] Plus aucun pick à jouer de votre côté")
-                elif not results and not skipped:
-                    print("  [DATA] Aucune donnée disponible pour les matchups actuels")
-
-                # SPEC-09 E1: écartés affichés à part, jamais mêlés au
-                # classement (ils ne sont pas classables faute de données).
-                if skipped:
-                    skipped_names = ", ".join(
-                        f"{name} ({format_games_count(games)} games)" for name, games in skipped
-                    )
-                    lane_suffix = f" en {player_lane}" if player_lane else ""
-                    print(f"  [DATA] Sans données exploitables{lane_suffix} : {skipped_names}")
-
-            # Handle auto-ban-hover for ban phases (independent of pick phase)
-            if self.m._is_ban_phase(state) and self.m.auto_ban_hover:
-                self.m._handle_auto_ban_hover(state)
-
-            # Phase-specific advice (dynamic based on actual game state)
-            advice = None
-            if state.phase == "PLANNING":
-                advice = "[PLAN] Réfléchissez à la composition d'équipe et aux priorités de ban"
-            elif state.phase == "BAN_PICK":
-                # BAN_PICK phase includes both bans and picks - detect which we're in
-                if self.m._is_ban_phase(state):
-                    advice = "[BAN] Concentrez-vous sur les bans des forces adverses"
-                else:
-                    advice = "[PICK] C'est le moment de sécuriser votre champion !"
-            elif state.phase == "PICK":
-                advice = "[PICK] C'est le moment de sécuriser votre champion !"
-            elif state.phase == "FINALIZATION":
-                advice = "[FINAL] Finalisez runes et sorts d'invocateur"
-
-            if advice:
-                print(f"\n[ADVICE] {advice}")
-
+            self._provide(state, analysis)
         except Exception as e:
             print(f"[WARNING] Erreur lors de la génération des recommandations: {e}")
+        self._publish(state, analysis)
+
+    def _publish(self, state: DraftState, analysis: Analysis) -> None:
+        """Snapshot du tick sur le bus, s'il y en a un. Best-effort : jamais d'exception."""
+        try:
+            snapshot = build_snapshot(self.m, state, analysis, self._advice(state))
+            self.m.last_snapshot = snapshot
+            bus = getattr(self.m, "bus", None)
+            if bus is not None:
+                bus.publish(TOPIC, asdict(snapshot))
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            if self.m.verbose is True:
+                print(f"[WARNING] Snapshot du draft non publié: {e}")
+
+    def _base_probability(self, allies: List[Placed], enemies: List[Placed]) -> Optional[float]:
+        """Probabilité de victoire de la position actuelle, référence des écarts du classement."""
+        try:
+            return self.m.evaluator.win_probability(allies, enemies)
+        except Exception:  # pylint: disable=broad-exception-caught
+            return None
+
+    def _provide(self, state: DraftState, analysis: Analysis) -> None:
+        enemy_picks = state.enemy_picks
+        ally_picks = state.ally_picks
+
+        if self.m.verbose:
+            print(
+                f"[DEBUG] _provide_recommendations called: Phase='{state.phase}', "
+                f"Enemies={len(enemy_picks)}, Allies={len(ally_picks)}"
+            )
+
+        # Skip recommendations if draft hasn't started yet (bans already shown in initial hover)
+        if not enemy_picks and not ally_picks:
+            if self.m.verbose:
+                print(f"[DEBUG] Waiting for picks to start (bans already shown at start)")
+            return
+
+        if enemy_picks:
+            print(f"\n[PICKS] RECOMMANDATIONS DE COUNTERPICK :")
+            print("-" * 50)
+
+            # SPEC-04 B4 §4.3 : notre lane (LCU) et celles inférées côté
+            # ennemi, qui pondèrent les paires dans l'évaluateur.
+            player_lane = state.ally_positions.get(state.local_player_cell_id)
+            allies = self._placed(ally_picks, state)
+            enemies = self._placed(enemy_picks, state)
+            banned = [
+                self.m._get_display_name(ban_id) for ban_id in state.ally_bans + state.enemy_bans
+            ]
+
+            # SPEC-04 B5 : l'ennemi qui partage notre lane, affiché « vs X ».
+            direct_counter_name = next(
+                (name for name, lane in enemies if lane and lane == player_lane), None
+            )
+
+            if self.m.verbose and banned:
+                print(f"[DEBUG] Bans: {banned}")
+
+            playable, skipped, games_by_champion = self._split_pool(state, player_lane)
+            turns = self._turns_from_our_next_pick(state)
+
+            results: List[SearchResult] = []
+            if playable and turns:
+                results = self.m.search.rank(
+                    allies=allies,
+                    enemies=enemies,
+                    pool=playable,
+                    remaining_turns=turns,
+                    banned=banned,
+                    player_lane=player_lane,
+                )
+
+            analysis.player_lane = player_lane
+            analysis.direct_counter = direct_counter_name
+            analysis.results = results
+            analysis.games_by_champion = games_by_champion
+            analysis.skipped = skipped
+            analysis.base_probability = self._base_probability(allies, enemies)
+
+            top_recommendation = self._print_results(
+                results, games_by_champion, player_lane, direct_counter_name
+            )
+
+            # Auto-hover top recommendation if enabled
+            if (
+                self.m.auto_hover
+                and top_recommendation
+                and top_recommendation != self.m.last_recommendation
+            ):
+                is_our_turn = self.m._is_player_turn(state)
+                enemy_changed = self.m._enemy_picks_changed(state)
+
+                if is_our_turn or enemy_changed:
+                    reason = "À vous de jouer" if is_our_turn else "Mise à jour d'un pick ennemi"
+                    self.m._auto_hover_champion(top_recommendation, reason)
+                    self.m.last_recommendation = top_recommendation
+
+            # « Plus de tour » passe avant « pas de données » : c'est
+            # l'explication la plus spécifique de la liste vide.
+            if not results and not turns:
+                print("  [DATA] Plus aucun pick à jouer de votre côté")
+            elif not results and not skipped:
+                print("  [DATA] Aucune donnée disponible pour les matchups actuels")
+
+            # SPEC-09 E1: écartés affichés à part, jamais mêlés au
+            # classement (ils ne sont pas classables faute de données).
+            if skipped:
+                skipped_names = ", ".join(
+                    f"{name} ({format_games_count(games)} games)" for name, games in skipped
+                )
+                lane_suffix = f" en {player_lane}" if player_lane else ""
+                print(f"  [DATA] Sans données exploitables{lane_suffix} : {skipped_names}")
+
+        # Handle auto-ban-hover for ban phases (independent of pick phase)
+        if self.m._is_ban_phase(state) and self.m.auto_ban_hover:
+            self.m._handle_auto_ban_hover(state)
+
+        advice = self._advice(state)
+        if advice:
+            print(f"\n[ADVICE] {advice}")

@@ -8,7 +8,7 @@ from typing import Callable, Dict, Optional, Tuple
 
 from ..role_inference import infer_team_roles
 from .search import PickTurn
-from .state import DraftState
+from .state import Cell, DraftState
 
 
 class DraftStateParser:
@@ -53,6 +53,9 @@ class DraftStateParser:
         my_team = champ_select_data.get("myTeam", [])
         their_team = champ_select_data.get("theirTeam", [])
 
+        timer = champ_select_data.get("timer", {})
+        state.time_left_ms = timer.get("adjustedTimeLeftInPhase")
+
         # SPEC-04 B3: cellId -> lane, for allies whose role is assigned by the queue
         state.ally_positions = self.lcu.get_assigned_positions(champ_select_data)
 
@@ -94,6 +97,28 @@ class DraftStateParser:
                         else:
                             if champion_id not in state.enemy_bans:
                                 state.enemy_bans.append(champion_id)
+
+        # SPEC-21 tâche 72 : survols en cours (pick non complété qui porte un champion), puis
+        # les emplacements des deux équipes.
+        hovers = {
+            action.get("actorCellId"): action.get("championId", 0)
+            for action_set in actions
+            for action in action_set
+            if action.get("type") == "pick"
+            and not action.get("completed", False)
+            and action.get("championId", 0) > 0
+        }
+        for team, cells in ((my_team, state.ally_cells), (their_team, state.enemy_cells)):
+            for player in team:
+                cell_id = player.get("cellId")
+                cells.append(
+                    Cell(
+                        cell_id=cell_id,
+                        champion_id=player.get("championId", 0),
+                        hover_id=hovers.get(cell_id) or player.get("championPickIntent", 0) or 0,
+                        position=state.ally_positions.get(cell_id),
+                    )
+                )
 
         # SPEC-12: picks encore à venir, dans l'ordre, pour la recherche
         # minimax. L'ordre des action_set est celui de la draft (LCU), et une

@@ -43,7 +43,11 @@ class DraftMonitor:
         auto_ban_hover: bool = False,
         preselected_pool_name: Optional[str] = None,
         console_input: bool = True,
+        bus=None,
     ):
+        # SPEC-21 tâche 72 : bus du client (None en mode console) et dernier snapshot de draft.
+        self.bus = bus
+        self.last_snapshot = None
         # SPEC-21 tâche 55 : lancé en fil par le client, le Live Coach n'écoute pas la console
         # (les commandes arrivent par `_command_queue`).
         self.console_input = console_input

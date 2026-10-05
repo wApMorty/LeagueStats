@@ -6,6 +6,7 @@ import pytest
 
 import lol_coach
 from src.client import launch
+from src.client.bus import EventBus
 from src.config_client import client_config
 from src.draft.commands import CommandListener
 from src.user_prefs import UserPrefs
@@ -53,8 +54,11 @@ def _faux_moniteur(monkeypatch):
 # ---------- Live Coach en fil ----------
 
 
+bus = EventBus()
+
+
 def lancer_le_fil():
-    coach = launch.LiveCoachThread()
+    coach = launch.LiveCoachThread(bus)
     coach.start()
     coach._thread.join(5)
     assert not coach._thread.is_alive()
@@ -76,6 +80,7 @@ def test_le_fil_reprend_les_preferences_sans_console(monkeypatch):
         "auto_ban_hover": False,
         "preselected_pool_name": "Ma pool",
         "console_input": False,
+        "bus": bus,
     }
     assert monitor.started == 1
 
@@ -113,7 +118,7 @@ def test_une_exception_du_moniteur_s_annonce_sans_remonter(capsys, monkeypatch):
 def test_stop_interrompt_l_attente_et_arrete_le_moniteur(monkeypatch):
     monkeypatch.setattr(client_config, "LIVE_COACH_RETRY_S", 30.0)
     monkeypatch.setattr(FauxLCU, "find_lcu_credentials", lambda self: None)
-    coach = launch.LiveCoachThread()
+    coach = launch.LiveCoachThread(bus)
     coach.start()
     while not FauxMoniteur.instances:
         coach._thread.join(0.01)

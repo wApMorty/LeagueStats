@@ -131,7 +131,7 @@ SPEC-21 §5 :
 | 84 | `motion.js` et banc `/_motion` | 3 | 69 | ✅ 2026-10-05 : `motion.js` repris et branché (`htmx:load`, braises, mode Réduit) ; banc `/_motion` (4 scènes : braises, 1 600 particules, tracé, sceau ; p95 par scène) ; **mesure du p95 à faire par @pj35** (bouton « Tout mesurer » dans la fenêtre : aucun test d'interface sans ton accord), à consigner en SPEC-21 §8 (critère 11) |
 | 55 | Lancement : `--client`, option 7 du menu (Quitter en 8), Live Coach en fil sans entrée console, message `[INFO]`/`[ALERTE]` + tests | 3 | 49, 70 | ✅ 2026-10-05 : 14 tests ; point d'entrée validé par @pj35 ; `DraftMonitor(console_input=False)`, le fil attend le client LoL (15 s) ; `LcuEvents` lancé ; **recette @pj35** : `python lol_coach.py --client` avec le vrai client LoL ouvert puis fermé |
 | **Lot 2 — Draft Alchimie (51 pts)** | | | | |
-| 72 | `DraftSnapshot`, recommandations structurées, sortie console identique | 5 | 70 | ⬜ |
+| 72 | `DraftSnapshot`, recommandations structurées, sortie console identique | 5 | 70 | ✅ 2026-10-05 : 11 tests ; sortie console identique (chaînes relevées avant la refonte) ; `DraftSnapshot` publié sur le bus (sujet `draft`), delta face à la position actuelle (`GameEvaluator.win_probability`) ; emplacements, survols et temps restant lus dans le champ select |
 | 85 | Bans conseillés et balance dans le snapshot | 3 | 72 | ⬜ |
 | 86 | Assets Data Dragon locaux et formes LCU de la draft | 5 | 49 | ⬜ |
 | 74 | Actions de draft : survoler, verrouiller, bannir, corriger un rôle | 5 | 72 | ⬜ |

@@ -59,6 +59,25 @@ class LoadoutImporter:
         # champion en fait partie : la page et le set portent son nom et son id.
         self._applied: Optional[Tuple[int, str, Build]] = None
 
+    def state(self) -> Optional[Dict]:
+        """Ce qui est écrit dans le client (SPEC-21 : le snapshot de draft), None avant le lock-in."""
+        if self._applied is None:
+            return None
+        champion_id, label, build = self._applied
+        return {
+            "champion_id": champion_id,
+            "label": label,
+            "primary_style": build.primary_style,
+            "sub_style": build.sub_style,
+            "perks": list(build.perks),
+            "shards": list(build.shards),
+            "spells": list(build.spells),
+            "item_blocks": [
+                {"title": title, "items": list(items)} for title, items in build.item_blocks
+            ],
+            "games": build.games,
+        }
+
     def direct_opponent(self, state: DraftState, lane: Optional[str]) -> Optional[str]:
         """Adversaire direct locké, s'il est le seul ennemi inféré sur notre lane.
 

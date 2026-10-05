@@ -24,6 +24,16 @@ class ChampionAction:
 
 
 @dataclass
+class Cell:
+    """Un emplacement d'équipe du champ select (SPEC-21 tâche 72)."""
+
+    cell_id: int
+    champion_id: int = 0  # champion verrouillé (0 : aucun)
+    hover_id: int = 0  # champion survolé, pas encore verrouillé (0 : aucun)
+    position: Optional[str] = None  # poste assigné par la file (alliés seulement)
+
+
+@dataclass
 class DraftState:
     """Current state of the draft."""
 
@@ -46,6 +56,11 @@ class DraftState:
     # contient aucune action non complétée), ce qui ramène le coach au
     # classement à profondeur 1.
     remaining_picks: List[PickTurn] = field(default_factory=list)
+    # SPEC-21 tâche 72 : les emplacements des deux équipes (le client les dessine), et le
+    # temps restant de la phase en millisecondes si le LCU l'annonce.
+    ally_cells: List[Cell] = field(default_factory=list)
+    enemy_cells: List[Cell] = field(default_factory=list)
+    time_left_ms: Optional[int] = None
 
     def get_all_picks(self) -> List[str]:
         """Get all picked champions."""
