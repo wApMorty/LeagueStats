@@ -35,7 +35,7 @@ class CommandListener:
         the terminal; apply_pending() drains the queue from the main thread
         every tick, keeping LCU/db access single-threaded.
         """
-        if self.m._command_listener_thread is not None:
+        if self.m._command_listener_thread is not None or not self.m.console_input:
             return
 
         def _listen() -> None:

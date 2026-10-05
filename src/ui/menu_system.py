@@ -31,9 +31,10 @@ MENU PRINCIPAL :
   4. Analyse & Tournoi          - Analyse statistique et coaching manuel de tournoi
   5. Constructeur d'équipe      - Trouver les meilleures combinaisons de champions
   6. Gérer les pools            - Créer, modifier et gérer des pools de champions personnalisées
-  7. Quitter
+  7. Client LeagueStats         - Fenêtre du client (en construction, SPEC-21)
+  8. Quitter
 
-Choisissez une option (1-7) : """
+Choisissez une option (1-8) : """
     return input(menu).strip()
 
 

@@ -21,7 +21,8 @@ Menu principal :
 4. **Analyse & Tournoi** — analyse statistique, coaching manuel de tournoi et bilan du coach de gameplay
 5. **Constructeur d'équipe** — recherche des meilleures combinaisons de champions (duos/trios)
 6. **Gérer les pools** — création et gestion de pools de champions personnalisées
-7. Quitter
+7. **Client LeagueStats** — fenêtre native (aussi `python lol_coach.py --client`) : sert le Live Coach et le LCU dans une interface dédiée (en construction, SPEC-21)
+8. Quitter
 
 ## Mise à jour des données
 

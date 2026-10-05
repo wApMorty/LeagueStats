@@ -30,6 +30,16 @@ from src.ui.team_builder_ui import run_optimal_team_builder
 from src.ui.pools_menu_ui import manage_champion_pools
 
 
+def run_client_window(verbose: bool = False) -> None:
+    """Open the LeagueStats client (imported here: fastapi/pywebview are not needed by the menu)."""
+    try:
+        from src.client.launch import run_client
+    except ImportError as e:
+        print(f"[ALERTE] Client indisponible (dépendance manquante) : {e}")
+        return
+    run_client(verbose)
+
+
 def main():
     """Main application entry point with unified menu."""
     parser = argparse.ArgumentParser(
@@ -58,6 +68,11 @@ def main():
         help="Enable automatic ban hovering during ban phases",
     )
     parser.add_argument(
+        "--client",
+        action="store_true",
+        help="Open the LeagueStats client window (SPEC-21) instead of the menu",
+    )
+    parser.add_argument(
         "--no-clear",
         action="store_true",
         help="Disable console clearing (useful for debugging or capturing logs)",
@@ -68,6 +83,10 @@ def main():
     # Configure console clearing
     if args.no_clear:
         set_clear_enabled(False)
+
+    if args.client:
+        run_client_window(args.verbose)
+        return
 
     # Legacy direct coach mode
     if args.direct_coach:
@@ -194,12 +213,16 @@ def main():
                 input("\nPress Enter to return to menu...")
 
             elif choice == "7":
+                # LeagueStats client (SPEC-21)
+                run_client_window(args.verbose)
+
+            elif choice == "8":
                 # Exit
                 print("\nGoodbye!")
                 break
 
             else:
-                print("\n[ERROR] Invalid option. Please choose 1-7.")
+                print("\n[ERROR] Invalid option. Please choose 1-8.")
                 input("Press Enter to continue...")
 
         except KeyboardInterrupt:

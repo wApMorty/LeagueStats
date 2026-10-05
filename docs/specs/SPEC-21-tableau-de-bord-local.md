@@ -6,7 +6,7 @@ remplacée). Forme, périmètre, ordre, temps réel et niveau d'écriture valid�
 2026-10-04 ; port libre choisi par l'OS validé. **Plan revu le 2026-10-05** à la réception du handoff de design « Alchimie »
 (`docs/design/client_alchimie/`) : 37 tâches, et une fiche par écran à coder (§4.10, §5). **Validé le
 2026-10-05** : ordre des lots, taille de la fenêtre, thème clair reporté, écrans sans maquette extrapolés
-d'« Alchimie ». Reste à valider : les écritures du coaching et le point d'entrée.
+d'« Alchimie ». Point d'entrée validé le 2026-10-05. Reste à valider : les écritures du coaching.
 
 **Origine** : feature candidate 5 du `TODO.md` (ex-tâche #6, `ROADMAP_2026.md` Horizon 3),
 repriorisée le 2026-09-26. Reformulée par @pj35 le 2026-10-04 : « bien plus qu'un rapport HTML en
@@ -98,7 +98,7 @@ post-game revus avec le Live Coach, le tout animé avec soin.
 | Bibliothèque d'animation | **Tranché par le spike (tâche 48, 2026-10-04)** : CSS + Web Animations API + View Transitions, zéro dépendance. WebView2 est un Chromium 154 qui expose les View Transitions ; 80 cartes animées plus un tracé SVG tiennent un p95 de 6,2 ms par image (§8). Un moteur de ressorts n'est justifié par aucune mesure ; à rouvrir seulement si un effet précis l'exige. Le handoff (2026-10-05) ajoute un calque `<canvas>` de particules (1 600 au plus, braises continues) : **non mesuré à ce jour**, la tâche 84 consigne le p95 sur le banc `/_motion` ; leviers de repli au README du handoff (plafond, débit des braises, plume de tracé). |
 | Cadre de la fenêtre | **Validé (@pj35, 2026-10-04) : sans bordure** (`frameless=True`), barre de titre et boutons Réduire/Agrandir/Fermer dessinés en HTML et animés. **Confirmé par le spike** sur le poste de @pj35 (§8) : déplacement par la barre de titre exact, redimensionnement par la poignée d'angle bas-droit exact (aller-retour JS vers Python : 0,7 ms), coins arrondis et bordure fournis par Windows 11. **Deux écarts à traiter en tâche 68** : le bouton Agrandir ne doit pas appeler `maximize()` (la fenêtre recouvre la barre des tâches), il place la fenêtre sur la zone utile de l'écran ; et il n'y a aucun redimensionnement natif par les bords (poignées HTML sur les quatre côtés et quatre coins ; **seuls le coin bas-droit et les bords droit et bas ont été essayés** : gauche et haut exigent `resize()` puis `move()` synchronisés, risque de saut, à mesurer en tâche 68). L'ancrage Win+Flèche est sans objet : @pj35 utilise Komorebi (gestionnaire de fenêtres en mosaïque, dont les barres expliquent la zone utile de 46 à 1032 px), et prévoit un usage surtout en plein écran ; il n'est pas critique (2026-10-04). |
 | Écritures du coaching dans la base | **À valider** : défaut proposé, oui, via une connexion d'écriture distincte et les repositories existants (fixer ou clore un axe, `outcome`) ; la lecture reste en `mode=ro`. Cela lève la règle « lecture seule » de la version précédente. |
-| Point d'entrée | **À valider** : défaut proposé, `python lol_coach.py --client` et option 7 du menu ; démarrage d'office du client plus tard. |
+| Point d'entrée | **Validé (@pj35, 2026-10-05)** : `python lol_coach.py --client` et option 7 du menu ; démarrage d'office du client plus tard. |
 | Port | **À valider** : défaut proposé, port libre choisi par l'OS (la fenêtre locale n'a pas besoin d'un port connu), affiché en `[INFO]`. |
 | Taille de l'exe | **Validé** : pas de limite ; le spike mesure et consigne (§8). |
 | Langue | Français, sans i18n (décision ROADMAP). |
@@ -411,7 +411,7 @@ Numéros à la suite du `TODO.md` (dernière : 67). Les tâches 48 à 56 et 68 �
 2026-10-04 ; **84 à 95 sont ajoutées le 2026-10-05** après le handoff de design. L'ordre d'exécution est
 celui des lots, **réordonnés d'après le handoff** (§2, à valider) : coque, motion, draft, file trouvée et
 transition, coaching et post-game, puis la navigation. Les tâches d'écran renvoient à leur fiche du §4.10.
-Les tâches 48, 49, 68, 69 et 70 sont faites.
+Les tâches 48, 49, 55, 68, 69, 70 et 84 sont faites (84 : la mesure du p95 reste à la recette).
 
 **Lot 1 — Socle, coque et motion (31 pts)** — étapes 1 et 2 du handoff
 
@@ -423,7 +423,7 @@ Les tâches 48, 49, 68, 69 et 70 sont faites.
 | 70 | ✅ Bus et temps réel : `bus.py`, route SSE, `lcu_events.py` (WebSocket LCU, reconnexion), faux serveur de test | 5 | 49 |
 | 69 | ✅ **Jetons, polices et coque « Alchimie »** : jetons OKLCH et `@font-face` locaux dans `style.css` ; `base.html` (barre de titre : logo pentacle, pastille animée, liseré dégradé) ; navigation à trois groupes, entrées sans écran grisées ; pied Thème / Motion ; réglage Motion persisté (`save_motion`, `POST /prefs/motion`, `data-motion` sur `<html>`) ; `WINDOW_BACKGROUND` ; tests | 5 | 68 |
 | 84 | 🟡 **`motion.js` et banc `/_motion`** (`motion.js` repris et branché le 2026-10-05 ; reste le banc et la mesure) : reprise de `motion.js` du handoff (+ `Motion.opts()`), `Motion.intro` et `ambient` sur `htmx:load`, braises coupées en Réduit ; banc `/_motion` (p95 du temps d'image par scène : braises, 1 600 particules, tracé, sceau) ; mesures consignées en §10 | 3 | 69 |
-| 55 | Lancement : `--client` et option 7 du menu (Quitter en 8), Live Coach en fil sans entrée console, message `[INFO]`/`[ALERTE]` + tests | 3 | 49, 70 |
+| 55 | ✅ Lancement : `--client` et option 7 du menu (Quitter en 8), Live Coach en fil sans entrée console, message `[INFO]`/`[ALERTE]` + tests | 3 | 49, 70 |
 
 **Lot 2 — Draft Alchimie (51 pts)** — étape 3 du handoff, l'écran clé
 

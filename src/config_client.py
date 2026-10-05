@@ -30,6 +30,11 @@ class ClientConfig:
     MOTION_MODES: Tuple[str, ...] = ("systeme", "complet", "reduit")
     MOTION_DEFAULT: str = "complet"
 
+    # Live Coach lancé en fil par le client : attente du client LoL (secondes) entre deux essais
+    # et délai d'arrêt à la fermeture de la fenêtre.
+    LIVE_COACH_RETRY_S: float = 15.0
+    LIVE_COACH_STOP_TIMEOUT_S: float = 5.0
+
     # Banc `/_motion` (critère 11) : budget par image (60 Hz) et durée d'une scène.
     MOTION_BUDGET_MS: float = 16.7
     MOTION_BENCH_SCENE_S: int = 3

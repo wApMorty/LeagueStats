@@ -42,7 +42,11 @@ class DraftMonitor:
         auto_accept_queue: bool = False,
         auto_ban_hover: bool = False,
         preselected_pool_name: Optional[str] = None,
+        console_input: bool = True,
     ):
+        # SPEC-21 tâche 55 : lancé en fil par le client, le Live Coach n'écoute pas la console
+        # (les commandes arrivent par `_command_queue`).
+        self.console_input = console_input
         self.lcu = LCUClient(verbose=verbose)
         self.assistant = Assistant()
         self.last_draft_state = DraftState()
@@ -180,16 +184,17 @@ class DraftMonitor:
             print("   [AUTO-ACCEPT] Acceptation automatique de la queue ACTIVÉE")
         if self.auto_ban_hover:
             print("   [AUTO-BAN-HOVER] Survol automatique des bans ACTIVÉ")
-        print(
-            "   Tapez 'r <champion> <lane>' + Entrée pour forcer un rôle (ex. r Pantheon support)"
-        )
-        print(
-            "   Tapez 'outcome win' ou 'outcome loss' + Entrée après la partie pour logger le résultat"
-        )
-        print(
-            "   Tapez 'bilan' pour le bilan du coach de gameplay, 'axe <métrique>' pour fixer un axe"
-        )
-        print("   (Ctrl+C pour arrêter)")
+        if self.console_input:
+            print(
+                "   Tapez 'r <champion> <lane>' + Entrée pour forcer un rôle (ex. r Pantheon support)"
+            )
+            print(
+                "   Tapez 'outcome win' ou 'outcome loss' + Entrée après la partie pour logger le résultat"
+            )
+            print(
+                "   Tapez 'bilan' pour le bilan du coach de gameplay, 'axe <métrique>' pour fixer un axe"
+            )
+            print("   (Ctrl+C pour arrêter)")
 
         self._start_command_listener()
 
