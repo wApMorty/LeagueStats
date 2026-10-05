@@ -40,6 +40,7 @@ from .draft_actions import Refusal, role_command, run as run_draft_action
 from .draft_skins import SkinBook, select_skin
 from .draft_view import Champions, signature, stage_view
 from .lcu_proxy import LcuProxy
+from .lobby import create as create_lobby, leave as leave_lobby, read_lobby, set_positions
 from .lcu_status import LcuProbe
 from .collection import VIEWS, read_collection
 from .historique import read_game, read_history
@@ -91,7 +92,7 @@ NAV = (
             NavItem("profil", "Profil", "ᛒ", 245, "/profil"),
             NavItem("historique", "Historique", "ᛁ", 55, "/historique"),
             NavItem("collection", "Collection", "ᚲ", 85, "/collection"),
-            NavItem("lobby", "Lobby", "ᚹ", 290),
+            NavItem("lobby", "Lobby", "ᚹ", 290, "/lobby"),
             NavItem("social", "Social", "ᛜ", 165),
         ),
     ),
@@ -356,6 +357,34 @@ def create_app(
         return screen(
             request, "collection.html", lambda: read_collection(proxy, vue, role, champions)
         )
+
+    @app.get("/lobby", response_class=HTMLResponse)
+    def lobby_page(request: Request):
+        return screen(request, "lobby.html", lambda: read_lobby(proxy))
+
+    @app.get("/lobby/etat", response_class=HTMLResponse)
+    def lobby_state(request: Request):
+        """Le corps de l'écran, relu par `lobby.js` aux événements du LCU."""
+        return screen(request, "partials/lobby_body.html", lambda: read_lobby(proxy))
+
+    def lobby_action(action: Callable[[], Any]):
+        try:
+            return action()
+        except Refusal as refusal:
+            return JSONResponse({"detail": str(refusal)}, status_code=409)
+
+    @app.post("/lobby/creer")
+    def lobby_create(queue_id: int):
+        """Ouvre un lobby pour une file proposée ; refusé (409) hors phase ou hors liste, sans écriture."""
+        return lobby_action(lambda: create_lobby(proxy, queue_id))
+
+    @app.post("/lobby/quitter")
+    def lobby_leave():
+        return lobby_action(lambda: leave_lobby(proxy))
+
+    @app.post("/lobby/postes")
+    def lobby_positions(first: str, second: str):
+        return lobby_action(lambda: set_positions(proxy, first, second))
 
     @app.get("/postgame", response_class=HTMLResponse)
     def postgame(request: Request):

@@ -1,0 +1,69 @@
+{#- Corps de l'écran Lobby : rechargé par `lobby.js` aux événements du LCU. Sans attribut `data-*` : un
+    rechargement ne rejoue aucune animation et ne doit pas prendre le focus d'une liste ouverte. -#}
+{% import "partials/lcu_state.html" as lcu %}
+{% if v.state %}
+{{ lcu.message(v.state) }}
+{% elif v.in_lobby %}
+<div class="cols">
+  <div class="main">
+    <section class="panel">
+      <div class="panel-head"><h2>{{ v.queue }}</h2><span class="muted">{{ v.members|length }} joueur{{ "s" if v.members|length > 1 }}{% if v.free_slots %} · {{ v.free_slots }} place{{ "s" if v.free_slots > 1 }} libre{{ "s" if v.free_slots > 1 }}{% endif %}</span></div>
+      <div role="list">
+        {% for m in v.members %}
+        <div class="friend{{ ' is-me' if m.mine }}" role="listitem">
+          <span class="friend-icon">{% if m.icon %}<img src="{{ m.icon }}" alt="">{% endif %}</span>
+          <span class="friend-text">
+            <b>{{ m.name }}{% if m.leader %} <i class="muted-2">chef du groupe</i>{% endif %}{% if m.bot %} <i class="muted-2">bot</i>{% endif %}</b>
+            <span class="muted">{% if m.level %}Niveau {{ m.level }} · {% endif %}{{ m.first }} / {{ m.second }}</span>
+          </span>
+          {% if m.ready %}<span class="badge">Prêt</span>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% if v.restrictions %}<p class="notice">Restriction du lobby : {{ v.restrictions|join(", ") }}</p>{% endif %}
+    </section>
+  </div>
+  <aside class="side">
+    {% if v.positions.shown %}
+    <section class="panel">
+      <div class="panel-head"><h2>Mes postes</h2></div>
+      <div class="pos-pick">
+        <label>Premier choix
+          <select id="pos-first" {{ "disabled" if not v.positions.editable }}>
+            {% for code, label in v.positions.options %}<option value="{{ code }}"{{ " selected" if code == v.positions.first }}>{{ label }}</option>{% endfor %}
+          </select>
+        </label>
+        <label>Second choix
+          <select id="pos-second" {{ "disabled" if not v.positions.editable }}>
+            {% for code, label in v.positions.options %}<option value="{{ code }}"{{ " selected" if code == v.positions.second }}>{{ label }}</option>{% endfor %}
+          </select>
+        </label>
+      </div>
+    </section>
+    {% endif %}
+    <section class="panel lobby-actions">
+      {% if v.can_leave %}<button type="button" class="btn-ghost" data-lobby-action="/lobby/quitter">Quitter le lobby</button>{% endif %}
+      {% if v.searching %}<p class="muted">Recherche de partie en cours : annule-la depuis la barre de titre avant de quitter.</p>{% endif %}
+      {% if not v.can_leave and not v.searching %}<p class="muted">Aucune action disponible dans cette phase du client.</p>{% endif %}
+    </section>
+  </aside>
+</div>
+{% else %}
+{% if v.can_create %}
+<p class="fine">Choisis une file : le client LoL ouvre le lobby, tu y règles tes postes.</p>
+{% for group in v.choices %}
+<section class="panel queue-group">
+  <div class="panel-head"><h2>{{ group.label }}</h2></div>
+  <div class="queue-list">
+    {% for q in group.queues %}
+    <button type="button" class="chip-btn queue-btn" data-lobby-action="/lobby/creer?queue_id={{ q.id }}">{{ q.name }}{% if q.positions %} <i class="muted-2">postes</i>{% endif %}</button>
+    {% endfor %}
+  </div>
+</section>
+{% else %}
+<p class="empty">Le client LoL ne propose aucune file pour l'instant.</p>
+{% endfor %}
+{% else %}
+<p class="empty">Le client LoL est en phase « {{ v.phase }} » : aucun lobby à ouvrir pour le moment.</p>
+{% endif %}
+{% endif %}

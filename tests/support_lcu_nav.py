@@ -48,6 +48,8 @@ class FauxLcuNav:
 
     def _make_request(self, endpoint, method="GET", data=None):
         self.calls.append((method, endpoint, data))
+        if method != "GET":
+            return {}  # écriture acceptée : le test lit `writes`
         if endpoint in self.overrides:
             return self.overrides[endpoint]
         if endpoint == "/lol-gameflow/v1/gameflow-phase":

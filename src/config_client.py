@@ -160,6 +160,16 @@ class ClientConfig:
     # Historique (SPEC-21 tâche 78) : parties demandées au LCU (il en sert 20 au plus, SPEC-19).
     HISTORY_COUNT: int = 20
 
+    # Lobby (SPEC-21 tâche 80) : groupes de modes (`gameSelectModeGroup` du LCU) dont on propose les files
+    # (Faille et ARAM ; TFT et modes alternatifs hors périmètre), phases du client où l'on peut ouvrir un
+    # lobby, postes qu'on peut demander.
+    LOBBY_QUEUE_GROUPS: Tuple[str, ...] = ("kSummonersRift", "kARAM")
+    LOBBY_CREATE_PHASES: Tuple[str, ...] = ("None", "Lobby")
+    LOBBY_POSITIONS: Tuple[str, ...] = ("TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY", "FILL")
+
+    # Social (SPEC-21 tâche 82) : longueur du dernier message affiché d'une conversation.
+    SOCIAL_MESSAGE_CHARS: int = 80
+
     # Live Coach lancé en fil par le client : attente du client LoL (secondes) entre deux essais
     # et délai d'arrêt à la fermeture de la fenêtre.
     LIVE_COACH_RETRY_S: float = 15.0

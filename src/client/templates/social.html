@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% import "partials/lcu_state.html" as lcu %}
+{% block title %}Social · LeagueStats{% endblock %}
+{% block page_class %} page-client page-social{% endblock %}
+{% macro friend(f) -%}
+<div class="friend" role="listitem">
+  <span class="friend-icon">{% if f.icon %}<img src="{{ f.icon }}" alt="">{% endif %}<i class="presence presence-{{ f.kind }}" title="{{ f.status }}"></i></span>
+  <span class="friend-text">
+    <b>{{ f.name }}{% if f.tag %}<i class="muted-2">#{{ f.tag }}</i>{% endif %}</b>
+    <span class="muted">{{ f.status }}{% if f.activity %} · {{ f.activity }}{% endif %}</span>
+  </span>
+  {% if f.rank %}<span class="badge badge-off">{{ f.rank }}</span>{% endif %}
+</div>
+{%- endmacro %}
+{% block content %}
+<header class="page-head" data-rise="1">
+  <div class="page-titles">
+    <div class="kicker">Client{% if v.summary %} · {{ v.summary }}{% endif %}</div>
+    <h1 data-spell="1">Social</h1>
+  </div>
+</header>
+
+{% if v.state %}
+{{ lcu.message(v.state) }}
+{% else %}
+<div class="cols">
+  <div class="main">
+    <section class="panel" data-fade="1" data-delay="100">
+      <div class="panel-head"><h2>Amis en partie</h2><span class="muted">{{ v.in_game|length }}</span></div>
+      <div role="list">{% for f in v.in_game %}{{ friend(f) }}{% else %}<p class="muted">Aucun ami en partie.</p>{% endfor %}</div>
+    </section>
+    <section class="panel" data-rise="1" data-delay="200">
+      <div class="panel-head"><h2>Amis connectés</h2><span class="muted">{{ v.online|length }}</span></div>
+      <div role="list">{% for f in v.online %}{{ friend(f) }}{% else %}<p class="muted">Aucun autre ami connecté.</p>{% endfor %}</div>
+    </section>
+    <section class="panel" data-rise="1" data-delay="300">
+      <details>
+        <summary class="panel-head"><h2>Hors ligne</h2><span class="muted">{{ v.offline|length }}</span></summary>
+        <div role="list">{% for f in v.offline %}{{ friend(f) }}{% endfor %}</div>
+      </details>
+    </section>
+  </div>
+  <aside class="side">
+    <section class="panel me" data-rise="1" data-delay="150">
+      <div class="friend">
+        <span class="friend-icon">{% if v.me.icon %}<img src="{{ v.me.icon }}" alt="">{% endif %}<i class="presence presence-{{ v.me.kind }}" title="{{ v.me.status }}"></i></span>
+        <span class="friend-text"><b>{{ v.me.name }}{% if v.me.tag %}<i class="muted-2">#{{ v.me.tag }}</i>{% endif %}</b><span class="muted">{{ v.me.status }}{% if v.me.rank %} · {{ v.me.rank }}{% endif %}</span></span>
+      </div>
+      {% if v.me.message %}<p class="goal-quote">{{ v.me.message }}</p>{% endif %}
+    </section>
+    <section class="panel" data-rise="1" data-delay="250">
+      <div class="panel-head"><h2>Conversations</h2><span class="muted">{{ v.unread }} non lu{{ "s" if v.unread > 1 }}</span></div>
+      {% for c in v.conversations %}
+      <div class="kv conv"><span><b>{{ c.name }}</b>{% if c.muted %} <i class="muted-2">(muet)</i>{% endif %}<br><span class="muted">{{ c.last or "Aucun message" }}</span></span>{% if c.unread %}<span class="badge badge-warn">{{ c.unread }}</span>{% endif %}</div>
+      {% else %}<p class="muted">Aucune conversation ouverte.</p>{% endfor %}
+      <p class="fine">Lecture seule : ni message, ni invitation, ni gestion d'amis depuis le client.</p>
+    </section>
+  </aside>
+</div>
+{% endif %}
+{% endblock %}

@@ -21,6 +21,10 @@ READS: Tuple[Pattern[str], ...] = tuple(
         r"/lol-matchmaking/v1/ready-check",
         r"/lol-champions/v1/owned-champions-minimal",
         r"/lol-item-sets/v1/item-sets/\d+/sets",
+        r"/lol-game-queues/v1/queues",
+        r"/lol-lobby/v2/lobby",
+        r"/lol-lobby/v2/lobby/matchmaking/search-state",
+        r"/lol-matchmaking/v1/search",
         r"/lol-ranked/v1/current-ranked-stats",
         r"/lol-regalia/v2/current-summoner/regalia",
         r"/lol-challenges/v1/summary-player-data/local-player",
@@ -29,13 +33,16 @@ READS: Tuple[Pattern[str], ...] = tuple(
     )
 )
 
-# Écritures : (méthode, motif complet). Draft seulement pour l'instant ; lobby et file à leurs tâches.
+# Écritures : (méthode, motif complet). Draft, partie trouvée, lobby ; la file à la tâche 81.
 WRITES: Tuple[Tuple[str, Pattern[str]], ...] = tuple(
     (method, re.compile(pattern))
     for method, pattern in (
         ("PATCH", r"/lol-champ-select/v1/session/actions/\d+"),  # survoler, verrouiller, bannir
         ("PATCH", r"/lol-champ-select/v1/session/my-selection"),  # skin, sorts
         ("POST", r"/lol-matchmaking/v1/ready-check/(accept|decline)"),  # partie trouvée
+        ("POST", r"/lol-lobby/v2/lobby"),  # ouvrir un lobby
+        ("DELETE", r"/lol-lobby/v2/lobby"),  # le quitter
+        ("PUT", r"/lol-lobby/v2/lobby/members/localMember/position-preferences"),  # mes postes
         ("POST", r"/lol-perks/v1/pages"),  # page de runes du loadout
         ("DELETE", r"/lol-perks/v1/pages/\d+"),  # la page « LS » précédente seulement
     )

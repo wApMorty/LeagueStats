@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Lobby · LeagueStats{% endblock %}
+{% block page_class %} page-client page-lobby{% endblock %}
+{% block content %}
+<header class="page-head" data-rise="1">
+  <div class="page-titles">
+    <div class="kicker">Client{% if v.phase %} · {{ v.phase }}{% endif %}</div>
+    <h1 data-spell="1">Lobby</h1>
+  </div>
+</header>
+<p class="notice" id="lobby-notice" role="alert" hidden></p>
+<div id="lobby-body" data-fade="1" data-delay="100">
+  {% include "partials/lobby_body.html" %}
+</div>
+{% endblock %}
