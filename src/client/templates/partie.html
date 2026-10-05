@@ -9,19 +9,25 @@
 <p class="empty">Aucune partie capturée pour l'instant : la revue apparaît ici après chaque partie classée.</p>
 {% else %}
 <header class="page-head game-hero" data-rise="1">
-  <div class="page-titles">
-    <div class="kicker">{{ g.kicker }}</div>
-    <h1 class="game-title {{ 'win' if g.win else 'loss' }}" data-spell="1">{{ g.title }}</h1>
-    <div class="game-context">{{ g.champion }}{% if g.role %} · {{ g.role }}{% endif %}{% if g.opponent %} contre {{ g.opponent }}{% endif %} · {{ g.duration }} · {{ g.queue }}</div>
+  <div class="game-lead">
+    <div class="game-seal" aria-hidden="true">
+      <div class="shock" data-shock="1"></div><div class="shock b" data-shock="1"></div>
+      <svg class="seal {{ 'win' if g.win else 'loss' }}" data-seal="1" viewBox="-52 -52 104 104"><circle class="seal-disc" r="50"/><circle class="seal-ring" r="44"/><path class="seal-star" d="M0,-38 L22.3,30.7 L-36.1,-11.7 L36.1,-11.7 L-22.3,30.7 Z"/></svg>
+    </div>
+    <div class="page-titles">
+      <div class="kicker" data-rise="1" data-delay="200">{{ g.kicker }}</div>
+      <h1 class="game-title {{ 'win' if g.win else 'loss' }}" data-rise="1" data-spell="1" data-delay="300">{{ g.title }}</h1>
+      <div class="game-context" data-rise="1" data-delay="400">{{ g.champion }}{% if g.role %} · {{ g.role }}{% endif %}{% if g.opponent %} contre {{ g.opponent }}{% endif %} · {{ g.duration }} · {{ g.queue }}</div>
+    </div>
   </div>
   <div class="game-side">
     {% if g.axes %}
-    <div class="axis-pills">
+    <div class="axis-pills" data-rise="1" data-delay="500">
       {% for a in g.axes %}<span class="axis-pill {{ 'held' if a.held else 'miss' }}"><i></i>{{ a.text }}</span>{% endfor %}
     </div>
     {% endif %}
     {% if g.lp and g.lp.delta %}
-    <div class="lp-gain {{ 'gain' if g.lp.gain else 'loss' }}"><b>{{ g.lp.delta }} LP</b><span>{{ g.lp.rank }}</span></div>
+    <div class="lp-gain {{ 'gain' if g.lp.gain else 'loss' }}" data-rise="1" data-delay="600"><b>{{ '+' if g.lp.gain else '−' }}<span data-count="{{ g.lp.value }}" data-delay="700">{{ g.lp.value }}</span> LP</b><span>{{ g.lp.rank }}</span></div>
     {% endif %}
     <a href="/parties">‹ Toutes les parties</a>
   </div>

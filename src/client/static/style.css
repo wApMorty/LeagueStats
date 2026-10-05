@@ -819,6 +819,18 @@ h2 { margin: 0; font: 600 24px/1 var(--font-title); }
 /* Post-game (tâche 75) : en-tête, axes jugés, LP, pile d'impact, écarts */
 .page-game { --halo-1: 100% 10%; --halo-2: 10% 0%; --halo-3: 40% 100%; }
 .game-hero { align-items: center; }
+.game-lead { display: flex; align-items: center; gap: 22px; }
+.game-seal { position: relative; width: 104px; height: 104px; flex: none; }
+.game-seal .shock { position: absolute; inset: 0; border-radius: 50%; border: 2px solid oklch(0.8 0.1 165); opacity: 0; }
+.game-seal .shock.b { border: 1px solid var(--copper); }
+.seal { position: absolute; inset: 0; width: 104px; height: 104px; overflow: visible;
+  filter: drop-shadow(0 0 18px oklch(0.8 0.1 165 / 0.5)); }
+.game-seal:has(.seal.loss) .shock:not(.b) { border-color: var(--rose); }
+.seal-disc { fill: oklch(0.8 0.1 165); }
+.seal-ring { fill: none; stroke: oklch(0.16 0.02 170 / 0.5); stroke-width: 1; }
+.seal-star { fill: none; stroke: oklch(0.16 0.02 170); stroke-width: 2; stroke-linejoin: round; }
+.seal.loss { filter: drop-shadow(0 0 18px oklch(0.72 0.21 345 / 0.5)); }
+.seal.loss .seal-disc { fill: var(--rose); }
 .game-side { display: flex; align-items: center; gap: 40px; }
 .axis-pills { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 .axis-pill { --c: var(--mint); display: flex; align-items: center; gap: 8px; padding: 5px 14px; border-radius: 999px;
