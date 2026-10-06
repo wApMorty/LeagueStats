@@ -20,6 +20,7 @@ import time
 
 from ..config_constants import draft_config
 from ..utils.console import clear_console
+from .final_analysis import TOPIC as GAME_TOPIC
 from .state import DraftState
 
 
@@ -240,6 +241,13 @@ class MonitorLifecycle:
         self.m._last_prediction_id = None  # SPEC-05 B7: predictions don't carry to the next game
         self.m._last_outcome_trigger_phase = None  # SPEC-08: re-arm the transition detector
         self.m.loadout.reset()  # SPEC-15: a new draft imports again
+        # SPEC-24 tâche 106 : l'analyse de la draft précédente ne survit pas à la partie suivante.
+        try:
+            bus = getattr(self.m, "bus", None)
+            if bus is not None:
+                bus.publish(GAME_TOPIC, None)
+        except Exception:  # pylint: disable=broad-exception-caught
+            pass
 
         # Reset ready message flag
         if hasattr(self.m, "_shown_ready_message"):

@@ -10,12 +10,22 @@ Back-reference to the monitor, like the other draft components: it reads
 ``lcu``, ``hover`` and ``_get_display_name`` through the monitor.
 """
 
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from ..config_constants import draft_config
-from .loadout import Build, adapt_to_matchup, get_page, option_name, pick_build
+from .loadout import (
+    Build,
+    Substitution,
+    adapt_to_matchup,
+    get_page,
+    option_name,
+    pick_build,
+)
 from .loadout_lcu import apply_build
 from .state import DraftState
+
+# Catégories de substitution dont les options sont des objets (les autres : runes, sorts).
+ITEM_CATEGORIES = ("Départ", "Core", "Bottes", "Situationnels")
 
 # (championId, lane, adversaire) : ce qui détermine la build cible.
 ImportKey = Tuple[int, Optional[str], Optional[str]]
@@ -59,16 +69,22 @@ class LoadoutImporter:
         # Ce qui est écrit dans le client : (championId, libellé, build). Le
         # champion en fait partie : la page et le set portent son nom et son id.
         self._applied: Optional[Tuple[int, str, Build]] = None
+        # SPEC-24 tâche 106 : substitutions du duel et noms d'objets de cette build (pour l'écran).
+        self._duel_info: Dict = {"substitutions": [], "item_names": {}}
 
     def set_manual(self, manual: bool) -> None:
         """La page est choisie à la main (l'import du lock-in s'efface) ou rendue à l'import."""
         if self.manual and not manual:
             self._last_key = None  # le prochain tick réimporte la build OneTricks
             self._applied = None
+            self._duel_info = {"substitutions": [], "item_names": {}}
         self.manual = manual
 
-    def state(self) -> Optional[Dict]:
-        """Ce qui est écrit dans le client (SPEC-21 : le snapshot de draft), None avant le lock-in."""
+    def state(self, with_duel: bool = False) -> Optional[Dict]:
+        """Ce qui est écrit dans le client (SPEC-21 : le snapshot de draft), None avant le lock-in.
+
+        ``with_duel`` ajoute les substitutions du duel et les noms d'objets (SPEC-24 tâche 106).
+        """
         if self._applied is None:
             return None
         champion_id, label, build = self._applied
@@ -84,6 +100,7 @@ class LoadoutImporter:
                 {"title": title, "items": list(items)} for title, items in build.item_blocks
             ],
             "games": build.games,
+            **(self._duel_info if with_duel else {}),
         }
 
     def direct_opponent(self, state: DraftState, lane: Optional[str]) -> Optional[str]:
@@ -125,7 +142,7 @@ class LoadoutImporter:
             print(f"[INFO] Build non importée : page OneTricks indisponible pour {label}")
             return
 
-        substitutions, duel_games = [], None
+        substitutions, duel_games, duel = [], None, None
         if opponent:
             duel = get_page(name, lane, opponent)
             adapted = adapt_to_matchup(general, duel) if duel else None
@@ -145,7 +162,39 @@ class LoadoutImporter:
             return
         outcome = apply_build(self.m.lcu, build, champion_id, label)
         self._applied = target
+        self._duel_info = self._describe(build, substitutions, general, duel)
         self._report(label, build, opponent, duel_games, substitutions, general, outcome)
+
+    @staticmethod
+    def _describe(
+        build: Build, substitutions: List[Substitution], page: dict, duel: Optional[dict]
+    ) -> Dict:
+        """Substitutions du duel (catégorie, ancien, nouveau, parts, raison) et noms d'objets."""
+        names = {**((duel or {}).get("itemData") or {}), **page.get("itemData", {})}
+        ids = {str(item) for _, items in build.item_blocks for item in items}
+        rows = []
+        for sub in substitutions:
+            bound = "" if sub.general_listed else "<"
+            ids.update(
+                str(item) for item in (*sub.old, *sub.new) if sub.category in ITEM_CATEGORIES
+            )
+            rows.append(
+                {
+                    "category": sub.category,
+                    "old": option_name(page, sub.category, sub.old),
+                    "new": option_name(page, sub.category, sub.new),
+                    "duel_share": sub.duel_share,
+                    "general_share": sub.general_share,
+                    "general_listed": sub.general_listed,
+                    "duel_games": sub.duel_games,
+                    "reason": f"{sub.duel_share:.0%} vs {bound}{sub.general_share:.0%} en général "
+                    f"({sub.duel_games} parties)",
+                }
+            )
+        return {
+            "substitutions": rows,
+            "item_names": {item: names[item] for item in sorted(ids) if item in names},
+        }
 
     @staticmethod
     def _report(label, build, opponent, duel_games, substitutions, page, outcome) -> None:

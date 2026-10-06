@@ -17,8 +17,9 @@ through _get_display_name, and writes _last_prediction_id (consumed by the
 "outcome win/loss" command).
 """
 
+from dataclasses import asdict, dataclass, field
 from itertools import zip_longest
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from ..analysis.game_eval import Placed
 from ..analysis.probability import sigmoid
@@ -26,9 +27,7 @@ from ..coaching.goals import draft_reminder
 from ..config_constants import analysis_config, draft_config, scraping_config
 from ..utils.console import clear_console
 
-# (nom, matchup, synergie, total) — matchup/total à None quand les données du
-# champion sont trop minces pour être affichées.
-ScoreRow = Tuple[str, Optional[float], float, float]
+TOPIC = "game"  # sujet du bus : l'analyse de la draft qui vient de finir (SPEC-24 tâche 106)
 
 # Une ligne du tableau face-à-face : (allié, ennemi) sous forme d'indices dans
 # leur équipe, None pour un côté vide, et True si les deux se font face dans
@@ -40,6 +39,40 @@ STATS_WIDTH = 17  # trois colonnes « +5.1f » séparées par un espace
 DUEL_WIDTH = 12
 # « Données insuffisantes » (SPEC-06 E7) ne tient pas dans STATS_WIDTH.
 INSUFFICIENT = "peu de données"
+
+
+@dataclass
+class ScoreLine:
+    """Un champion du tableau ; ``matchup`` à None quand ses données sont trop minces."""
+
+    name: str
+    matchup: Optional[float]
+    synergy: float
+    total: float
+
+
+@dataclass
+class FaceOffLine:
+    """Une ligne du face-à-face : un côté peut être vide, ``duel`` est None s'il n'est pas mesuré."""
+
+    ally: Optional[ScoreLine]
+    enemy: Optional[ScoreLine]
+    duel: Optional[float]
+
+
+@dataclass
+class FinalAnalysis:
+    """L'analyse de fin de draft, en données : la console l'imprime, l'écran « En partie » la relit."""
+
+    lines: List[FaceOffLine]
+    win_probability: float
+    draft_diff: float  # écart entre les deux camps, en points
+    evaluation: str
+    loadout: Optional[Dict[str, Any]] = field(default=None)
+
+    def to_payload(self) -> Dict[str, Any]:
+        """Charge utile du bus (types simples, sérialisable en JSON)."""
+        return asdict(self)
 
 
 def _to_points(logit: float) -> float:
@@ -95,15 +128,31 @@ def face_offs(allies: Sequence[Placed], enemies: Sequence[Placed]) -> List[FaceO
     return rows
 
 
-def _stats(row: Optional[ScoreRow], mirrored: bool) -> str:
+def _stats(row: Optional[ScoreLine], mirrored: bool) -> str:
     """Mat Syn Tot (Tot Syn Mat côté ennemi, en miroir) sur STATS_WIDTH."""
     if row is None:
         return ""
-    _, matchup, synergy, total = row
-    if matchup is None:
+    if row.matchup is None:
         return INSUFFICIENT
-    values = (total, synergy, matchup) if mirrored else (matchup, synergy, total)
+    values = (
+        (row.total, row.synergy, row.matchup) if mirrored else (row.matchup, row.synergy, row.total)
+    )
     return " ".join(f"{value:+5.1f}" for value in values)
+
+
+def evaluation_of(draft_diff: float) -> Tuple[str, str]:
+    """Libellé de l'évaluation et sa ligne console, d'après l'écart de draft en points."""
+    if draft_diff >= 5.0:
+        label, detail = "Avantage de draft majeur", f"{draft_diff:+.2f}% d'écart total"
+    elif draft_diff >= 2.5:
+        label, detail = "Bon avantage de draft", f"{draft_diff:+.2f}% d'écart total"
+    elif draft_diff >= -2.5:
+        label, detail = "Draft équilibré", f"{draft_diff:+.2f}% de différence"
+    elif draft_diff >= -5.0:
+        label, detail = "Désavantage de draft", f"{draft_diff:.2f}% de retard"
+    else:
+        label, detail = "Désavantage de draft majeur", f"{draft_diff:.2f}% de retard"
+    return label, f"{label} ({detail})"
 
 
 def _line(ally_stats: str, ally: str, duel: str, enemy: str, enemy_stats: str) -> str:
@@ -137,7 +186,7 @@ class FinalDraftAnalyzer:
             return False
         return True
 
-    def _score_team(self, team: Sequence[Placed], opposing: Sequence[Placed]) -> List[ScoreRow]:
+    def _score_team(self, team: Sequence[Placed], opposing: Sequence[Placed]) -> List[ScoreLine]:
         """Une ligne de tableau par champion, dans l'ordre de ``team``.
 
         La colonne « Synergy » compte les paires du point de vue DE CE
@@ -146,22 +195,27 @@ class FinalDraftAnalyzer:
         ``team_logit()``. C'est voulu — la colonne répond à « qu'apporte ce
         champion », pas à « comment se décompose le total ».
         """
-        rows: List[ScoreRow] = []
+        rows: List[ScoreLine] = []
         for index, champion in enumerate(team):
             name, lane = champion
             try:
                 if not self._has_enough_data(name, lane):
-                    rows.append((name, None, 0.0, 0.0))
+                    rows.append(ScoreLine(name, None, 0.0, 0.0))
                     continue
 
                 others = [mate for position, mate in enumerate(team) if position != index]
                 matchup = sum(self.m.evaluator.matchup_logit(champion, enemy) for enemy in opposing)
                 synergy = sum(self.m.evaluator.synergy_logit(champion, mate) for mate in others)
                 rows.append(
-                    (name, _to_points(matchup), _to_points(synergy), _to_points(matchup + synergy))
+                    ScoreLine(
+                        name,
+                        _to_points(matchup),
+                        _to_points(synergy),
+                        _to_points(matchup + synergy),
+                    )
                 )
             except Exception:
-                rows.append((name, None, 0.0, 0.0))  # Mark error
+                rows.append(ScoreLine(name, None, 0.0, 0.0))  # Mark error
 
         return rows
 
@@ -176,32 +230,51 @@ class FinalDraftAnalyzer:
         except Exception:
             return None
 
-    def _print_face_off(self, allies: Sequence[Placed], enemies: Sequence[Placed]) -> None:
-        """Tableau miroir, une ligne par lane (SPEC-14)."""
+    def _face_off_lines(
+        self, allies: Sequence[Placed], enemies: Sequence[Placed]
+    ) -> List[FaceOffLine]:
+        """Les lignes du tableau miroir, une par lane, dans l'ordre de ``face_offs`` (SPEC-14)."""
         ally_rows = self._score_team(allies, enemies)
         enemy_rows = self._score_team(enemies, allies)
+        return [
+            FaceOffLine(
+                ally_rows[ally] if ally is not None else None,
+                enemy_rows[enemy] if enemy is not None else None,
+                self._duel(allies[ally], enemies[enemy]) if paired else None,
+            )
+            for ally, enemy, paired in face_offs(allies, enemies)
+        ]
 
+    @staticmethod
+    def _print_face_off(lines: Sequence[FaceOffLine]) -> None:
+        """Tableau miroir, une ligne par lane (SPEC-14)."""
         print("\nFACE-À-FACE PAR LANE :\n")
         print(_line("  Mat   Syn   Tot", "Allié", "DUEL", "Ennemi", "  Tot   Syn   Mat"))
         dashes = " ".join(["-" * 5] * 3)
         print(_line(dashes, "-" * NAME_WIDTH, "-" * DUEL_WIDTH, "-" * NAME_WIDTH, dashes))
-        for ally, enemy, paired in face_offs(allies, enemies):
-            ally_row = ally_rows[ally] if ally is not None else None
-            enemy_row = enemy_rows[enemy] if enemy is not None else None
-            duel = self._duel(allies[ally], enemies[enemy]) if paired else None
+        for line in lines:
             print(
                 _line(
-                    _stats(ally_row, mirrored=False),
-                    ally_row[0] if ally_row else "",
-                    duel_cell(duel),
-                    enemy_row[0] if enemy_row else "",
-                    _stats(enemy_row, mirrored=True),
+                    _stats(line.ally, mirrored=False),
+                    line.ally.name if line.ally else "",
+                    duel_cell(line.duel),
+                    line.enemy.name if line.enemy else "",
+                    _stats(line.enemy, mirrored=True),
                 )
             )
         print("\n  DUEL : matchup direct en points de winrate, + = avantage pour vous")
         print("  ?    : pas de donnée sur ce duel, ou lane incertaine")
 
     # ---------- entrée principale ----------
+
+    def _publish(self, analysis: FinalAnalysis) -> None:
+        """Sur le bus du client (sujet ``game``), jusqu'à la draft suivante ; best-effort."""
+        try:
+            bus = getattr(self.m, "bus", None)
+            if bus is not None:
+                bus.publish(TOPIC, analysis.to_payload())
+        except Exception:  # pylint: disable=broad-exception-caught
+            pass
 
     def analyze(
         self,
@@ -231,27 +304,18 @@ class FinalDraftAnalyzer:
             print("[INFO] Draft incomplet - aucune analyse finale disponible")
             return
 
-        allies: List[Placed] = [
-            (self.m._get_display_name(champ_id), role_map.get(champ_id)) for champ_id in ally_picks
-        ]
-        enemies: List[Placed] = [
-            (self.m._get_display_name(champ_id), role_map.get(champ_id)) for champ_id in enemy_picks
-        ]
-
-        self._print_face_off(allies, enemies)
+        analysis = build_final_analysis(self.m, ally_picks, enemy_picks, role_map)
+        self._print_face_off(analysis.lines)
+        self._publish(analysis)
 
         # Team summary comparison
-        print(f"\nCOMPARAISON DU DRAFT :")
+        print("\nCOMPARAISON DU DRAFT :")
         print("-" * 40)
 
-        win_probability = self.m.evaluator.win_probability(allies, enemies)
+        win_probability = analysis.win_probability
         our_expected = win_probability * 100.0
         print(f"  Probabilité de victoire estimée : {our_expected:.2f}%")
         print(f"  Probabilité adverse : {100.0 - our_expected:.2f}%")
-
-        # Même définition qu'avant SPEC-12 (écart entre les deux camps), pour
-        # que les seuils d'évaluation ci-dessous gardent leur calibrage.
-        draft_diff = (2.0 * win_probability - 1.0) * 100.0
 
         # SPEC-05 B7 §8: best-effort prediction logging for later calibration
         # (scripts/calibrate_model.py). Never blocks nor slows down the draft.
@@ -270,16 +334,7 @@ class FinalDraftAnalyzer:
         except Exception as e:
             print(f"[WARNING] Échec de l'enregistrement de la prédiction: {e}")
 
-        if draft_diff >= 5.0:
-            print(f"  Évaluation : Avantage de draft majeur ({draft_diff:+.2f}% d'écart total)")
-        elif draft_diff >= 2.5:
-            print(f"  Évaluation : Bon avantage de draft ({draft_diff:+.2f}% d'écart total)")
-        elif draft_diff >= -2.5:
-            print(f"  Évaluation : Draft équilibré ({draft_diff:+.2f}% de différence)")
-        elif draft_diff >= -5.0:
-            print(f"  Évaluation : Désavantage de draft ({draft_diff:.2f}% de retard)")
-        else:
-            print(f"  Évaluation : Désavantage de draft majeur ({draft_diff:.2f}% de retard)")
+        print(f"  Évaluation : {evaluation_of(analysis.draft_diff)[1]}")
 
         # SPEC-19 §7.3 : rappel des axes de travail du coach de gameplay.
         try:
@@ -294,3 +349,38 @@ class FinalDraftAnalyzer:
                 print(line)
 
         print("\n" + "=" * 80)
+
+
+def build_final_analysis(
+    monitor, ally_picks: List[int], enemy_picks: List[int], ally_lanes: Dict[int, str]
+) -> FinalAnalysis:
+    """Calcule l'analyse de fin de draft, sans rien imprimer ni publier (SPEC-24 tâche 106).
+
+    ``ally_lanes`` : championId -> lane inférée, pour les deux camps (``state.inferred_roles``).
+    """
+    allies: List[Placed] = [
+        (monitor._get_display_name(champ_id), ally_lanes.get(champ_id)) for champ_id in ally_picks
+    ]
+    enemies: List[Placed] = [
+        (monitor._get_display_name(champ_id), ally_lanes.get(champ_id)) for champ_id in enemy_picks
+    ]
+    win_probability = monitor.evaluator.win_probability(allies, enemies)
+    # Même définition qu'avant SPEC-12 (écart entre les deux camps), pour que les seuils
+    # d'évaluation gardent leur calibrage.
+    draft_diff = (2.0 * win_probability - 1.0) * 100.0
+    return FinalAnalysis(
+        lines=FinalDraftAnalyzer(monitor)._face_off_lines(allies, enemies),
+        win_probability=win_probability,
+        draft_diff=draft_diff,
+        evaluation=evaluation_of(draft_diff)[0],
+        loadout=_loadout_of(monitor),
+    )
+
+
+def _loadout_of(monitor) -> Optional[Dict[str, Any]]:
+    """La build écrite dans le client à cet instant (None avant le lock-in ou si illisible)."""
+    try:
+        loadout = monitor.loadout.state(with_duel=True)
+    except Exception:  # pylint: disable=broad-exception-caught
+        return None
+    return loadout if isinstance(loadout, dict) else None

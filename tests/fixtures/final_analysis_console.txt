@@ -1,0 +1,142 @@
+##### prob=0.55 thin=()
+
+================================================================================
+ANALYSE FINALE DU DRAFT - Scores individuels des champions
+================================================================================
+
+FACE-À-FACE PAR LANE :
+
+  Mat   Syn   Tot  Allié              DUEL     Ennemi            Tot   Syn   Mat
+----- ----- -----  -------------- ------------ --------------  ----- ----- -----
+ +3.4  +0.0  +3.4  Garen           <<<  +3.4   Darius           -3.4  +0.0  -3.4
+ -1.3  +0.0  -1.3  Vi              >    -1.3   Lee Sin          +1.3  +0.0  +1.3
+ +0.2  +0.0  +0.2  Ahri            =    +0.2   Syndra           -0.2  +0.0  -0.2
+ -2.5  +0.0  -2.5  Jinx            >>   -2.5   Draven           +2.5  +0.0  +2.5
+ +0.0  +0.0  +0.0  Rell                ?       Nautilus         +0.0  +0.0  +0.0
+
+  DUEL : matchup direct en points de winrate, + = avantage pour vous
+  ?    : pas de donnée sur ce duel, ou lane incertaine
+
+COMPARAISON DU DRAFT :
+----------------------------------------
+  Probabilité de victoire estimée : 55.00%
+  Probabilité adverse : 45.00%
+  Évaluation : Avantage de draft majeur (+10.00% d'écart total)
+
+[INFO] axe test
+
+================================================================================
+##### prob=0.53 thin=('Garen',)
+
+================================================================================
+ANALYSE FINALE DU DRAFT - Scores individuels des champions
+================================================================================
+
+FACE-À-FACE PAR LANE :
+
+  Mat   Syn   Tot  Allié              DUEL     Ennemi            Tot   Syn   Mat
+----- ----- -----  -------------- ------------ --------------  ----- ----- -----
+   peu de données  Garen           <<<  +3.4   Darius           -3.4  +0.0  -3.4
+ -1.3  +0.0  -1.3  Vi              >    -1.3   Lee Sin          +1.3  +0.0  +1.3
+ +0.2  +0.0  +0.2  Ahri            =    +0.2   Syndra           -0.2  +0.0  -0.2
+ -2.5  +0.0  -2.5  Jinx            >>   -2.5   Draven           +2.5  +0.0  +2.5
+ +0.0  +0.0  +0.0  Rell                ?       Nautilus         +0.0  +0.0  +0.0
+
+  DUEL : matchup direct en points de winrate, + = avantage pour vous
+  ?    : pas de donnée sur ce duel, ou lane incertaine
+
+COMPARAISON DU DRAFT :
+----------------------------------------
+  Probabilité de victoire estimée : 53.00%
+  Probabilité adverse : 47.00%
+  Évaluation : Avantage de draft majeur (+6.00% d'écart total)
+
+[INFO] axe test
+
+================================================================================
+##### prob=0.5 thin=()
+
+================================================================================
+ANALYSE FINALE DU DRAFT - Scores individuels des champions
+================================================================================
+
+FACE-À-FACE PAR LANE :
+
+  Mat   Syn   Tot  Allié              DUEL     Ennemi            Tot   Syn   Mat
+----- ----- -----  -------------- ------------ --------------  ----- ----- -----
+ +0.0  +0.0  +0.0  Rell                ?       Nautilus         +0.0  +0.0  +0.0
+ +3.4  +0.0  +3.4  Garen               ?       Darius           -3.4  +0.0  -3.4
+ -2.5  +0.0  -2.5  Jinx                ?       Draven           +2.5  +0.0  +2.5
+ -1.3  +0.0  -1.3  Vi                  ?       Lee Sin          +1.3  +0.0  +1.3
+ +0.2  +0.0  +0.2  Ahri                ?       Syndra           -0.2  +0.0  -0.2
+
+  DUEL : matchup direct en points de winrate, + = avantage pour vous
+  ?    : pas de donnée sur ce duel, ou lane incertaine
+
+COMPARAISON DU DRAFT :
+----------------------------------------
+  Probabilité de victoire estimée : 50.00%
+  Probabilité adverse : 50.00%
+  Évaluation : Draft équilibré (+0.00% de différence)
+
+[INFO] axe test
+
+================================================================================
+##### prob=0.46 thin=()
+
+================================================================================
+ANALYSE FINALE DU DRAFT - Scores individuels des champions
+================================================================================
+
+FACE-À-FACE PAR LANE :
+
+  Mat   Syn   Tot  Allié              DUEL     Ennemi            Tot   Syn   Mat
+----- ----- -----  -------------- ------------ --------------  ----- ----- -----
+ +3.4  +0.0  +3.4  Garen           <<<  +3.4   Darius           -3.4  +0.0  -3.4
+ -1.3  +0.0  -1.3  Vi              >    -1.3   Lee Sin          +1.3  +0.0  +1.3
+ +0.2  +0.0  +0.2  Ahri            =    +0.2   Syndra           -0.2  +0.0  -0.2
+ -2.5  +0.0  -2.5  Jinx            >>   -2.5   Draven           +2.5  +0.0  +2.5
+ +0.0  +0.0  +0.0  Rell                ?       Nautilus         +0.0  +0.0  +0.0
+
+  DUEL : matchup direct en points de winrate, + = avantage pour vous
+  ?    : pas de donnée sur ce duel, ou lane incertaine
+
+COMPARAISON DU DRAFT :
+----------------------------------------
+  Probabilité de victoire estimée : 46.00%
+  Probabilité adverse : 54.00%
+  Évaluation : Désavantage de draft majeur (-8.00% de retard)
+
+[INFO] axe test
+
+================================================================================
+##### prob=0.4 thin=()
+
+================================================================================
+ANALYSE FINALE DU DRAFT - Scores individuels des champions
+================================================================================
+
+FACE-À-FACE PAR LANE :
+
+  Mat   Syn   Tot  Allié              DUEL     Ennemi            Tot   Syn   Mat
+----- ----- -----  -------------- ------------ --------------  ----- ----- -----
+                                       ?       Darius           -3.4  +0.0  -3.4
+ -1.3  +0.0  -1.3  Vi              >    -1.3   Lee Sin          +1.3  +0.0  +1.3
+                                       ?       Syndra           -0.2  +0.0  -0.2
+ -2.5  +0.0  -2.5  Jinx            >>   -2.5   Draven           +2.5  +0.0  +2.5
+ +0.0  +0.0  +0.0  Rell                ?       Nautilus         +0.0  +0.0  +0.0
+ +3.4  +0.0  +3.4  Garen               ?
+ +0.2  +0.0  +0.2  Ahri                ?
+
+  DUEL : matchup direct en points de winrate, + = avantage pour vous
+  ?    : pas de donnée sur ce duel, ou lane incertaine
+
+COMPARAISON DU DRAFT :
+----------------------------------------
+  Probabilité de victoire estimée : 40.00%
+  Probabilité adverse : 60.00%
+  Évaluation : Désavantage de draft majeur (-20.00% de retard)
+
+[INFO] axe test
+
+================================================================================
