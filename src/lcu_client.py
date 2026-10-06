@@ -434,7 +434,7 @@ class LCUClient(_MatchHistoryMixin):
 
         # Get current action ID
         action_id = self.get_current_player_action_id(action_type)
-        if not action_id:
+        if action_id is None:  # 0 est l'action de la cellule 0
             if self.verbose:
                 print("[WARNING] No available action to update")
             return False
@@ -477,7 +477,7 @@ class LCUClient(_MatchHistoryMixin):
 
         # Get current action ID
         action_id = self.get_current_player_action_id()
-        if not action_id:
+        if action_id is None:  # 0 est l'action de la cellule 0
             if self.verbose:
                 print("[WARNING] No available action to update")
             return False

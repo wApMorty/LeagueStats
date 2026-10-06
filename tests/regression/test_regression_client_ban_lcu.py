@@ -127,3 +127,25 @@ def test_le_facade_du_moniteur_renvoie_le_resultat_du_survol():
     monitor.lcu.hover_champion.assert_called_once_with("Garen", action_type="ban")
     monitor.lcu.hover_champion.return_value = False
     assert HoverAutomation(monitor).auto_hover_champion("Garen") is False
+
+
+def test_la_cellule_0_peut_survoler_son_ban_l_action_a_l_identifiant_0():
+    """L'action de ban de la cellule 0 a l'id 0 : « if not action_id » la prenait pour « aucune »."""
+    session = load("session_ban_simultane.json")
+    session["localPlayerCellId"] = 0
+    client = LCUClient.__new__(LCUClient)
+    client.verbose = False
+    sent = {}
+    with patch.object(client, "get_champion_select_session", return_value=session):
+        assert client.get_current_player_action_id("ban") == 0
+        with (
+            patch.object(client, "is_in_champion_select", return_value=True),
+            patch.object(client, "get_champion_id_by_name", return_value=122),
+            patch.object(
+                client,
+                "_make_request",
+                side_effect=lambda e, method="GET", data=None: sent.update(endpoint=e) or {},
+            ),
+        ):
+            assert client.hover_champion("Darius", action_type="ban") is True
+    assert sent["endpoint"] == "/lol-champ-select/v1/session/actions/0"

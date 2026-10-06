@@ -165,3 +165,26 @@ class TestLoadoutAvecSubstitutions:
 
 importer = li.importer
 li_http = li.http
+
+
+def test_l_ordre_des_competences_va_de_la_page_onetricks_a_la_charge_utile(importer):
+    """Bout en bout : page OneTricks publiée -> `_skills` -> `state(with_duel=True)` ; absente -> None."""
+    skills = json.loads((li.FIXTURES / "onetricks_skills_yorick_top.json").read_text("utf-8"))
+
+    def served(url, params=None, **kwargs):
+        data = json.loads((li.FIXTURES / "onetricks_jinx_bot.json").read_text("utf-8"))
+        data["firstItemStats"]["all"]["all"].update(
+            {k: skills[k] for k in ("skillPaths", "maxSkillOrders")}
+        )
+        html = f'<script id="__NEXT_DATA__">{json.dumps({"props": {"pageProps": data}})}</script>'
+        return Mock(text=html, raise_for_status=Mock())
+
+    with patch("src.draft.loadout.requests.get", side_effect=served):
+        importer.on_tick(li.session(), li.state())
+    detail = importer.state(with_duel=True)["skills"]
+    assert detail["max_order"] == ["Q", "E", "W"] and detail["levels"][:3] == ["Q", "E", "W"]
+
+
+def test_page_sans_ordre_des_competences_donne_none_dans_la_charge_utile(importer, http):
+    importer.on_tick(li.session(), li.state())
+    assert importer.state(with_duel=True)["skills"] is None
