@@ -6,7 +6,7 @@ best-effort : un échec s'annonce en `[ALERTE]` et ne bloque ni le menu ni les a
 """
 
 import threading
-from typing import Optional
+from typing import Callable, Optional
 
 from ..config import config
 from ..config_client import client_config
@@ -17,7 +17,12 @@ from ..ui.checks import check_database, check_dependencies
 from ..user_prefs import UserPrefs, load_user_prefs
 from . import server, window
 from .bus import EventBus
+from .ingame import LiveGame
 from .lcu_events import LcuEvents
+from .lcu_proxy import LcuProxy
+from .lcu_status import LcuProbe
+
+GAMEFLOW_PHASE = "/lol-gameflow/v1/gameflow-phase"
 
 
 def _saved_pool(name: Optional[str]) -> Optional[str]:
@@ -91,6 +96,12 @@ def _wait_for_interrupt() -> None:
         pass
 
 
+def _gameflow_phase(lcu: LCUClient) -> Callable[[], Optional[str]]:
+    """La phase du client LoL, lue par la sonde en cache puis la liste blanche ; None client fermé."""
+    probe, proxy = LcuProbe(lcu), LcuProxy(lcu)
+    return lambda: proxy.get(GAMEFLOW_PHASE) if probe.is_open() else None
+
+
 def run_client(verbose: bool = False) -> bool:
     """Lance le client et rend la main à la fermeture de la fenêtre (bloquant).
 
@@ -106,14 +117,17 @@ def run_client(verbose: bool = False) -> bool:
         return False
     print(f"[INFO] Client LeagueStats sur {url}")
     events = LcuEvents(bus, LCUClient(verbose=verbose).find_lcu_credentials)
+    game = LiveGame(bus, _gameflow_phase(LCUClient(verbose=verbose)))
     try:
         events.start()
+        game.start()
         coach.start()
         if not window.run(url):
             print("[INFO] Ctrl+C pour arrêter le client")
             _wait_for_interrupt()
     finally:
         coach.stop()
+        game.stop()
         events.stop()
         server.stop()
     return True

@@ -234,7 +234,7 @@
     }
    ],
    "level": 13,
-   "position": "Joueur7",
+   "position": "TOP",
    "rawChampionName": "game_character_displayname_Yorick",
    "rawSkinName": "game_character_skin_displayname_Yorick_30",
    "respawnTimer": 0.0,
@@ -843,7 +843,7 @@
     }
    ],
    "level": 12,
-   "position": "Joueur7",
+   "position": "TOP",
    "rawChampionName": "game_character_displayname_Shen",
    "rawSkinName": "game_character_skin_displayname_Shen_3",
    "respawnTimer": 0.0,

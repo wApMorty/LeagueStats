@@ -211,6 +211,16 @@ class ClientConfig:
     # Lecture pendant que le Live Coach écrit : attente d'un verrou avant d'abandonner.
     DB_READ_TIMEOUT_S: float = 5.0
 
+    # Écran « En partie » (SPEC-24 tâche 107) : lecture de la Live Client API pendant la partie
+    # (`INGAME_POLL_S` et `INGAME_GRACE_POLLS` reprennent `OVERLAY_*` de SPEC-20), repos hors partie, pas
+    # de la série de win chance (celui du spike de SPEC-20), points gardés (une heure), lectures
+    # vides d'affilée avant de conclure que la partie est finie.
+    INGAME_POLL_S: float = 1.0
+    INGAME_IDLE_POLL_S: float = 5.0
+    INGAME_SAMPLE_S: float = 5.0
+    INGAME_MAX_POINTS: int = 720
+    INGAME_GRACE_POLLS: int = 10
+
     # Jeton de session (octets aléatoires) et en-tête qui le porte.
     SESSION_TOKEN_BYTES: int = 32
     TOKEN_HEADER: str = "X-Session-Token"
