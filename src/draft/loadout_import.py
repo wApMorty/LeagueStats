@@ -55,6 +55,24 @@ def locked_champion(champ_select_data: Dict) -> Optional[int]:
     return me.get("championId") or None
 
 
+def _skills(page: dict) -> Optional[Dict]:
+    """L'ordre des compétences que la page OneTricks publie (SPEC-24 tâche 110) : la maximisation
+    (« Q > E > W », part des parties) et la montée des premiers niveaux ; None si elle ne le publie pas.
+    """
+    try:
+        stats = page["firstItemStats"]["all"]["all"]
+        letters = "QWER"
+        top = stats["maxSkillOrders"][0]
+        path = stats["skillPaths"][0][0]
+        return {
+            "max_order": [letters[index] for index in top["order"]],
+            "playrate": top["playrate"],
+            "levels": [letters[int(step[0]["skillSlot"]) - 1] for step in path],
+        }
+    except (KeyError, IndexError, TypeError, ValueError):
+        return None
+
+
 class LoadoutImporter:
     """Pousse la build OneTricks dans le client, une fois par clé et par draft."""
 
@@ -70,14 +88,14 @@ class LoadoutImporter:
         # champion en fait partie : la page et le set portent son nom et son id.
         self._applied: Optional[Tuple[int, str, Build]] = None
         # SPEC-24 tâche 106 : substitutions du duel et noms d'objets de cette build (pour l'écran).
-        self._duel_info: Dict = {"substitutions": [], "item_names": {}}
+        self._duel_info: Dict = {"substitutions": [], "skills": None, "item_names": {}}
 
     def set_manual(self, manual: bool) -> None:
         """La page est choisie à la main (l'import du lock-in s'efface) ou rendue à l'import."""
         if self.manual and not manual:
             self._last_key = None  # le prochain tick réimporte la build OneTricks
             self._applied = None
-            self._duel_info = {"substitutions": [], "item_names": {}}
+            self._duel_info = {"substitutions": [], "skills": None, "item_names": {}}
         self.manual = manual
 
     def state(self, with_duel: bool = False) -> Optional[Dict]:
@@ -194,6 +212,7 @@ class LoadoutImporter:
             )
         return {
             "substitutions": rows,
+            "skills": _skills(page),
             "item_names": {item: names[item] for item in sorted(ids) if item in names},
         }
 

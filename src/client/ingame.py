@@ -63,16 +63,21 @@ def me_of(data: dict) -> Optional[dict]:
         "position": player.get("position"),
         "level": player.get("level"),
         "gold": active.get("currentGold"),
-        "items": [
-            {
-                "id": item.get("itemID"),
-                "name": item.get("displayName"),
-                "slot": item.get("slot"),
-                "count": item.get("count", 1),
-                "price": item.get("price"),
-            }
-            for item in player.get("items", [])
-        ],
+        # None quand l'API ne sert pas `items` (« achats indisponibles ») ; [] : rien d'acheté.
+        "items": (
+            None
+            if "items" not in player
+            else [
+                {
+                    "id": item.get("itemID"),
+                    "name": item.get("displayName"),
+                    "slot": item.get("slot"),
+                    "count": item.get("count", 1),
+                    "price": item.get("price"),
+                }
+                for item in player["items"]
+            ]
+        ),
         "abilities": {
             key: ability.get("abilityLevel")
             for key, ability in (active.get("abilities") or {}).items()

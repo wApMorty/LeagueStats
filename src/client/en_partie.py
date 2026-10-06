@@ -5,6 +5,7 @@ fin de draft (sujet `game`, `FinalAnalysis.to_payload()`). Sans analyse, l'écra
 n'a pas vu la draft de cette partie (ignorance visible) ; sans modèle, il dit comment l'entraîner.
 """
 
+from collections import Counter
 from typing import Any, Dict, List, Optional, Sequence
 
 from markupsafe import Markup
@@ -164,8 +165,108 @@ def curve_view(ingame: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+# Blocs du plan dont les objets se visent un à un (le reste : alternatives, composants, situationnels).
+NEXT_BLOCKS = ("Core", "Bottes")
+
+
+def _remaining_cost(
+    item_id: int, owned: Counter, items: Dict[int, Dict[str, Any]]
+) -> Optional[int]:
+    """Or qu'il reste à payer pour `item_id` : son coût d'assemblage plus celui des composants non possédés."""
+    info = items.get(item_id)
+    if info is None:
+        return None
+    cost = info["base"]
+    for part in info["parts"]:
+        if owned[part] > 0:
+            owned[part] -= 1
+        else:
+            cost += _remaining_cost(part, owned, items) or 0
+    return cost
+
+
+def build_view(
+    analysis: Optional[Dict[str, Any]],
+    ingame: Dict[str, Any],
+    items: Optional[Dict[int, Dict[str, Any]]] = None,
+) -> Dict[str, Any]:
+    """Plan d'objets de la draft, suivi des achats (objets possédés, prochain objet, or) et ordre des compétences.
+
+    `items` : objets de Data Dragon (`Assets.items()`), pour les noms français et les coûts.
+    """
+    loadout = (analysis or {}).get("loadout")
+    if not loadout:
+        return {"available": False}
+    items = items or {}
+    names = loadout.get("item_names") or {}
+    me = ingame.get("me")
+    mine = None if me is None or me.get("items") is None else me["items"]
+    owned: Counter = Counter()
+    for item in mine or []:
+        owned[item["id"]] += item.get("count") or 1
+
+    def entry(item_id: int) -> Dict[str, Any]:
+        return {
+            "id": item_id,
+            "name": (items.get(item_id) or {}).get("name") or names.get(str(item_id), str(item_id)),
+            "img": f"/assets/item/{item_id}.png",
+            "owned": owned[item_id] > 0,
+        }
+
+    blocks = [
+        {"title": block["title"], "items": [entry(i) for i in block["items"]]}
+        for block in loadout["item_blocks"]
+        if block["items"]
+    ]
+    next_item = None
+    if mine is not None:
+        targets: List[Dict[str, Any]] = []
+        for block in blocks:
+            base = block["title"].split(" (")[0]
+            if base == "Core":
+                targets += block["items"]
+            elif base == "Bottes" and not any(i["owned"] for i in block["items"]):
+                targets += block["items"][:1]  # les suivantes sont des alternatives
+        target = next((i for i in targets if not i["owned"]), None)
+        if target is not None:
+            cost = _remaining_cost(target["id"], Counter(owned), items)
+            gold = (me or {}).get("gold")
+            next_item = {
+                **target,
+                "cost": cost,
+                "gold": None if gold is None else int(gold),
+                "missing": None if cost is None or gold is None else max(0, cost - int(gold)),
+            }
+    skills = loadout.get("skills")
+    return {
+        "available": True,
+        "label": loadout.get("label"),
+        "blocks": blocks,
+        "substitutions": loadout.get("substitutions") or [],
+        "tracking": mine is not None,
+        "next": next_item,
+        "complete": mine is not None and next_item is None,
+        "skills": (
+            {
+                "max_order": " > ".join(skills["max_order"]),
+                "levels": " ".join(skills["levels"]),
+                "playrate": round(skills["playrate"] * 100),
+                "current": " ".join(
+                    f"{key} {level}"
+                    for key, level in (me or {}).get("abilities", {}).items()
+                    if level
+                ),
+            }
+            if skills
+            else None
+        ),
+    }
+
+
 def en_partie_view(
-    ingame: Optional[Dict[str, Any]], analysis: Optional[Dict[str, Any]]
+    ingame: Optional[Dict[str, Any]],
+    analysis: Optional[Dict[str, Any]],
+    items: Optional[Dict[int, Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """L'écran : état (`idle`, `live`, `ended`), horloge, win chance, analyse de la draft."""
     state = (ingame or {}).get("state", "idle")
@@ -180,6 +281,7 @@ def en_partie_view(
             model_missing=p is None,
             points=len(data.get("series") or []),
             curve=curve_view(data),
+            build=build_view(analysis, data, items),
         )
     view["analysis"] = analysis_view(analysis)
     return view

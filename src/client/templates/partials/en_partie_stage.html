@@ -18,6 +18,43 @@
   {% if v.curve.chart and v.curve.note %}<p class="fine">{{ v.curve.note }}</p>{% endif %}
 </section>
 
+{% if v.build.available %}
+{% set b = v.build %}
+<section class="panel ig-build" aria-label="Build">
+  <div class="panel-head"><h2>Build</h2><span class="muted">{{ b.label }}</span></div>
+  {% if b.tracking %}
+    {% if b.next %}
+    <p class="ig-next">Prochain objet : <img class="ig-item" src="{{ b.next.img }}" alt=""><b>{{ b.next.name }}</b>
+      {% if b.next.cost is not none and b.next.gold is not none %}
+      · {{ b.next.gold }} or sur {{ b.next.cost }}{% if b.next.missing %} · <span class="ig-missing">il manque {{ b.next.missing }}</span>{% else %} · <span class="ig-ok">achetable maintenant</span>{% endif %}
+      {% else %}· coût indisponible{% endif %}</p>
+    {% else %}<p class="ig-next">Le plan principal est complet.</p>{% endif %}
+  {% else %}
+  <p class="notice">Achats indisponibles : l'API de la partie ne sert pas les objets.</p>
+  {% endif %}
+  <div class="ig-blocks">
+    {% for block in b.blocks %}
+    <div class="ig-block"><div class="ig-block-title">{{ block.title }}</div>
+      <div class="ig-items">{% for item in block["items"] %}<span class="ig-item-card{{ ' is-owned' if item.owned }}" title="{{ item.name }}{{ ' · acheté' if item.owned }}"><img class="ig-item" src="{{ item.img }}" alt="{{ item.name }}">{% if item.owned %}<i aria-hidden="true">✓</i>{% endif %}</span>{% endfor %}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% if b.substitutions %}
+  <div class="ig-subs"><div class="ig-block-title">Adaptations au duel</div>
+    <ul>{% for sub in b.substitutions %}<li><b>{{ sub.category }}</b> : {{ sub.old or "—" }} → {{ sub.new }} <span class="muted">({{ sub.reason }})</span></li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+  {% if b.skills %}
+  <p class="ig-skills"><span class="ig-block-title">Compétences</span> {{ b.skills.max_order }} <span class="muted">({{ b.skills.playrate }} % des parties)</span> · montée : {{ b.skills.levels }}{% if b.skills.current %} · <span class="muted">actuel : {{ b.skills.current }}</span>{% endif %}</p>
+  {% endif %}
+</section>
+{% else %}
+<section class="panel ig-build" aria-label="Build">
+  <div class="panel-head"><h2>Build</h2></div>
+  <p class="empty">Plan de build indisponible : le Live Coach n'a pas vu le verrouillage de ton champion dans cette partie.</p>
+</section>
+{% endif %}
+
 {% if v.analysis %}
 {% set a = v.analysis %}
 <section class="panel ig-draft" aria-label="Analyse de la draft">

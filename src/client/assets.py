@@ -35,6 +35,7 @@ _KINDS: Dict[str, Tuple[str, "re.Pattern[str]", bool]] = {
 _DATA = {
     "champions": "{v}/data/{loc}/champion.json",
     "runes": "{v}/data/{loc}/runesReforged.json",
+    "items": "{v}/data/{loc}/item.json",
 }
 _SKIN_DATA = "{v}/data/{loc}/champion/{name}.json"
 _CHAMPION_ID = re.compile(r"[A-Za-z0-9]+")
@@ -183,6 +184,30 @@ class Assets:
             return [{"num": s["num"], "name": s["name"]} for s in entry]
         except (TypeError, KeyError):
             return []
+
+    def items(self) -> Dict[int, Dict[str, Any]]:
+        """Les objets de Data Dragon : `{id: {name, total, base, parts}}` (`base` : coût d'assemblage,
+        `parts` : composants), `{}` quand Data Dragon est injoignable."""
+        version = self.version()
+        if (cached := self._memo.get(("items", version))) is not None:
+            return cached
+        data = self._json(_DATA["items"])
+        if not isinstance(data, dict):
+            return {}
+        items = {}
+        for key, item in (data.get("data") or {}).items():
+            try:
+                gold = item.get("gold") or {}
+                items[int(key)] = {
+                    "name": item.get("name", key),
+                    "total": gold.get("total", 0),
+                    "base": gold.get("base", 0),
+                    "parts": [int(part) for part in item.get("from", [])],
+                }
+            except (TypeError, ValueError, AttributeError):
+                continue
+        self._memo[("items", version)] = items
+        return items
 
     def rune_styles(self) -> List[Dict[str, Any]]:
         """`runesReforged.json` : les cinq arbres, leurs rangées et leurs runes (icônes comprises)."""

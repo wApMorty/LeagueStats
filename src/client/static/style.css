@@ -1085,3 +1085,18 @@ a.chip-btn { display: inline-flex; align-items: center; text-decoration: none; }
 .ig-duel-ally { color: oklch(0.8 0.1 165); }
 .ig-duel-enemy { color: oklch(0.74 0.12 355); }
 .ig-duel-none, .ig-duel-even { color: var(--muted-2); }
+
+.page-en-partie .ig-curve, .page-en-partie .ig-build { margin-bottom: 20px; }
+.ig-next { margin: 0 0 14px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.ig-missing { color: oklch(0.74 0.12 355); }
+.ig-ok { color: oklch(0.8 0.1 165); }
+.ig-blocks { display: flex; flex-wrap: wrap; gap: 18px 28px; }
+.ig-block-title { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted-2); margin-bottom: 6px; }
+.ig-items { display: flex; flex-wrap: wrap; gap: 6px; }
+.ig-item { width: 32px; height: 32px; border-radius: 6px; vertical-align: middle; }
+.ig-item-card { position: relative; display: inline-block; opacity: 0.55; }
+.ig-item-card.is-owned { opacity: 1; box-shadow: 0 0 0 2px oklch(0.8 0.1 165); border-radius: 6px; }
+.ig-item-card i { position: absolute; right: -4px; bottom: -4px; width: 14px; height: 14px; border-radius: 7px; font-size: 10px;
+  line-height: 14px; text-align: center; font-style: normal; color: oklch(0.16 0.02 170); background: oklch(0.8 0.1 165); }
+.ig-subs { margin-top: 14px; } .ig-subs ul { margin: 0; padding-left: 18px; }
+.ig-skills { margin: 14px 0 0; }

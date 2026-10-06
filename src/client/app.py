@@ -428,7 +428,9 @@ def create_app(
     def ingame_view() -> dict:
         """L'état de la partie (sujet `ingame`) et l'analyse de la dernière draft (sujet `game`)."""
         latest = (lambda topic: bus.latest(topic)) if bus is not None else (lambda topic: None)
-        return en_partie_view(latest("ingame"), latest("game"))
+        analysis = latest("game")
+        items = app.state.assets.items() if (analysis or {}).get("loadout") else {}
+        return en_partie_view(latest("ingame"), analysis, items)
 
     @app.get("/en-partie", response_class=HTMLResponse)
     def en_partie(request: Request):
