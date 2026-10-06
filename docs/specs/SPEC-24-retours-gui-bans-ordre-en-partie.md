@@ -270,6 +270,16 @@ fixes, imprime pour chaque candidat le gain d'ordre à budget réduit et sa stab
 (0,5 s contre 2 s). Critère de livraison de l'ordre : le signe du gain est identique à 2 s sur au moins 80 % des
 cas au-dessus du seuil.
 
+**Résultat du bench (2026-10-07, `scripts/bench_swap_advice.py`, base réelle, scénarios B1 et B2 de
+SPEC-17)** : le critère de stabilité est **tenu** (2 cas sur 2 au-dessus du seuil, signe identique) mais il ne
+prouve rien : la recherche finit dans les 0,5 s, les deux budgets rendent le même chiffre. Le chiffre n'a pas
+de sens : la recherche écarte les tours qui **précèdent** le mien (`_turns_from_our_next_pick`), si bien
+qu'un échange change le nombre de picks alliés considérés, pas leur ordre (B2 : échanger avec l'allié suivant
+ou avec le dernier donne le même 50,55 %, alors que l'ordre actuel donne 54,05 % avec Jayce en variante). Les
+gains positifs de B1 (+0,5 à +1,2) et négatifs de B2 (−0,7 à −2,8) suivent ce biais. **Pas de conseil d'ordre
+livré** ; `order_swaps` reste dans le script. Le rouvrir demande une recherche qui chaîne la racine sur les
+tours qui précèdent (SPEC-12, « ponytail »).
+
 ### 4.7 Carte « Échanges » (tâche 104)
 
 Sur la légende d'un coéquipier dont la session liste un swap : icône ⇄ (ordre) et ⇄ de rôle, avec le gain du
