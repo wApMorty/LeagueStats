@@ -6,6 +6,16 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### 🐛 Fix
 
+- **Le ban visé n'arrivait pas dans le client LoL (SPEC-24 tâche 97)** — relevé sur une vraie draft classée,
+  trois défauts : depuis l'écran du client LeagueStats, `bannable-champion-ids` ne vaut que `[-1]` pendant toute
+  la phase de bans, et chaque ban était refusé (« pas disponible ») ; en console, le survol automatique d'un
+  ban s'écrivait sur l'action de **pick** ; et bans et picks étant simultanés (dix bans d'un coup, picks par
+  lots de deux), le tour du joueur était lu sur la première action non terminée, donc faux pour tout le monde
+  sauf le premier. Corrigé aux trois endroits, avec le refus du client expliqué (déjà banni, déjà pris, survolé
+  par un coéquipier) et plus de présélection silencieuse de la première carte de ban. Régression :
+  `tests/regression/test_regression_client_ban_lcu.py` (8 tests, rouges avant). Les formes du LCU sont
+  désormais de vraies fixtures (`tests/fixtures/lcu_forms/`, identités et jeton du chat retirés).
+
 - **Le premier pick d'une draft n'était pas vu comme « mon tour » (SPEC-24 tâche 98)** — la cellule 0 était
   traitée comme « personne » : sur le premier pick, le Live Coach ne reconnaissait pas le tour du joueur de la
   cellule 0, et l'acteur affiché pouvait être celui d'une action plus tardive. L'état de draft porte aussi
@@ -13,6 +23,16 @@ All notable changes to LeagueStats Coach will be documented in this file.
   `tests/regression/test_regression_current_actor_cell_zero.py`.
 
 ### ✨ Feature
+
+- **Ordre de pick, échanges de rôle et écran « En partie » (SPEC-24 tâches 99, 100, 102, 105 à 110, lot en
+  cours)** — chaque sceau de la draft porte son numéro de pick (1 à 10, dès la phase de bans) et un anneau
+  marque les joueurs dont c'est le tour. Le coach chiffre les échanges de **rôle** (gain de victoire prédite
+  du modèle, au-dessus de 1 point). Nouvel écran **En partie** (entrée de navigation et pastille dans la
+  barre de titre pendant la partie, sans bascule automatique) : win chance et courbe en direct avec les
+  objectifs, face-à-face de la draft, plan de build avec les objets achetés cochés, prochain objet et or qui
+  manque, ordre des compétences quand OneTricks le publie. Lecture seule. **Pas de conseil d'ordre de pick** :
+  le bench montre que la recherche ne compare pas les ordres (elle écarte les tours qui précèdent le sien). Les
+  boutons d'échange (demander, accepter, annuler) et la carte « Échanges » attendent un arbitrage (SPEC-24 §2).
 
 - **Analyse de fin de draft en données, et relevé de draft (SPEC-24 tâches 96 et 106, lot en cours)** —
   `FinalAnalysis` (une ligne par lane, probabilité, écart, évaluation, build avec ses substitutions du duel)
