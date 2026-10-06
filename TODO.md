@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-10-05 (SPEC-21 : plan revu après le handoff de design « Alchimie »)
+**Mis à jour** : 2026-10-06 (SPEC-24 : retours de @pj35 sur le client, bans, ordre de pick, swaps, écran « En partie »)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -165,6 +165,36 @@ SPEC-21 §5 :
 | 81 | File : lancer, annuler ; barre de titre | 5 | 80, 93 | ✅ 2026-10-05 : 24 tests avec faux LCU ; `lobby.file_state`, `start`, `cancel` (chef du groupe, hors recherche, restriction du lobby citée ; annuler refusé hors `Matchmaking`, jamais pendant une partie trouvée), `GET /file/state`, `POST /file/lancer|annuler` derrière le jeton ; barre de titre : « Lancer la file » puis « En file m:ss · estimée » avec « Annuler » (`file.js`), mêmes boutons sur l'écran Lobby ; liste blanche : recherche du lobby seulement ; cohabitation avec l'auto-accept : l'info-bulle de la recherche le signale, la partie trouvée reste celle de `found.js` ; **forme de `lol-matchmaking/v1/search` construite d'après `/help`, à confirmer en vraie file ; rendu à voir par @pj35** |
 | 82 | Social en lecture seule | 3 | 76 | ✅ 2026-10-05 : 19 tests ; `social.py` (`read_social`, `social_view` pures), `/social` : profil de chat, amis en partie (file, champion, rang), connectés, hors ligne (repliés), conversations (non lus, dernier message tronqué) ; **aucune écriture** : liste blanche limitée à `me`, `friends`, `conversations`, aucune route d'envoi ni d'invitation (tests des critères 5 et 6) ; pseudos et messages échappés ; **rendu à voir par @pj35** |
 | 83 | Clôture : exe vérifié, docs, statuts | 3 | 56, 77–79, 81, 82, 95 | ✅ 2026-10-05 : exe construit (82,9 Mo, spike 82,3), `check_exe_assets.py` : 48 fichiers du client et 8 modules présents ; README, `PROJECT_STRUCTURE.md`, `CHANGELOG.md`, statuts de la spec et du README des specs ; **recette @pj35** : lancer l'exe, parcourir Profil, Historique, Collection, Lobby (ouvrir, postes, quitter), file (lancer, annuler), Social ; confronter les formes du lobby et de la file au client réel |
+
+### Lot suivant — SPEC-24, retours sur le client (🟡 rédigée le 2026-10-06)
+
+[SPEC-24](docs/specs/SPEC-24-retours-gui-bans-ordre-en-partie.md) : le ban visé n'arrive pas dans le client
+LoL (cause **non établie**, le chemin n'a jamais vu une vraie phase de bans : relevé d'abord) ; ordre de pick
+affiché et swaps d'ordre et de rôle (boutons et conseil chiffré) ; écran « En partie » (analyse de la draft,
+plan de build et suivi des achats, courbe de win chance). Rouvre SPEC-21 §7 (« écran en partie »). Trois lots
+utilisables seuls, 16 tâches (96 à 111, 61 pts) ; arbitrages « à valider » en SPEC-24 §2 :
+
+| # | Tâche | Pts | Dépend de | État |
+|---|---|---|---|---|
+| **Lot 1 — Bans et acteur courant (8 pts)** | | | | |
+| 96 | `dump_lcu_draft_forms.py --watch`, relevé d'une draft classée et d'une normale par @pj35, fixtures réelles | 3 | — | ⬜ |
+| 97 | Ban : cause racine sur le relevé, correctif, régression rouge puis verte, audit de `hover_champion` (console) | 3 | 96 | ⬜ |
+| 98 | `current_actor` de la cellule 0 (`if state.current_actor:` écrase l'acteur) et `acting_cells` : correctif et régression | 2 | — | ⬜ |
+| **Lot 2 — Ordre de pick et swaps (24 pts)** | | | | |
+| 99 | `pick_order` et `swaps` dans `DraftState` et `DraftSnapshot`, console identique | 3 | 96, 98 | ⬜ |
+| 100 | Ordre de pick à l'écran : numéro sur chaque sceau, anneau du joueur en cours | 3 | 99 | ⬜ |
+| 101 | Actions de swap : liste blanche, `draft_swaps.run`, `POST /draft/swap/{kind}/{action}` | 5 | 96, 99 | ⬜ |
+| 102 | Conseil de swap de rôle (`swap_advice.role_swaps`) | 3 | 99 | ⬜ |
+| 103 | Conseil de swap d'ordre, bench, calibrage du seuil (**conditionnelle** au bench) | 5 | 102 | ⬜ |
+| 104 | Carte « Échanges » : icônes, popover, bandeau de demande reçue, annuler | 5 | 100, 101, 102 | ⬜ |
+| **Lot 3 — En partie (29 pts)** | | | | |
+| 105 | Spike Live Client en partie réelle (@pj35) et page OneTricks (ordre des compétences), fixtures | 3 | — | ⬜ |
+| 106 | `FinalAnalysis` structuré et publié (sujet `game`), loadout étendu des substitutions, console identique | 5 | — | ⬜ |
+| 107 | `LiveGame` : fil de lecture, série de win chance, état sur le bus | 5 | 105 | ⬜ |
+| 108 | Écran « En partie » : cadre, navigation, pastille, face-à-face de la draft | 5 | 106, 107 | ⬜ |
+| 109 | Courbe de win chance en direct | 3 | 107, 108 | ⬜ |
+| 110 | Build : plan d'objets, suivi des achats, ordre des compétences si publié | 5 | 105, 108 | ⬜ |
+| 111 | Clôture : exe vérifié, docs, SPEC-21 §7, statuts | 3 | 104, 109, 110 | ⬜ |
 
 ### Lot suivant — SPEC-22, attribution complète de l'impact (🟡 rédigée le 2026-10-04)
 
