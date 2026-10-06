@@ -177,7 +177,7 @@ utilisables seuls, 16 tâches (96 à 111, 61 pts) ; arbitrages « à valider » 
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
 | **Lot 1 — Bans et acteur courant (8 pts)** | | | | |
-| 96 | `dump_lcu_draft_forms.py --watch`, relevé d'une draft classée et d'une normale par @pj35, fixtures réelles | 3 | — | ⬜ |
+| 96 | `dump_lcu_draft_forms.py --watch`, relevé d'une draft classée et d'une normale par @pj35, fixtures réelles | 3 | — | 🟡 2026-10-06 : script prêt (`--watch`, 2 tests, formes nouvelles seules, identités et `obfuscated*` retirées) ; **reste à @pj35** : lancer `python scripts/dump_lcu_draft_forms.py --watch` pendant une draft classée puis une normale (survoler et valider un ban, demander et recevoir un swap), puis fixtures réelles et SPEC-21 §10 |
 | 97 | Ban : cause racine sur le relevé, correctif, régression rouge puis verte, audit de `hover_champion` (console) | 3 | 96 | ⬜ |
 | 98 | `current_actor` de la cellule 0 (`if state.current_actor:` écrase l'acteur) et `acting_cells` : correctif et régression | 2 | — | ✅ 2026-10-06 : 4 tests, rouge avant le fix ; `parse` teste `is not None` et remplit `acting_cells` (`isInProgress`), `phases` teste `is None` ; les autres appelants de `current_actor` / `local_player_cell_id` relus, aucun autre test sur la valeur |
 | **Lot 2 — Ordre de pick et swaps (24 pts)** | | | | |
