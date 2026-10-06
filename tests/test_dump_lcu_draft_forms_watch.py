@@ -30,22 +30,15 @@ def fake_lcu(responses):
     return lcu
 
 
-def test_ecrit_chaque_nouvelle_forme_une_seule_fois(tmp_path):
+def test_ecrit_chaque_nouvelle_forme_une_seule_fois(tmp_path, capsys):
     session = "/lol-champ-select/v1/session"
-    lcu = fake_lcu(
-        {
-            session: [
-                {"timer": {"phase": "BAN_PICK"}},
-                {"timer": {"phase": "BAN_PICK"}},
-                {"timer": {"phase": "FINALIZATION"}},
-            ]
-        }
-    )
+    ban = {"timer": {"phase": "BAN_PICK", "adjustedTimeLeftInPhase": 20000}}
+    ban_later = {"timer": {"phase": "BAN_PICK", "adjustedTimeLeftInPhase": 19000}}
+    pick = {"timer": {"phase": "FINALIZATION", "adjustedTimeLeftInPhase": 9000}}
+    lcu = fake_lcu({session: [ban, ban_later, pick]})
     dump.watch(lcu, tmp_path, interval=0, ticks=3, sleep=lambda _: None)
-    assert (
-        len(list(tmp_path.glob("*_session.json"))) <= 2
-    )  # même seconde : la 2e forme peut écraser
-    assert "FINALIZATION" in max(tmp_path.glob("*_session.json")).read_text(encoding="utf-8")
+    # Le compteur qui avance seul n'est pas une forme : 2 écritures pour 3 lectures.
+    assert capsys.readouterr().out.count("[DATA]") == 2
 
 
 def test_identites_retirees_et_endpoint_absent_ignore(tmp_path):

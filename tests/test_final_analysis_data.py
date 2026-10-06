@@ -134,6 +134,21 @@ class TestLoadoutAvecSubstitutions:
         blocks = {item for block in detail["item_blocks"] for item in block["items"]}
         assert all(str(item) in detail["item_names"] for item in blocks)
 
+    def test_la_charge_utile_du_bus_embarque_les_substitutions(self, importer, http):
+        li_state = li.state([li.DRAVEN], {li.DRAVEN: "bottom"})
+        importer.on_tick(li.session(), li_state)
+        monitor = fo.make_monitor()
+        monitor.loadout = importer
+        bus = EventBus()
+        monitor.bus = bus
+        with patch("src.draft.final_analysis.clear_console"):
+            FinalDraftAnalyzer(monitor).analyze(
+                fo.ALLY_IDS, fo.ENEMY_IDS, ally_lanes=fo.LANES_BY_ID
+            )
+        loadout = bus.latest(TOPIC)["loadout"]
+        assert {s["category"] for s in loadout["substitutions"]} == {"Sorts", "Rune 3"}
+        assert loadout["item_names"]
+
     def test_state_sans_with_duel_reste_celui_de_la_draft(self, importer, http):
         importer.on_tick(li.session(), li.state([li.DRAVEN], {li.DRAVEN: "bottom"}))
         assert "substitutions" not in importer.state()

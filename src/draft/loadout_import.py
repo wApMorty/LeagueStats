@@ -171,6 +171,7 @@ class LoadoutImporter:
     ) -> Dict:
         """Substitutions du duel (catégorie, ancien, nouveau, parts, raison) et noms d'objets."""
         names = {**((duel or {}).get("itemData") or {}), **page.get("itemData", {})}
+        named = {**page, "itemData": names}  # un objet du duel absent de la page générale
         ids = {str(item) for _, items in build.item_blocks for item in items}
         rows = []
         for sub in substitutions:
@@ -181,8 +182,8 @@ class LoadoutImporter:
             rows.append(
                 {
                     "category": sub.category,
-                    "old": option_name(page, sub.category, sub.old),
-                    "new": option_name(page, sub.category, sub.new),
+                    "old": option_name(named, sub.category, sub.old),
+                    "new": option_name(named, sub.category, sub.new),
                     "duel_share": sub.duel_share,
                     "general_share": sub.general_share,
                     "general_listed": sub.general_listed,

@@ -76,6 +76,20 @@ def endpoints(lcu: LCUClient, champion_id: int, summoner_id: int):
     ]
 
 
+VOLATILE_TIMER_KEYS = {
+    "adjustedTimeLeftInPhase",
+    "internalNowInEpochMs",
+}  # changent à chaque lecture
+
+
+def form_key(data) -> str:
+    """Texte de comparaison : la session sans les compteurs qui avancent seuls (pas une « forme »)."""
+    if isinstance(data, dict) and isinstance(data.get("timer"), dict):
+        timer = {k: v for k, v in data["timer"].items() if k not in VOLATILE_TIMER_KEYS}
+        data = {**data, "timer": timer}
+    return json.dumps(anonymize(data, False), sort_keys=True)
+
+
 def watch_once(lcu: LCUClient, seen: dict, target_dir: Path, now: str) -> int:
     """Lit les endpoints suivis, écrit les formes jamais vues ; renvoie leur nombre."""
     written = 0
@@ -84,9 +98,9 @@ def watch_once(lcu: LCUClient, seen: dict, target_dir: Path, now: str) -> int:
         if data is None:
             continue
         text = json.dumps(anonymize(data, False), indent=2, ensure_ascii=False, sort_keys=True)
-        if seen.get(name) == text:
+        if seen.get(name) == form_key(data):
             continue
-        seen[name] = text
+        seen[name] = form_key(data)
         target = target_dir / f"{now}_{name}.json"
         target.write_text(text, encoding="utf-8")
         print(f"[DATA] {now} {endpoint} -> {target.name}")
