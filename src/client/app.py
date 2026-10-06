@@ -37,6 +37,7 @@ from .draft_grimoire import grimoire_view
 from .draft_loadout import normalize_page, plan as loadout_plan, runes_payload, send as send_loadout
 from . import found
 from .en_partie import en_partie_view
+from .draft_swaps import run as run_draft_swap
 from .draft_actions import Refusal, role_command, run as run_draft_action
 from .draft_skins import SkinBook, select_skin
 from .draft_view import Champions, signature, stage_view
@@ -577,6 +578,15 @@ def create_app(
         """Survoler, verrouiller ou bannir ; refusé (409) hors phase et hors tour, sans écriture."""
         try:
             return run_draft_action(proxy, name, champion_id)
+        except Refusal as refusal:
+            return JSONResponse({"detail": str(refusal)}, status_code=409)
+
+    @app.post("/draft/swap/{kind}/{action}")
+    def draft_swap(kind: str, action: str, cell_id: int):
+        """Demander, accepter, refuser ou annuler un échange ; refusé (409) si la session ne le liste
+        pas dans l'état attendu. L'`id` de l'échange vient de la session, jamais du front."""
+        try:
+            return run_draft_swap(proxy, kind, action, cell_id)
         except Refusal as refusal:
             return JSONResponse({"detail": str(refusal)}, status_code=409)
 

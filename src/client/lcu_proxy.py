@@ -40,6 +40,10 @@ WRITES: Tuple[Tuple[str, Pattern[str]], ...] = tuple(
     for method, pattern in (
         ("PATCH", r"/lol-champ-select/v1/session/actions/\d+"),  # survoler, verrouiller, bannir
         ("PATCH", r"/lol-champ-select/v1/session/my-selection"),  # skin, sorts
+        (  # échanges d'ordre de pick et de rôle (SPEC-24) : l'id vient de la session
+            "POST",
+            r"/lol-champ-select/v1/session/(pick-order-swaps|position-swaps)/\d+/(request|accept|decline|cancel)",
+        ),
         ("POST", r"/lol-matchmaking/v1/ready-check/(accept|decline)"),  # partie trouvée
         ("POST", r"/lol-lobby/v2/lobby"),  # ouvrir un lobby
         ("DELETE", r"/lol-lobby/v2/lobby"),  # le quitter
