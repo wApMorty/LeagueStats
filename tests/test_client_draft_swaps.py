@@ -96,6 +96,7 @@ EXPECTED_SWAP_PATTERN = (
 def test_la_liste_blanche_ne_gagne_que_le_motif_des_huit_chemins():
     swaps = [p.pattern for m, p in WRITES if "swaps" in p.pattern]
     assert swaps == [EXPECTED_SWAP_PATTERN]
+    assert len(WRITES) == 11  # les dix écritures d'avant SPEC-24, plus ce seul motif
     assert all(m == "POST" for m, p in WRITES if "swaps" in p.pattern)
     paths = [
         f"{BASE}/{segment}/{n}/{action}"

@@ -119,3 +119,14 @@ def test_le_front_ne_donne_jamais_l_id_de_l_echange():
     )
     call = re.search(r"post\(`/draft/swap/[^`]*`, \{([^}]*)\}\)", source)
     assert call and call.group(1).strip() == "cell_id: cell"
+
+
+def test_l_etat_du_swap_entre_dans_l_empreinte_de_la_legende(client, bus):  # noqa: F811
+    """Même cellule, sans bandeau : AVAILABLE contre SENT change l'empreinte du membre."""
+    available = stage(client, bus, [swap("pick_order", 1, "AVAILABLE")])
+    sent = stage(client, bus, [swap("pick_order", 1, "SENT")])
+    sigs = lambda html: re.findall(
+        r'data-key="(m-ally-\d)"\s+data-sig="([^"]+)"', html
+    )  # noqa: E731
+    assert sigs(available) and sigs(available) != sigs(sent)
+    assert "d-swap-banner" not in available + sent
