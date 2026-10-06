@@ -625,6 +625,7 @@ h1 { margin: 0 0 12px; font: 600 46px/1 var(--font-title); }
 /* Partie trouvée (tâche 93) */
 .tb-pill[hidden] { display: none; }
 .tb-pill { margin-left: auto; cursor: pointer; font: inherit; font-size: 12px; background: transparent; }
+.tb-pill { text-decoration: none; }
 .tb-pill:hover { background: oklch(0.74 0.11 55 / 0.12); }
 .f-overlay { position: fixed; inset: var(--bar-h) 0 0 0; z-index: 30; display: grid; place-items: center;
   background: radial-gradient(circle at 50% 48%, oklch(0.2 0.04 170 / 0.94) 0%, oklch(0.08 0.015 170 / 0.96) 55%); }
@@ -1068,3 +1069,19 @@ a.chip-btn { display: inline-flex; align-items: center; text-decoration: none; }
 .tb-search .tb-cancel { padding: 0 8px; border: 1px solid var(--rule); border-radius: 10px; background: transparent; color: var(--ink-2);
   font: inherit; font-size: 12px; cursor: pointer; }
 .tb-search .tb-cancel:hover { background: oklch(0.6 0.19 25 / 0.3); color: var(--ink); }
+
+/* Écran « En partie » (SPEC-24 tâche 108) */
+.page-en-partie .ig-head { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 20px; }
+.ig-clock b, .ig-chance b { display: block; font-size: 34px; line-height: 1.1; }
+.ig-chance { text-align: right; }
+.ig-notice { margin: 0; }
+.ig-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.ig-table th, .ig-table td { padding: 8px 10px; text-align: right; border-bottom: 1px solid oklch(1 0 0 / 0.06); }
+.ig-table th { font-size: 12px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted-2); }
+.ig-table .ig-side { text-align: left; width: 18%; }
+.ig-ally-ink { color: oklch(0.8 0.1 165); }
+.ig-foe-ink { color: oklch(0.74 0.12 355); }
+.ig-duel { text-align: center !important; white-space: nowrap; font-weight: 600; }
+.ig-duel-ally { color: oklch(0.8 0.1 165); }
+.ig-duel-enemy { color: oklch(0.74 0.12 355); }
+.ig-duel-none, .ig-duel-even { color: var(--muted-2); }

@@ -36,6 +36,7 @@ from .home import ORIGINS, axes_view, empty_home, home_view
 from .draft_grimoire import grimoire_view
 from .draft_loadout import normalize_page, plan as loadout_plan, runes_payload, send as send_loadout
 from . import found
+from .en_partie import en_partie_view
 from .draft_actions import Refusal, role_command, run as run_draft_action
 from .draft_skins import SkinBook, select_skin
 from .draft_view import Champions, signature, stage_view
@@ -91,6 +92,7 @@ NAV = (
         55,
         (
             NavItem("draft", "Draft", "ᛟ", 55, "/draft"),
+            NavItem("en-partie", "En partie", "ᛊ", 165, "/en-partie"),
             NavItem("postgame", "Post-game", "ᛞ", 345, "/postgame"),
         ),
     ),
@@ -177,6 +179,7 @@ def create_app(
             transition=client_config.transition(),
             motion_modes=[(m, MOTION_LABELS[m]) for m in client_config.MOTION_MODES],
             lcu_open=probe.is_open(),
+            ingame_live=(bus.latest("ingame") or {}).get("state") == "live" if bus else False,
             token=app.state.session_token,
             token_header=client_config.TOKEN_HEADER,
             poll_s=client_config.LCU_STATE_POLL_S,
@@ -421,6 +424,23 @@ def create_app(
         """Amis, statuts et conversations : lecture seule, aucune route d'écriture (SPEC-21 §2)."""
         champions = Champions(app.state.assets)
         return screen(request, "social.html", lambda: read_social(proxy, champions))
+
+    def ingame_view() -> dict:
+        """L'état de la partie (sujet `ingame`) et l'analyse de la dernière draft (sujet `game`)."""
+        latest = (lambda topic: bus.latest(topic)) if bus is not None else (lambda topic: None)
+        return en_partie_view(latest("ingame"), latest("game"))
+
+    @app.get("/en-partie", response_class=HTMLResponse)
+    def en_partie(request: Request):
+        """La partie en cours : win chance, analyse de la draft. Lecture seule, aucune route d'écriture."""
+        return render(request, "en_partie.html", v=ingame_view())
+
+    @app.get("/en-partie/stage", response_class=HTMLResponse)
+    def en_partie_stage(request: Request):
+        """Le corps de l'écran, relu par `en_partie.js` à chaque événement du sujet `ingame`."""
+        return templates.TemplateResponse(
+            request, "partials/en_partie_stage.html", {"v": ingame_view()}
+        )
 
     @app.get("/postgame", response_class=HTMLResponse)
     def postgame(request: Request):

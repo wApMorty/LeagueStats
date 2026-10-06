@@ -1,0 +1,47 @@
+{#- Corps de l'écran « En partie » : rechargé par `en_partie.js` à chaque événement du sujet `ingame`.
+    Sans attribut `data-*` : un rechargement ne rejoue aucune animation. Lecture seule. -#}
+{% if v.state == "idle" %}
+<p class="empty">Pas de partie en cours. L'écran se remplit dès que la partie démarre, Live Coach lancé.</p>
+{% else %}
+<section class="panel ig-head" aria-label="Partie en cours">
+  <div class="ig-clock"><b>{{ v.clock }}</b><span class="muted">{{ "Partie terminée" if v.state == "ended" else "Partie en cours" }}</span></div>
+  {% if v.model_missing %}
+  <p class="notice ig-notice">Pas de modèle de win chance entraîné : lance <code>{{ v.train_command }}</code>.</p>
+  {% else %}
+  <div class="ig-chance"><b>{{ v.p }} %</b><span class="muted">win chance{% if v.delta is not none %} · {{ "%+d"|format(v.delta) }} pts / min{% endif %}</span></div>
+  {% endif %}
+</section>
+
+{% if v.analysis %}
+{% set a = v.analysis %}
+<section class="panel ig-draft" aria-label="Analyse de la draft">
+  <div class="panel-head"><h2>Face-à-face de la draft</h2><span class="muted">{{ a.evaluation }} · {{ a.probability }} % ({{ a.diff }} pts d'écart)</span></div>
+  <table class="ig-table">
+    <thead><tr><th class="ig-side">Allié</th><th>Mat</th><th>Syn</th><th>Tot</th><th>Duel</th><th>Tot</th><th>Syn</th><th>Mat</th><th class="ig-side">Ennemi</th></tr></thead>
+    <tbody>
+    {% for row in a.rows %}
+      <tr>
+        {% if row.ally %}
+        <td class="ig-side ig-ally-ink">{{ row.ally.name }}</td>
+        {% if row.ally.thin %}<td colspan="3" class="muted">peu de données</td>
+        {% else %}<td>{{ row.ally.matchup }}</td><td>{{ row.ally.synergy }}</td><td>{{ row.ally.total }}</td>{% endif %}
+        {% else %}<td class="ig-side"></td><td colspan="3"></td>{% endif %}
+        <td class="ig-duel ig-duel-{{ row.duel.side }}" title="Duel direct, en points de victoire : + = avantage pour vous">{% if row.duel.side == "ally" %}{{ "‹" * row.duel.chevrons }}{% elif row.duel.side == "enemy" %}{{ "›" * row.duel.chevrons }}{% endif %} {{ row.duel.text }}</td>
+        {% if row.enemy %}
+        {% if row.enemy.thin %}<td colspan="3" class="muted">peu de données</td>
+        {% else %}<td>{{ row.enemy.total }}</td><td>{{ row.enemy.synergy }}</td><td>{{ row.enemy.matchup }}</td>{% endif %}
+        <td class="ig-side ig-foe-ink">{{ row.enemy.name }}</td>
+        {% else %}<td colspan="3"></td><td class="ig-side"></td>{% endif %}
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p class="fine">Mat : matchups directs, Syn : synergies, Tot : leur somme (points de victoire). Duel : le face-à-face de la lane, <b>+</b> = avantage pour vous.</p>
+</section>
+{% else %}
+<section class="panel ig-draft" aria-label="Analyse de la draft">
+  <div class="panel-head"><h2>Face-à-face de la draft</h2></div>
+  <p class="empty">Analyse indisponible : le Live Coach n'a pas vu la draft de cette partie.</p>
+</section>
+{% endif %}
+{% endif %}
