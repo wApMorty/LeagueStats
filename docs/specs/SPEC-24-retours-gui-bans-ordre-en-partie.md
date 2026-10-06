@@ -1,6 +1,6 @@
 # SPEC-24 — Retours sur le client : bans, ordre de pick et swaps, écran « En partie »
 
-**Statut** : 🟡 Rédigée le 2026-10-06, arbitrages « à valider » en §2.
+**Statut** : 🟡 Rédigée le 2026-10-06 ; arbitrages de §2 validés par @pj35 le 2026-10-06, sauf le cadre des swaps (à valider après le relevé de la tâche 96).
 
 **Origine** : @pj35, 2026-10-06 — « fix la sélection de ban qui ne fonctionne pas » ; « afficher le pick
 order et proposer des swap order ou swap role » ; « une section in-game : infos de build, analyse de game
@@ -93,9 +93,9 @@ l'analyse de la draft, le plan de build et la courbe de win chance pendant la pa
 |---|---|
 | Découpage | **Défaut proposé** : une spec, trois lots utilisables seuls (bans, ordre et swaps, en partie). Le lot 1 se livre en premier : c'est un bug. |
 | Cause du ban | **Validé (@pj35, 2026-10-06)** : le symptôme est « rien n'arrive dans le client LoL ». **Non établie** : relevé d'une vraie draft d'abord (tâche 96), correctif ensuite (tâche 97), jamais sur hypothèse. |
-| Périmètre du correctif de ban | **À valider** : la tâche 97 corrige aussi `LCUClient.hover_champion` (chemin console, hypothèse 4) si le relevé la confirme. Sans cela le Live Coach continue d'écrire le ban sur l'action de pick quand `auto_ban_hover` est vrai. |
+| Périmètre du correctif de ban | **Validé (@pj35, 2026-10-06)** : la tâche 97 corrige aussi `LCUClient.hover_champion` (chemin console, hypothèse 4) si le relevé la confirme. Sans cela le Live Coach continue d'écrire le ban sur l'action de pick quand `auto_ban_hover` est vrai. |
 | `current_actor` de la cellule 0 | **Défaut proposé** : corrigé en tâche 98, test de régression (§1). Préalable de l'ordre de pick, qui s'appuie sur « qui joue maintenant ». |
-| Affichage de l'ordre de pick | **Défaut proposé** : numéro 1 à 10 sur chaque sceau, présent dès la phase de bans, anneau du joueur en cours (§3, A). Frise des dix tours écartée. |
+| Affichage de l'ordre de pick | **Validé (@pj35, 2026-10-06)** : numéro 1 à 10 sur chaque sceau, présent dès la phase de bans, anneau du joueur en cours (§3, A). Frise des dix tours écartée. |
 | Swaps | **Validé (@pj35, 2026-10-06)** : boutons (demander, accepter, refuser, annuler) **et** conseil chiffré par le modèle. Heuristique sans métrique écartée (précédent : items et matchups indirects, 2026-09-25). |
 | Conseil de swap de rôle | **Défaut proposé** : gain = victoire prédite après l'échange moins avant, en points, par `GameEvaluator.win_probability` ; seulement si les deux joueurs ont un champion (le mien survolé ou verrouillé, l'autre verrouillé). Seuil `SWAP_MIN_GAIN_PTS` (§4.6). |
 | Conseil de swap d'ordre | **Défaut proposé, livraison conditionnelle** : recherche minimax relancée à budget réduit avec les tours permutés, comparée à l'ordre actuel **au même budget**. Si le bench (tâche 103) ne dégage pas un signal au-dessus du bruit, la tâche est close sans conseil d'ordre (les boutons restent) et la spec le consigne. |
@@ -103,9 +103,9 @@ l'analyse de la draft, le plan de build et la courbe de win chance pendant la pa
 | Écran « En partie » | **Validé par la demande (@pj35, 2026-10-06)** : section du client. **Rouvre SPEC-21 §7** (« Overlay et écran en partie »), à acter dans la tâche 111. L'overlay `tkinter` de SPEC-20 reste tel quel. |
 | Source en jeu | **Défaut proposé** : Live Client API (port 2999), lue 1 fois par seconde par un fil du **serveur du client**, pas par la boucle du Live Coach (§3, C). Modèle de win chance de SPEC-20, identique à l'overlay. |
 | Courbe de win chance | **Défaut proposé** : série en mémoire, un point toutes les `INGAME_SAMPLE_S`, depuis l'ouverture du client ; **pas de persistance** (la page de la partie, `/parties/{id}`, redessine la courbe complète depuis la timeline LCU après la partie). Redémarrer le client en pleine partie perd le début de la courbe, et l'écran le dit. |
-| Analyse de la draft | **À valider** : on garde le résultat calculé à la fin de la draft (`FinalAnalysis`, tâche 106), publié sur son sujet du bus et conservé jusqu'à la draft suivante. Si le Live Coach n'a pas vu la draft, l'écran dit « analyse indisponible » (ignorance visible) ; alternative écartée pour l'instant : recalculer depuis `allPlayers[].championName/position`. |
+| Analyse de la draft | **Validé (@pj35, 2026-10-06)** : on garde le résultat calculé à la fin de la draft (`FinalAnalysis`, tâche 106), publié sur son sujet du bus et conservé jusqu'à la draft suivante. Si le Live Coach n'a pas vu la draft, l'écran dit « analyse indisponible » (ignorance visible) ; alternative écartée pour l'instant : recalculer depuis `allPlayers[].championName/position`. |
 | Contenu « build » | **Validé (@pj35, 2026-10-06)** : plan d'objets (avec les substitutions du duel et leur raison), suivi des achats (objets déjà pris cochés, prochain objet du plan, or disponible), ordre des compétences. Runes et sorts : non retenus (déjà dans la colonne loadout de la draft). L'ordre des compétences n'est livré que si OneTricks le publie (spike, tâche 105) ; sinon la ligne disparaît et le CHANGELOG le dit. |
-| Ouverture de l'écran | **À valider** : entrée « En partie » dans la navigation et pastille dans la barre de titre pendant une partie, **sans bascule automatique** de page (@pj35 peut être sur un autre onglet du client). |
+| Ouverture de l'écran | **Validé (@pj35, 2026-10-06)** : entrée « En partie » dans la navigation et pastille dans la barre de titre pendant une partie, **sans bascule automatique** de page (@pj35 peut être sur un autre onglet du client). |
 | Écriture en partie | **Défaut proposé** : aucune. L'écran « En partie » est en lecture seule ; les seules écritures nouvelles de la spec sont les swaps de draft et le correctif de ban. |
 | Design | Les écrans sont extrapolés du système « Alchimie » (SPEC-21 §2, « Écrans sans maquette », validé le 2026-10-05) ; si une direction manque, Claude s'arrête et le signale. |
 
