@@ -6,7 +6,7 @@ src/draft_monitor.py pour préserver ``from src.draft_monitor import DraftState`
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 from .search import PickTurn
 
@@ -44,6 +44,8 @@ class DraftState:
     ally_bans: List[str] = field(default_factory=list)
     enemy_bans: List[str] = field(default_factory=list)
     current_actor: Optional[int] = None
+    # SPEC-24 tâche 98 : toutes les cellules dont l'action est en cours (plusieurs en bans simultanés).
+    acting_cells: Set[int] = field(default_factory=set)
     local_player_cell_id: Optional[int] = None
     # SPEC-04 B3: lane info, filled from the LCU (ally_positions) and later
     # inferred by role_inference.py (B4) for all 10 players.

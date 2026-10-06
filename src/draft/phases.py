@@ -26,7 +26,7 @@ def has_draft_changed(current_state: DraftState, previous: DraftState) -> bool:
 
 def is_player_turn(state: DraftState) -> bool:
     """Check if it's the local player's turn to pick."""
-    if not state.current_actor or not state.local_player_cell_id:
+    if state.current_actor is None or state.local_player_cell_id is None:
         return False
     return state.current_actor == state.local_player_cell_id
 
@@ -73,7 +73,7 @@ def is_player_ban_turn(state: DraftState, verbose: bool = False) -> bool:
     """Check if it's the local player's turn to ban."""
     if not is_ban_phase(state, verbose):
         return False
-    if not state.current_actor or not state.local_player_cell_id:
+    if state.current_actor is None or state.local_player_cell_id is None:
         return False
     return state.current_actor == state.local_player_cell_id
 

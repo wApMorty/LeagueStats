@@ -179,7 +179,7 @@ utilisables seuls, 16 tâches (96 à 111, 61 pts) ; arbitrages « à valider » 
 | **Lot 1 — Bans et acteur courant (8 pts)** | | | | |
 | 96 | `dump_lcu_draft_forms.py --watch`, relevé d'une draft classée et d'une normale par @pj35, fixtures réelles | 3 | — | ⬜ |
 | 97 | Ban : cause racine sur le relevé, correctif, régression rouge puis verte, audit de `hover_champion` (console) | 3 | 96 | ⬜ |
-| 98 | `current_actor` de la cellule 0 (`if state.current_actor:` écrase l'acteur) et `acting_cells` : correctif et régression | 2 | — | ⬜ |
+| 98 | `current_actor` de la cellule 0 (`if state.current_actor:` écrase l'acteur) et `acting_cells` : correctif et régression | 2 | — | ✅ 2026-10-06 : 4 tests, rouge avant le fix ; `parse` teste `is not None` et remplit `acting_cells` (`isInProgress`), `phases` teste `is None` ; les autres appelants de `current_actor` / `local_player_cell_id` relus, aucun autre test sur la valeur |
 | **Lot 2 — Ordre de pick et swaps (24 pts)** | | | | |
 | 99 | `pick_order` et `swaps` dans `DraftState` et `DraftSnapshot`, console identique | 3 | 96, 98 | ⬜ |
 | 100 | Ordre de pick à l'écran : numéro sur chaque sceau, anneau du joueur en cours | 3 | 99 | ⬜ |

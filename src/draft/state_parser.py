@@ -167,8 +167,15 @@ class DraftStateParser:
                 if not action.get("completed", False):
                     state.current_actor = action.get("actorCellId")
                     break
-            if state.current_actor:
+            # La cellule 0 est une cellule : on teste None, jamais la valeur.
+            if state.current_actor is not None:
                 break
+        state.acting_cells = {
+            action.get("actorCellId")
+            for action_set in actions
+            for action in action_set
+            if action.get("isInProgress", False)
+        }
 
         # SPEC-04 B4 §4.3: infer roles for both teams, recalculated on every
         # parse so the picture sharpens as the draft fills in. Allies with a
