@@ -140,3 +140,71 @@ def test_aucune_bascule_automatique_de_page():
 
 def test_horloge():
     assert en_partie.clock(754.9) == "12:34" and en_partie.clock(None) == "0:00"
+
+
+# ---------- courbe de win chance en direct (SPEC-24 tâche 109) ----------
+
+
+def series(start=0.0, count=30, step=5.0):
+    return [[start + i * step, 0.5 + 0.01 * i] for i in range(count)]
+
+
+def objectives():
+    return [
+        {"t": 60.0, "kind": "dragon", "team": "ORDER"},
+        {"t": 90.0, "kind": "turret", "team": "CHAOS"},
+        {"t": 120.0, "kind": "baron", "team": "ORDER"},
+    ]
+
+
+def test_la_courbe_est_tracee_avec_les_reperes_d_objectifs(client, bus):  # noqa: F811
+    bus.publish(
+        "ingame",
+        {**LIVE, "series": series(), "objectives": objectives(), "me": {"team": "ORDER"}},
+    )
+    html = stage(client)
+    assert 'class="chart"' in html or "<svg" in html
+    assert "Win chance en direct" in html and "+3 pts sur la dernière minute" in html
+    assert ">Dragon<" in html and ">Nashor<" in html and "Tour adverse" in html
+    assert "La courbe apparaît après" not in html
+
+
+@pytest.mark.parametrize("points", [[], [[10.0, 0.5]]])
+def test_moins_de_deux_points_un_message_et_pas_de_courbe(client, bus, points):  # noqa: F811
+    bus.publish("ingame", {**LIVE, "series": points})
+    html = stage(client)
+    assert "La courbe apparaît après quelques secondes" in html
+    assert "ch-line" not in html
+
+
+def test_sans_modele_pas_de_courbe(client, bus):  # noqa: F811
+    bus.publish(
+        "ingame", {"state": "live", "game_time": 600.0, "p": None, "delta": None, "series": []}
+    )
+    assert "ch-line" not in stage(client)
+
+
+def test_un_client_ouvert_en_cours_de_partie_le_dit(client, bus):  # noqa: F811
+    bus.publish("ingame", {**LIVE, "series": series(start=900.0)})
+    html = stage(client)
+    assert "ch-line" in html and "pas tracé" in html and "depuis 15:00" in html
+
+
+def test_pas_de_note_quand_la_courbe_part_du_debut(client, bus):  # noqa: F811
+    bus.publish("ingame", {**LIVE, "series": series(start=0.0)})
+    assert "pas tracé" not in stage(client)
+
+
+def test_les_objectifs_hors_de_la_courbe_ne_sont_pas_reperes(client, bus):  # noqa: F811
+    bus.publish("ingame", {**LIVE, "series": series(start=900.0), "objectives": objectives()})
+    assert ">Dragon<" not in stage(client)
+
+
+def test_le_point_de_depart_de_la_draft_n_est_pas_sur_la_courbe(client, bus):  # noqa: F811
+    bus.publish("ingame", {**LIVE, "series": series()})
+    bus.publish("game", analysis())
+    html = stage(client)
+    chart = html.split("Win chance en direct")[1].split("Face-à-face")[0]
+    assert "55" not in chart.replace(
+        "0.55", ""
+    )  # la probabilité de la draft (55 %) n'est pas tracée

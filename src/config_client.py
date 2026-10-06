@@ -220,6 +220,8 @@ class ClientConfig:
     INGAME_SAMPLE_S: float = 5.0
     INGAME_MAX_POINTS: int = 720
     INGAME_GRACE_POLLS: int = 10
+    # Premier point de la série au-delà duquel l'écran dit que le début de la partie n'est pas tracé.
+    INGAME_LATE_START_S: float = 60.0
 
     # Jeton de session (octets aléatoires) et en-tête qui le porte.
     SESSION_TOKEN_BYTES: int = 32

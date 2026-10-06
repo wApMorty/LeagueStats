@@ -12,6 +12,12 @@
   {% endif %}
 </section>
 
+<section class="panel ig-curve" aria-label="Win chance en direct">
+  <div class="panel-head"><h2>Win chance en direct</h2>{% if v.delta is not none %}<span class="muted">{{ "%+d"|format(v.delta) }} pts sur la dernière minute</span>{% endif %}</div>
+  {% if v.curve.chart %}{{ v.curve.chart }}{% else %}<p class="empty">{{ v.curve.note }}</p>{% endif %}
+  {% if v.curve.chart and v.curve.note %}<p class="fine">{{ v.curve.note }}</p>{% endif %}
+</section>
+
 {% if v.analysis %}
 {% set a = v.analysis %}
 <section class="panel ig-draft" aria-label="Analyse de la draft">
