@@ -1100,3 +1100,15 @@ a.chip-btn { display: inline-flex; align-items: center; text-decoration: none; }
   line-height: 14px; text-align: center; font-style: normal; color: oklch(0.16 0.02 170); background: oklch(0.8 0.1 165); }
 .ig-subs { margin-top: 14px; } .ig-subs ul { margin: 0; padding-left: 18px; }
 .ig-skills { margin: 14px 0 0; }
+
+/* Échanges de la draft (SPEC-24 tâche 104) : boutons sur la légende d'un allié, bandeau d'une demande reçue. */
+.d-swaps { display: flex; justify-content: center; gap: 6px; margin-top: 4px; }
+.d-swap { height: 24px; padding: 0 10px; border-radius: 12px; font: inherit; font-size: 12px; cursor: pointer; color: var(--ink);
+  border: 1px solid oklch(0.8 0.1 165 / 0.5); background: oklch(0.8 0.1 165 / 0.1); }
+.d-swap:hover { background: oklch(0.8 0.1 165 / 0.22); }
+.d-swap-sent { border-color: oklch(0.74 0.12 355 / 0.6); background: oklch(0.74 0.12 355 / 0.1); }
+.d-swap-decline { border-color: oklch(0.74 0.12 355 / 0.6); background: oklch(0.74 0.12 355 / 0.1); }
+.d-swap-banner { position: absolute; left: 470px; top: 96px; width: 540px; z-index: 5; display: flex; flex-direction: column; gap: 6px; }
+.d-swap-request { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-radius: var(--r-card);
+  border: 1px solid oklch(0.74 0.11 55 / 0.5); background: oklch(0.16 0.02 170 / 0.94); font-size: 14px; }
+.d-swap-request span { flex: 1; }

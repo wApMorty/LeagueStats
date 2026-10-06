@@ -440,6 +440,11 @@
       const name = (card) => card.querySelector(".d-card-name").textContent;
       const ban = event.target.closest(".d-cards-ban .d-card");
       if (ban) return aimBan(+ban.dataset.champ, name(ban));
+      const swap = event.target.closest("[data-swap]");
+      if (swap) {
+        const [kind, action, cell] = swap.dataset.swap.split(":"); // l'id de l'échange reste côté serveur
+        return post(`/draft/swap/${kind}/${action}`, { cell_id: cell });
+      }
       const skin = event.target.closest(".d-skin");
       if (skin) return pickSkin(skin);
       const pick = event.target.closest(".d-cards-pick .d-card");

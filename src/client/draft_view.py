@@ -127,8 +127,98 @@ def _status(player: Dict[str, Any], kind: Optional[str]) -> str:
     return "survol" if player.get("hover_id") else "à choisir"
 
 
+SWAP_NAMES = {"pick_order": "ordre", "position": "rôle"}
+
+
+def _swap_buttons(snapshot: Dict[str, Any]) -> Dict[int, List[Dict[str, Any]]]:
+    """Par cellule alliée, les boutons d'échange à poser sur sa légende (SPEC-24 tâche 104).
+
+    Une entrée `AVAILABLE` se demande, une entrée `SENT` s'annule ; une demande reçue (`RECEIVED`) passe
+    par le bandeau (`swap_requests`), une entrée `INVALID` n'offre rien. Le gain chiffré du coach s'ajoute
+    au bouton d'échange de rôle.
+    """
+    gains = {
+        a["cell_id"]: a["gain_pts"]
+        for a in snapshot.get("swap_advice") or []
+        if a["kind"] == "position"
+    }
+    buttons: Dict[int, List[Dict[str, Any]]] = {}
+    for swap in snapshot.get("swaps") or []:
+        name = SWAP_NAMES[swap["kind"]]
+        gain = gains.get(swap["cell_id"]) if swap["kind"] == "position" else None
+        if swap["state"] == "AVAILABLE":
+            label = f"⇄ {name}" + (f" {signed(gain)} pts" if gain is not None else "")
+            title = f"Demander l'échange de {name}" + (
+                f" : le modèle estime {signed(gain)} pts de victoire prédite"
+                if gain is not None
+                else ""
+            )
+            action = "request"
+        elif swap["state"] == "SENT":
+            label, title, action = f"✕ {name}", f"Annuler ma demande d'échange de {name}", "cancel"
+        else:
+            continue
+        buttons.setdefault(swap["cell_id"], []).append(
+            {
+                "kind": swap["kind"],
+                "action": action,
+                "state": swap["state"].lower(),
+                "label": label,
+                "title": title,
+            }
+        )
+    return buttons
+
+
+def swap_requests(snapshot: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Les demandes d'échange reçues, pour le bandeau : qui, quel échange, à accepter ou refuser."""
+    players = {p["cell_id"]: p for p in snapshot.get("allies", [])}
+    mine = next((p for p in players.values() if p["is_local"]), None)
+    gains = {
+        a["cell_id"]: a["gain_pts"]
+        for a in snapshot.get("swap_advice") or []
+        if a["kind"] == "position"
+    }
+    found = []
+    for swap in snapshot.get("swaps") or []:
+        if swap["state"] != "RECEIVED":
+            continue
+        who = players.get(swap["cell_id"]) or {}
+        name = (
+            who.get("champion") or who.get("hover") or ROLE_LABELS.get(who.get("role"), "Un allié")
+        )
+        if swap["kind"] == "pick_order":
+            theirs, ours = who.get("pick_order"), (mine or {}).get("pick_order")
+            detail = (
+                f"son ordre de pick (n° {theirs} contre ton n° {ours})"
+                if theirs and ours
+                else "son ordre de pick"
+            )
+        else:
+            detail = "vos rôles"
+        gain = gains.get(swap["cell_id"]) if swap["kind"] == "position" else None
+        found.append(
+            {
+                "kind": swap["kind"],
+                "cell_id": swap["cell_id"],
+                "text": f"{name} te propose d'échanger {detail}",
+                "gain": (
+                    None
+                    if gain is None
+                    else f"Le modèle estime {signed(gain)} pts de victoire prédite"
+                ),
+            }
+        )
+    return found
+
+
 def _member(
-    player: Dict[str, Any], branch: int, champions: Champions, kind: Optional[str], delay: int
+    player: Dict[str, Any],
+    branch: int,
+    champions: Champions,
+    kind: Optional[str],
+    delay: int,
+    swap: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     left, top = _branch_point(branch)
     champion_id = player["champion_id"]
@@ -150,6 +240,7 @@ def _member(
         "role": ROLE_LABELS.get(player["role"], "—") if player["role"] else "—",
         "status": _status(player, kind),
         "order": player.get("pick_order"),  # rang de pick 1 à 10, None sans actions du LCU
+        "swap": swap or [],
         "acting": bool(player.get("is_acting")),
         "pending": foe_hidden or not shown,
         "hovering": bool(hover_id and not champion_id),
@@ -164,9 +255,17 @@ def seals(snapshot: Dict[str, Any], champions: Champions, intro: bool) -> Dict[s
     kind = snapshot.get("kind")
     allies = snapshot["allies"]
     me = next((p for p in allies if p["is_local"]), None)
+    buttons = _swap_buttons(snapshot)
     others = sorted((p for p in allies if p is not me), key=lambda p: _role_rank(p["role"]))
     ally_members = [
-        _member(p, ALLY_BRANCHES[i], champions, kind, 1200 + i * 90 if intro else 0)
+        _member(
+            p,
+            ALLY_BRANCHES[i],
+            champions,
+            kind,
+            1200 + i * 90 if intro else 0,
+            buttons.get(p["cell_id"]),
+        )
         for i, p in enumerate(others[: len(ALLY_BRANCHES)])
     ]
 
@@ -410,6 +509,7 @@ def stage_view(
         "advice": PHASE_ADVICE[phase],
         "role": ROLE_LABELS.get(snapshot.get("local_role"), ""),
         "seals": sealed,
+        "swap_requests": swap_requests(snapshot),
         "strips": ban_strips(snapshot, champions),
         "skin": skin,
         "recs": recs,

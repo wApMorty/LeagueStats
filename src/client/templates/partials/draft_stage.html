@@ -19,7 +19,9 @@
   {% endif %}
   {% if m.hovering %}<svg class="d-dashring" data-spin="10" viewBox="0 0 112 112" aria-hidden="true"><circle cx="56" cy="56" r="54"/></svg>{% endif %}
   {% if m.order %}<span class="d-order" title="Pick n° {{ m.order }}">{{ m.order }}</span>{% endif %}
-  <div class="d-caption"><div class="d-name">{{ m.name }}</div><div class="d-sub">{{ m.role }} · {{ m.status }}</div></div>
+  <div class="d-caption"><div class="d-name">{{ m.name }}</div><div class="d-sub">{{ m.role }} · {{ m.status }}</div>
+    {% if m.swap %}<div class="d-swaps">{% for s in m.swap %}<button type="button" class="d-swap d-swap-{{ s.state }}" data-swap="{{ s.kind }}:{{ s.action }}:{{ m.cell_id }}" title="{{ s.title }}">{{ s.label }}</button>{% endfor %}</div>{% endif %}
+  </div>
 </div>
 {%- endmacro %}
 
@@ -90,6 +92,16 @@
   </div>
   {% endif %}
 </div>
+
+{% if v.swap_requests %}
+<div class="d-swap-banner" data-key="swap-banner" data-sig="{{ v.swap_requests|sig }}" role="alert">
+  {% for r in v.swap_requests %}
+  <div class="d-swap-request"><span>{{ r.text }}{% if r.gain %} <i class="muted">· {{ r.gain }}</i>{% endif %}</span>
+    <button type="button" class="d-swap d-swap-accept" data-swap="{{ r.kind }}:accept:{{ r.cell_id }}">Accepter</button>
+    <button type="button" class="d-swap d-swap-decline" data-swap="{{ r.kind }}:decline:{{ r.cell_id }}">Refuser</button></div>
+  {% endfor %}
+</div>
+{% endif %}
 
 <div class="d-balance" data-key="balance" data-sig="balance" data-fade data-delay="{{ 1200 if v.intro else 0 }}">
   <div class="d-bal-foe d-foe-ink">Eux · <span id="d-bal-foe">–</span></div>
