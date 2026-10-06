@@ -8,7 +8,7 @@ from typing import Callable, Dict, Optional, Tuple
 
 from ..role_inference import infer_team_roles
 from .search import PickTurn
-from .state import Cell, DraftState
+from .state import Cell, DraftState, Swap
 
 
 class DraftStateParser:
@@ -131,6 +131,19 @@ class DraftStateParser:
                         position=state.ally_positions.get(cell_id),
                         skin_id=player.get("selectedSkinId", 0) or 0,
                     )
+                )
+
+        # SPEC-24 tâche 99 : le rang de pick de chaque cellule, dans l'ordre des actions.
+        rank = 0
+        for action_set in actions:
+            for action in action_set:
+                if action.get("type") == "pick" and action.get("actorCellId") is not None:
+                    rank += 1
+                    state.pick_order[action["actorCellId"]] = rank
+        for kind, key in (("pick_order", "pickOrderSwaps"), ("position", "positionSwaps")):
+            for swap in champ_select_data.get(key) or []:
+                state.swaps.append(
+                    Swap(kind, swap.get("id"), swap.get("cellId"), swap.get("state", ""))
                 )
 
         # SPEC-12: picks encore à venir, dans l'ordre, pour la recherche

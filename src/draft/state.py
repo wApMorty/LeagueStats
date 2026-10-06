@@ -35,6 +35,20 @@ class Cell:
 
 
 @dataclass
+class Swap:
+    """Un échange de la session : ``kind`` "pick_order" ou "position", avec l'AUTRE joueur (``cell_id``).
+
+    ``state`` : AVAILABLE (demandable), SENT (ma demande), RECEIVED (la sienne), INVALID (bloqué par
+    une autre demande), relevé SPEC-24 ; ``id`` est renouvelé à chaque échange terminé.
+    """
+
+    kind: str
+    id: int
+    cell_id: int
+    state: str
+
+
+@dataclass
 class DraftState:
     """Current state of the draft."""
 
@@ -68,6 +82,10 @@ class DraftState:
     # Le ban du joueur local : posé (my_ban_id) ou seulement survolé (my_ban_hover_id).
     my_ban_id: int = 0
     my_ban_hover_id: int = 0
+    # SPEC-24 tâche 99 : cellId -> rang de pick (1 à 10, dans l'ordre des actions du LCU ; `pickTurn`
+    # vaut 0 partout au relevé) et les échanges que la session liste.
+    pick_order: Dict[int, int] = field(default_factory=dict)
+    swaps: List[Swap] = field(default_factory=list)
 
     def get_all_picks(self) -> List[str]:
         """Get all picked champions."""

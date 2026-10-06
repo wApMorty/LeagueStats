@@ -34,6 +34,16 @@ class SnapshotPlayer:
     role_confidence: Optional[float] = None
     is_local: bool = False
     is_acting: bool = False
+    pick_order: Optional[int] = None  # rang de pick (1 à 10), None sans actions du LCU
+
+
+@dataclass
+class SnapshotSwap:
+    """Un échange que la session liste avec ``cell_id`` ; l'``id`` reste côté serveur."""
+
+    kind: str  # "pick_order" | "position"
+    cell_id: int
+    state: str  # AVAILABLE | SENT | RECEIVED | INVALID
 
 
 @dataclass
@@ -114,6 +124,7 @@ class DraftSnapshot:
     # Fin de draft attendue si l'on joue le premier du classement (la position actuelle sans lui).
     projected_probability: Optional[float] = None
     ban_advice: List[SnapshotBanAdvice] = field(default_factory=list)
+    swaps: List[SnapshotSwap] = field(default_factory=list)
     champions: List[SnapshotChampion] = field(default_factory=list)
     pool_name: Optional[str] = None
     pool: List[str] = field(default_factory=list)
@@ -134,6 +145,11 @@ class Analysis:
     candidates: Dict[int, float] = field(
         default_factory=dict
     )  # championId -> victoire si je le prends
+
+
+def _is_acting(state: DraftState, cell_id: int) -> bool:
+    """Cette cellule a une action en cours (plusieurs à la fois en bans et par lots de picks)."""
+    return cell_id in state.acting_cells if state.acting_cells else cell_id == state.current_actor
 
 
 def _team(
@@ -158,7 +174,8 @@ def _team(
                 role_source=state.role_source.get(champion_id) if champion_id else None,
                 role_confidence=state.role_confidence.get(champion_id) if champion_id else None,
                 is_local=cell.cell_id is not None and cell.cell_id == state.local_player_cell_id,
-                is_acting=cell.cell_id is not None and cell.cell_id == state.current_actor,
+                is_acting=cell.cell_id is not None and _is_acting(state, cell.cell_id),
+                pick_order=state.pick_order.get(cell.cell_id),
             )
         )
     return players
@@ -247,6 +264,7 @@ def build_snapshot(
         base_probability=base,
         projected_probability=results[0].win_probability if results else base,
         ban_advice=ban_rows,
+        swaps=[SnapshotSwap(s.kind, s.cell_id, s.state) for s in state.swaps],
         champions=_champion_table(monitor, analysis, gains),
         pool_name=getattr(monitor, "pool_name", None),
         pool=list(getattr(monitor, "current_pool", []) or []),

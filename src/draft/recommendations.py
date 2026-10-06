@@ -199,6 +199,9 @@ class DraftRecommender:
         return (
             state.phase,
             state.current_actor,
+            tuple(sorted(state.acting_cells)),
+            state.local_player_cell_id,  # un échange d'ordre accepté change ma cellule
+            tuple((s.kind, s.cell_id, s.state) for s in state.swaps),
             tuple(cells),
             tuple(state.ally_bans),
             tuple(state.enemy_bans),
