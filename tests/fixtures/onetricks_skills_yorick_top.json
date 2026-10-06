@@ -1,0 +1,128 @@
+{
+ "champion": "Yorick",
+ "earlySkillPaths": [
+  [
+   [
+    [
+     {
+      "skillSlot": "1"
+     }
+    ],
+    [
+     {
+      "skillSlot": "3"
+     }
+    ],
+    [
+     {
+      "skillSlot": "2"
+     }
+    ]
+   ],
+   0.6057384856677156
+  ],
+  [
+   [
+    [
+     {
+      "skillSlot": "3"
+     }
+    ],
+    [
+     {
+      "skillSlot": "1"
+     }
+    ],
+    [
+     {
+      "skillSlot": "2"
+     }
+    ]
+   ],
+   0.17131079892853032
+  ]
+ ],
+ "lane": "top",
+ "maxSkillOrders": [
+  {
+   "order": [
+    0,
+    2,
+    1
+   ],
+   "playrate": 0.7825375590554101
+  }
+ ],
+ "skillPaths": [
+  [
+   [
+    [
+     {
+      "skillSlot": "1"
+     }
+    ],
+    [
+     {
+      "skillSlot": "3"
+     }
+    ],
+    [
+     {
+      "skillSlot": "2"
+     }
+    ],
+    [
+     {
+      "skillSlot": "1"
+     }
+    ],
+    [
+     {
+      "skillSlot": "1"
+     }
+    ],
+    [
+     {
+      "skillSlot": "4"
+     }
+    ],
+    [
+     {
+      "skillSlot": "1"
+     }
+    ],
+    [
+     {
+      "skillSlot": "3"
+     }
+    ],
+    [
+     {
+      "skillSlot": "1"
+     }
+    ],
+    [
+     {
+      "skillSlot": "3"
+     }
+    ],
+    [
+     {
+      "skillSlot": "4"
+     }
+    ],
+    [
+     {
+      "skillSlot": "3"
+     }
+    ],
+    [
+     {
+      "skillSlot": "3"
+     }
+    ]
+   ],
+   0.34281791742496964
+  ]
+ ]
+}

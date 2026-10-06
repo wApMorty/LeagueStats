@@ -300,6 +300,24 @@ substitutions (catégorie, ancien, nouveau, parts, raison) et du nom des objets.
 
 ### 4.9 Écran « En partie » (tâches 105 à 110)
 
+**Spike du 2026-10-07** (partie classique réelle à 16 min 41 s, une seule lecture `GET`
+`allgamedata`, `tests/fixtures/spike_live/allgamedata_items.json`, noms remplacés) :
+
+- `allPlayers[*]` pour les **dix** joueurs : `championName` (nom affiché, « Lee Sin »), `position`
+  (`TOP` / `JUNGLE` / `MIDDLE` / `BOTTOM` / `UTILITY`), `items` (`itemID`, `displayName`, `price`, `slot`,
+  `count`, `consumable` ; `price` est le coût de recomposition, pas le prix de l'objet complet), `level`,
+  `scores`, `summonerSpells`, `runes`. Les objets adverses sont donc lisibles (non demandés, §7).
+- `activePlayer` : `currentGold` (réel, 537,4 à 16 min), `abilities` (`Q` `W` `E` `R` avec `abilityLevel`,
+  `Passive` sans niveau : le niveau **courant** de chaque compétence, pas l'ordre de montée), `level`,
+  `championStats`, `fullRunes`, `summonerName` / `riotId`.
+- `events.Events` : `FirstBlood`, `Multikill`, `FirstBrick`, `MinionsSpawning`, `GameStart` en plus des
+  événements déjà suivis.
+- **Ordre des compétences : OneTricks le publie**, déjà dans la page réduite (`_trim` garde tout
+  `firstItemStats.all.all`) : `skillPaths` (suite de 13 niveaux avec sa part), `earlySkillPaths` (3 premiers
+  niveaux), `maxSkillOrders` (`order` : indices 0 Q, 1 W, 2 E dans l'ordre de maximisation, `playrate`) ;
+  `skillSlot` 1 à 4 = Q, W, E, R (`tests/fixtures/onetricks_skills_yorick_top.json`). La ligne d'ordre des
+  compétences de la tâche 110 est donc livrable ; `loadout.Build` ne la porte pas encore.
+
 - **`src/client/ingame.py`** : `LiveGame(bus, get_phase, fetch=live.fetch, model=…)`, un fil daemon démarré avec
   le serveur. Hors partie (phase gameflow ≠ `InProgress`), il dort `INGAME_IDLE_POLL_S` et publie `{"state":
   "idle"}` une fois. En partie, il lit `live.fetch()` toutes les `INGAME_POLL_S`, calcule la win chance par
