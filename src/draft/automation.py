@@ -23,18 +23,21 @@ class HoverAutomation:
     def __init__(self, monitor) -> None:
         self.m = monitor
 
-    def auto_hover_champion(self, champion_name: str, reason: str = "") -> None:
-        """Automatically hover the recommended champion."""
+    def auto_hover_champion(
+        self, champion_name: str, reason: str = "", action_type: str = "pick"
+    ) -> bool:
+        """Automatically hover the recommended champion ; True si le client l'a accepté."""
         try:
-            if self.m.lcu.hover_champion(champion_name):
+            if self.m.lcu.hover_champion(champion_name, action_type=action_type):
                 reason_text = f" ({reason})" if reason else ""
                 print(f"  [AUTO-HOVER] {champion_name} survolé{reason_text}")
-            else:
-                if self.m.verbose:
-                    print(f"  [ALERTE] [AUTO-HOVER] Échec du survol de {champion_name}")
+                return True
+            if self.m.verbose:
+                print(f"  [ALERTE] [AUTO-HOVER] Échec du survol de {champion_name}")
         except Exception as e:
             if self.m.verbose:
                 print(f"  [ERREUR] [AUTO-HOVER] Erreur lors du survol de {champion_name}: {e}")
+        return False
 
     def do_initial_hover(self) -> None:
         """Do initial hover with the best champion from the pool when entering champion select."""

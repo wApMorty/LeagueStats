@@ -24,11 +24,23 @@ def has_draft_changed(current_state: DraftState, previous: DraftState) -> bool:
     )
 
 
+def _is_local_acting(state: DraftState) -> bool:
+    """La cellule locale a une action en cours.
+
+    Bans et picks sont joués par lots (10 bans à la fois, picks par deux, relevé SPEC-24) :
+    ``current_actor`` n'est que la première action non terminée, c'est ``acting_cells`` qui dit qui
+    joue. Sans ``isInProgress`` dans la session, on retombe sur ``current_actor``.
+    """
+    if state.local_player_cell_id is None:
+        return False
+    if state.acting_cells:
+        return state.local_player_cell_id in state.acting_cells
+    return state.current_actor == state.local_player_cell_id
+
+
 def is_player_turn(state: DraftState) -> bool:
     """Check if it's the local player's turn to pick."""
-    if state.current_actor is None or state.local_player_cell_id is None:
-        return False
-    return state.current_actor == state.local_player_cell_id
+    return _is_local_acting(state)
 
 
 def is_ban_phase(state: DraftState, verbose: bool = False) -> bool:
@@ -71,11 +83,7 @@ def is_ban_phase(state: DraftState, verbose: bool = False) -> bool:
 
 def is_player_ban_turn(state: DraftState, verbose: bool = False) -> bool:
     """Check if it's the local player's turn to ban."""
-    if not is_ban_phase(state, verbose):
-        return False
-    if state.current_actor is None or state.local_player_cell_id is None:
-        return False
-    return state.current_actor == state.local_player_cell_id
+    return is_ban_phase(state, verbose) and _is_local_acting(state)
 
 
 def enemy_picks_changed(state: DraftState, previous: DraftState) -> bool:

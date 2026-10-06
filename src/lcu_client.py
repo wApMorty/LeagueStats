@@ -361,9 +361,13 @@ class LCUClient(_MatchHistoryMixin):
         # Convert to lowercase and remove spaces, dots, apostrophes
         return without_accents.lower().replace(" ", "").replace(".", "").replace("'", "")
 
-    def get_current_player_action_id(self) -> Optional[int]:
+    def get_current_player_action_id(self, action_type: str = "pick") -> Optional[int]:
         """
-        Get the current player's action ID in champion select.
+        Get the current player's action ID of the given type in champion select.
+
+        ``pick`` : première action de pick non terminée (déjà survolable avant son tour).
+        ``ban`` : l'action de ban non terminée, en cours (SPEC-24 : sur une vraie draft, la cellule
+        locale porte une action de ban puis une action de pick, la seconde pas encore en cours).
 
         Returns:
             Action ID or None if not found
@@ -382,18 +386,21 @@ class LCUClient(_MatchHistoryMixin):
                 if (
                     action.get("actorCellId") == local_player_cell_id
                     and not action.get("completed", False)
-                    and action.get("type") in ["pick", "hover"]
+                    and action.get("type")
+                    in ([action_type, "hover"] if action_type == "pick" else [action_type])
+                    and (action_type == "pick" or action.get("isInProgress", True))
                 ):
                     return action.get("id")
 
         return None
 
-    def hover_champion(self, champion_name: str) -> bool:
+    def hover_champion(self, champion_name: str, action_type: str = "pick") -> bool:
         """
         Hover a champion during champion select.
 
         Args:
             champion_name: Champion name to hover
+            action_type: ``pick`` (défaut) ou ``ban`` : l'action du joueur local qui reçoit le survol
 
         Returns:
             True if successful, False otherwise
@@ -426,7 +433,7 @@ class LCUClient(_MatchHistoryMixin):
             return False
 
         # Get current action ID
-        action_id = self.get_current_player_action_id()
+        action_id = self.get_current_player_action_id(action_type)
         if not action_id:
             if self.verbose:
                 print("[WARNING] No available action to update")
@@ -434,7 +441,7 @@ class LCUClient(_MatchHistoryMixin):
 
         # Update action to hover the champion
         endpoint = f"/lol-champ-select/v1/session/actions/{action_id}"
-        data = {"championId": champion_id, "completed": False, "type": "pick"}
+        data = {"championId": champion_id, "completed": False, "type": action_type}
 
         result = self._make_request(endpoint, method="PATCH", data=data)
         if result is not None:  # None means error, {} means success

@@ -3,12 +3,12 @@
     [
       {
         "actorCellId": 0,
-        "championId": 29,
-        "completed": true,
+        "championId": 0,
+        "completed": false,
         "duration": 0,
         "id": 0,
         "isAllyAction": true,
-        "isInProgress": false,
+        "isInProgress": true,
         "pickTurn": 0,
         "type": "ban"
       },
@@ -36,12 +36,12 @@
       },
       {
         "actorCellId": 3,
-        "championId": 157,
-        "completed": true,
+        "championId": 0,
+        "completed": false,
         "duration": 0,
         "id": 3,
         "isAllyAction": true,
-        "isInProgress": false,
+        "isInProgress": true,
         "pickTurn": 0,
         "type": "ban"
       },
@@ -263,7 +263,7 @@
   "benchChampions": [],
   "benchEnabled": false,
   "boostableSkinCount": 0,
-  "counter": 23,
+  "counter": 16,
   "disallowBanningTeammateHoveredChampions": true,
   "gameId": 0,
   "hasSimultaneousBans": true,
@@ -577,8 +577,8 @@
     }
   ],
   "timer": {
-    "adjustedTimeLeftInPhase": 6134,
-    "internalNowInEpochMs": 1791325343389,
+    "adjustedTimeLeftInPhase": 19621,
+    "internalNowInEpochMs": 1791325329914,
     "isInfinite": false,
     "phase": "BAN_PICK",
     "totalTimeInPhase": 25000

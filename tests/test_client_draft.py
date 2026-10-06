@@ -1428,3 +1428,76 @@ def test_rune_logic_js_sans_erreur_de_syntaxe():
     if node is None:
         pytest.skip("node absent")
     assert subprocess.run([node, "--check", str(LOGIC)], capture_output=True).returncode == 0
+
+
+# ---------- visée d'un ban sans présélection (SPEC-24 tâche 97) ----------
+
+BAN_LOGIC = Path(__file__).parent.parent / "src" / "client" / "static" / "ban_logic.js"
+BAN_SCRIPT = """
+const L = require(process.argv[1]);
+const { state, clicked, id } = JSON.parse(require('fs').readFileSync(0, 'utf8'));
+console.log(JSON.stringify({
+  target: L.target(state, clicked),
+  suggestion: L.suggestion(state, clicked),
+  send: L.shouldSendHover(state, clicked, id),
+}));
+"""
+
+
+def ban_logic(state, clicked=None, id=None):
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node absent")
+    base = {"kind": "ban", "my_ban_id": 0, "ban_hover_id": 0, "bans": [122, 266]}
+    done = subprocess.run(
+        [node, "-e", BAN_SCRIPT, str(BAN_LOGIC)],
+        input=json.dumps({"state": {**base, **state}, "clicked": clicked, "id": id}),
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return json.loads(done.stdout)
+
+
+def test_aucune_cible_a_l_ouverture_le_conseil_n_est_qu_une_suggestion():
+    result = ban_logic({}, id=122)
+    assert result["target"] is None  # le bouton « Bannir » reste inactif
+    assert result["suggestion"] == 122
+
+
+def test_un_clic_sur_la_premiere_carte_envoie_un_survol():
+    assert ban_logic({}, id=122)["send"] is True
+
+
+def test_cliquer_la_cible_deja_envoyee_n_envoie_rien():
+    assert ban_logic({"ban_hover_id": 122}, id=122)["send"] is False
+    assert ban_logic({}, clicked=122, id=122)["send"] is False
+
+
+def test_un_autre_clic_change_la_cible_et_l_envoie():
+    result = ban_logic({"ban_hover_id": 122}, clicked=266, id=266)
+    assert result["target"] == 266 and result["send"] is False  # déjà la cible cliquée
+    assert ban_logic({"ban_hover_id": 122}, id=266)["send"] is True
+
+
+def test_ban_pose_ou_hors_phase_de_bans_rien_ne_part():
+    assert ban_logic({"my_ban_id": 122}, id=266) == {
+        "target": 122,
+        "suggestion": None,
+        "send": False,
+    }
+    assert ban_logic({"kind": "pick"}, id=122) == {
+        "target": None,
+        "suggestion": None,
+        "send": False,
+    }
+
+
+def test_ban_logic_servi_avant_draft_js_et_sans_erreur_de_syntaxe(client):
+    assert client.get("/static/ban_logic.js").status_code == 200
+    html = client.get("/").text
+    assert html.index("ban_logic.js") < html.index("draft.js")
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node absent")
+    assert subprocess.run([node, "--check", str(BAN_LOGIC)], capture_output=True).returncode == 0

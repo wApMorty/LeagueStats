@@ -168,7 +168,7 @@ class BanAdvisor:
                     return
 
                 print(f"[DEBUG] Attempting to hover {top_ban}...")
-                if self.m._auto_hover_champion(top_ban, "Recommandation de ban"):
+                if self.m._auto_hover_champion(top_ban, "Recommandation de ban", action_type="ban"):
                     print(f"  [AUTO-BAN-HOVER] Survol de {top_ban} (Menace : {threat_score:.2f})")
                     self.m.last_ban_recommendation = top_ban
                 else:

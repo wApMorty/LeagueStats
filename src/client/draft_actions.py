@@ -44,6 +44,30 @@ def current_action(session: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     return None
 
 
+def _refusal_reason(session: Dict[str, Any], expected: str, champion_id: int) -> str:
+    """Pourquoi le client LoL a refusé, d'après la session ; message générique si rien n'explique."""
+    actions = [action for action_set in session.get("actions", []) for action in action_set]
+    taken = lambda kind: any(  # noqa: E731
+        a.get("type") == kind and a.get("completed") and a.get("championId") == champion_id
+        for a in actions
+    )
+    me = session.get("localPlayerCellId")
+    if taken("ban"):
+        return "Ce champion est déjà banni"
+    if taken("pick"):
+        return "Ce champion est déjà pris"
+    if (
+        expected == "ban"
+        and session.get("disallowBanningTeammateHoveredChampions")
+        and any(
+            p.get("cellId") != me and p.get("championPickIntent") == champion_id
+            for p in session.get("myTeam", [])
+        )
+    ):
+        return "Un coéquipier survole ce champion : le client interdit de le bannir"
+    return "Le client LoL a refusé l'action"
+
+
 def run(proxy: LcuProxy, name: str, champion_id: int) -> Dict[str, Any]:
     """Exécute l'action `name` sur `champion_id` ; lève `Refusal` si elle n'est pas permise."""
     if name not in ACTIONS:
@@ -60,7 +84,10 @@ def run(proxy: LcuProxy, name: str, champion_id: int) -> Dict[str, Any]:
     if action.get("type") != expected:
         raise Refusal(f"Ce n'est pas le moment de {_TYPE_LABEL[expected]}")
     permitted = proxy.get(f"/lol-champ-select/v1/{allowed}")
-    if isinstance(permitted, list) and champion_id not in permitted:
+    # Relevé SPEC-24 : en phase de bans la liste ne vaut que `[-1]` : sans identifiant réel elle ne
+    # dit rien, c'est le client LoL qui tranche.
+    real = [i for i in permitted if i > 0] if isinstance(permitted, list) else []
+    if real and champion_id not in real:
         raise Refusal("Ce champion n'est pas disponible")
     result = proxy.send(
         "PATCH",
@@ -68,7 +95,7 @@ def run(proxy: LcuProxy, name: str, champion_id: int) -> Dict[str, Any]:
         {"championId": champion_id, "completed": completed, "type": expected},
     )
     if result is None:
-        raise Refusal("Le client LoL a refusé l'action")
+        raise Refusal(_refusal_reason(session, expected, champion_id))
     return {"action": name, "champion_id": champion_id, "completed": completed}
 
 

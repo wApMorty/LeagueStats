@@ -64,7 +64,7 @@ def test_survoler_ecrit_sur_l_action_en_cours(pick):
     assert pick.writes == [
         (
             "PATCH",
-            "/lol-champ-select/v1/session/actions/12",
+            "/lol-champ-select/v1/session/actions/18",
             {"championId": 266, "completed": False, "type": "pick"},
         )
     ]
@@ -80,7 +80,7 @@ def test_bannir_et_survoler_un_ban(ban):
     draft_actions.run(LcuProxy(ban), "hover_ban", 122)
     draft_actions.run(LcuProxy(ban), "ban", 122)
     assert [w[2]["completed"] for w in ban.writes] == [False, True]
-    assert all(w[1] == "/lol-champ-select/v1/session/actions/0" for w in ban.writes)
+    assert all(w[1] == "/lol-champ-select/v1/session/actions/4" for w in ban.writes)
 
 
 @pytest.mark.parametrize("action", ["ban", "hover_ban"])
@@ -101,7 +101,7 @@ def test_pas_mon_tour_est_refuse(pick):
     session = load("session_pick.json")
     for action_set in session["actions"]:
         for action in action_set:
-            if action["actorCellId"] == 0:
+            if action["actorCellId"] == session["localPlayerCellId"]:
                 action["isInProgress"] = False  # le tour d'un autre joueur
     pick.reads[SESSION] = session
     with pytest.raises(Refusal, match="pas ton tour"):
@@ -113,7 +113,7 @@ def test_apres_le_verrouillage_plus_d_action(pick):
     session = load("session_pick.json")
     for action_set in session["actions"]:
         for action in action_set:
-            if action["actorCellId"] == 0:
+            if action["actorCellId"] == session["localPlayerCellId"]:
                 action["completed"] = True
     pick.reads[SESSION] = session
     with pytest.raises(Refusal, match="pas ton tour"):
@@ -278,3 +278,52 @@ def test_route_correction_de_role_sans_jeton_403(temp_db, pick):
         post(client, "/draft/role", token=False, champion="LeeSin", lane="top").status_code == 403
     )
     assert lignes == []
+
+
+# ---------- SPEC-24 tâche 97 : formes relevées sur une vraie draft classée ----------
+
+
+def test_une_liste_reelle_continue_de_filtrer_les_bans():
+    lcu = FauxLCU(load("session_ban.json"), bannable=load("bannable_champion_ids.json"))
+    with pytest.raises(Refusal, match="pas disponible"):
+        draft_actions.run(LcuProxy(lcu), "ban", 999999)
+    draft_actions.run(LcuProxy(lcu), "ban", 122)
+    assert len(lcu.writes) == 1
+
+
+def _refuse(session, action, champion_id):
+    lcu = FauxLCU(session, bannable=[-1], refuses=True)
+    with pytest.raises(Refusal) as refusal:
+        draft_actions.run(LcuProxy(lcu), action, champion_id)
+    return str(refusal.value)
+
+
+def test_refus_du_client_sans_explication_reste_generique():
+    assert _refuse(load("session_ban.json"), "hover_ban", 122) == "Le client LoL a refusé l'action"
+
+
+def test_refus_d_un_champion_deja_banni_dit_pourquoi():
+    session = load("session_ban.json")  # le ban de la cellule 0 : 29
+    assert _refuse(session, "ban", 29) == "Ce champion est déjà banni"
+
+
+def test_refus_d_un_champion_survole_par_un_coequipier_dit_pourquoi():
+    session = load("session_ban.json")
+    assert session["disallowBanningTeammateHoveredChampions"] is True
+    session["myTeam"][0]["championPickIntent"] = 122
+    assert "coéquipier" in _refuse(session, "ban", 122)
+    session["disallowBanningTeammateHoveredChampions"] = False
+    assert _refuse(session, "ban", 122) == "Le client LoL a refusé l'action"
+
+
+def test_fixtures_releves_sans_identite_et_avec_les_cles_de_swaps():
+    for name in ("session_ban", "session_pick", "session_swaps", "session_swaps_sent"):
+        text = (FIXTURES / f"{name}.json").read_text(encoding="utf-8")
+        data = json.loads(text)
+        for key in ("pickOrderSwaps", "positionSwaps", "hasSimultaneousBans"):
+            assert key in data
+        assert "disallowBanningTeammateHoveredChampions" in data
+        assert "chatDetails" not in data and "eyJ" not in text  # le jeton du chat
+        for player in data["myTeam"] + data["theirTeam"]:
+            for key in ("puuid", "gameName", "tagLine", "summonerId", "obfuscatedPuuid"):
+                assert player[key] == "anon"

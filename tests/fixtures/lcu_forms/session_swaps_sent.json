@@ -47,67 +47,67 @@
       },
       {
         "actorCellId": 4,
-        "championId": 0,
-        "completed": false,
+        "championId": 58,
+        "completed": true,
         "duration": 0,
         "id": 4,
         "isAllyAction": true,
-        "isInProgress": true,
+        "isInProgress": false,
         "pickTurn": 0,
         "type": "ban"
       },
       {
         "actorCellId": 5,
-        "championId": 0,
-        "completed": false,
+        "championId": 56,
+        "completed": true,
         "duration": 0,
         "id": 5,
         "isAllyAction": false,
-        "isInProgress": true,
+        "isInProgress": false,
         "pickTurn": 0,
         "type": "ban"
       },
       {
         "actorCellId": 6,
-        "championId": 0,
-        "completed": false,
+        "championId": 246,
+        "completed": true,
         "duration": 0,
         "id": 6,
         "isAllyAction": false,
-        "isInProgress": true,
+        "isInProgress": false,
         "pickTurn": 0,
         "type": "ban"
       },
       {
         "actorCellId": 7,
-        "championId": 0,
-        "completed": false,
+        "championId": 51,
+        "completed": true,
         "duration": 0,
         "id": 7,
         "isAllyAction": false,
-        "isInProgress": true,
+        "isInProgress": false,
         "pickTurn": 0,
         "type": "ban"
       },
       {
         "actorCellId": 8,
-        "championId": 0,
-        "completed": false,
+        "championId": 157,
+        "completed": true,
         "duration": 0,
         "id": 8,
         "isAllyAction": false,
-        "isInProgress": true,
+        "isInProgress": false,
         "pickTurn": 0,
         "type": "ban"
       },
       {
         "actorCellId": 9,
-        "championId": 0,
-        "completed": false,
+        "championId": 164,
+        "completed": true,
         "duration": 0,
         "id": 9,
         "isAllyAction": false,
-        "isInProgress": true,
+        "isInProgress": false,
         "pickTurn": 0,
         "type": "ban"
       }
@@ -116,7 +116,7 @@
       {
         "actorCellId": -1,
         "championId": 0,
-        "completed": false,
+        "completed": true,
         "duration": 0,
         "id": 102,
         "isAllyAction": false,
@@ -128,8 +128,8 @@
     [
       {
         "actorCellId": 0,
-        "championId": 0,
-        "completed": false,
+        "championId": 523,
+        "completed": true,
         "duration": 0,
         "id": 10,
         "isAllyAction": true,
@@ -141,8 +141,8 @@
     [
       {
         "actorCellId": 5,
-        "championId": 0,
-        "completed": false,
+        "championId": 64,
+        "completed": true,
         "duration": 0,
         "id": 11,
         "isAllyAction": false,
@@ -152,8 +152,8 @@
       },
       {
         "actorCellId": 6,
-        "championId": 0,
-        "completed": false,
+        "championId": 267,
+        "completed": true,
         "duration": 0,
         "id": 12,
         "isAllyAction": false,
@@ -170,14 +170,14 @@
         "duration": 0,
         "id": 13,
         "isAllyAction": true,
-        "isInProgress": false,
+        "isInProgress": true,
         "pickTurn": 0,
         "type": "pick"
       },
       {
         "actorCellId": 2,
-        "championId": 0,
-        "completed": false,
+        "championId": 72,
+        "completed": true,
         "duration": 0,
         "id": 14,
         "isAllyAction": true,
@@ -263,7 +263,7 @@
   "benchChampions": [],
   "benchEnabled": false,
   "boostableSkinCount": 0,
-  "counter": 23,
+  "counter": 42,
   "disallowBanningTeammateHoveredChampions": true,
   "gameId": 0,
   "hasSimultaneousBans": true,
@@ -272,13 +272,13 @@
   "isCustomGame": false,
   "isLegacyChampSelect": false,
   "isSpectating": false,
-  "localPlayerCellId": 4,
+  "localPlayerCellId": 1,
   "lockedEventIndex": -1,
   "myTeam": [
     {
       "assignedPosition": "bottom",
       "cellId": 0,
-      "championId": 0,
+      "championId": 523,
       "championPickIntent": 0,
       "gameName": "anon",
       "internalName": "",
@@ -292,7 +292,7 @@
       "playerAlias": "",
       "playerType": "",
       "puuid": "anon",
-      "selectedSkinId": 0,
+      "selectedSkinId": 523007,
       "spell1Id": 21,
       "spell2Id": 4,
       "summonerId": "anon",
@@ -301,7 +301,7 @@
       "wardSkinId": -1
     },
     {
-      "assignedPosition": "utility",
+      "assignedPosition": "top",
       "cellId": 1,
       "championId": 0,
       "championPickIntent": 0,
@@ -309,7 +309,7 @@
       "internalName": "",
       "isAutofilled": false,
       "isHumanoid": false,
-      "nameVisibilityType": "HIDDEN",
+      "nameVisibilityType": "UNHIDDEN",
       "obfuscatedPuuid": "anon",
       "obfuscatedSummonerId": "anon",
       "pickMode": 0,
@@ -319,7 +319,7 @@
       "puuid": "anon",
       "selectedSkinId": 0,
       "spell1Id": 4,
-      "spell2Id": 3,
+      "spell2Id": 12,
       "summonerId": "anon",
       "tagLine": "anon",
       "team": 1,
@@ -328,8 +328,8 @@
     {
       "assignedPosition": "jungle",
       "cellId": 2,
-      "championId": 0,
-      "championPickIntent": 0,
+      "championId": 72,
+      "championPickIntent": 72,
       "gameName": "anon",
       "internalName": "",
       "isAutofilled": false,
@@ -342,7 +342,7 @@
       "playerAlias": "",
       "playerType": "",
       "puuid": "anon",
-      "selectedSkinId": 0,
+      "selectedSkinId": 72009,
       "spell1Id": 4,
       "spell2Id": 11,
       "summonerId": "anon",
@@ -376,7 +376,7 @@
       "wardSkinId": -1
     },
     {
-      "assignedPosition": "top",
+      "assignedPosition": "utility",
       "cellId": 4,
       "championId": 0,
       "championPickIntent": 0,
@@ -384,7 +384,7 @@
       "internalName": "",
       "isAutofilled": false,
       "isHumanoid": false,
-      "nameVisibilityType": "UNHIDDEN",
+      "nameVisibilityType": "HIDDEN",
       "obfuscatedPuuid": "anon",
       "obfuscatedSummonerId": "anon",
       "pickMode": 0,
@@ -394,7 +394,7 @@
       "puuid": "anon",
       "selectedSkinId": 0,
       "spell1Id": 4,
-      "spell2Id": 12,
+      "spell2Id": 3,
       "summonerId": "anon",
       "tagLine": "anon",
       "team": 1,
@@ -404,44 +404,44 @@
   "pickOrderSwaps": [
     {
       "cellId": 2,
-      "id": 24,
-      "state": "AVAILABLE"
+      "id": 38,
+      "state": "INVALID"
     },
     {
       "cellId": 0,
-      "id": 25,
-      "state": "AVAILABLE"
+      "id": 39,
+      "state": "INVALID"
     },
     {
-      "cellId": 1,
-      "id": 26,
-      "state": "AVAILABLE"
+      "cellId": 4,
+      "id": 46,
+      "state": "SENT"
     },
     {
       "cellId": 3,
-      "id": 27,
-      "state": "AVAILABLE"
+      "id": 47,
+      "state": "INVALID"
     }
   ],
   "positionSwaps": [
     {
       "cellId": 2,
-      "id": 8,
+      "id": 12,
       "state": "AVAILABLE"
     },
     {
       "cellId": 0,
-      "id": 9,
+      "id": 13,
       "state": "AVAILABLE"
     },
     {
-      "cellId": 1,
-      "id": 10,
+      "cellId": 4,
+      "id": 14,
       "state": "AVAILABLE"
     },
     {
       "cellId": 3,
-      "id": 11,
+      "id": 15,
       "state": "AVAILABLE"
     }
   ],
@@ -453,7 +453,7 @@
     {
       "assignedPosition": "",
       "cellId": 5,
-      "championId": 0,
+      "championId": 64,
       "championPickIntent": 0,
       "gameName": "anon",
       "internalName": "",
@@ -467,7 +467,7 @@
       "playerAlias": "",
       "playerType": "",
       "puuid": "anon",
-      "selectedSkinId": 0,
+      "selectedSkinId": 64000,
       "spell1Id": 0,
       "spell2Id": 0,
       "summonerId": "anon",
@@ -478,7 +478,7 @@
     {
       "assignedPosition": "",
       "cellId": 6,
-      "championId": 0,
+      "championId": 267,
       "championPickIntent": 0,
       "gameName": "anon",
       "internalName": "",
@@ -492,7 +492,7 @@
       "playerAlias": "",
       "playerType": "",
       "puuid": "anon",
-      "selectedSkinId": 0,
+      "selectedSkinId": 267000,
       "spell1Id": 0,
       "spell2Id": 0,
       "summonerId": "anon",
@@ -577,8 +577,8 @@
     }
   ],
   "timer": {
-    "adjustedTimeLeftInPhase": 6134,
-    "internalNowInEpochMs": 1791325343389,
+    "adjustedTimeLeftInPhase": 11902,
+    "internalNowInEpochMs": 1791325375477,
     "isInfinite": false,
     "phase": "BAN_PICK",
     "totalTimeInPhase": 25000
@@ -586,22 +586,22 @@
   "trades": [
     {
       "cellId": 2,
-      "id": 16,
-      "state": "INVALID"
-    },
-    {
-      "cellId": 0,
-      "id": 17,
+      "id": 35,
       "state": "INVALID"
     },
     {
       "cellId": 3,
-      "id": 18,
+      "id": 14,
       "state": "INVALID"
     },
     {
-      "cellId": 1,
-      "id": 19,
+      "cellId": 4,
+      "id": 15,
+      "state": "INVALID"
+    },
+    {
+      "cellId": 0,
+      "id": 25,
       "state": "INVALID"
     }
   ]

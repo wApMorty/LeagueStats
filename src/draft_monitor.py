@@ -371,9 +371,9 @@ class DraftMonitor:
         """
         return phases.should_show_bans(state)
 
-    def _auto_hover_champion(self, champion_name: str, reason: str = ""):
-        """Automatically hover the recommended champion."""
-        self.hover.auto_hover_champion(champion_name, reason)
+    def _auto_hover_champion(self, champion_name: str, reason: str = "", action_type: str = "pick"):
+        """Automatically hover the recommended champion ; True si le client l'a accepté."""
+        return self.hover.auto_hover_champion(champion_name, reason, action_type)
 
     def _do_initial_hover(self):
         """Do initial hover with the best champion from the pool when entering champion select."""

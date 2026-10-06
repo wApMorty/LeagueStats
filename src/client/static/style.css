@@ -381,6 +381,7 @@ h1 { margin: 0 0 12px; font: 600 46px/1 var(--font-title); }
 .d-card:hover { border-color: oklch(0.74 0.11 55 / 0.45); }
 .d-card-line { position: absolute; left: 16px; right: 16px; top: -1px; height: 2px; border-radius: 1px;
   background: var(--hc); box-shadow: 0 0 12px var(--hc); }
+.d-card.is-sugg:not(.is-sel) { border-color: oklch(0.74 0.11 55 / 0.28); }
 .d-card.is-sel { border-color: var(--hc); box-shadow: 0 0 30px oklch(0.74 0.11 55 / 0.18), inset 0 0 40px oklch(0.74 0.11 55 / 0.06); }
 .d-card-corner { display: none; position: absolute; width: 9px; height: 9px; background: var(--copper); transform: rotate(45deg); }
 .d-card.is-sel .d-card-corner { display: block; }

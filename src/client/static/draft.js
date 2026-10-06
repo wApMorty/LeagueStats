@@ -183,12 +183,13 @@
     paintPicks(state);
     paintSkins(state);
     if (state.kind !== "ban") ctx.banSel = null;
-    else if (state.my_ban_id) ctx.banSel = state.my_ban_id;
-    else if (!ctx.banSel) ctx.banSel = state.ban_hover_id || state.bans[0] || null;
+    else ctx.banSel = BanLogic.target(state, ctx.banSel); // plus de présélection : le conseil reste une suggestion
+    const suggested = BanLogic.suggestion(state, ctx.banSel);
     ctx.stage.querySelectorAll(".d-cards-ban .d-card").forEach((card) => {
       const id = +card.dataset.champ;
       const selected = id === ctx.banSel;
       card.classList.toggle("is-sel", selected);
+      card.classList.toggle("is-sugg", id === suggested);
       card.querySelector("[data-state]").textContent =
         id === state.my_ban_id ? "Banni" : selected ? "Visé" : "Viser";
     });
@@ -308,7 +309,7 @@
 
   /** Vise un ban (carte ou grimoire) : l'aperçu part dans le client par un survol de ban. */
   function aimBan(id, name) {
-    if (!ctx.state || ctx.state.kind !== "ban" || ctx.state.my_ban_id || ctx.banSel === id) return;
+    if (!BanLogic.shouldSendHover(ctx.state, ctx.banSel, id)) return;
     ctx.banSel = id;
     ctx.banName = name;
     paintRow();

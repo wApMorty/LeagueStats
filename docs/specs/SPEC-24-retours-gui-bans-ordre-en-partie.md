@@ -149,7 +149,41 @@ puis verrouillage, `pickTurn` (joueur et action), `pickOrderSwaps` / `positionSw
 par des extraits réels anonymisés (`gameName`, `tagLine`, `puuid`, `summonerId`, `obfuscated*` retirés), plus
 `session_swaps.json`. Les endpoints de swap sont notés en SPEC-21 §10 une fois confirmés.
 
+**Relevé du 2026-10-07** (une draft classée solo/duo, file 420, 73 formes, 2 min) :
+
+- **Bans simultanés** : `hasSimultaneousBans` vrai, les dix bans `isInProgress` d'un coup (phase `PLANNING`
+  comprise), puis une action `ten_bans_reveal` (`actorCellId: -1`). Les picks se jouent **par lots** : une
+  cellule, puis deux, deux, deux, une, une (ordre des `action_set` : cellules 0, 5-6, 1-2, 7-8, 3-4, 9), donc
+  plusieurs `isInProgress` à la fois : `current_actor` (première action non terminée) ne dit pas qui joue.
+- **`pickTurn` vaut 0 partout** (actions et joueurs) : inutilisable, le rang se lit sur l'ordre des actions.
+- **Ma cellule porte deux actions** : un ban (en cours) puis un pick (`isInProgress` faux). Un survol de ban
+  est la même action avec `championId` > 0, `completed` faux (vu sur un coéquipier : cellule 0, champion 29).
+- **`bannable-champion-ids` ne vaut que `[-1]` pendant toute la phase où mon ban est en cours** (sinon 173
+  identifiants plus le `-1`, y compris les champions déjà bannis) ; `pickable-champion-ids` : 173, inchangée.
+  `disallowBanningTeammateHoveredChampions` vaut vrai. Une liste sans identifiant réel ne dit rien.
+- **Swaps** : `pickOrderSwaps` et `positionSwaps` existent tous deux en file classée, jusqu'au premier pick
+  (vides ensuite). Chaque entrée `{cellId, id, state}` désigne **l'autre joueur** (jamais moi) ; `state` :
+  `AVAILABLE`, `SENT` (ma demande ; les autres passent `INVALID`), `RECEIVED` (la sienne ; idem). Les `id` sont
+  **renouvelés** à chaque swap qui se termine (nouveaux numéros, demande acceptée ou non). Un swap d'ordre
+  accepté **échange les cellules des deux joueurs** : mon `localPlayerCellId` change (3 → 4, puis 4 → 1 → 4)
+  avec mon `assignedPosition`, et les actions suivent la cellule (mon ban posé change). Un swap de rôle n'a pas
+  été accepté pendant le relevé. **Non relevés** (le relevé est en lecture seule) : les chemins `POST` et leur
+  corps ; SPEC-21 §10 ne les note donc pas.
+- Cause du ban : **trois défauts relevés**, corrigés en tâche 97 (§4.2).
+
 ### 4.2 Ban (tâche 97)
+
+**Réalisé le 2026-10-07 d'après le relevé** (`tests/regression/test_regression_client_ban_lcu.py`, 8 tests, rouge
+avant) : (1) une liste de bannissables sans identifiant réel ne bloque plus un ban (c'était le refus
+« pas disponible » de chaque ban depuis l'écran) ; (2) `LCUClient.get_current_player_action_id(type)` et
+`hover_champion(name, action_type)` visent l'action du type demandé, `auto_hover_champion` renvoie un
+booléen et `handle_auto_ban_hover` passe `ban` et lit le retour ; (3) `is_player_turn` / `is_player_ban_turn`
+lisent `acting_cells` (bans et picks sont simultanés) ; (4) refus du client expliqué (déjà banni, déjà pris,
+survolé par un coéquipier) ; (5) plus de présélection silencieuse (`ban_logic.js`, testé sous node). **Écart
+avec le point 4 ci-dessous** : les cartes ne sont pas filtrées sur `bannable-champion-ids`, la liste valant
+`[-1]` pendant la phase et contenant les champions déjà bannis, elle exclurait tout ou rien.
+
+Texte d'origine :
 
 1. Un test rejoue sur la fixture réelle la séquence `hover_ban` puis `ban` de `draft_actions.run` et vérifie
    l'endpoint, le corps et le type contre ce que le relevé montre que le client LoL fait / accepte
