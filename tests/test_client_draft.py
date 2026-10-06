@@ -1501,3 +1501,68 @@ def test_ban_logic_servi_avant_draft_js_et_sans_erreur_de_syntaxe(client):
     if node is None:
         pytest.skip("node absent")
     assert subprocess.run([node, "--check", str(BAN_LOGIC)], capture_output=True).returncode == 0
+
+
+# ---------- ordre de pick à l'écran (SPEC-24 tâche 100) ----------
+
+PICK_ORDER = {
+    0: 1,
+    5: 2,
+    6: 3,
+    1: 4,
+    2: 5,
+    7: 6,
+    8: 7,
+    3: 8,
+    4: 9,
+    9: 10,
+}  # relevé en draft classée
+
+
+def ordered(snapshot, acting=(0,)):
+    for team in ("allies", "enemies"):
+        for p in snapshot[team]:
+            p["pick_order"] = PICK_ORDER[p["cell_id"]]
+            p["is_acting"] = p["cell_id"] in acting
+    return snapshot
+
+
+def test_dix_numeros_de_pick_et_l_anneau_du_joueur_en_cours_cellule_0_comprise(client, bus):
+    bus.publish("draft", ordered(pick_snapshot()))
+    html = client.get("/draft/stage").text
+    assert html.count('class="d-order"') == 10
+    assert sorted(int(n) for n in re.findall(r'class="d-order"[^>]*>(\d+)<', html)) == list(
+        range(1, 11)
+    )
+    assert html.count(" d-acting") == 1  # moi, la cellule 0
+    assert 'class="d-me d-acting"' in html
+    assert 'title="Pick n° 1"' in html and 'title="Pick n° 10"' in html
+
+
+def test_l_anneau_suit_les_lots_de_picks_simultanes(client, bus):
+    bus.publish("draft", ordered(pick_snapshot(), acting=(1, 2)))
+    html = client.get("/draft/stage").text
+    assert html.count(" d-acting") == 2 and 'class="d-me d-acting"' not in html
+
+
+def test_les_numeros_sont_la_des_la_phase_de_bans(client, bus):
+    bus.publish("draft", ordered(ban_snapshot(), acting=tuple(range(10))))
+    html = client.get("/draft/stage").text
+    assert html.count('class="d-order"') == 10
+
+
+def test_sans_actions_du_lcu_ni_numero_ni_anneau(client, bus):
+    bus.publish(
+        "draft", pick_snapshot(allies=[asdict(player("ally", 0, role="top", is_local=True))])
+    )
+    html = client.get("/draft/stage").text
+    assert 'class="d-order"' not in html and "d-acting" not in html
+
+
+def test_le_numero_fait_partie_de_l_empreinte_du_sceau(client, bus):
+    bus.publish("draft", pick_snapshot())
+    before = client.get("/draft/stage").text
+    bus.publish("draft", ordered(pick_snapshot()))
+    after = client.get("/draft/stage").text
+    sigs = lambda html: re.findall(r'data-sig="([^"]+)"', html)
+    assert sigs(before) != sigs(after)

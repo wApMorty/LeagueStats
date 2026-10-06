@@ -10,7 +10,7 @@
 {%- endmacro %}
 
 {% macro member(m, i) -%}
-<div class="d-member d-member-{{ m.team }}" data-key="m-{{ m.team }}-{{ i }}" data-sig="{{ m|sig }}"
+<div class="d-member d-member-{{ m.team }}{{ ' d-acting' if m.acting }}" data-key="m-{{ m.team }}-{{ i }}" data-sig="{{ m|sig }}"
      data-pop data-delay="{{ m.delay }}" style="--l: {{ m.left }}px; --t: {{ m.top }}px" data-champion="{{ m.champion_id or '' }}">
   {% if m.pending %}
   <div class="d-portrait d-pending" data-glow="2600"><span class="rune" aria-hidden="true">ᛃ</span></div>
@@ -18,6 +18,7 @@
   <div class="d-portrait{{ ' d-hover' if m.hovering }}">{% if m.img %}<img src="{{ m.img }}" alt="">{% endif %}</div>
   {% endif %}
   {% if m.hovering %}<svg class="d-dashring" data-spin="10" viewBox="0 0 112 112" aria-hidden="true"><circle cx="56" cy="56" r="54"/></svg>{% endif %}
+  {% if m.order %}<span class="d-order" title="Pick n° {{ m.order }}">{{ m.order }}</span>{% endif %}
   <div class="d-caption"><div class="d-name">{{ m.name }}</div><div class="d-sub">{{ m.role }} · {{ m.status }}</div></div>
 </div>
 {%- endmacro %}
@@ -79,11 +80,12 @@
   <div data-key="rings" data-sig="rings" class="d-seal-fx">{{ rings('dRing1', 160, 0, 'ᚠ ᚢ ᚦ ᚨ ᚱ ᚲ ᚷ ᚹ ᚺ ᚾ ᛁ ᛃ ᛇ ᛈ ᛉ ᛊ ᛏ ᛒ ᛖ ᛗ ᛚ ᛜ ᛞ ᛟ ᚠ ᚢ ᚦ ᚨ ᚱ ᚲ ᚷ ᚹ ᚺ ᚾ ᛁ ᛃ ᛇ ᛈ ᛉ ᛊ ᛏ ᛒ ᛖ ᛗ ᛚ ᛜ ᛞ ᛟ') }}</div>
   {% for m in s.allies %}{{ member(m, loop.index0) }}{% endfor %}
   {% if s.me %}
-  <div class="d-me" data-key="me" data-sig="{{ s.me|sig }}" title="{{ s.me.name }}">
+  <div class="d-me{{ ' d-acting' if s.me.acting }}" data-key="me" data-sig="{{ s.me|sig }}" title="{{ s.me.name }}">
     <div class="d-shock" data-shock></div><div class="d-shock d-shock-b" data-shock></div>
     <div class="d-portrait d-portrait-me"{% if v.intro %} data-pop data-delay="1000"{% endif %}><img data-me{% if s.me.img %} src="{{ s.me.img }}"{% endif %} alt="" style="opacity: {{ s.me.opacity }}"></div>
     {% if not s.me.locked %}<svg class="d-dashring d-dashring-me" data-spin="8" viewBox="0 0 128 128" aria-hidden="true"><circle cx="64" cy="64" r="62"/></svg>{% endif %}
     {% if s.me.locked %}<svg class="d-lock" data-seal viewBox="-20 -20 40 40" aria-hidden="true"><circle r="18"/><path d="M0,-11 L6.47,8.9 L-10.46,-3.4 L10.46,-3.4 L-6.47,8.9 Z"/></svg>{% endif %}
+    {% if s.me.order %}<span class="d-order" title="Pick n° {{ s.me.order }}">{{ s.me.order }}</span>{% endif %}
     <div class="d-me-caption"><div class="d-kicker">Toi · {{ s.me.role }}</div><div class="d-name d-name-me">{{ s.me.name }}</div><div class="d-sub">{{ s.me.state }}</div></div>
   </div>
   {% endif %}

@@ -149,6 +149,8 @@ def _member(
         "img": None if foe_hidden else champions.image(shown),
         "role": ROLE_LABELS.get(player["role"], "—") if player["role"] else "—",
         "status": _status(player, kind),
+        "order": player.get("pick_order"),  # rang de pick 1 à 10, None sans actions du LCU
+        "acting": bool(player.get("is_acting")),
         "pending": foe_hidden or not shown,
         "hovering": bool(hover_id and not champion_id),
         "left": left,
@@ -208,6 +210,8 @@ def seals(snapshot: Dict[str, Any], champions: Champions, intro: bool) -> Dict[s
         shown = me["champion_id"] or me["hover_id"]
         me_view = {
             "cell_id": me["cell_id"],
+            "order": me.get("pick_order"),
+            "acting": bool(me.get("is_acting")),
             "champion_id": me["champion_id"],
             "name": me["champion"] or me.get("hover") or "Choisir",
             "img": champions.image(shown),

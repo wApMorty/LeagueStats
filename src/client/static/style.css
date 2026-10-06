@@ -293,6 +293,13 @@ h1 { margin: 0 0 12px; font: 600 46px/1 var(--font-title); }
 .d-portrait { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; background: oklch(0.13 0.018 170);
   border: 2px solid oklch(0.8 0.1 165); box-shadow: 0 0 22px oklch(0.8 0.1 165 / 0.35); }
 .d-portrait img { display: block; width: 116%; height: 116%; margin: -8%; }
+/* Ordre de pick (SPEC-24 tâche 100) : médaillon du rang, anneau du joueur en cours. */
+.d-order { position: absolute; top: -6px; left: -6px; z-index: 2; min-width: 24px; height: 24px; padding: 0 5px;
+  box-sizing: border-box; display: grid; place-items: center; border-radius: 12px; font-size: 12px; font-weight: 700;
+  line-height: 1; color: oklch(0.16 0.02 170); background: oklch(0.8 0.1 165); box-shadow: 0 0 10px oklch(0.8 0.1 165 / 0.5); }
+.d-member-enemy .d-order { background: oklch(0.74 0.12 355); box-shadow: 0 0 10px oklch(0.74 0.12 355 / 0.5); }
+.d-me .d-order { top: -8px; left: -8px; background: var(--copper); box-shadow: 0 0 10px oklch(0.74 0.11 55 / 0.5); }
+.d-acting .d-portrait { outline: 2px solid oklch(0.95 0.03 95); outline-offset: 4px; }
 .d-member-enemy .d-portrait { border-color: oklch(0.74 0.12 355); box-shadow: 0 0 22px oklch(0.74 0.12 355 / 0.35); }
 .d-portrait.d-hover img { opacity: 0.55; }
 .d-portrait.d-pending { border: 1.5px dashed oklch(0.74 0.12 355 / 0.8); background: oklch(0.16 0.02 170);
