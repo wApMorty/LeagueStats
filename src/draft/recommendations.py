@@ -24,8 +24,9 @@ from ..analysis.game_eval import Placed
 from ..config_constants import draft_config, ui_config
 from ..utils.display import format_games_count
 from .search import PickTurn, SearchResult
-from .snapshot import TOPIC, Analysis, build_snapshot
+from .snapshot import TOPIC, Analysis, SnapshotSwapAdvice, build_snapshot
 from .state import DraftState
+from .swap_advice import has_open_swap, role_swaps
 
 
 class DraftRecommender:
@@ -35,6 +36,8 @@ class DraftRecommender:
         self.m = monitor
         self._last_analysis: Optional[Analysis] = None
         self._last_key = None
+        self._swap_key = None
+        self._swap_cache: List[SnapshotSwapAdvice] = []
 
     # ---------- préparation de la position ----------
 
@@ -242,7 +245,9 @@ class DraftRecommender:
                 analysis.base_probability = self._base_probability(
                     self._placed(state.ally_picks, state), self._placed(state.enemy_picks, state)
                 )
-            snapshot = build_snapshot(self.m, state, analysis, self._advice(state))
+            snapshot = build_snapshot(
+                self.m, state, analysis, self._advice(state), self._swap_advice(state)
+            )
             self.m.last_snapshot = snapshot
             bus = getattr(self.m, "bus", None)
             if bus is not None:
@@ -250,6 +255,36 @@ class DraftRecommender:
         except Exception as e:  # pylint: disable=broad-exception-caught
             if self.m.verbose is True:
                 print(f"[WARNING] Snapshot du draft non publié: {e}")
+
+    def _swap_advice(self, state: DraftState) -> List[SnapshotSwapAdvice]:
+        """Conseils d'échange de rôle ; recalculés quand les picks, les lanes ou les échanges changent.
+
+        Best-effort : une panne du conseil ne coûte que le conseil (SPEC-24 tâche 102).
+        """
+        try:
+            if not has_open_swap(state.swaps, "position"):
+                self._swap_key = None
+                return []
+            me = state.local_player_cell_id
+            allies = {}
+            for cell in state.ally_cells:
+                champion_id = cell.champion_id or (cell.hover_id if cell.cell_id == me else 0)
+                if champion_id:
+                    lane = state.inferred_roles.get(cell.champion_id) or cell.position
+                    allies[cell.cell_id] = (self.m._get_display_name(champion_id), lane)
+            enemies = self._placed(state.enemy_picks, state)
+            key = (
+                tuple(sorted(allies.items(), key=lambda item: item[0])),
+                tuple(enemies),
+                me,
+                tuple((s.kind, s.cell_id, s.state) for s in state.swaps),
+            )
+            if key != self._swap_key:
+                self._swap_key = key
+                self._swap_cache = role_swaps(self.m.evaluator, allies, enemies, me, state.swaps)
+            return self._swap_cache
+        except Exception:  # pylint: disable=broad-exception-caught
+            return []
 
     def _base_probability(self, allies: List[Placed], enemies: List[Placed]) -> Optional[float]:
         """Probabilité de victoire de la position actuelle, référence des écarts du classement."""

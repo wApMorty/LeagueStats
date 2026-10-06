@@ -47,6 +47,17 @@ class SnapshotSwap:
 
 
 @dataclass
+class SnapshotSwapAdvice:
+    """Un échange que le modèle conseille : ce que gagne la victoire prédite, en points."""
+
+    kind: str  # "position" (échange de rôle) | "pick_order"
+    cell_id: int  # l'autre joueur
+    champion: str  # son champion
+    gain_pts: float
+    reason: str
+
+
+@dataclass
 class SnapshotBan:
     champion_id: int
     champion: str
@@ -125,6 +136,7 @@ class DraftSnapshot:
     projected_probability: Optional[float] = None
     ban_advice: List[SnapshotBanAdvice] = field(default_factory=list)
     swaps: List[SnapshotSwap] = field(default_factory=list)
+    swap_advice: List[SnapshotSwapAdvice] = field(default_factory=list)
     champions: List[SnapshotChampion] = field(default_factory=list)
     pool_name: Optional[str] = None
     pool: List[str] = field(default_factory=list)
@@ -207,7 +219,11 @@ def _champion_table(
 
 
 def build_snapshot(
-    monitor, state: DraftState, analysis: Analysis, advice: Optional[str]
+    monitor,
+    state: DraftState,
+    analysis: Analysis,
+    advice: Optional[str],
+    swap_advice: Sequence[SnapshotSwapAdvice] = (),
 ) -> DraftSnapshot:
     """Le snapshot de ce tick ; `monitor` fournit les noms, la pool, les prédicats de phase et le loadout."""
     name = monitor._get_display_name  # pylint: disable=protected-access
@@ -265,6 +281,7 @@ def build_snapshot(
         projected_probability=results[0].win_probability if results else base,
         ban_advice=ban_rows,
         swaps=[SnapshotSwap(s.kind, s.cell_id, s.state) for s in state.swaps],
+        swap_advice=list(swap_advice),
         champions=_champion_table(monitor, analysis, gains),
         pool_name=getattr(monitor, "pool_name", None),
         pool=list(getattr(monitor, "current_pool", []) or []),

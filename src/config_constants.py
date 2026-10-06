@@ -280,6 +280,10 @@ class DraftConfig:
     # premiers reprennent les paliers des anciens marqueurs [+]/[++].
     DUEL_ARROW_THRESHOLDS: tuple = (1.0, 2.0, 3.0)
 
+    # SPEC-24 tâche 102 : gain minimal (points de victoire prédite) pour conseiller un échange. Départ :
+    # l'ordre de grandeur d'un palier de DUEL ; à recalibrer sur le bruit du modèle (tâche 103).
+    SWAP_MIN_GAIN_PTS: float = 1.0
+
     # SPEC-15 / ADR-003 : build OneTricks importée au lock-in. Le User-Agent de
     # navigateur fait passer le checkpoint anti-bot Vercel, acceptable tant que
     # le volume reste celui d'une consultation manuelle (2 pages par draft).
