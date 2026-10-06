@@ -78,6 +78,7 @@ src/
 │   ├── data.py, home.py, review.py             # Données des écrans du coaching : rang, progression, calibration ; accueil ; parties et post-game
 │   ├── draft_*.py, found.py, assets.py          # Draft interactive, partie trouvée, Data Dragon local
 │   ├── profil.py, historique.py, collection.py   # Écrans du groupe Client lus dans le LCU : profil, historique, collection
+│   ├── draft_swaps.py                             # Échanges d'ordre et de rôle (l'id lu dans la session)
 │   ├── ingame.py, en_partie.py                    # Écran « En partie » : fil de lecture de la Live Client API (sujet `ingame`), vue (courbe, face-à-face, build)
 │   ├── lobby.py, social.py                        # Lobby et file d'attente (écriture gardée par la phase), social en lecture seule
 │   ├── templates/                                # Jinja : coque, un gabarit par écran, fragments htmx dans partials/

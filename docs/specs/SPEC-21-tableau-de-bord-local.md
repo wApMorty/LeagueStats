@@ -539,8 +539,9 @@ une recette de @pj35 (§6, 10).
 - ❌ **Mise en page déplaçable et réglages du moteur depuis l'interface** : thème seul pour ce lot ;
   à rouvrir avec leur coût (stockage des dispositions ; sortie des constantes de
   `config_constants.py`, contraire à la règle actuelle).
-- ❌ **Overlay et écran « en partie »** : l'overlay de SPEC-20 reste un processus à part ; un écran
-  de partie en cours dans le client n'est pas demandé.
+- ❌ **Overlay et écran « en partie »** : l'overlay de SPEC-20 reste un processus à part. ~~Un écran
+  de partie en cours dans le client n'est pas demandé.~~ **Rouvert le 2026-10-06 par @pj35 et livré par
+  SPEC-24** : écran « En partie » du client (lecture seule), l'overlay `tkinter` reste inchangé.
 - ❌ **Réécriture de la boucle de draft** : le Live Coach garde son polling ; le client s'y branche
   par un bus, rien de plus.
 - ❌ **Thème clair** : reporté, le handoff ne le définit pas (§2, validé).

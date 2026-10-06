@@ -20,6 +20,9 @@ CLIENT = project_root / "src" / "client"
 MODULES = (
     "src.client.app",
     "src.client.launch",
+    "src.client.ingame",
+    "src.client.en_partie",
+    "src.client.draft_swaps",
     "fastapi",
     "uvicorn",
     "jinja2",

@@ -24,15 +24,16 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Feature
 
-- **Ordre de pick, échanges de rôle et écran « En partie » (SPEC-24 tâches 99, 100, 102, 105 à 110, lot en
-  cours)** — chaque sceau de la draft porte son numéro de pick (1 à 10, dès la phase de bans) et un anneau
-  marque les joueurs dont c'est le tour. Le coach chiffre les échanges de **rôle** (gain de victoire prédite
-  du modèle, au-dessus de 1 point). Nouvel écran **En partie** (entrée de navigation et pastille dans la
+- **Ordre de pick, échanges et écran « En partie » (SPEC-24 tâches 99 à 111)** — chaque sceau de la draft
+  porte son numéro de pick (1 à 10, dès la phase de bans) et un anneau marque les joueurs dont c'est le tour.
+  Les échanges d'ordre et de rôle se demandent, s'acceptent, se refusent et s'annulent depuis la légende d'un
+  allié (bandeau pour une demande reçue) ; l'`id` de l'échange est lu dans la session par le serveur. Le coach
+  chiffre les échanges de **rôle** (gain de victoire prédite du modèle, au-dessus de 1 point). Nouvel écran **En partie** (entrée de navigation et pastille dans la
   barre de titre pendant la partie, sans bascule automatique) : win chance et courbe en direct avec les
   objectifs, face-à-face de la draft, plan de build avec les objets achetés cochés, prochain objet et or qui
   manque, ordre des compétences quand OneTricks le publie. Lecture seule. **Pas de conseil d'ordre de pick** :
   le bench montre que la recherche ne compare pas les ordres (elle écarte les tours qui précèdent le sien). Les
-  boutons d'échange (demander, accepter, annuler) et la carte « Échanges » attendent un arbitrage (SPEC-24 §2).
+  chemins `POST` des échanges viennent du schéma du client et n'ont pas encore été exercés en vraie draft.
 
 - **Analyse de fin de draft en données, et relevé de draft (SPEC-24 tâches 96 et 106, lot en cours)** —
   `FinalAnalysis` (une ligne par lane, probabilité, écart, évaluation, build avec ses substitutions du duel)
