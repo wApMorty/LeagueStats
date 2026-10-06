@@ -1,6 +1,6 @@
 # SPEC-24 — Retours sur le client : bans, ordre de pick et swaps, écran « En partie »
 
-**Statut** : 🟡 Rédigée le 2026-10-06 ; arbitrages de §2 validés par @pj35 le 2026-10-06, sauf le cadre des swaps (à valider après le relevé de la tâche 96).
+**Statut** : 🟡 En cours (2026-10-07 : tâches 98 et 106 faites, 96 à moitié, script prêt et relevé de @pj35 à faire) ; rédigée le 2026-10-06 ; arbitrages de §2 validés par @pj35 le 2026-10-06, sauf le cadre des swaps (à valider après le relevé de la tâche 96).
 
 **Origine** : @pj35, 2026-10-06 — « fix la sélection de ban qui ne fonctionne pas » ; « afficher le pick
 order et proposer des swap order ou swap role » ; « une section in-game : infos de build, analyse de game

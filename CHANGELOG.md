@@ -4,6 +4,24 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### 🐛 Fix
+
+- **Le premier pick d'une draft n'était pas vu comme « mon tour » (SPEC-24 tâche 98)** — la cellule 0 était
+  traitée comme « personne » : sur le premier pick, le Live Coach ne reconnaissait pas le tour du joueur de la
+  cellule 0, et l'acteur affiché pouvait être celui d'une action plus tardive. L'état de draft porte aussi
+  `acting_cells` (toutes les cellules dont l'action est en cours, utile aux bans simultanés). Régression :
+  `tests/regression/test_regression_current_actor_cell_zero.py`.
+
+### ✨ Feature
+
+- **Analyse de fin de draft en données, et relevé de draft (SPEC-24 tâches 96 et 106, lot en cours)** —
+  `FinalAnalysis` (une ligne par lane, probabilité, écart, évaluation, build avec ses substitutions du duel)
+  est calculée à part, imprimée comme avant (sortie console identique, vérifiée sur 5 jeux) et publiée sur le
+  bus (sujet `game`) jusqu'à la draft suivante : c'est la source de l'écran « En partie » à venir.
+  `python scripts/dump_lcu_draft_forms.py --watch` relève, pendant une draft, chaque nouvelle forme de la
+  session, des champions bannissables et des swaps (lectures seules, identités retirées) ; le relevé par
+  @pj35 conditionne le correctif du ban (tâche 97) et les swaps.
+
 ### ✨ Feature
 
 - **Client LeagueStats, collection, lobby, file et social (SPEC-21 tâches 79 à 83)** — le groupe « Client »
