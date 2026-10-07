@@ -4,6 +4,12 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+## [4.3.0] - 2026-10-07
+
+Le Live Coach suit la phase de jeu par l'événement WebSocket du client LoL (0 lecture par tour) et affiche
+une pastille de phase permanente. Les LP et l'écran de fin sont de nouveau capturés, lus hors de la boucle
+du monitor. Aucune action requise (pas de migration, pas de nouvelle dépendance).
+
 ### 🐛 Fix
 
 - **Les LP et l'écran de fin n'étaient plus capturés (SPEC-25)** — depuis le 2026-10-05 (11 parties), ni
