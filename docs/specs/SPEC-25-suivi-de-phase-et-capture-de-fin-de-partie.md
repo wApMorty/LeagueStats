@@ -57,9 +57,9 @@ vitesse de la boucle du monitor.
 | Événement `/lol-ranked` du WebSocket | **Validé (@pj35, 2026-10-07)** : écarté comme source principale ; la tâche 117, **conditionnelle** au spike, ne le lit que s'il porte la notification de LP. |
 | Périmètre dans le client | **Validé (@pj35, 2026-10-07)** : sujet `phase` sur le bus **et** pastille permanente dans la barre de titre. SPEC-23 (collecte : `step(phase)`) et SPEC-24 (écran « En partie ») la consomment. |
 | Spike | **Validé (@pj35, 2026-10-07)** : un relevé en lecture seule d'une fin de partie réelle (événements WebSocket, phases, durée de disponibilité des deux endpoints) avant d'implémenter. |
-| Erreurs de capture muettes | **À valider** : afficher une fois chaque erreur distincte en `[ALERTE]` même hors `-v` (le Live Coach reste best-effort : rien n'est levé). |
-| Cadence de rattrapage | **À valider** : `PHASE_POLL_S = 2,0` hors fin de partie, `PHASE_POST_POLL_S = 1,0` en fin de partie ; à confirmer sur le relevé de la tâche 112. |
-| Ralentissement de la boucle (2 à 5 s/tour) | **À valider** : non traité ici (cause non établie, §1). Avec le tracker le tour perd 2 lectures sur 3, et la capture n'en dépend plus ; si la lenteur persiste, un constat chiffré par étape du tour fait l'objet d'une tâche à part. |
+| Erreurs de capture muettes | **Validé (@pj35, 2026-10-07)** : afficher une fois chaque erreur distincte en `[ALERTE]` même hors `-v` (le Live Coach reste best-effort : rien n'est levé). |
+| Cadence de rattrapage | **Validé (@pj35, 2026-10-07)** : `PHASE_POLL_S = 2,0` hors fin de partie, `PHASE_POST_POLL_S = 1,0` en fin de partie ; à confirmer sur le relevé de la tâche 112. |
+| Ralentissement de la boucle (2 à 5 s/tour) | **Validé (@pj35, 2026-10-07)** : non traité ici (cause non établie, §1). Avec le tracker le tour perd 2 lectures sur 3, et la capture n'en dépend plus ; si la lenteur persiste, un constat chiffré par étape du tour fait l'objet d'une tâche à part. |
 
 ## 3. Approches considérées
 
