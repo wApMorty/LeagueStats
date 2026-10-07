@@ -383,6 +383,34 @@ class DraftConfig:
     POST_GAME_RETRY_INTERVAL: float = 5.0
     POST_GAME_RETRY_WINDOW: float = 600.0
 
+    # SPEC-25 : suivi de la phase gameflow (`PhaseTracker`). L'événement WebSocket donne la phase à
+    # l'instant du changement (relevé du 2026-10-07), le sondage de rattrapage couvre un événement
+    # manqué, une reconnexion et le mode console. Pendant la fin de partie, l'écran de fin et la
+    # notification de LP ne répondent que tant que la phase dure : une lecture par seconde.
+    PHASE_POLL_S: float = 2.0
+    PHASE_POST_POLL_S: float = 1.0
+    # Sans confirmation de la phase (événement ou sondage réussi) depuis ce délai, le tracker la
+    # déclare inconnue (None) et le monitor relit la phase lui-même.
+    PHASE_STALE_S: float = 10.0
+    # Client fermé : au plus une recherche des identifiants (scrutation des processus) par délai.
+    PHASE_CREDENTIALS_RETRY_S: float = 10.0
+    # Phases du LCU (`GameflowPhase`) rangées par famille ; la famille `post` est
+    # `OUTCOME_TRIGGER_PHASES`, sa seule source. Une phase absente est `unknown`.
+    PHASE_KINDS: Dict[str, str] = field(
+        default_factory=lambda: {
+            "None": "idle",
+            "Lobby": "idle",
+            "Matchmaking": "queue",
+            "ReadyCheck": "queue",
+            "ChampSelect": "draft",
+            "GameStart": "game",
+            "InProgress": "game",
+            "Reconnect": "game",
+            "FailedToLaunch": "error",
+            "TerminatedInError": "error",
+        }
+    )
+
 
 @dataclass
 class RoleInferenceConfig:
