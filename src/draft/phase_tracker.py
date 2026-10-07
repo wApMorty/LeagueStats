@@ -72,6 +72,7 @@ class PhaseTracker:
         self._entered_epoch = time.time()
         self._confirmed = float("-inf")  # dernier instant où la phase a été confirmée
         self._callbacks: List[Callback] = []
+        self._event_handlers: List[Callable[[dict], None]] = []
         self._unknown_seen: set = set()
         self._stop = threading.Event()
         self._thread: Optional[threading.Thread] = None
@@ -95,6 +96,11 @@ class PhaseTracker:
     def subscribe(self, callback: Callback) -> None:
         """`callback(ancienne, nouvelle, famille)` à chaque changement, dans le fil du tracker."""
         self._callbacks.append(callback)
+
+    def subscribe_events(self, handler: Callable[[dict], None]) -> None:
+        """`handler(événement)` pour chaque événement LCU du bus autre que la phase, dans le fil du
+        tracker : il doit rester bref et ne pas toucher à une base. Sans bus, jamais appelé."""
+        self._event_handlers.append(handler)
 
     def observe(self, phase: Optional[str]) -> None:
         """Une lecture : événement, sondage réussi (chaîne) ou sondage sans réponse (None)."""
@@ -135,12 +141,20 @@ class PhaseTracker:
         self.observe(phase)
 
     def _on_event(self, event) -> None:
-        """Un message du bus : seul l'événement de phase compte."""
+        """Un message du bus : l'événement de phase, ou un autre pour les abonnés d'événements."""
         payload = event[1]
-        if isinstance(payload, dict) and payload.get("uri") == PHASE_URI:
+        if not isinstance(payload, dict):
+            return
+        if payload.get("uri") == PHASE_URI:
             data = payload.get("data")
             if isinstance(data, str):
                 self.observe(data)
+            return
+        for handler in list(self._event_handlers):
+            try:
+                handler(payload)
+            except Exception:  # pylint: disable=broad-exception-caught
+                pass  # un abonné cassé n'arrête ni le tracker ni les autres
 
     def start(self) -> None:
         """Lance le fil daemon ; sans bus, le sondage seul. Sans effet s'il tourne déjà."""

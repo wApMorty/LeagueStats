@@ -13,6 +13,9 @@ from typing import Optional
 
 from ..config_constants import coaching_config
 
+# L'événement WebSocket de cet URI porte la même notification que le GET, à l'instant où elle naît.
+LP_NOTIFICATION_URI = "/lol-ranked/v1/current-lp-change-notification"
+
 
 def snapshot_current(lcu, db) -> int:
     """Une photo par file classée où le joueur a un rang. Retourne leur nombre."""

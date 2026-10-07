@@ -74,6 +74,16 @@ class GameCapture:
         self._safely(lambda: self.remember_end_of_game(lcu))
         self._safely(lambda: self.remember_lp_notification(lcu))
 
+    def on_lcu_event(self, event: dict) -> None:
+        """Événement WebSocket du client LoL (fil du tracker de phase) : la notification de LP est
+        mise de côté dès qu'elle naît, sans attendre une lecture. Ne touche pas à la base."""
+        if event.get("uri") != ranked.LP_NOTIFICATION_URI:
+            return
+        note = ranked.valid_notification(event.get("data"))
+        if note is not None:
+            with self._lock:
+                self._lp_by_game[note["gameId"]] = note
+
     def write_lp_snapshots(self) -> None:
         """Écrit les notifications de LP mises de côté ; celle qu'une base verrouillée a refusée
         reste en mémoire et repart au passage suivant."""

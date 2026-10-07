@@ -117,6 +117,7 @@ class DraftMonitor:
         self.game_capture = GameCapture(self)  # SPEC-19
         # SPEC-25 : lit l'écran de fin et la notification de LP dès l'entrée en fin de partie.
         self.post_game_watcher = PostGameWatcher(self.phase_tracker, self.game_capture)
+        self.phase_tracker.subscribe_events(self.game_capture.on_lcu_event)  # notification de LP
         self.crawler = Crawler(self)  # SPEC-20 : collecte de parties tierces
         self.loadout = LoadoutImporter(self)  # SPEC-15
         self.last_recommendation = None  # Track last recommendation to avoid spam

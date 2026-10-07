@@ -246,3 +246,16 @@ def test_le_lecteur_oublie_des_identifiants_perimes():
     assert read() == "Lobby"
     assert read() is None
     assert lcu.credentials is None  # le client LoL a redémarré : nouveau port
+
+
+def test_les_abonnes_d_evenements_recoivent_les_autres_uri_et_un_abonne_casse_ne_gene_pas():
+    tracker, _ = make()
+    seen = []
+    tracker.subscribe_events(Mock(side_effect=RuntimeError("boum")))
+    tracker.subscribe_events(seen.append)
+    ranked = {"uri": "/lol-ranked/v1/current-lp-change-notification", "data": {"gameId": 1}}
+    tracker._on_event(("lcu", ranked))
+    tracker._on_event(event("Lobby"))  # la phase n'est pas un événement « autre »
+    tracker._on_event(("lcu", None))
+    assert seen == [ranked]
+    assert tracker.phase == "Lobby"

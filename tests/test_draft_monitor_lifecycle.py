@@ -553,3 +553,11 @@ class TestPhaseTrackerWiring:
         monitor.phase_tracker.observe("PreEndOfGame")  # la boucle, trop lente, n'a rien vu
         assert monitor._post_game_until > time.time()
         assert monitor._next_post_game_attempt == 0.0
+
+    def test_la_notification_de_lp_de_l_evenement_arrive_a_la_capture(self, monitor):
+        event = {
+            "uri": "/lol-ranked/v1/current-lp-change-notification",
+            "data": {"gameId": 7, "queueType": "RANKED_SOLO_5x5", "leaguePointsDelta": -20},
+        }
+        monitor.phase_tracker._on_event(("lcu", event))  # SPEC-25 tâche 117
+        assert monitor.game_capture._lp_by_game[7]["leaguePointsDelta"] == -20

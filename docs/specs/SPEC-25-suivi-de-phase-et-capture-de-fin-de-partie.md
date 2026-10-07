@@ -98,6 +98,8 @@ vitesse de la boucle du monitor.
   complète** (`leaguePointsDelta` −20, `leaguePoints` 64, `tier`, `division`, `gameId`, `queueType`), identique à la réponse du GET. Elle arrive 4 fois (une `null`, puis 3 fois la charge). Même constat pour
   `/lol-end-of-game/v1/eog-stats-block` (`Create` puis 3 `Update`, dernière charge identique au GET) : à noter pour la
   tâche 117 (lire aussi l'écran de fin dans l'événement coûte une ligne de plus).
+- **Tâche 117 livrée** : `GameCapture.on_lcu_event` (abonné d'événements du tracker, `PhaseTracker.subscribe_events`)
+  met la notification de côté dès l'événement ; l'écran de fin n'est pas lu dans l'événement (hors de la tâche).
 - **Bruit du préfixe `/lol-ranked`** : à l'entrée en fin de partie, ~25 événements `ranked-stats/<puuid>` et
   `cached-ranked-stats/<puuid>` (un par joueur de la partie) en 130 ms, 69 événements au total sur la partie. Le tracker
   et la tâche 117 filtrent sur l'URI exacte.

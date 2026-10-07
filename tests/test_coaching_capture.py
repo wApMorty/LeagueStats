@@ -275,3 +275,53 @@ class TestTransientsOffLoop:
         out = capsys.readouterr().out
         assert out.count("[ALERTE] Capture de partie : RuntimeError: client fermé") == 1
         assert out.count("[ALERTE] Capture de partie : ValueError: autre") == 1
+
+
+class TestLpFromWebSocketEvent:
+    """SPEC-25 tâche 117 : l'événement `/lol-ranked` porte la notification de LP (relevé du 2026-10-07)."""
+
+    NOTE = json.loads(
+        (
+            Path(__file__).parent / "fixtures" / "lcu_endgame" / "lp_change_notification.json"
+        ).read_text(encoding="utf-8")
+    )
+    EVENT = {"uri": ranked.LP_NOTIFICATION_URI, "eventType": "Update", "data": NOTE}
+
+    def test_event_gives_the_same_snapshot_as_the_poll(self, db, lcu):
+        lcu.get_lp_change_notification.return_value = self.NOTE
+        polled, evented = _capture(db, lcu), _capture(db, lcu)
+
+        polled.read_transients()
+        evented.on_lcu_event(self.EVENT)
+
+        assert evented._lp_by_game == polled._lp_by_game == {self.NOTE["gameId"]: self.NOTE}
+        evented.write_lp_snapshots()
+        assert _rows(
+            db, "SELECT queue, tier, division, lp, lp_delta, game_id FROM rank_snapshots"
+        ) == [("RANKED_SOLO_5x5", "DIAMOND", "II", 64, -20, 8006463758)]
+        assert polled.write_lp_snapshots() is None  # même partie : une seule photo
+        assert _rows(db, "SELECT COUNT(*) FROM rank_snapshots") == [(1,)]
+
+    def test_screen_left_before_any_read_still_gives_the_lp(self, db, lcu):
+        capture = _capture(db, lcu)  # le fil de lecture n'a rien vu : fenêtre plus courte que 1 s
+        capture.on_lcu_event(self.EVENT)
+        lcu.get_lp_change_notification.return_value = {}
+
+        capture.on_post_game()
+
+        assert _rows(db, "SELECT lp_delta, game_id FROM rank_snapshots") == [(-20, 8006463758)]
+
+    @pytest.mark.parametrize(
+        "event",
+        [
+            {"uri": ranked.LP_NOTIFICATION_URI, "eventType": "Update", "data": None},
+            {"uri": ranked.LP_NOTIFICATION_URI, "eventType": "Delete", "data": {}},
+            {"uri": "/lol-ranked/v1/ranked-stats/anon", "data": {"gameId": 1}},
+            {"uri": ranked.LP_NOTIFICATION_URI, "data": {"gameId": 1, "queueType": "ARAM"}},
+            {"uri": "/lol-chat/v1/me", "data": {}},
+        ],
+    )
+    def test_other_events_are_ignored(self, db, lcu, event):
+        capture = _capture(db, lcu)
+        capture.on_lcu_event(event)
+        assert capture._lp_by_game == {}
