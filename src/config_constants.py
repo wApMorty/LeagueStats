@@ -257,6 +257,9 @@ class DraftConfig:
 
     # Polling and interaction
     POLL_INTERVAL: float = 1.0  # Check draft state every N seconds
+    # Sondages « hors champ select » de suite avant de vider l'écran de draft : un appel LCU qui
+    # échoue (délai, 5xx) répond comme une sortie de draft, et rien ne redessine l'écran ensuite.
+    CHAMP_SELECT_EXIT_TICKS: int = 3
     # SPEC-21 : bans conseillés que le snapshot de draft porte (la console en affiche 3).
     SNAPSHOT_BAN_COUNT: int = 4
     # SPEC-21 grimoire : menaces lues pour annoter tous les champions en phase de bans, et part

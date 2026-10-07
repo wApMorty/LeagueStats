@@ -6,6 +6,11 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### 🐛 Fix
 
+- **L'écran de draft restait vide en pleine champ select** — un seul sondage du LCU en échec (délai, 5xx)
+  passait pour une sortie de draft : l'écran était vidé et, la draft n'ayant pas bougé, rien ne le
+  redessinait avant le pick ou le ban suivant, alors que la pastille et le Live Coach voyaient la draft.
+  L'écran n'est plus vidé qu'après `CHAMP_SELECT_EXIT_TICKS` (3) sondages de suite hors champ select.
+  Régression : `tests/regression/test_regression_draft_snapshot_blip.py`.
 - **Le ban visé n'arrivait pas dans le client LoL (SPEC-24 tâche 97)** — relevé sur une vraie draft classée,
   trois défauts : depuis l'écran du client LeagueStats, `bannable-champion-ids` ne vaut que `[-1]` pendant toute
   la phase de bans, et chaque ban était refusé (« pas disponible ») ; en console, le survol automatique d'un

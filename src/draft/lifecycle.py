@@ -29,6 +29,7 @@ class MonitorLifecycle:
 
     def __init__(self, monitor) -> None:
         self.m = monitor
+        self._exit_ticks = 0  # sondages « hors champ select » consécutifs
 
     def monitor_loop(self) -> None:
         """Main monitoring loop."""
@@ -38,7 +39,9 @@ class MonitorLifecycle:
                 self.m._handle_ready_check()
 
             if not self.m.lcu.is_in_champion_select():
-                self.m.recommender.clear()  # SPEC-21 : l'écran de draft se vide
+                self._exit_ticks += 1
+                if self._exit_ticks >= draft_config.CHAMP_SELECT_EXIT_TICKS:
+                    self.m.recommender.clear()  # SPEC-21 : l'écran de draft se vide
                 # Show ready message when leaving champion select if we had a draft
                 if self.m.last_draft_state.phase and (
                     self.m.last_draft_state.ally_picks or self.m.last_draft_state.enemy_picks
@@ -90,6 +93,7 @@ class MonitorLifecycle:
                     self.m.crawler.step()
                 return
 
+            self._exit_ticks = 0
             # Get current champion select data
             champ_select_data = self.m.lcu.get_champion_select_session()
             if not champ_select_data:
