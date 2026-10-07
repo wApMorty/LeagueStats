@@ -6,6 +6,7 @@ Hermétiques : LCU simulé, réponses tirées des fixtures anonymisées du spike
 
 import json
 import sqlite3
+import threading
 import time
 from pathlib import Path
 from types import SimpleNamespace
@@ -163,19 +164,114 @@ class TestRankSnapshots:
         ]
 
     def test_after_game_snapshot_carries_the_lp_delta_once(self, db, lcu, capsys):
-        lcu.get_lp_change_notification.return_value = _fixture(
-            "current-lp-change-notification.json"
-        )
+        note = _fixture("current-lp-change-notification.json")
 
-        assert ranked.snapshot_after_game(lcu, db) is True
-        assert ranked.snapshot_after_game(lcu, db) is False
+        assert ranked.snapshot_after_game(note, db) is True
+        assert ranked.snapshot_after_game(note, db) is False
         assert _rows(db, "SELECT queue, lp, lp_delta, game_id FROM rank_snapshots") == [
             ("RANKED_SOLO_5x5", 38, 19, GAME_ID)
         ]
         assert "+19 LP" in capsys.readouterr().out
 
-    def test_no_notification_outside_the_post_game(self, db, lcu):
-        lcu.get_lp_change_notification.return_value = {}
+    @pytest.mark.parametrize(
+        "note",
+        [{}, None, {"gameId": 1, "queueType": "ARAM"}, {"queueType": "RANKED_SOLO_5x5"}],
+    )
+    def test_no_valid_notification_outside_the_post_game(self, note):
+        assert ranked.valid_notification(note) is None
 
-        assert ranked.snapshot_after_game(lcu, db) is False
+
+class TestTransientsOffLoop:
+    """SPEC-25 tâche 115 : la lecture se sépare de l'écriture en base."""
+
+    def test_notification_is_set_aside_then_written_without_the_lcu(self, db, lcu):
+        lcu.get_lp_change_notification.return_value = _fixture(
+            "current-lp-change-notification.json"
+        )
+        capture = _capture(db, lcu)
+
+        capture.read_transients()  # fil de PostGameWatcher : aucune base
         assert _rows(db, "SELECT COUNT(*) FROM rank_snapshots") == [(0,)]
+        lcu.get_lp_change_notification.return_value = {}  # l'écran de fin est quitté
+        capture.on_post_game()  # fil du coach : écrit ce qui a été mis de côté
+
+        assert _rows(db, "SELECT lp_delta, game_id FROM rank_snapshots") == [(19, GAME_ID)]
+        assert capture._lp_by_game == {}
+
+    def test_read_transients_uses_the_given_client(self, db, lcu):
+        other = Mock()
+        other.get_end_of_game_block.return_value = _fixture("eog_stats_block.json")
+        other.get_lp_change_notification.return_value = _fixture(
+            "current-lp-change-notification.json"
+        )
+        capture = _capture(db, lcu)
+
+        capture.read_transients(other)
+
+        lcu.get_lp_change_notification.assert_not_called()
+        assert set(capture._lp_by_game) == {GAME_ID} and set(capture._eog_by_game) == {GAME_ID}
+
+    def test_locked_database_replays_the_notification_on_the_next_pass(self, db, lcu, capsys):
+        note = _fixture("current-lp-change-notification.json")
+        lcu.get_lp_change_notification.return_value = note
+        capture = _capture(db, lcu)
+        real_insert = db.insert_rank_snapshot
+        db.insert_rank_snapshot = Mock(side_effect=sqlite3.OperationalError("database is locked"))
+
+        capture.on_post_game()
+        assert GAME_ID in capture._lp_by_game  # gardée en mémoire
+        assert "[ALERTE] Capture de partie : OperationalError: database is locked" in (
+            capsys.readouterr().out
+        )
+
+        db.insert_rank_snapshot = real_insert
+        lcu.get_lp_change_notification.return_value = {}
+        capture.on_post_game()
+        assert _rows(db, "SELECT lp_delta, game_id FROM rank_snapshots") == [(19, GAME_ID)]
+
+    def test_two_threads_on_the_dictionaries(self, db, lcu):
+        capture = _capture(db, lcu)
+        errors = []
+
+        def reader():
+            try:
+                for game_id in range(1, 400):
+                    capture.read_transients(
+                        Mock(
+                            get_end_of_game_block=Mock(
+                                return_value={"gameId": game_id, "queueType": "RANKED_SOLO_5x5"}
+                            ),
+                            get_lp_change_notification=Mock(
+                                return_value={
+                                    "gameId": game_id,
+                                    "queueType": "RANKED_SOLO_5x5",
+                                    "tier": "GOLD",
+                                }
+                            ),
+                        )
+                    )
+            except Exception as exc:  # pragma: no cover - ne doit pas arriver
+                errors.append(exc)
+
+        thread = threading.Thread(target=reader)
+        thread.start()
+        while thread.is_alive():
+            capture.write_lp_snapshots()
+            lcu.get_recent_matches.return_value = []
+            capture.capture_recent()
+        capture.write_lp_snapshots()
+        assert errors == []
+        assert _rows(db, "SELECT COUNT(*) FROM rank_snapshots") == [(399,)]
+
+    def test_each_distinct_error_is_shown_once_without_verbose(self, db, lcu, capsys):
+        lcu.get_recent_matches.side_effect = RuntimeError("client fermé")
+        capture = _capture(db, lcu)
+
+        capture.on_post_game()
+        capture.on_post_game()
+        lcu.get_recent_matches.side_effect = ValueError("autre")
+        capture.on_post_game()
+
+        out = capsys.readouterr().out
+        assert out.count("[ALERTE] Capture de partie : RuntimeError: client fermé") == 1
+        assert out.count("[ALERTE] Capture de partie : ValueError: autre") == 1

@@ -12,12 +12,18 @@ puis rangé avec la partie. Seule source fiable du poste de chaque joueur.
 Chaque passage enchaîne sur l'analyse des parties nouvellement capturées
 (findings.py) : rapport de fin de partie en direct, synthèse au démarrage.
 
+La lecture des deux endpoints transitoires (écran de fin, notification de LP) se sépare de
+l'écriture en base (SPEC-25) : `read_transients` ne touche pas à la base et tourne dans le fil de
+`PostGameWatcher`, cadencé par la phase gameflow et non par la boucle du monitor ; `on_post_game`,
+dans le fil du coach, écrit ce qui a été mis de côté.
+
 Best-effort, comme src/draft/outcome_tracker.py : rien ici n'interrompt la
 boucle du Live Coach.
 """
 
 import json
 import sqlite3
+import threading
 from datetime import datetime, timezone
 from typing import Callable, Dict, Optional, Set
 
@@ -37,7 +43,10 @@ class GameCapture:
     def __init__(self, monitor) -> None:
         self.m = monitor
         self._eog_by_game: Dict[int, str] = {}
+        self._lp_by_game: Dict[int, dict] = {}  # notification de LP mise de côté, pas encore écrite
+        self._lock = threading.Lock()  # le fil de PostGameWatcher et celui du coach s'y croisent
         self._warned_missing_tables = False
+        self._alerted: Set[str] = set()
 
     def on_startup(self) -> None:
         """Rattrapage des parties jouées app fermée, et photo du classement."""
@@ -49,12 +58,31 @@ class GameCapture:
     def on_post_game(self) -> None:
         """Un passage de la fenêtre d'après-partie."""
         known = self._captured_ids()
-        self._safely(self.remember_end_of_game)
-        self._safely(lambda: ranked.snapshot_after_game(self.m.lcu, self.m.assistant.db))
+        self.read_transients()  # filet : le fil de PostGameWatcher les a déjà lues en général
+        self._safely(self.write_lp_snapshots)
         self._safely(self.capture_recent)
         self._safely(lambda: self.analyze(live=True))
         self._safely(lambda: self.impact(live=True))
         self._safely(lambda: self._announce(known))
+
+    def read_transients(self, lcu=None) -> None:
+        """Met de côté l'écran de fin et la notification de LP, sans toucher à la base.
+
+        Ils ne répondent que sur l'écran de fin (SPEC-19, SPEC-25 §4.0) : appelé par le fil de
+        `PostGameWatcher` avec son propre client LCU, et par la boucle du monitor avec le sien.
+        """
+        self._safely(lambda: self.remember_end_of_game(lcu))
+        self._safely(lambda: self.remember_lp_notification(lcu))
+
+    def write_lp_snapshots(self) -> None:
+        """Écrit les notifications de LP mises de côté ; celle qu'une base verrouillée a refusée
+        reste en mémoire et repart au passage suivant."""
+        with self._lock:
+            pending = dict(self._lp_by_game)
+        for game_id, note in pending.items():
+            ranked.snapshot_after_game(note, self.m.assistant.db)
+            with self._lock:
+                self._lp_by_game.pop(game_id, None)
 
     @property
     def _client_mode(self) -> bool:
@@ -125,13 +153,21 @@ class GameCapture:
         predicted = CoachingRepository(db).predicted_probability(analysis.game_id)
         return [""] + report.game_report(analysis, name_of, predicted, duel)
 
-    def remember_end_of_game(self) -> None:
+    def remember_end_of_game(self, lcu=None) -> None:
         """Met de côté l'écran de fin d'une partie classée, sans ses secrets."""
-        block = self.m.lcu.get_end_of_game_block()
+        block = (lcu or self.m.lcu).get_end_of_game_block()
         if not block or block.get("queueType") not in coaching_config.RANKED_QUEUES:
             return
         clean = {key: value for key, value in block.items() if key not in EOG_SECRET_KEYS}
-        self._eog_by_game[block["gameId"]] = json.dumps(clean)
+        with self._lock:
+            self._eog_by_game[block["gameId"]] = json.dumps(clean)
+
+    def remember_lp_notification(self, lcu=None) -> None:
+        """Met de côté la notification de LP de la partie classée qui vient de finir."""
+        note = ranked.valid_notification((lcu or self.m.lcu).get_lp_change_notification())
+        if note is not None:
+            with self._lock:
+                self._lp_by_game[note["gameId"]] = note
 
     def capture_recent(self) -> int:
         """Capture les parties SoloQ/Flex de l'historique absentes de la base."""
@@ -142,7 +178,9 @@ class GameCapture:
         # timeline d'une partie de l'écran de fin sont servis tout de suite
         # (mesuré le 2026-09-30). Sans ça, le rapport arrivait pendant, voire
         # après, la partie suivante.
-        for game_id in self._eog_by_game:
+        with self._lock:
+            eog_by_game = dict(self._eog_by_game)
+        for game_id in eog_by_game:
             matches.setdefault(game_id, None)
         count = 0
         for game_id, match in matches.items():
@@ -153,7 +191,7 @@ class GameCapture:
             game = lcu.get_game_detail(game_id)
             if not game or not game.get("participants"):
                 continue
-            match = match or self._match_from_detail(game)
+            match = match or self._match_from_detail(game, eog_by_game.get(game_id))
             if not match or match["queue_id"] not in coaching_config.QUEUE_IDS:
                 continue
             duration_s = game.get("gameDuration") or 0
@@ -174,17 +212,19 @@ class GameCapture:
                 player_participant_id=match.get("participant_id"),
                 raw_game=json.dumps(game),
                 raw_timeline=json.dumps(timeline) if timeline else None,
-                raw_eog=self._eog_by_game.pop(game_id, None),
+                raw_eog=eog_by_game.get(game_id),
             )
+            with self._lock:
+                self._eog_by_game.pop(game_id, None)
             count += int(inserted)
         if count:
             print(f"[DATA] Coach de gameplay : {count} partie(s) capturée(s)")
         return count
 
-    def _match_from_detail(self, game: dict) -> Optional[dict]:
+    def _match_from_detail(self, game: dict, raw_eog: Optional[str]) -> Optional[dict]:
         """Les champs de get_recent_matches utiles à la capture, depuis le
         détail ; le joueur est retrouvé par le puuid de l'écran de fin."""
-        eog = json.loads(self._eog_by_game.get(game["gameId"], "{}"))
+        eog = json.loads(raw_eog or "{}")
         puuid = (eog.get("localPlayer") or {}).get("puuid")
         participant_id = next(
             (
@@ -218,5 +258,13 @@ class GameCapture:
             self._warn(e)
 
     def _warn(self, error: Exception) -> None:
-        if getattr(self.m, "verbose", False):
-            print(f"[WARNING] Capture de partie : {error}")
+        """Chaque erreur distincte s'affiche une fois, même hors `-v` : une capture qui échoue ne se
+        distinguerait sinon pas d'un écran de fin manqué (SPEC-25)."""
+        message = f"{type(error).__name__}: {error}"
+        with self._lock:
+            first = message not in self._alerted
+            self._alerted.add(message)
+        if first:
+            print(f"[ALERTE] Capture de partie : {message}")
+        elif getattr(self.m, "verbose", False):
+            print(f"[WARNING] Capture de partie : {message}")

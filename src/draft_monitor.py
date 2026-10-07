@@ -11,6 +11,7 @@ from .utils.console import clear_console
 from .constants import TOP_SOLOQ_POOL, CHAMPIONS_BY_ROLE
 from .config_constants import analysis_config, draft_config
 from .coaching.capture import GameCapture
+from .coaching.post_game_watcher import PostGameWatcher
 from .winprob.crawl import Crawler
 from .draft.state import ChampionAction, DraftState
 from .draft import phases
@@ -114,6 +115,8 @@ class DraftMonitor:
         self.phase_tracker.subscribe(self.lifecycle.on_phase_change)
         self.outcome_tracker = OutcomeTracker(self)
         self.game_capture = GameCapture(self)  # SPEC-19
+        # SPEC-25 : lit l'écran de fin et la notification de LP dès l'entrée en fin de partie.
+        self.post_game_watcher = PostGameWatcher(self.phase_tracker, self.game_capture)
         self.crawler = Crawler(self)  # SPEC-20 : collecte de parties tierces
         self.loadout = LoadoutImporter(self)  # SPEC-15
         self.last_recommendation = None  # Track last recommendation to avoid spam
@@ -187,6 +190,7 @@ class DraftMonitor:
 
         self.is_monitoring = True
         self.phase_tracker.start()
+        self.post_game_watcher.start()
         print("[WATCH] Surveillance du champion select...")
         print("   (Démarrez une partie pour voir les recommandations de draft)")
         if self.auto_accept_queue:
@@ -416,6 +420,7 @@ class DraftMonitor:
     def cleanup(self):
         """Clean up resources."""
         self.phase_tracker.stop()
+        self.post_game_watcher.stop()
         if self.lcu:
             self.lcu.disconnect()
         if self.assistant:
