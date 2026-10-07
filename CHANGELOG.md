@@ -4,6 +4,12 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+## [4.2.0] - 2026-10-07
+
+Le client LeagueStats arrive : écrans Draft, En partie, coaching, profil, collection, lobby et social,
+échanges d'ordre de pick et de rôle, ban visé qui atteint enfin le client LoL, écran de draft qui ne
+reste plus vide. **Action requise** : `pip install -r requirements.txt` (nouvelles dépendances du client).
+
 ### 🐛 Fix
 
 - **L'écran de draft restait vide en pleine champ select** — un seul sondage du LCU en échec (délai, 5xx)
