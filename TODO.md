@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-10-06 (SPEC-24 : retours de @pj35 sur le client, bans, ordre de pick, swaps, écran « En partie »)
+**Mis à jour** : 2026-10-07 (SPEC-25 : suivi de phase et capture de fin de partie)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -195,6 +195,25 @@ utilisables seuls, 16 tâches (96 à 111, 61 pts) ; arbitrages « à valider » 
 | 109 | Courbe de win chance en direct | 3 | 107, 108 | ⬜✅ 2026-10-07 : 7 tests ; `charts.line_chart` sur la série (axe en minutes, bande des 50 %, dernier point lumineux, repères dragon / Héraut / Nashor / tour / inhibiteur tirés des événements Live Client, couleur de gain ou de perte selon le camp), variation sur la dernière minute, moins de deux points : un message et pas de courbe, client ouvert en cours de partie (`INGAME_LATE_START_S`) : l'écran le dit, objectifs d'avant le premier point non repérés, point de départ de la draft non tracé ; **rendu à voir par @pj35** |
 | 110 | Build : plan d'objets, suivi des achats, ordre des compétences si publié | 5 | 105, 108 | ⬜✅ 2026-10-07 : 16 tests ; `en_partie.build_view` : plan d'objets du loadout de `FinalAnalysis` (blocs, noms français de Data Dragon, `Assets.items()` nouveau), objets possédés cochés, prochain objet (Core puis première paire de bottes, les alternatives ne comptent pas), coût restant (assemblage + composants non possédés) et manque d'or (`activePlayer.currentGold`), `items` absent de l'API : « achats indisponibles » (distinct d'une liste vide), substitutions du duel avec leur raison, **ordre des compétences** (`loadout_import._skills` d'après `maxSkillOrders` / `skillPaths` de la page OneTricks, ligne absente quand la page ne le publie pas) ; **rendu à voir par @pj35** |
 | 111 | Clôture : exe vérifié, docs, SPEC-21 §7, statuts | 3 | 104, 109, 110 | ⬜✅ 2026-10-07 : `python build_app.py` (83,1 Mo) puis `check_exe_assets.py` : 52 fichiers du client et 11 modules (dont `ingame`, `en_partie`, `draft_swaps`) présents ; README, `PROJECT_STRUCTURE.md`, `CHANGELOG.md`, SPEC-21 §7 (« écran en partie » rouvert et livré), statuts ; **recette @pj35** : lancer l'exe, ouvrir « En partie » pendant une partie (courbe qui avance, plan qui se coche à l'achat), valider un ban et demander, recevoir, accepter un échange en draft classée |
+
+### Lot suivant — SPEC-25, suivi de phase et capture de fin de partie (🟡 rédigée le 2026-10-07)
+
+[SPEC-25](docs/specs/SPEC-25-suivi-de-phase-et-capture-de-fin-de-partie.md) : les LP et l'écran de fin ne sont plus
+capturés depuis le 2026-10-05 (11 parties) ; les deux endpoints ne répondent que sur l'écran de fin et sont
+lus toutes les 6 à 10 s dans une boucle de 2 à 5 s/tour. `PhaseTracker` (événements WebSocket `/lol-gameflow` +
+sondage de rattrapage) comme source unique de la phase, capture déclenchée par la transition hors de la boucle du
+monitor, pastille de phase dans la barre de titre. Spike d'une fin de partie réelle d'abord (@pj35). Passe avant
+la tâche 64 de SPEC-23. Découpage en SPEC-25 §5 (tâches 112 à 118, 24 pts) :
+
+| # | Tâche | Pts | Dépend de | État |
+|---|---|---|---|---|
+| 112 | Spike : `scripts/dump_lcu_endgame.py`, une fin de partie réelle par @pj35, fixtures | 3 | — | ⬜ |
+| 113 | `PhaseTracker` : événements, sondage de rattrapage, `kind`, sujet `phase`, constantes | 5 | 112 | ⬜ |
+| 114 | `DraftMonitor` et `MonitorLifecycle` sur le tracker : zéro lecture de phase par tour | 3 | 113 | ⬜ |
+| 115 | Capture hors boucle (`read_transients`, `PostGameWatcher`), erreurs affichées une fois, régression | 5 | 112, 113 | ⬜ |
+| 116 | Pastille de phase dans la barre de titre, `LiveGame` sur le tracker | 3 | 113 | ⬜ |
+| 117 | **Conditionnelle** au spike : notification de LP lue dans l'événement `/lol-ranked` | 3 | 112, 115 | ⬜ |
+| 118 | Clôture : exe, docs, `CHANGELOG.md`, SPEC-23 et SPEC-24, statuts | 2 | 114, 115, 116 | ⬜ |
 
 ### Lot suivant — SPEC-22, attribution complète de l'impact (🟡 rédigée le 2026-10-04)
 
