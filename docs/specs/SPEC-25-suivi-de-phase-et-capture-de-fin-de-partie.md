@@ -213,6 +213,8 @@ fenêtre de rattrapage, plus la lecture transitoire.
   les processus : au plus une par délai quand le client est fermé).
 - Le repli du monitor est **une** lecture (`get_gameflow_session`) qui sert aux trois décisions du tour ;
   `is_in_ready_check` / `is_in_champion_select` ne sont plus appelés par la boucle (trois tests adaptés).
+- `PostGameWatcher` cherche les identifiants du client LoL au `start()` (juste après `connect()`) et à chaque entrée
+  en famille `game` (la recherche peut scruter les processus : jamais à l'écran de fin, dont la fenêtre est courte).
 - `on_post_game` garde un `read_transients()` avec le client du coach (filet), en plus du fil de lecture.
 - Pastille : id `tb-phase`, deux libellés de plus que les six de la spec (`error`, `unknown`) ; `LiveGame` lit le
   tracker et retombe sur la sonde `LcuProbe` quand le tracker est muet (Live Coach pas encore connecté).

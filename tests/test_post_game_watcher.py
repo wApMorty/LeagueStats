@@ -88,3 +88,13 @@ def test_un_tracker_reste_bloque_sur_post_est_borne_par_la_fenetre(setup, monkey
     setup.watcher.start()
     setup.tracker.enter("post")  # le suiveur ne sortira jamais de `post`
     assert wait_for(lambda: not setup.watcher._thread.is_alive())
+
+
+def test_les_identifiants_sont_cherches_avant_l_ecran_de_fin(setup):
+    setup.watcher.start()  # client LoL ouvert
+    setup.tracker.enter("game")  # une partie dure : le temps de les rafraîchir
+    searches = setup.lcu.find_lcu_credentials.call_count
+    setup.tracker.enter("post")
+    assert wait_for(lambda: setup.capture.read_transients.call_count >= 1)
+    assert setup.lcu.find_lcu_credentials.call_count == searches  # rien à chercher à l'écran de fin
+    setup.watcher.stop()

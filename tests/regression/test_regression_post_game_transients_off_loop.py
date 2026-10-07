@@ -73,7 +73,8 @@ def test_les_lp_et_l_ecran_de_fin_sont_captures_quand_la_boucle_arrive_trop_tard
     ):
         monitor.post_game_watcher.start()
         monitor.phase_tracker.observe("PreEndOfGame")  # événement du client LoL
-        wait_for(lambda: capture._eog_by_game)  # la boucle, elle, met 5 s à passer
+        # la boucle, elle, met 5 s à passer : le fil a lu l'écran de fin et la notification
+        wait_for(lambda: capture._eog_by_game and capture._lp_by_game)
         window["open"] = False  # « Rejouer » : l'écran de fin disparaît
         monitor.phase_tracker.observe("None")
         capture.on_post_game()  # un tour de boucle de plus de 3 s après la fin de la fenêtre

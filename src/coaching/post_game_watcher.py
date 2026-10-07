@@ -23,6 +23,7 @@ class PostGameWatcher:
         self._capture = capture
         self._make_lcu = make_lcu
         self._armed = False
+        self._lcu: Optional[LCUClient] = None  # identifiants trouvés avant l'écran de fin
         self._stop = threading.Event()
         self._thread: Optional[threading.Thread] = None
         tracker.subscribe(self.on_phase)
@@ -31,6 +32,7 @@ class PostGameWatcher:
         """Arme le suivi : sans lui, une transition de phase ne lance rien (tests, mode hors ligne)."""
         self._armed = True
         self._stop.clear()
+        self._prepare()
 
     def stop(self) -> None:
         """Désarme et demande l'arrêt du fil en cours."""
@@ -39,6 +41,8 @@ class PostGameWatcher:
 
     def on_phase(self, _old, _new, kind: str) -> None:
         """Rappel du tracker : l'entrée dans la fin de partie lance la lecture, une seule à la fois."""
+        if kind == "game" and self._armed:
+            self._prepare()  # la recherche des identifiants peut scruter les processus : pas à l'écran de fin
         if kind != "post" or not self._armed:
             return
         if self._thread is not None and self._thread.is_alive():
@@ -46,10 +50,23 @@ class PostGameWatcher:
         self._thread = threading.Thread(target=self._run, name="post-game-watcher", daemon=True)
         self._thread.start()
 
-    def _run(self) -> None:
+    def _prepare(self) -> None:
+        """Un client LCU propre au fil, avec les identifiants du client LoL ouvert."""
         try:
             lcu = self._make_lcu()
             lcu.credentials = lcu.find_lcu_credentials()
+            self._lcu = lcu
+        except Exception:  # pylint: disable=broad-exception-caught
+            self._lcu = None  # _run les cherchera
+
+    def _run(self) -> None:
+        try:
+            lcu = self._lcu
+            if lcu is None or lcu.credentials is None:
+                self._prepare()
+                lcu = self._lcu
+            if lcu is None:
+                return
             deadline = time.monotonic() + draft_config.POST_GAME_RETRY_WINDOW
             while not self._stop.is_set():
                 self._capture.read_transients(lcu)

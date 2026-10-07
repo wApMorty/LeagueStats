@@ -156,6 +156,9 @@ class DraftMonitor:
         if not self.lcu.connect():
             return False
 
+        self.phase_tracker.start()  # SPEC-25 : dès la connexion, avant le rattrapage et le choix de pool
+        self.post_game_watcher.start()
+
         # SPEC-08 §2.6b: catch up on outcomes for games played while the app
         # was closed, before entering the poll loop -- the LCU is connected
         # at this point, which the startup path in src/ui/draft_coach_ui.py
@@ -190,8 +193,6 @@ class DraftMonitor:
         clear_console()
 
         self.is_monitoring = True
-        self.phase_tracker.start()
-        self.post_game_watcher.start()
         print("[WATCH] Surveillance du champion select...")
         print("   (Démarrez une partie pour voir les recommandations de draft)")
         if self.auto_accept_queue:
