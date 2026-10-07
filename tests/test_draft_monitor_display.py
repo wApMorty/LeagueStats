@@ -305,7 +305,7 @@ class TestMonitorLoopAppliesCommands:
             "theirTeam": [],
             "actions": [],
         }
-        monitor.lcu.is_in_champion_select = Mock(return_value=True)
+        monitor.lcu.get_gameflow_session = Mock(return_value={"phase": "ChampSelect"})
         monitor.lcu.get_champion_select_session = Mock(return_value=champ_select_data)
         monitor.last_draft_state = monitor._parse_draft_state(champ_select_data)
         monitor._command_queue.put("r Ornn support")
@@ -325,7 +325,7 @@ class TestMonitorLoopAppliesCommands:
             "theirTeam": [],
             "actions": [],
         }
-        monitor.lcu.is_in_champion_select = Mock(return_value=True)
+        monitor.lcu.get_gameflow_session = Mock(return_value={"phase": "ChampSelect"})
         monitor.lcu.get_champion_select_session = Mock(return_value=champ_select_data)
         monitor.last_draft_state = monitor._parse_draft_state(champ_select_data)
 

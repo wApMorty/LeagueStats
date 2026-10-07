@@ -17,6 +17,7 @@ replacement (e.g. ``patch.object(monitor, "_handle_draft_change")`` then
 """
 
 import time
+from typing import Optional
 
 from ..config_constants import draft_config
 from ..utils.console import clear_console
@@ -34,11 +35,15 @@ class MonitorLifecycle:
     def monitor_loop(self) -> None:
         """Main monitoring loop."""
         try:
+            # Une seule lecture de phase par tour, et aucune quand le tracker la connaît (SPEC-25)
+            gameflow = self.gameflow()
+            phase = (gameflow or {}).get("phase", "")
+
             # Check for ready check (queue found) and auto-accept if enabled
-            if self.m.auto_accept_queue and self.m.lcu.is_in_ready_check():
+            if self.m.auto_accept_queue and phase == "ReadyCheck":
                 self.m._handle_ready_check()
 
-            if not self.m.lcu.is_in_champion_select():
+            if phase != "ChampSelect":
                 self._exit_ticks += 1
                 if self._exit_ticks >= draft_config.CHAMP_SELECT_EXIT_TICKS:
                     self.m.recommender.clear()  # SPEC-21 : l'écran de draft se vide
@@ -61,7 +66,6 @@ class MonitorLifecycle:
                         self.m._shown_ready_message = True
 
                 # Check if we've completely left the game flow and should reset
-                gameflow = self.m.lcu.get_gameflow_session()
                 if gameflow:
                     current_phase = gameflow.get("phase", "")
                     # Reset when we're back in lobby or matchmaking
@@ -126,6 +130,21 @@ class MonitorLifecycle:
             if self.m.verbose:
                 print(f"[WARNING] Monitor error: {e}")
 
+    def gameflow(self) -> Optional[dict]:
+        """`{"phase": ...}` du tracker ; sans phase confirmée, la session gameflow lue au LCU."""
+        phase = self.m.phase_tracker.phase
+        if phase is not None:
+            return {"phase": phase}
+        return self.m.lcu.get_gameflow_session()
+
+    def on_phase_change(self, _old, _new, kind: str) -> None:
+        """Entrée en fin de partie (fil du tracker) : la fenêtre d'après-partie s'ouvre même si la
+        boucle, trop lente, n'a jamais vu la phase. Seulement des affectations : pas de base ici."""
+        now = time.time()
+        if kind == "post" and now >= self.m._post_game_until:
+            self.m._post_game_until = now + draft_config.POST_GAME_RETRY_WINDOW
+            self.m._next_post_game_attempt = 0.0
+
     def retry_post_game(self) -> None:
         """One post-game pass every POST_GAME_RETRY_INTERVAL seconds while the
         window is open: outcome resolution (SPEC-08) and capture (SPEC-19).
@@ -147,7 +166,7 @@ class MonitorLifecycle:
         """Handle ready check (queue found) and auto-accept if enabled."""
         try:
             # Get current gameflow phase to avoid spam
-            gameflow = self.m.lcu.get_gameflow_session()
+            gameflow = self.gameflow()
             if not gameflow:
                 return
 

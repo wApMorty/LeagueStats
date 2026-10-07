@@ -27,6 +27,7 @@ from .draft.commands import CommandListener
 from .draft.recommendations import DraftRecommender
 from .draft.final_analysis import FinalDraftAnalyzer
 from .draft.lifecycle import MonitorLifecycle
+from .draft.phase_tracker import PhaseTracker, lcu_phase_reader
 from .draft.loadout_import import LoadoutImporter
 from .draft.outcome_tracker import OutcomeTracker
 
@@ -108,6 +109,9 @@ class DraftMonitor:
         self.recommender = DraftRecommender(self)
         self.final_analyzer = FinalDraftAnalyzer(self)
         self.lifecycle = MonitorLifecycle(self)
+        # SPEC-25 : la phase gameflow vient du tracker (événements WebSocket + sondage de rattrapage).
+        self.phase_tracker = PhaseTracker(lcu_phase_reader(), bus=bus)
+        self.phase_tracker.subscribe(self.lifecycle.on_phase_change)
         self.outcome_tracker = OutcomeTracker(self)
         self.game_capture = GameCapture(self)  # SPEC-19
         self.crawler = Crawler(self)  # SPEC-20 : collecte de parties tierces
@@ -182,6 +186,7 @@ class DraftMonitor:
         clear_console()
 
         self.is_monitoring = True
+        self.phase_tracker.start()
         print("[WATCH] Surveillance du champion select...")
         print("   (Démarrez une partie pour voir les recommandations de draft)")
         if self.auto_accept_queue:
@@ -410,6 +415,7 @@ class DraftMonitor:
 
     def cleanup(self):
         """Clean up resources."""
+        self.phase_tracker.stop()
         if self.lcu:
             self.lcu.disconnect()
         if self.assistant:

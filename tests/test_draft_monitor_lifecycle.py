@@ -10,6 +10,7 @@ Behavior is pinned exactly as it is today, including the fact that
 ``_handle_ready_check`` never consults ``self.auto_accept_queue`` itself.
 """
 
+import time
 from unittest.mock import Mock, patch
 
 import pytest
@@ -388,10 +389,6 @@ class TestOutcomeResolutionTrigger:
 
     @staticmethod
     def _outside_champion_select(monitor, phase):
-        monitor.lcu.is_in_ready_check.return_value = (
-            False  # keep the ready-check branch out of scope
-        )
-        monitor.lcu.is_in_champion_select.return_value = False
         monitor.lcu.get_gameflow_session.return_value = {"phase": phase}
 
     def test_entering_a_trigger_phase_resolves_once(self, monitor):
@@ -475,8 +472,7 @@ class TestOutcomeResolutionTrigger:
     def test_champion_select_hot_path_never_calls_resolve(self, monitor):
         """Never in the champion-select branch (SPEC-08 §2.6a: 'jamais dans
         le chemin chaud du champion select')."""
-        monitor.lcu.is_in_ready_check.return_value = False
-        monitor.lcu.is_in_champion_select.return_value = True
+        monitor.lcu.get_gameflow_session.return_value = {"phase": "ChampSelect"}
         monitor.lcu.get_champion_select_session.return_value = None
 
         with patch.object(monitor, "_resolve_pending_outcomes") as resolve:
@@ -485,8 +481,6 @@ class TestOutcomeResolutionTrigger:
         resolve.assert_not_called()
 
     def test_no_gameflow_session_does_not_raise_or_resolve(self, monitor):
-        monitor.lcu.is_in_ready_check.return_value = False
-        monitor.lcu.is_in_champion_select.return_value = False
         monitor.lcu.get_gameflow_session.return_value = None
 
         with patch.object(monitor, "_resolve_pending_outcomes") as resolve:
@@ -500,8 +494,7 @@ class TestLoadoutWiring:
 
     def test_champ_select_tick_feeds_the_importer(self, monitor):
         session = {"localPlayerCellId": 1, "myTeam": [], "theirTeam": [], "actions": []}
-        monitor.lcu.is_in_ready_check.return_value = False
-        monitor.lcu.is_in_champion_select.return_value = True
+        monitor.lcu.get_gameflow_session.return_value = {"phase": "ChampSelect"}
         monitor.lcu.get_champion_select_session.return_value = session
         monitor.lcu.get_assigned_positions.return_value = {}
         monitor.loadout = Mock()
@@ -510,3 +503,53 @@ class TestLoadoutWiring:
 
         monitor.loadout.on_tick.assert_called_once()
         assert monitor.loadout.on_tick.call_args.args[0] is session
+
+
+class TestPhaseTrackerWiring:
+    """SPEC-25 tâche 114 : la phase vient du tracker ; sans phase confirmée, une seule lecture."""
+
+    @staticmethod
+    def _reads(monitor):
+        lcu = monitor.lcu
+        return (
+            lcu.get_gameflow_session.call_count
+            + lcu.is_in_ready_check.call_count
+            + lcu.is_in_champion_select.call_count
+        )
+
+    def test_tracker_frais_un_tour_ne_lit_aucune_phase(self, monitor):
+        # auto_accept_queue est actif : avant SPEC-25, ce tour faisait 3 lectures
+        monitor.phase_tracker.observe("WaitingForStats")
+        monitor._monitor_loop()
+        assert self._reads(monitor) == 0
+        assert monitor._last_outcome_trigger_phase == "WaitingForStats"
+
+    def test_tracker_en_champ_select_lit_la_draft_mais_pas_la_phase(self, monitor):
+        monitor.phase_tracker.observe("ChampSelect")
+        monitor.lcu.get_champion_select_session.return_value = None
+        monitor._monitor_loop()
+        monitor.lcu.get_champion_select_session.assert_called_once_with()
+        assert self._reads(monitor) == 0
+
+    def test_tracker_en_ready_check_accepte_sans_relire_la_phase(self, monitor):
+        monitor.phase_tracker.observe("ReadyCheck")
+        monitor.lcu.get_ready_check_state.return_value = {"timer": 8}
+        monitor.lcu.accept_ready_check.return_value = True
+        monitor._monitor_loop()
+        monitor.lcu.accept_ready_check.assert_called_once_with()
+        assert self._reads(monitor) == 0
+
+    def test_tracker_perime_un_tour_lit_la_phase_une_fois(self, monitor):
+        assert monitor.phase_tracker.phase is None  # jamais confirmée, ou périmée
+        monitor.lcu.get_gameflow_session.return_value = {"phase": "Lobby"}
+        monitor._monitor_loop()
+        assert self._reads(monitor) == 1
+        monitor.lcu.get_gameflow_session.assert_called_once_with()
+
+    def test_entrer_en_fin_de_partie_ouvre_la_fenetre_sans_tour_de_boucle(self, monitor):
+        assert monitor._post_game_until == 0.0
+        monitor.phase_tracker.observe("InProgress")
+        assert monitor._post_game_until == 0.0
+        monitor.phase_tracker.observe("PreEndOfGame")  # la boucle, trop lente, n'a rien vu
+        assert monitor._post_game_until > time.time()
+        assert monitor._next_post_game_attempt == 0.0

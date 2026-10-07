@@ -24,8 +24,10 @@ from tests.test_draft_snapshot import RANKED, monitor, pick_state  # noqa: F401 
 
 
 def _tick(monitor, in_champ_select):
-    monitor.lcu.is_in_champion_select.return_value = in_champ_select
-    monitor.lcu.get_gameflow_session.return_value = {"phase": "ChampSelect"}
+    # Un sondage qui échoue répond None (SPEC-25 : la phase se lit en une seule requête).
+    monitor.lcu.get_gameflow_session.return_value = (
+        {"phase": "ChampSelect"} if in_champ_select else None
+    )
     monitor.lcu.get_champion_select_session.return_value = {"timer": {}}
     with patch.object(monitor, "_parse_draft_state", return_value=pick_state()):
         monitor.lifecycle.monitor_loop()
