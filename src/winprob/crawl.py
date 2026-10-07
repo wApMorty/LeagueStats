@@ -43,6 +43,19 @@ CREATE TABLE IF NOT EXISTS crawl_frontier (
 );
 """
 
+# Sans index, chaque requête de la boucle du Live Coach balaie les 500 Mo de `crawl_games` (blobs
+# compris) : à froid, la boucle y passait des dizaines de secondes et manquait la file trouvée. Les
+# index partiels couvrent le travail à faire ; `read_utc` remplace `length(raw) > 0` dans les comptes.
+INDEXES = """
+CREATE INDEX IF NOT EXISTS crawl_games_todo ON crawl_games(depth, game_creation_utc DESC)
+    WHERE raw IS NULL;
+CREATE INDEX IF NOT EXISTS crawl_games_created ON crawl_games(game_creation_utc);
+CREATE INDEX IF NOT EXISTS crawl_games_version ON crawl_games(game_version);
+CREATE INDEX IF NOT EXISTS crawl_games_read ON crawl_games(read_utc);
+CREATE INDEX IF NOT EXISTS crawl_frontier_todo ON crawl_frontier(depth, priority DESC)
+    WHERE visited_utc IS NULL;
+"""
+
 _UTC_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
@@ -119,7 +132,7 @@ class Crawler:
         def count(table: str, where: str) -> int:
             return self._db().execute(f"SELECT COUNT(*) FROM {table} WHERE {where}").fetchone()[0]
 
-        read = count("crawl_games", "length(raw) > 0")
+        read = count("crawl_games", "read_utc IS NOT NULL")
         recent = count("crawl_games", "read_utc >= datetime('now', '-1 day')")
         pending = count("crawl_games", "raw IS NULL")
         players = count("crawl_frontier", "visited_utc IS NULL")
@@ -201,9 +214,11 @@ class Crawler:
 
     def _seed(self) -> None:
         db = self.m.assistant.db
+        fresh = False
         for game_id, participant_id in db.get_recent_games(cfg.CRAWL_SEED_GAMES):
             if game_id in self._seeded:
                 continue
+            fresh = True
             raw = db.get_raw_game(game_id)
             game = json.loads(raw) if raw else {}
             priority = game.get("gameCreation") or 0
@@ -217,7 +232,10 @@ class Crawler:
                     self._add_player(puuid, 1, priority, from_my_game=True)
             self._seeded.add(game_id)
         self._db().commit()
-        self._purge()
+        if (
+            fresh
+        ):  # `seed()` repasse toutes les 5 s en après-partie : la purge n'a rien de neuf à voir
+            self._purge()
 
     def _add_player(
         self, puuid: str, depth: int, priority: int, from_my_game: bool = False
@@ -319,6 +337,7 @@ class Crawler:
                     "UPDATE crawl_games SET read_utc = ? WHERE length(raw) > 0", (_now(),)
                 )
                 self._conn.commit()
+            self._conn.executescript(INDEXES)
         return self._conn
 
     def _safely(self, work: Callable[[], None]) -> None:

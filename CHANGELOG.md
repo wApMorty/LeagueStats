@@ -6,6 +6,14 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### 🐛 Fix
 
+- **La boucle du Live Coach restait coincée dans la collecte (SPEC-20)** — seule la première draft d'une
+  session était vue. `data/crawl.db` (558 Mo, 35 000 parties) n'avait aucun index : chaque `step()`
+  balayait toute la table, et `seed()`, rappelé toutes les 5 s pendant les 10 min d'après-partie,
+  relançait une purge complète à chaque passage. À froid, la boucle y passait des dizaines de secondes
+  (`py-spy` : 30 relevés sur 30 dans la requête de travail) et manquait la file trouvée. Index partiels
+  sur le travail à faire, index sur `read_utc` (qui remplace `length(raw) > 0` dans les comptes), et
+  `seed()` ne purge que s'il a amorcé une partie neuve. Les index se créent au prochain lancement du Live
+  Coach (une seconde environ). Régression : `tests/regression/test_regression_crawl_blocks_loop.py`.
 - **Le client n'entrait plus dans l'écran de draft (4.3.0)** — chaque flux SSE tenait une connexion HTTP/1.1
   ouverte et Chromium n'en accorde que 6 par hôte. La page en ouvrait 5 (`lcu` ×3, `ingame`,
   `game_captured`), la pastille de phase en a ajouté un 6ᵉ : plus aucune connexion pour `/draft`, les
