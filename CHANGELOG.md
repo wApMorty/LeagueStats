@@ -4,6 +4,12 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+## [4.3.1] - 2026-10-08
+
+Correctifs de la 4.3.0 : le client entre de nouveau dans l'écran de draft et la boucle du Live Coach ne reste
+plus coincée dans la collecte après une partie. Aucune action requise (pas de migration ; les index de
+`data/crawl.db` se créent seuls au prochain lancement du Live Coach, une seconde environ).
+
 ### 🐛 Fix
 
 - **La boucle du Live Coach restait coincée dans la collecte (SPEC-20)** — seule la première draft d'une
