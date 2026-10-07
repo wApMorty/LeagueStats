@@ -35,7 +35,19 @@ WATCHED = [
     ("pick_order_swaps", "/lol-champ-select/v1/session/pick-order-swaps"),
     ("position_swaps", "/lol-champ-select/v1/session/position-swaps"),
 ]
-IDENTITY_KEYS = {"puuid", "summonerId", "accountId", "gameName", "tagLine", "summonerName", "name"}
+IDENTITY_KEYS = {
+    "puuid",
+    "summonerId",
+    "accountId",
+    "gameName",
+    "tagLine",
+    "summonerName",
+    "name",
+    "riotIdGameName",
+    "riotIdTagLine",
+    "jwt",  # écran de fin : jetons du salon de discussion (SPEC-25 tâche 112)
+    "multiUserChatPassword",
+}
 KEPT_NAMES = {"pages", "styles", "skins"}  # `name` y désigne une page, un arbre, un skin : à garder
 
 

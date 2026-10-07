@@ -1,0 +1,46 @@
+[
+ {
+  "t": 9.978,
+  "phase": "ReadyCheck"
+ },
+ {
+  "t": 23.017,
+  "phase": "Matchmaking"
+ },
+ {
+  "t": 24.966,
+  "phase": "ReadyCheck"
+ },
+ {
+  "t": 30.171,
+  "phase": "ChampSelect"
+ },
+ {
+  "t": 197.061,
+  "phase": "GameStart"
+ },
+ {
+  "t": 197.252,
+  "phase": "InProgress"
+ },
+ {
+  "t": 1647.4,
+  "phase": "Reconnect"
+ },
+ {
+  "t": 1655.335,
+  "phase": "WaitingForStats"
+ },
+ {
+  "t": 1663.914,
+  "phase": "PreEndOfGame"
+ },
+ {
+  "t": 1666.331,
+  "phase": "EndOfGame"
+ },
+ {
+  "t": 1689.158,
+  "phase": "None"
+ }
+]

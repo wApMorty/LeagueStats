@@ -207,7 +207,7 @@ la tâche 64 de SPEC-23. Découpage en SPEC-25 §5 (tâches 112 à 118, 24 pts) 
 
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
-| 112 | Spike : `scripts/dump_lcu_endgame.py`, une fin de partie réelle par @pj35, fixtures | 3 | — | ⬜ script écrit et testé 2026-10-07 (2 tests) ; **reste à @pj35** : `python scripts/dump_lcu_endgame.py` lancé avant la fin d'une partie, Ctrl+C après le retour au lobby, puis fixtures et constats en SPEC-25 §4 |
+| 112 | Spike : `scripts/dump_lcu_endgame.py`, une fin de partie réelle par @pj35, fixtures | 3 | — | ⬜✅ 2026-10-07 : 3 tests ; relevé de 1 689 s (partie classée perdue), fixtures `tests/fixtures/lcu_endgame/`, constats en SPEC-25 §4.0 : phase par événement sans délai (`"None"` hors lobby, chaîne), endpoints pleins de `PreEndOfGame` à la sortie d'`EndOfGame` (25 s ici), lecture en 1 ms, **événement `/lol-ranked` porteur de la notification complète (tâche 117 confirmée)** ; « Rejouer » rapide non couvert |
 | 113 | `PhaseTracker` : événements, sondage de rattrapage, `kind`, sujet `phase`, constantes | 5 | 112 | ⬜ |
 | 114 | `DraftMonitor` et `MonitorLifecycle` sur le tracker : zéro lecture de phase par tour | 3 | 113 | ⬜ |
 | 115 | Capture hors boucle (`read_transients`, `PostGameWatcher`), erreurs affichées une fois, régression | 5 | 112, 113 | ⬜ |

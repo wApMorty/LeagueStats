@@ -75,6 +75,36 @@ vitesse de la boucle du monitor.
 
 ## 4. Détail
 
+### 4.0 Relevé du spike (tâche 112, partie classée perdue, 2026-10-07)
+
+`scripts/dump_lcu_endgame.py`, 1 689 s de relevé (file, champ select, partie, fin de partie), fixtures dans
+`tests/fixtures/lcu_endgame/` (`gameflow_events.json`, `lp_change_notification.json`, `eog_stats_block.json`).
+
+- **La phase arrive par événement, sans délai.** `uri` `/lol-gameflow/v1/gameflow-phase`, `eventType` `Update`,
+  `data` = la phase en chaîne (le même instant, à la milliseconde, que l'événement `/session`). Suite vue :
+  `Matchmaking` → `ReadyCheck` → `Matchmaking` → `ReadyCheck` → `ChampSelect` → `GameStart` → `InProgress` →
+  `Reconnect` → `WaitingForStats` → `PreEndOfGame` → `EndOfGame` → `"None"`. **Hors lobby la phase est la chaîne
+  `"None"`**, pas l'objet `None` : `PHASE_KINDS` la range avec `idle`, et `closed` reste le client qui ne répond pas.
+- **Fenêtre des deux endpoints : de `PreEndOfGame` à la sortie d'`EndOfGame`.** Vides pendant `WaitingForStats`
+  (8,5 s), pleins dès `PreEndOfGame` (`eog-stats-block` 0,03 s avant l'événement de phase, la notification de LP
+  0,3 s après) et jusqu'à la milliseconde où la phase passe à `"None"` : les événements `Delete` / `null` des deux
+  endpoints partent au même instant (1689,155 s) que le changement de phase. Ici 25 s parce que la partie a été
+  quittée sans cliquer ; la fenêtre dure exactement ce que dure l'écran de fin, d'où le risque avec « Rejouer ».
+  Hors fenêtre, la réponse est `null` (JSON), pas `{}`.
+- **Lecture instantanée** : 1 ms en moyenne (`eog-stats-block` 8 ms en fenêtre, 70 ko, 11 ms au pire). Une lecture
+  par seconde (`PHASE_POST_POLL_S = 1,0`) ne coûte rien et tient la cadence validée ; `PHASE_POLL_S = 2,0` reste
+  le rattrapage, l'événement porte la phase.
+- **Tâche 117 confirmée : l'événement `/lol-ranked/v1/current-lp-change-notification` porte la notification
+  complète** (`leaguePointsDelta` −20, `leaguePoints` 64, `tier`, `division`, `gameId`, `queueType`), identique à la réponse du GET. Elle arrive 4 fois (une `null`, puis 3 fois la charge). Même constat pour
+  `/lol-end-of-game/v1/eog-stats-block` (`Create` puis 3 `Update`, dernière charge identique au GET) : à noter pour la
+  tâche 117 (lire aussi l'écran de fin dans l'événement coûte une ligne de plus).
+- **Bruit du préfixe `/lol-ranked`** : à l'entrée en fin de partie, ~25 événements `ranked-stats/<puuid>` et
+  `cached-ranked-stats/<puuid>` (un par joueur de la partie) en 130 ms, 69 événements au total sur la partie. Le tracker
+  et la tâche 117 filtrent sur l'URI exacte.
+- **Non couvert par ce relevé** : « Rejouer » cliqué dans les 3 s (la fenêtre s'y réduit), reste la vérification de
+  bout en bout du §6. La cause de la perte des LP reste donc l'hypothèse du §1 ; la fenêtre bornée par la phase est,
+  elle, établie.
+
 ### 4.1 `src/draft/phase_tracker.py` (nouveau)
 
 ```python

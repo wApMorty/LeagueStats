@@ -74,3 +74,20 @@ def test_evenements_filtres_par_prefixe_et_anonymises(tmp_path):
     assert [e["uri"] for e in events] == [dump.PHASE_ENDPOINT, "/lol-ranked/v1/x"]
     assert events[1]["data"] == {"puuid": "anon", "tier": "GOLD"}
     assert recorder.phases[0][1] == "PreEndOfGame"
+
+
+FIXTURES = Path(__file__).parent / "fixtures" / "lcu_endgame"
+
+
+def test_fixtures_du_spike_sans_identite_ni_jeton():
+    """Le relevé réel du 2026-10-07 : ni nom, ni puuid, ni jeton du salon de fin de partie."""
+    block = json.loads((FIXTURES / "eog_stats_block.json").read_text(encoding="utf-8"))
+    for player in (p for team in block["teams"] for p in team["players"]):
+        assert {player["puuid"], player["summonerName"], player["riotIdGameName"]} == {"anon"}
+    assert block["mucJwtDto"]["jwt"] == block["multiUserChatPassword"] == "anon"
+    notification = json.loads((FIXTURES / "lp_change_notification.json").read_text("utf-8"))
+    assert notification["gameId"] == block["gameId"]
+    phases = [
+        e["phase"] for e in json.loads((FIXTURES / "gameflow_events.json").read_text("utf-8"))
+    ]
+    assert phases[-5:] == ["Reconnect", "WaitingForStats", "PreEndOfGame", "EndOfGame", "None"]
