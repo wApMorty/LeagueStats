@@ -63,7 +63,7 @@ def test_chaque_famille_de_phase_a_un_libelle():
 
 def test_le_script_suit_le_sujet_phase_sans_changer_de_page():
     source = open("src/client/static/en_partie.js", encoding="utf-8").read()
-    assert 'Sse.open("phase"' in source and "tb-phase" in source
+    assert '"phase"' in source and "tb-phase" in source
     assert "location" not in source and "hx-get" not in source
 
 

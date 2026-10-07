@@ -4,6 +4,14 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### 🐛 Fix
+
+- **Le client n'entrait plus dans l'écran de draft (4.3.0)** — chaque flux SSE tient une connexion HTTP/1.1
+  ouverte et Chromium n'en autorise que 6 par hôte. La pastille de phase avait ajouté un 5ᵉ flux global au
+  flux de la draft : 6 connexions tenues, plus aucune pour `/draft`, `/draft/stage` ni les images. Les sujets
+  `ingame` et `phase` passent désormais par une seule connexion (`Sse.open` accepte une liste). Régression :
+  `tests/regression/test_regression_sse_connection_budget.py`.
+
 ## [4.3.0] - 2026-10-07
 
 Le Live Coach suit la phase de jeu par l'événement WebSocket du client LoL (0 lecture par tour) et affiche

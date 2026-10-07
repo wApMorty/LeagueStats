@@ -10,10 +10,12 @@
    */
   function open(topic, onEvent, { alive = () => true, onOpen = () => {} } = {}) {
     const abort = new AbortController();
+    // Un flux tient une connexion (6 par hôte dans Chromium) : plusieurs sujets passent par un seul.
+    const query = [].concat(topic).map((name) => `topic=${encodeURIComponent(name)}`).join("&");
     (async () => {
       while (alive() && !abort.signal.aborted) {
         try {
-          const response = await fetch(`/events?topic=${encodeURIComponent(topic)}`, {
+          const response = await fetch(`/events?${query}`, {
             headers: { [meta("token-header")]: meta("session-token") },
             signal: abort.signal,
           });
