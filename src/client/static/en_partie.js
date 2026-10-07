@@ -1,15 +1,20 @@
 // Écran « En partie » (SPEC-24 tâche 108) : le corps de la page est relu (`/en-partie/stage`) à chaque
-// événement du sujet `ingame` du bus ; la pastille de la barre de titre apparaît pendant la partie sur toutes
-// les pages, sans jamais changer de page toute seule. Lecture seule : aucun POST.
+// événement du sujet `ingame` du bus. La pastille de phase de la barre de titre (SPEC-25) suit le sujet
+// `phase` sur toutes les pages, sans jamais changer de page toute seule. Lecture seule : aucun POST.
 (() => {
   let busy = false;
   let again = false;
 
   const body = () => document.getElementById("en-partie-body");
 
-  function pill(live) {
-    const element = document.getElementById("tb-ingame");
-    if (element) element.hidden = !live;
+  function pill(payload) {
+    const element = document.getElementById("tb-phase");
+    if (!element || !payload) return;
+    const labels = JSON.parse(element.dataset.labels);
+    const kind = payload.kind in labels ? payload.kind : "unknown";
+    element.classList.toggle("chip-closed", kind === "closed");
+    element.classList.toggle("chip-ok", kind !== "closed");
+    element.querySelector("#tb-phase-text").textContent = labels[kind];
   }
 
   async function refresh() {
@@ -34,10 +39,8 @@
   }
 
   window.addEventListener("load", () => {
-    Sse.open("ingame", (name, payload) => {
-      pill(payload?.state === "live");
-      refresh();
-    });
+    Sse.open("ingame", () => refresh());
+    Sse.open("phase", (name, payload) => pill(payload));
   });
 
   window.EnPartie = { refresh };

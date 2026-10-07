@@ -122,10 +122,9 @@ def test_aucune_route_d_ecriture_sous_en_partie(client):
 def test_navigation_entree_active_et_pastille(client, bus):  # noqa: F811
     html = client.get("/en-partie").text
     assert re.search(r'<a class="nav-item" href="/en-partie"[^>]*aria-current="page"', html)
-    assert 'id="tb-ingame"' in html and re.search(r'id="tb-ingame"[^>]*\bhidden\b', html)
-    bus.publish("ingame", LIVE)
-    live = client.get("/").text
-    assert 'id="tb-ingame"' in live and not re.search(r'id="tb-ingame"[^>]*\bhidden\b', live)
+    # La pastille « En partie » est devenue la pastille de phase permanente (SPEC-25) : voir
+    # tests/test_client_phase_pastille.py.
+    assert 'id="tb-phase"' in html
 
 
 def test_script_servi_et_charge(client):

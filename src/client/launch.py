@@ -102,6 +102,17 @@ def _gameflow_phase(lcu: LCUClient) -> Callable[[], Optional[str]]:
     return lambda: proxy.get(GAMEFLOW_PHASE) if probe.is_open() else None
 
 
+def _phase_source(bus: EventBus, lcu: LCUClient) -> Callable[[], Optional[str]]:
+    """La phase du `PhaseTracker` (sujet `phase`) ; tracker muet, la sonde du client."""
+    fallback = _gameflow_phase(lcu)
+
+    def read() -> Optional[str]:
+        phase = (bus.latest("phase") or {}).get("phase")
+        return phase if phase is not None else fallback()
+
+    return read
+
+
 def run_client(verbose: bool = False) -> bool:
     """Lance le client et rend la main à la fermeture de la fenêtre (bloquant).
 
@@ -117,7 +128,7 @@ def run_client(verbose: bool = False) -> bool:
         return False
     print(f"[INFO] Client LeagueStats sur {url}")
     events = LcuEvents(bus, LCUClient(verbose=verbose).find_lcu_credentials)
-    game = LiveGame(bus, _gameflow_phase(LCUClient(verbose=verbose)))
+    game = LiveGame(bus, _phase_source(bus, LCUClient(verbose=verbose)))
     try:
         events.start()
         game.start()

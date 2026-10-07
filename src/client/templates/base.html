@@ -37,7 +37,7 @@
     </span>
   </div>
   <button type="button" class="chip chip-ok tb-pill" id="tb-center" hidden title="Ouvrir la draft"><span class="dot"></span>Champ select en cours</button>
-  <span hx-boost="true" hx-target="#view" hx-select="#view" hx-swap="outerHTML"><a class="chip chip-ok tb-pill" id="tb-ingame" href="/en-partie"{% if not ingame_live %} hidden{% endif %} title="Ouvrir l'écran En partie"><span class="dot"></span>En partie</a></span>
+  <span hx-boost="true" hx-target="#view" hx-select="#view" hx-swap="outerHTML"><a class="chip tb-pill {{ 'chip-closed' if phase_kind == 'closed' else 'chip-ok' }}" id="tb-phase" href="/en-partie" data-labels='{{ phase_labels|tojson }}' title="Phase de jeu du client LoL : ouvrir l'écran En partie"><span class="dot"></span><span id="tb-phase-text">{{ phase_labels.get(phase_kind, phase_labels["unknown"]) }}</span></a></span>
   <button type="button" class="chip chip-ok tb-pill" id="tb-file-start" hidden title="Lancer la recherche de partie du lobby">Lancer la file</button>
   <span class="chip chip-ok tb-pill tb-search" id="tb-file-search" hidden><span class="dot"></span><span id="tb-file-text">En file</span><button type="button" class="tb-cancel" id="tb-file-cancel">Annuler</button></span>
   {% include "partials/client_state.html" %}

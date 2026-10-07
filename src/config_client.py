@@ -208,6 +208,21 @@ class ClientConfig:
     LCU_WS_BACKOFF_MAX_S: float = 30.0
     LCU_WS_STOP_TIMEOUT_S: float = 5.0
 
+    # Pastille de phase de la barre de titre (SPEC-25 §4.4) : libellé de chaque famille de phase
+    # publiée par `PhaseTracker` (sujet `phase`).
+    PHASE_LABELS: Dict[str, str] = field(
+        default_factory=lambda: {
+            "idle": "Hors partie",
+            "queue": "En file",
+            "draft": "Champion select",
+            "game": "En partie",
+            "post": "Fin de partie",
+            "closed": "Client LoL fermé",
+            "error": "Erreur de partie",
+            "unknown": "Phase inconnue",
+        }
+    )
+
     # Lecture pendant que le Live Coach écrit : attente d'un verrou avant d'abandonner.
     DB_READ_TIMEOUT_S: float = 5.0
 
