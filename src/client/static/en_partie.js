@@ -39,7 +39,8 @@
   }
 
   window.addEventListener("load", () => {
-    Sse.open(["ingame", "phase"], (name, payload) => (name === "phase" ? pill(payload) : refresh()));
+    Sse.open("ingame", () => refresh());
+    Sse.open("phase", (name, payload) => pill(payload));
   });
 
   window.EnPartie = { refresh };

@@ -6,10 +6,12 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### 🐛 Fix
 
-- **Le client n'entrait plus dans l'écran de draft (4.3.0)** — chaque flux SSE tient une connexion HTTP/1.1
-  ouverte et Chromium n'en autorise que 6 par hôte. La pastille de phase avait ajouté un 5ᵉ flux global au
-  flux de la draft : 6 connexions tenues, plus aucune pour `/draft`, `/draft/stage` ni les images. Les sujets
-  `ingame` et `phase` passent désormais par une seule connexion (`Sse.open` accepte une liste). Régression :
+- **Le client n'entrait plus dans l'écran de draft (4.3.0)** — chaque flux SSE tenait une connexion HTTP/1.1
+  ouverte et Chromium n'en accorde que 6 par hôte. La page en ouvrait 5 (`lcu` ×3, `ingame`,
+  `game_captured`), la pastille de phase en a ajouté un 6ᵉ : plus aucune connexion pour `/draft`, les
+  `fetch` ni la navigation (« Pas de champ select en cours », « Retour au coaching » inerte, auto-ouverture
+  absente), et la draft en demandait un 7ᵉ. `sse.js` ouvre désormais une seule connexion pour toute la
+  page et distribue les événements aux écouteurs par sujet. Régression :
   `tests/regression/test_regression_sse_connection_budget.py`.
 
 ## [4.3.0] - 2026-10-07
