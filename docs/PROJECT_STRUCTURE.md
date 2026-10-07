@@ -59,11 +59,13 @@ src/
 │   ├── ban_advice.py                     # 3 écrans de bans (auto-hover, draft, adaptatif)
 │   ├── pool_selection.py                  # Sélection de la pool de la session
 │   ├── loadout.py, loadout_lcu.py, loadout_import.py  # Import des builds OneTricks (SPEC-15)
+│   ├── phase_tracker.py                 # Phase gameflow : événement WebSocket + sondage de rattrapage (SPEC-25)
 │   ├── lifecycle.py, phases.py, commands.py,
 │       automation.py, display.py, memory_diagnostics.py
 │
 ├── coaching/                # Coach de gameplay (SPEC-19)
 │   ├── capture.py, ranked.py            # Capture brute des parties, photos de classement
+│   ├── post_game_watcher.py              # Fil de lecture de l'écran de fin et des LP, cadencé par la phase (SPEC-25)
 │   ├── metrics.py, grid.py               # Métriques des 10 joueurs, grille par rôle, norme, objectif
 │   ├── findings.py, report.py             # Constats de fin de partie, sorties console
 │   └── progression.py, goals.py            # Schémas, tendances, LP, axes de travail

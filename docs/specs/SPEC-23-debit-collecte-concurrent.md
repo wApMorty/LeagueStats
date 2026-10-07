@@ -95,7 +95,8 @@ Méthode `LCUClient.crawl_session()` (ou équivalent), mêmes identifiants.
 - **Constructeur** : `Crawler(monitor, path=None, clock=time.monotonic, executor=None)` ; le défaut crée
   un `ThreadPoolExecutor(max_workers=cfg.CRAWL_WORKERS, thread_name_prefix="crawl")`. Les tests
   injectent un exécuteur synchrone (`submit` exécute et renvoie un `Future` terminé).
-- **`step(phase: str = "") -> None`** (remplace `step()`, `lifecycle.py:88` passe la phase de gameflow) :
+- **`step(phase: str = "") -> None`** (remplace `step()`, `lifecycle.py:88` passe la phase de gameflow ; depuis SPEC-25, celle du `PhaseTracker`
+  que `MonitorLifecycle.gameflow()` fournit déjà à chaque tour, sans relire le LCU) :
   1. récolte les `Future` terminés et écrit leurs résultats (une transaction, un `commit` par tick) ;
   2. si pause 429 en cours, s'arrête ici ;
   3. recharge le panier : `jetons = min(jetons + débit × dt, débit × CRAWL_BURST_S)` ;

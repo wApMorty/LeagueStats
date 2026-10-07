@@ -328,7 +328,8 @@ substitutions (catégorie, ancien, nouveau, parts, raison) et du nom des objets.
   du fil (`try/except` large, journalisé en `[INFO]`). Sans modèle (`train.model_path()` absent) : `p` est
   `None` et l'écran dit comment l'entraîner (`python -m src.winprob.retrain --force`).
 - **Routes** : `GET /en-partie`, `GET /en-partie/stage` (fragment, comme `/draft/stage`) ; aucune route `POST`.
-  Entrée de navigation « En partie », pastille dans la barre de titre pendant `state == "live"`. SSE sur le sujet
+  Entrée de navigation « En partie », pastille dans la barre de titre pendant `state == "live"` (SPEC-25 §4.4 :
+  devenue la pastille de phase permanente `tb-phase`, qui suit le sujet `phase`). SSE sur le sujet
   `ingame`, consommé par `ingame.js` (`sse.js` partagé).
 - **Cadre et face-à-face (108)** : le tableau de SPEC-14 (une ligne par lane : allié, mat / syn / total, DUEL, ennemi)
   tel que `FinalAnalysis` le porte, la probabilité de la draft et son évaluation. Sans `FinalAnalysis`, l'état

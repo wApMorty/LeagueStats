@@ -1,7 +1,10 @@
 # SPEC-25 — Suivi de phase de jeu et capture de fin de partie
 
-**Statut** : 🟡 Rédigée le 2026-10-07. Source de phase, déclencheur de la capture, périmètre dans le client
-et spike validés par @pj35 (§2) ; la cause exacte de la perte des LP reste une hypothèse jusqu'au spike (tâche 112).
+**Statut** : ✅ Implémentée le 2026-10-07 (7 tâches, 24 pts) ; **recette en conditions réelles à faire par @pj35**
+(§6, vérification de bout en bout : « Rejouer » dans les 3 s après l'écran de fin, et la pastille à voir). Rédigée le
+2026-10-07 ; source de phase, déclencheur, périmètre et spike validés par @pj35 (§2), les trois points « à valider » aussi.
+La fenêtre bornée par la phase est établie par le spike (§4.0) ; que « Rejouer » rapide en soit la cause reste à
+confirmer par la recette.
 
 **Origine** : @pj35, 2026-10-07 : « le live coach --client ne détecte plus les gains/pertes de LP […] Il est
 important qu'on sache à tout moment si on est en champ select, dans une fin de game, ou en game. Ça mérite
@@ -199,6 +202,22 @@ fenêtre de rattrapage, plus la lecture transitoire.
   (compteur d'appels du faux `lcu`), en lit une quand il est périmé.
 - Client : le fragment de la pastille pour chacun des six états ; sujet `phase` reçu par SSE.
 - Hermétique : ni `data/db.db`, ni `logs/`, ni vrai client LoL (`tests/conftest.py`).
+
+### 4.7 Écarts à la rédaction
+
+- `PostGameWatcher` vit dans `src/coaching/post_game_watcher.py`, pas dans `capture.py` : le critère 7 (aucun
+  `sqlite` ni `.connection` dans son module) ne tient pas dans un module qui importe `sqlite3`.
+- `PhaseTracker.phase` vaut `None` quand la phase n'est pas confirmée depuis `PHASE_STALE_S` : le monitor n'a
+  qu'un test (`None` : lire `lifecycle.gameflow()`), pas de notion « frais » à part. Un sondage raté n'efface pas
+  la phase avant ce délai. Constante ajoutée : `PHASE_CREDENTIALS_RETRY_S` (la recherche des identifiants scrute
+  les processus : au plus une par délai quand le client est fermé).
+- Le repli du monitor est **une** lecture (`get_gameflow_session`) qui sert aux trois décisions du tour ;
+  `is_in_ready_check` / `is_in_champion_select` ne sont plus appelés par la boucle (trois tests adaptés).
+- `on_post_game` garde un `read_transients()` avec le client du coach (filet), en plus du fil de lecture.
+- Pastille : id `tb-phase`, deux libellés de plus que les six de la spec (`error`, `unknown`) ; `LiveGame` lit le
+  tracker et retombe sur la sonde `LcuProbe` quand le tracker est muet (Live Coach pas encore connecté).
+- Tâche 117 : `PhaseTracker.subscribe_events` relaie les événements LCU non-phase à `GameCapture.on_lcu_event`.
+  L'écran de fin n'est pas lu dans l'événement (le spike montre qu'il le porterait aussi, hors de la tâche).
 
 ## 5. Tâches
 

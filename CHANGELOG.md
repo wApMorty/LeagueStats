@@ -4,6 +4,30 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### 🐛 Fix
+
+- **Les LP et l'écran de fin n'étaient plus capturés (SPEC-25)** — depuis le 2026-10-05 (11 parties), ni
+  `lp_delta` ni `raw_eog`. L'écran de fin et la notification de LP ne répondent que pendant l'écran de fin
+  (relevé d'une vraie partie : de `PreEndOfGame` à la sortie d'`EndOfGame`, puis `null`) et n'étaient lus
+  que par la boucle du monitor, une fois toutes les 5 s dans une boucle de 2 à 5 s par tour : un écran
+  quitté par « Rejouer » passait entre deux lectures. Un fil `PostGameWatcher` les lit chaque seconde, avec
+  son propre client LCU, dès l'entrée en fin de partie, et la notification de LP est aussi prise dans
+  l'événement WebSocket `/lol-ranked` à l'instant où elle naît ; la boucle écrit en base ce qui a été mis
+  de côté (une base verrouillée rejoue la notification au passage suivant). Une erreur de capture
+  s'affiche une fois en `[ALERTE]`, même hors `-v`. Régression :
+  `tests/regression/test_regression_post_game_transients_off_loop.py`. Les LP des parties déjà jouées ne
+  se récupèrent pas (aucune variation inventée, SPEC-19 §8).
+
+### ✨ Feature
+
+- **Suivi de la phase de jeu (SPEC-25)** — `PhaseTracker` : la phase gameflow arrive par l'événement
+  WebSocket du client LoL à l'instant du changement, avec un sondage de rattrapage (et en mode console).
+  Le Live Coach ne la relit plus à chaque tour (0 lecture au lieu de 3 ; 1 seule si le tracker est muet),
+  et une pastille permanente de la barre de titre l'affiche partout : Hors partie, En file, Champion
+  select, En partie, Fin de partie, Client LoL fermé. Elle remplace la pastille « En partie ».
+  `scripts/dump_lcu_endgame.py` relève une fin de partie réelle (fixtures anonymisées dans
+  `tests/fixtures/lcu_endgame/`).
+
 ## [4.2.0] - 2026-10-07
 
 Le client LeagueStats arrive : écrans Draft, En partie, coaching, profil, collection, lobby et social,

@@ -23,6 +23,8 @@ MODULES = (
     "src.client.ingame",
     "src.client.en_partie",
     "src.client.draft_swaps",
+    "src.draft.phase_tracker",
+    "src.coaching.post_game_watcher",
     "fastapi",
     "uvicorn",
     "jinja2",
