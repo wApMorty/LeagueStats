@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-10-07 (SPEC-25 : suivi de phase et capture de fin de partie)
+**Mis à jour** : 2026-10-08 (SPEC-26 : partie trouvée persistante et bascule en partie)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -214,6 +214,21 @@ la tâche 64 de SPEC-23. Découpage en SPEC-25 §5 (tâches 112 à 118, 24 pts) 
 | 116 | Pastille de phase dans la barre de titre, `LiveGame` sur le tracker | 3 | 113 | ⬜✅ 2026-10-07 : 8 tests ; la pastille `#tb-phase` de la barre de titre remplace la pastille « En partie » (même emplacement, lien vers l'écran En partie, jamais de bascule de page) : six états rendus (Hors partie, En file, Champion select, En partie, Fin de partie, Client LoL fermé) d'après `bus.latest("phase")` au chargement puis le sujet `phase` en SSE (`client_config.PHASE_LABELS`, plus « Erreur de partie » et « Phase inconnue »), `LiveGame` lit la phase du tracker avec la sonde `LcuProbe` en repli quand le tracker est muet ; **rendu à voir par @pj35** |
 | 117 | **Conditionnelle** au spike : notification de LP lue dans l'événement `/lol-ranked` | 3 | 112, 115 | ⬜✅ 2026-10-07 : 9 tests ; spike favorable (SPEC-25 §4.0) : `PhaseTracker.subscribe_events` passe les événements `/lol-ranked/v1/current-lp-change-notification` à `GameCapture.on_lcu_event`, qui met la notification de côté dès qu'elle naît (même photo que le sondage sur la fixture réelle ; un écran quitté avant toute lecture donne quand même les LP) ; l'écran de fin n'est pas lu dans l'événement |
 | 118 | Clôture : exe, docs, `CHANGELOG.md`, SPEC-23 et SPEC-24, statuts | 2 | 114, 115, 116 | ⬜✅ 2026-10-07 : `python build_app.py` (83,2 Mo) puis `check_exe_assets.py` : 52 fichiers du client et 13 modules (dont `phase_tracker` et `post_game_watcher`, ajoutés au script) présents ; `PROJECT_STRUCTURE.md`, README, `CHANGELOG.md`, SPEC-23 (`step(phase)` lit la phase du tracker) et SPEC-24 (pastille), écarts à la rédaction en SPEC-25 §4.7, statuts ; **recette @pj35** : lancer l'exe pendant une partie classée, regarder la pastille (En file, Champion select, En partie, Fin de partie, Hors partie), cliquer « Rejouer » dans les 3 s après l'écran de fin, puis `SELECT lp_delta, game_id FROM rank_snapshots ORDER BY id DESC LIMIT 1` (non nul) et `SELECT raw_eog IS NOT NULL FROM game_records ORDER BY game_creation_utc DESC LIMIT 1` (1) |
+
+### Lot suivant — SPEC-26, partie trouvée persistante et bascule en partie (🟡 rédigée le 2026-10-08)
+
+[SPEC-26](docs/specs/SPEC-26-file-trouvee-persistante-et-bascule-en-partie.md) : après « Accepter », l'overlay se
+referme puis se rouvre en entier tant que les autres joueurs n'ont pas accepté (`apply` rappelle `show`, la
+séquence se rejoue) ; il doit rester jusqu'à l'ouverture de la draft. À la fin de la draft (`ChampSelect` vers
+`GameStart`), le client bascule tout seul sur « En partie » (rouvre SPEC-24 §2 / §7 et SPEC-25 §7). Garde-fou de
+30 s, contenu de l'attente et absence de réglage « à valider » (SPEC-26 §2). Découpage en SPEC-26 §5 (tâches
+119 à 121, 10 pts) :
+
+| # | Tâche | Pts | Dépend de | État |
+|---|---|---|---|---|
+| 119 | Banc `support_found_js.py`, régression rouge puis table de décision de l'overlay (`asking` / `held` / `entering`), `hold_max` et `enter_wait` | 5 | — | ⬜ |
+| 120 | Bascule vers « En partie » : `Transition.go` exposé, sujet `phase` dans `found.js` | 3 | 119 | ⬜ |
+| 121 | Clôture : SPEC-24 et SPEC-25 rouvertes, `CHANGELOG.md`, statuts | 2 | 119, 120 | ⬜ |
 
 ### Lot suivant — SPEC-22, attribution complète de l'impact (🟡 rédigée le 2026-10-04)
 
