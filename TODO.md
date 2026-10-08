@@ -215,7 +215,7 @@ la tâche 64 de SPEC-23. Découpage en SPEC-25 §5 (tâches 112 à 118, 24 pts) 
 | 117 | **Conditionnelle** au spike : notification de LP lue dans l'événement `/lol-ranked` | 3 | 112, 115 | ⬜✅ 2026-10-07 : 9 tests ; spike favorable (SPEC-25 §4.0) : `PhaseTracker.subscribe_events` passe les événements `/lol-ranked/v1/current-lp-change-notification` à `GameCapture.on_lcu_event`, qui met la notification de côté dès qu'elle naît (même photo que le sondage sur la fixture réelle ; un écran quitté avant toute lecture donne quand même les LP) ; l'écran de fin n'est pas lu dans l'événement |
 | 118 | Clôture : exe, docs, `CHANGELOG.md`, SPEC-23 et SPEC-24, statuts | 2 | 114, 115, 116 | ⬜✅ 2026-10-07 : `python build_app.py` (83,2 Mo) puis `check_exe_assets.py` : 52 fichiers du client et 13 modules (dont `phase_tracker` et `post_game_watcher`, ajoutés au script) présents ; `PROJECT_STRUCTURE.md`, README, `CHANGELOG.md`, SPEC-23 (`step(phase)` lit la phase du tracker) et SPEC-24 (pastille), écarts à la rédaction en SPEC-25 §4.7, statuts ; **recette @pj35** : lancer l'exe pendant une partie classée, regarder la pastille (En file, Champion select, En partie, Fin de partie, Hors partie), cliquer « Rejouer » dans les 3 s après l'écran de fin, puis `SELECT lp_delta, game_id FROM rank_snapshots ORDER BY id DESC LIMIT 1` (non nul) et `SELECT raw_eog IS NOT NULL FROM game_records ORDER BY game_creation_utc DESC LIMIT 1` (1) |
 
-### Lot suivant — SPEC-26, partie trouvée persistante et bascule en partie (🟡 rédigée le 2026-10-08)
+### Lot suivant — SPEC-26, partie trouvée persistante et bascule en partie (✅ livré le 2026-10-08, recette @pj35 à faire)
 
 [SPEC-26](docs/specs/SPEC-26-file-trouvee-persistante-et-bascule-en-partie.md) : après « Accepter », l'overlay se
 referme puis se rouvre en entier tant que les autres joueurs n'ont pas accepté (`apply` rappelle `show`, la
@@ -226,9 +226,9 @@ séquence se rejoue) ; il doit rester jusqu'à l'ouverture de la draft. À la fi
 
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
-| 119 | Banc `support_found_js.py`, régression rouge puis table de décision de l'overlay (`asking` / `held` / `entering`), `hold_max` et `enter_wait` | 5 | — | ⬜ |
-| 120 | Bascule vers « En partie » : `Transition.go` exposé, sujet `phase` dans `found.js` | 3 | 119 | ⬜ |
-| 121 | Clôture : SPEC-24 et SPEC-25 rouvertes, `CHANGELOG.md`, statuts | 2 | 119, 120 | ⬜ |
+| 119 | Banc `support_found_js.py`, régression rouge puis table de décision de l'overlay (`asking` / `held` / `entering`), `hold_max` et `enter_wait` | 5 | — | ✅ 2026-10-08 : 19 tests ; régression `test_regression_found_overlay_reopens.py` rouge avant (6 overlays créés pour 1 attendu) puis verte, banc `node` `tests/support_found_js.py` (horloge virtuelle), table de décision dans `found.js` (`expectDraft` supprimé), `FOUND_HOLD_MAX_S` = 30 s et `FOUND_ENTER_WAIT_S` = 1,5 s dans `/found/state` ; **recette @pj35** : accepter une vraie partie, l'overlay reste sur « Acceptée » puis s'efface sur la draft, et relever `playerResponse` et `state` du ready-check après acceptation |
+| 120 | Bascule vers « En partie » : `Transition.go` exposé, sujet `phase` dans `found.js` | 3 | 119 | ✅ 2026-10-08 : 13 tests ; `window.Transition = { go }`, `found.js` écoute le sujet `phase` et appelle `Transition.go("/en-partie")` au seul passage `draft` vers `game` (jamais au premier événement vu, ni si `/en-partie` est déjà ouverte), `en_partie.js` inchangé ; **recette @pj35** : verrouiller les 10 champions, le client bascule sur « En partie » depuis la draft puis depuis une autre page |
+| 121 | Clôture : SPEC-24 et SPEC-25 rouvertes, `CHANGELOG.md`, statuts | 2 | 119, 120 | ✅ 2026-10-08 : entrées Fix et Feature sous `[Unreleased]`, statut de SPEC-26, SPEC-24 §2 et §7, SPEC-25 §7 et README des specs à jour ; recette réelle laissée à @pj35 (SPEC-26 §6) |
 
 ### Lot suivant — SPEC-22, attribution complète de l'impact (🟡 rédigée le 2026-10-04)
 

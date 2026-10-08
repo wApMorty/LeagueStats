@@ -105,7 +105,7 @@ l'analyse de la draft, le plan de build et la courbe de win chance pendant la pa
 | Courbe de win chance | **Défaut proposé** : série en mémoire, un point toutes les `INGAME_SAMPLE_S`, depuis l'ouverture du client ; **pas de persistance** (la page de la partie, `/parties/{id}`, redessine la courbe complète depuis la timeline LCU après la partie). Redémarrer le client en pleine partie perd le début de la courbe, et l'écran le dit. |
 | Analyse de la draft | **Validé (@pj35, 2026-10-06)** : on garde le résultat calculé à la fin de la draft (`FinalAnalysis`, tâche 106), publié sur son sujet du bus et conservé jusqu'à la draft suivante. Si le Live Coach n'a pas vu la draft, l'écran dit « analyse indisponible » (ignorance visible) ; alternative écartée pour l'instant : recalculer depuis `allPlayers[].championName/position`. |
 | Contenu « build » | **Validé (@pj35, 2026-10-06)** : plan d'objets (avec les substitutions du duel et leur raison), suivi des achats (objets déjà pris cochés, prochain objet du plan, or disponible), ordre des compétences. Runes et sorts : non retenus (déjà dans la colonne loadout de la draft). L'ordre des compétences n'est livré que si OneTricks le publie (spike, tâche 105) ; sinon la ligne disparaît et le CHANGELOG le dit. |
-| Ouverture de l'écran | **Validé (@pj35, 2026-10-06)** : entrée « En partie » dans la navigation et pastille dans la barre de titre pendant une partie, **sans bascule automatique** de page (@pj35 peut être sur un autre onglet du client). |
+| Ouverture de l'écran | **Validé (@pj35, 2026-10-06)** : entrée « En partie » dans la navigation et pastille dans la barre de titre pendant une partie, **sans bascule automatique** de page (@pj35 peut être sur un autre onglet du client). *Rouvert par SPEC-26 (2026-10-08) : seule la transition draft vers partie bascule désormais, la pastille continue de n'informer que.* |
 | Écriture en partie | **Défaut proposé** : aucune. L'écran « En partie » est en lecture seule ; les seules écritures nouvelles de la spec sont les swaps de draft et le correctif de ban. |
 | Design | Les écrans sont extrapolés du système « Alchimie » (SPEC-21 §2, « Écrans sans maquette », validé le 2026-10-05) ; si une direction manque, Claude s'arrête et le signale. |
 
@@ -445,4 +445,4 @@ l'achat, courbe de win chance qui avance.
 - ❌ **Runes et sorts en partie** : déjà dans la colonne loadout de la draft (non retenus par @pj35, 2026-10-06).
 - ❌ **Objets des adversaires, cooldowns, suivi de leur or** : non demandés, et l'API ne sert pas l'or adverse.
 - ❌ **Conseil d'ordre par règles écrites à la main** : sans métrique (§3).
-- ❌ **Bascule automatique de page** vers « En partie » : à rouvrir après usage (§2, « à valider »).
+- ❌ **Bascule automatique de page** vers « En partie » : à rouvrir après usage (§2, « à valider »). *Rouverte et livrée par SPEC-26 (2026-10-08), au passage `ChampSelect` vers `GameStart`.*

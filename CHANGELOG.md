@@ -4,6 +4,14 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### ✨ Feature
+
+- **Bascule automatique vers « En partie » à la fin de la draft (SPEC-26)** — au passage de `ChampSelect` à `GameStart` (famille de phase `draft` vers `game`), le client ouvre tout seul l'écran « En partie » (analyse de la draft, build, win chance), depuis n'importe quelle page, par la transition signature. Pas de bascule à un dodge, à une reconnexion, ni quand le client s'ouvre en pleine partie ; pas de réglage pour la couper. Tests : `tests/test_client_game_switch.py`.
+
+### 🐛 Fix
+
+- **L'animation de la partie trouvée repartait de zéro après « Accepter » (SPEC-26)** — l'overlay se refermait 1,2 s après l'acceptation alors que la phase restait `ReadyCheck` tant que les autres joueurs n'avaient pas tous accepté : il se rouvrait en entier (boutons, 90 runes, explosion) en boucle jusqu'au champ select. L'overlay accepté est maintenant tenu (« Acceptée · En attente des autres joueurs ») jusqu'à l'ouverture de la draft, puis s'efface sur la draft déjà chargée ; si la file échoue après l'acceptation, il s'efface avec « Un joueur n'a pas accepté · retour en file », et un garde-fou de 30 s (`FOUND_HOLD_MAX_S`) le retire si la phase n'avance pas. Régression : `tests/regression/test_regression_found_overlay_reopens.py`.
+
 ## [4.4.0] - 2026-10-08
 
 Nouvel écran Pool dans le client et correctif de l'affichage des runes en draft. Aucune action requise (pas de migration, pas de scrape).

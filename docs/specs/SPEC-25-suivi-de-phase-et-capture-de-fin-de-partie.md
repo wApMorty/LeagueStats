@@ -268,7 +268,7 @@ passe de « En partie » à « Fin de partie » puis « Hors partie » ou « En 
 
 - ❌ Cause du ralentissement de la boucle (2 à 5 s/tour) : non établie, traitée à part si elle persiste (§2).
 - ❌ Lectures de phase à la demande de `found.py` et `lobby.py` : une requête par page, pas une boucle.
-- ❌ Bascule automatique de page selon la phase : la pastille informe, elle ne navigue pas (SPEC-24 tâche 108).
+- ❌ Bascule automatique de page selon la phase : la pastille informe, elle ne navigue pas (SPEC-24 tâche 108). *Rouverte par SPEC-26 (2026-10-08) pour le seul passage draft vers partie ; la pastille ne navigue toujours pas.*
 - ❌ Reconstituer une variation de LP pour une partie récupérée au rattrapage : une partie sans notification
   lue n'a pas de variation, comme SPEC-19 §8 (« aucune variation inventée »).
 - ❌ Changer le pas de la collecte (SPEC-23) ou le transport LCU (`LCUClient.last_status_code`, SPEC-23 tâche 62).
