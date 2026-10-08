@@ -34,6 +34,8 @@ def state(proxy: LcuProxy) -> Dict[str, Any]:
         "ready_check": answer,
         "remaining": remaining,
         "total": client_config.FOUND_SECONDS,
+        "hold_max": client_config.FOUND_HOLD_MAX_S,
+        "enter_wait": client_config.FOUND_ENTER_WAIT_S,
         "auto_accept": bool(prefs and prefs.auto_accept_queue),
     }
 

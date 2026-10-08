@@ -62,6 +62,11 @@ class ClientConfig:
     # Partie trouvée (SPEC-21 tâche 93) : secondes laissées pour répondre ; le compte à rebours part de
     # là, moins le `timer` du LCU (forme non relevée : à confirmer en partie réelle).
     FOUND_SECONDS: float = 10.0
+    # SPEC-26 : une fois acceptée, la partie trouvée reste à l'écran au plus `HOLD_MAX_S` (trois fois la
+    # fenêtre de réponse) si la phase n'avance pas ; à l'entrée en draft, la page /draft se charge sous
+    # l'overlay pendant au plus `ENTER_WAIT_S` avant l'effondrement (durée de chargement non mesurée).
+    FOUND_HOLD_MAX_S: float = 30.0
+    FOUND_ENTER_WAIT_S: float = 1.5
 
     # Écran Rang (SPEC-21 tâche 51) : files suivies, seuil de photos sous lequel une file n'a pas de
     # courbe (README du handoff), fenêtre du delta de LP, parties de l'histogramme, taille de la courbe.

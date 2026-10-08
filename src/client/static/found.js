@@ -4,12 +4,15 @@
 (() => {
   const meta = (name) => document.querySelector(`meta[name="${name}"]`)?.content;
   const POLL_MS = 4000;
-  const EXPECT_DRAFT_MS = 20000; // après « Accepter », le champ select suit dans ce délai
+  const LEAVE_MESSAGE = "Un joueur n'a pas accepté · retour en file";
   const RUNES = "ᚠ ᚢ ᚦ ᚨ ᚱ ᚲ ᚷ ᚹ ᚺ ᚾ ᛁ ᛃ ᛇ ᛈ ᛉ ᛊ ᛏ ᛒ ᛖ ᛗ ᛚ ᛜ ᛞ ᛟ ";
   const RING = 2199.1; // circonférence de l'anneau de compte à rebours (r = 350)
 
-  let overlay = null; // { el, until, total, accepted, timer, timeouts }
-  let expectDraft = 0;
+  // Overlay : { el, until, total, timer, timeouts, holdMax, enterWait } puis, selon l'étape, `accepted`
+  // (séquence lancée, une seule fois), `settled` (séquence finie : « held »), `entering` (effondrement vers
+  // la draft) et `leaving` (fondu de sortie). Table de décision : `apply`.
+  let overlay = null;
+  let dismissed = false; // garde-fou échu pendant ce ready-check : on ne rouvre pas l'overlay
   let busy = false;
 
   const post = (path) =>
@@ -17,10 +20,12 @@
       .then(async (response) => ({ ok: response.ok, body: await response.json().catch(() => ({})) }))
       .catch(() => ({ ok: false, body: { detail: "Serveur indisponible" } }));
 
+  /** Ouvre /draft ; faux si on y est déjà (rien ne se charge). */
   function goDraft() {
-    if (location.pathname === "/draft") return;
+    if (location.pathname === "/draft") return false;
     history.pushState({}, "", "/draft");
     htmx.ajax("GET", "/draft", { target: "#view", select: "#view", swap: "outerHTML" });
+    return true;
   }
 
   // ---------- pastille de la barre de titre ----------
@@ -120,15 +125,16 @@
     overlay = null;
   }
 
-  /** Acceptation (la mienne, ou celle du Live Coach) : impact, explosion, anneaux ×9, effondrement vers la draft. */
+  /** Acceptation (la mienne, ou celle du Live Coach) : impact, explosion, anneaux ×9, puis l'overlay est tenu. */
   function acceptedSequence() {
     if (!overlay || overlay.accepted) return;
     overlay.accepted = true;
-    expectDraft = performance.now() + EXPECT_DRAFT_MS;
+    overlay.acceptedAt = performance.now();
     const el = overlay.el;
     el.querySelector("#f-title").textContent = "Acceptée";
-    el.querySelector("#f-sub").textContent = "Le cercle se referme · ouverture du champ select";
+    el.querySelector("#f-sub").textContent = "En attente des autres joueurs";
     el.querySelector("#f-buttons").hidden = true;
+    el.querySelector("#f-count").style.visibility = "hidden";
     const reduced = Motion.opts().reduced;
     if (!reduced) {
       const C = Motion.C;
@@ -142,17 +148,41 @@
       });
       el.querySelectorAll("[data-spin]").forEach((svg) => svg.getAnimations().forEach((animation) => (animation.playbackRate = 9)));
     }
-    later(reduced ? 0 : 1200, () => {
-      const done = () => {
-        close();
-        if (expectDraft) refresh(); // le champ select est peut-être déjà là
-      };
-      if (reduced) return done();
+    later(reduced ? 0 : 1200, settle);
+  }
+
+  /** Fin de la séquence : les anneaux reprennent leur vitesse, l'overlay attend la draft. */
+  function settle() {
+    overlay.settled = true;
+    overlay.el.querySelectorAll("[data-spin]").forEach((svg) => svg.getAnimations().forEach((animation) => (animation.playbackRate = 1)));
+    if (overlay.enterAfter) enter();
+  }
+
+  /** Le champ select s'ouvre : /draft se charge sous l'overlay, qui s'effondre ensuite et se retire. */
+  function enter() {
+    if (overlay.entering) return;
+    if (!overlay.settled) return void (overlay.enterAfter = true);
+    overlay.entering = true;
+    clearInterval(overlay.timer);
+    const el = overlay.el;
+    if (Motion.opts().reduced) {
+      goDraft();
+      return close();
+    }
+    let started = false;
+    const collapse = () => {
+      if (started) return;
+      started = true;
+      document.removeEventListener("htmx:load", onLoad);
       el.animate(
         [{ opacity: 1, transform: "scale(1)", filter: "brightness(1)" }, { opacity: 0, transform: "scale(.2) rotate(160deg)", filter: "brightness(3)" }],
         { duration: 560, easing: "cubic-bezier(.6,0,.8,.2)", fill: "forwards" },
-      ).onfinish = done;
-    });
+      ).onfinish = close;
+    };
+    const onLoad = (event) => event.target.id === "view" && collapse();
+    if (!goDraft()) return collapse();
+    document.addEventListener("htmx:load", onLoad);
+    later(overlay.enterWait * 1000, collapse);
   }
 
   async function accept() {
@@ -167,33 +197,48 @@
     leave();
   }
 
-  /** La file n'est plus trouvée (refus, esquive, expiration) : l'overlay s'efface. */
-  function leave() {
-    if (!overlay || overlay.accepted) return;
+  /** La file n'est plus trouvée (refus, esquive, expiration) : l'overlay s'efface, avec un message si on en donne un. */
+  function leave(message) {
+    if (!overlay || overlay.leaving) return;
+    overlay.leaving = true;
     const el = overlay.el;
     clearInterval(overlay.timer);
+    overlay.timeouts.forEach(clearTimeout);
+    if (message) el.querySelector("#f-sub").textContent = message;
     if (Motion.opts().reduced) return close();
     el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 400, fill: "forwards" }).onfinish = close;
   }
 
   // ---------- état ----------
 
+  /** Table de décision de l'overlay (SPEC-26 §4.1), évaluée à chaque état lu. */
   function apply(state) {
     pill(state.phase === "ChampSelect");
-    const found =
-      state.phase === "ReadyCheck" &&
-      state.ready_check?.state === "InProgress" &&
-      state.ready_check.response !== "Declined";
-    if (found && !overlay) show(state);
-    else if (found && overlay && state.ready_check.response === "Accepted") acceptedSequence();
-    else if (!found && overlay) {
-      if (state.phase === "ChampSelect") acceptedSequence(); // le Live Coach a accepté avant nous
-      else leave();
+    if (state.phase !== "ReadyCheck") dismissed = false;
+    const check = state.ready_check;
+    const found = state.phase === "ReadyCheck" && check?.state === "InProgress" && check.response !== "Declined";
+    if (!overlay) {
+      if (found && !dismissed) {
+        show(state);
+        if (check.response === "Accepted") acceptedSequence(); // auto-accept, ou page ouverte après l'acceptation
+      }
+      return;
     }
-    if (state.phase === "ChampSelect" && expectDraft > performance.now() && !overlay) {
-      expectDraft = 0;
-      goDraft();
-    }
+    overlay.holdMax = state.hold_max;
+    overlay.enterWait = state.enter_wait;
+    if (overlay.entering || overlay.leaving) return;
+    if (state.phase === "ChampSelect") {
+      acceptedSequence(); // le Live Coach a accepté avant nous : sans effet si déjà jouée
+      enter();
+    } else if (overlay.accepted) {
+      // Tenu : après l'acceptation, seul compte que la phase reste `ReadyCheck` (le détail du ready-check ne compte plus).
+      if (state.phase !== "ReadyCheck") leave(LEAVE_MESSAGE);
+      else if (performance.now() - overlay.acceptedAt > overlay.holdMax * 1000) {
+        dismissed = true;
+        leave(LEAVE_MESSAGE);
+      }
+    } else if (found && check.response === "Accepted") acceptedSequence();
+    else if (!found) leave();
   }
 
   async function refresh() {
