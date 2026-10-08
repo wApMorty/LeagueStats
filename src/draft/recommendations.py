@@ -212,6 +212,11 @@ class DraftRecommender:
             state.my_ban_hover_id,
         )
 
+    def _key(self, state: DraftState) -> tuple:
+        """La signature de la draft et la build écrite : l'import du lock-in arrive après la publication
+        du tick, c'est le tick suivant qui doit republier le snapshot qui la porte."""
+        return (self._signature(state), self.m.loadout.state())
+
     def clear(self) -> None:
         """Fin du champ select : l'écran de draft repasse à l'état vide (publie `None` une seule fois)."""
         try:
@@ -232,7 +237,7 @@ class DraftRecommender:
         try:
             if getattr(self.m, "bus", None) is None or self._last_analysis is None:
                 return
-            if self._signature(state) != self._last_key:
+            if self._key(state) != self._last_key:
                 self._publish(state, self._last_analysis)
         except Exception:  # pylint: disable=broad-exception-caught
             pass
@@ -240,7 +245,7 @@ class DraftRecommender:
     def _publish(self, state: DraftState, analysis: Analysis) -> None:
         """Snapshot du tick sur le bus, s'il y en a un. Best-effort : jamais d'exception."""
         try:
-            self._last_analysis, self._last_key = analysis, self._signature(state)
+            self._last_analysis, self._last_key = analysis, self._key(state)
             if analysis.base_probability is None:  # phase de bans, ou aucun ennemi
                 analysis.base_probability = self._base_probability(
                     self._placed(state.ally_picks, state), self._placed(state.enemy_picks, state)
