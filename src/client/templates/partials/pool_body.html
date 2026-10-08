@@ -1,0 +1,57 @@
+{#- Corps de l'écran Pool : remplacé tel quel par chaque action (htmx). Un refus arrive dans `v.notice`. -#}
+<div id="pool-body" hx-target="#pool-body" hx-swap="outerHTML">
+  {% if v.notice %}<p class="notice" role="status">{{ v.notice }}</p>{% endif %}
+  <p class="fine">{% if v.active %}Pool actif : <b>{{ v.active }}</b>{% else %}Aucun pool choisi : le Live Coach prend son pool par défaut.{% endif %}</p>
+  <div class="cols">
+    <div class="main">
+      {% if v.selected %}
+      {% set s = v.selected %}
+      <section class="panel">
+        <div class="panel-head">
+          <h2>{{ s.name }}</h2>
+          <span class="muted">{{ s.size }} champion{{ "s" if s.size > 1 }}{% if s.active %} · <span class="badge">Actif</span>{% endif %}</span>
+        </div>
+        {% if s.description %}<p class="muted">{{ s.description }}</p>{% endif %}
+        <div class="pool-actions">
+          {% if not s.active %}<button type="button" class="btn-primary" hx-post="/pool/actif?name={{ s.name|urlencode }}">Utiliser ce pool</button>{% endif %}
+          {% if s.editable %}<button type="button" class="btn-ghost" hx-post="/pool/supprimer?name={{ s.name|urlencode }}" hx-confirm="Supprimer le pool « {{ s.name }} » ?">Supprimer</button>{% endif %}
+          <form class="pool-new" hx-post="/pool/dupliquer?name={{ s.name|urlencode }}">
+            <input name="arg" placeholder="Nom de la copie" aria-label="Nom de la copie" required>
+            <button type="submit" class="btn-ghost">Dupliquer</button>
+          </form>
+        </div>
+        {% if not s.editable %}<p class="fine">Pool système : duplique-le pour choisir tes champions.</p>{% endif %}
+        <div class="pool-grid" role="list">
+          {% for c in s.champions %}
+          {% if s.editable %}
+          <button type="button" role="listitem" class="chip-btn{{ ' is-on' if c.on }}" aria-pressed="{{ 'true' if c.on else 'false' }}"
+                  hx-post="/pool/{{ 'retirer' if c.on else 'ajouter' }}?name={{ s.name|urlencode }}&amp;arg={{ c.name|urlencode }}">{{ c.name }}</button>
+          {% elif c.on %}
+          <span role="listitem" class="chip-btn is-on">{{ c.name }}</span>
+          {% endif %}
+          {% endfor %}
+        </div>
+      </section>
+      {% else %}
+      <p class="empty">Aucun pool.</p>
+      {% endif %}
+    </div>
+    <aside class="side">
+      <section class="panel">
+        <div class="panel-head"><h2>Mes pools</h2></div>
+        <div role="list">
+          {% for p in v.pools %}
+          <a class="friend{{ ' is-me' if p.open }}" role="listitem" href="/pool?nom={{ p.name|urlencode }}">
+            <span class="friend-text"><b>{{ p.name }}</b><span class="muted">{{ p.size }} champion{{ "s" if p.size > 1 }}{% if p.system %} · système{% endif %}</span></span>
+            {% if p.active %}<span class="badge">Actif</span>{% endif %}
+          </a>
+          {% endfor %}
+        </div>
+        <form class="pool-new" hx-post="/pool/creer">
+          <input name="arg" placeholder="Nouveau pool" aria-label="Nom du nouveau pool" required>
+          <button type="submit" class="btn-ghost">Créer</button>
+        </form>
+      </section>
+    </aside>
+  </div>
+</div>

@@ -6,7 +6,7 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, NamedTuple, Optional, Tuple, Union
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 import anyio
 from fastapi import FastAPI, Request
@@ -17,7 +17,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from ..config import get_resource_path
 from ..config_client import client_config
-from ..pool_manager import get_user_data_path
+from ..pool_manager import PoolManager, get_user_data_path
 from ..coaching.goals import set_goal
 from ..coaching.grid import GRID
 from ..repositories.coaching import CoachingRepository
@@ -53,6 +53,7 @@ from .lobby import (
 )
 from .lcu_status import LcuProbe
 from .collection import VIEWS, read_collection
+from .pools import champion_names, edit as edit_pool, forget_bans, pools_view
 from .historique import read_game, read_history
 from .profil import read_profile
 from .social import read_social
@@ -93,6 +94,7 @@ NAV = (
         55,
         (
             NavItem("draft", "Draft", "ᛟ", 55, "/draft"),
+            NavItem("pool", "Pool", "ᚠ", 85, "/pool"),
             NavItem("en-partie", "En partie", "ᛊ", 165, "/en-partie"),
             NavItem("postgame", "Post-game", "ᛞ", 345, "/postgame"),
         ),
@@ -371,6 +373,37 @@ def create_app(
         return screen(
             request, "collection.html", lambda: read_collection(proxy, vue, role, champions)
         )
+
+    def pool_body(selected: Optional[str], notice: Optional[str] = None) -> dict:
+        return pools_view(PoolManager(), selected, champion_names(app.state.db_path), notice)
+
+    @app.get("/pool", response_class=HTMLResponse)
+    def pool_page(request: Request, nom: Optional[str] = None):
+        return render(request, "pool.html", v=pool_body(nom))
+
+    @app.post("/pool/{action}", response_class=HTMLResponse)
+    async def pool_action(request: Request, action: str, name: str = "", arg: str = ""):
+        """Choisit, crée, duplique, supprime un pool ou y ajoute/retire un champion ; un refus s'affiche
+        dans le corps de l'écran (200), jamais en erreur. Un nom saisi arrive dans le corps du formulaire
+        htmx (lu à la main : `Form` demanderait python-multipart)."""
+        typed = parse_qs((await request.body()).decode("utf-8", "replace")).get("arg", [""])[0]
+
+        def work() -> dict:
+            manager = PoolManager()
+            names = champion_names(app.state.db_path)
+            try:
+                notice, selected = edit_pool(manager, action, name, names, arg or typed)
+                if action != "actif" and not manager.save_custom_pools(recalculate_bans=False):
+                    raise Refusal("Pools non enregistrés")
+            except Refusal as refusal:
+                notice, selected = str(refusal), name
+            else:
+                if action != "actif":
+                    forget_bans(app.state.db_path, name)
+            return pools_view(manager, selected, names, notice)
+
+        view = await in_thread(work)
+        return templates.TemplateResponse(request, "partials/pool_body.html", {"v": view})
 
     @app.get("/lobby", response_class=HTMLResponse)
     def lobby_page(request: Request):

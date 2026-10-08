@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Pool · LeagueStats{% endblock %}
+{% block page_class %} page-client page-pool{% endblock %}
+{% block content %}
+<header class="page-head" data-rise="1">
+  <div class="page-titles">
+    <div class="kicker">Partie · pris en compte au prochain lancement du Live Coach</div>
+    <h1 data-spell="1">Pool</h1>
+  </div>
+</header>
+<div data-fade="1" data-delay="100">
+  {% include "partials/pool_body.html" %}
+</div>
+{% endblock %}

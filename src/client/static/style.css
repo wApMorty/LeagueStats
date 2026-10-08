@@ -1112,3 +1112,11 @@ a.chip-btn { display: inline-flex; align-items: center; text-decoration: none; }
 .d-swap-request { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-radius: var(--r-card);
   border: 1px solid oklch(0.74 0.11 55 / 0.5); background: oklch(0.16 0.02 170 / 0.94); font-size: 14px; }
 .d-swap-request span { flex: 1; }
+
+/* Écran Pool : grille de champions à cocher, formulaires de nom en ligne. */
+.pool-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 12px 0; }
+.pool-new { display: flex; gap: 8px; margin-top: 12px; }
+.pool-actions .pool-new { margin: 0; }
+.pool-new input { height: 34px; padding: 0 12px; border-radius: 17px; border: 1px solid var(--rule); background: transparent; color: var(--ink); }
+.pool-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+a.friend { text-decoration: none; color: inherit; }

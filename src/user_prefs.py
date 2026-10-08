@@ -7,7 +7,7 @@ le lancement du draft coach.
 
 import json
 import os
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from typing import Optional
 
 from .config_client import client_config
@@ -116,3 +116,11 @@ def save_motion(mode: str) -> bool:
     if mode not in client_config.MOTION_MODES:
         return False
     return _write_raw({**_read_raw(), "motion": mode})
+
+
+def save_pool_name(name: str) -> bool:
+    """Mémorise le pool actif du Live Coach en gardant les autres préférences.
+
+    Sans fichier complet, les défauts de `UserPrefs` sont ceux que le Live Coach du client applique déjà.
+    """
+    return save_user_prefs(replace(load_user_prefs() or UserPrefs(), pool_name=name))
