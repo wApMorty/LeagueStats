@@ -115,6 +115,7 @@ global.document = {
   createElement: () => ({ ...node(), innerHTML: '', querySelector: () => node() }),
   body: { appendChild() {} },
 };
+global.window = global;
 global.addEventListener = () => {};
 global.matchMedia = () => ({ addEventListener() {} });
 global.history = { pushState: (...args) => calls.pushed.push(args[2]) };

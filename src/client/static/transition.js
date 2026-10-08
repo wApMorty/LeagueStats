@@ -143,4 +143,6 @@
   matchMedia("(prefers-reduced-motion: reduce)").addEventListener("change", syncSwap);
   addEventListener("DOMContentLoaded", syncSwap);
   syncSwap();
+
+  window.Transition = { go }; // navigation programmatique (found.js : bascule vers « En partie », SPEC-26)
 })();

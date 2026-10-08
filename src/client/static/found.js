@@ -254,7 +254,24 @@
     }
   }
 
+  // Bascule vers « En partie » (SPEC-26) : au passage de la famille de phase `draft` à `game`, depuis n'importe
+  // quelle page. Le premier événement vu n'a pas de précédent : jamais d'arrachage d'une page ouverte en pleine partie.
+  let lastKind = null;
+  function watchPhase(name, payload) {
+    const kind = payload?.kind;
+    if (!kind) return;
+    const switching = lastKind === "draft" && kind === "game" && location.pathname !== "/en-partie";
+    lastKind = kind;
+    if (!switching) return;
+    if (window.Transition) Transition.go("/en-partie");
+    else {
+      history.pushState({}, "", "/en-partie");
+      htmx.ajax("GET", "/en-partie", { target: "#view", select: "#view", swap: "outerHTML" });
+    }
+  }
+
   window.addEventListener("load", () => {
+    Sse.open("phase", watchPhase);
     Sse.open("lcu", (name, payload) => {
       if (/gameflow|ready-check|champ-select/.test(payload?.uri ?? "")) refresh();
     }, { onOpen: refresh });
