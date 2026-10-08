@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-10-08 (SPEC-26 : partie trouvée persistante et bascule en partie)
+**Mis à jour** : 2026-10-08 (SPEC-27 : vérification des postes en partie)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -229,6 +229,25 @@ séquence se rejoue) ; il doit rester jusqu'à l'ouverture de la draft. À la fi
 | 119 | Banc `support_found_js.py`, régression rouge puis table de décision de l'overlay (`asking` / `held` / `entering`), `hold_max` et `enter_wait` | 5 | — | ✅ 2026-10-08 : 19 tests ; régression `test_regression_found_overlay_reopens.py` rouge avant (6 overlays créés pour 1 attendu) puis verte, banc `node` `tests/support_found_js.py` (horloge virtuelle), table de décision dans `found.js` (`expectDraft` supprimé), `FOUND_HOLD_MAX_S` = 30 s et `FOUND_ENTER_WAIT_S` = 1,5 s dans `/found/state` ; **recette @pj35** : accepter une vraie partie, l'overlay reste sur « Acceptée » puis s'efface sur la draft, et relever `playerResponse` et `state` du ready-check après acceptation |
 | 120 | Bascule vers « En partie » : `Transition.go` exposé, sujet `phase` dans `found.js` | 3 | 119 | ✅ 2026-10-08 : 13 tests ; `window.Transition = { go }`, `found.js` écoute le sujet `phase` et appelle `Transition.go("/en-partie")` au seul passage `draft` vers `game` (jamais au premier événement vu, ni si `/en-partie` est déjà ouverte), `en_partie.js` inchangé ; **recette @pj35** : verrouiller les 10 champions, le client bascule sur « En partie » depuis la draft puis depuis une autre page |
 | 121 | Clôture : SPEC-24 et SPEC-25 rouvertes, `CHANGELOG.md`, statuts | 2 | 119, 120 | ✅ 2026-10-08 : entrées Fix et Feature sous `[Unreleased]`, statut de SPEC-26, SPEC-24 §2 et §7, SPEC-25 §7 et README des specs à jour ; recette réelle laissée à @pj35 (SPEC-26 §6) |
+
+### Lot suivant — SPEC-27, vérification des postes en partie (🟡 rédigée le 2026-10-08)
+
+[SPEC-27](docs/specs/SPEC-27-verification-des-postes-en-partie.md) : les postes adverses sont devinés pendant la draft
+(85 % d'équipes adverses entièrement justes sur 69 parties, mesure rejouée) et plus jamais vérifiés ; l'écran « En
+partie » garde le face-à-face et la build calculés dessus. Une fois la partie lancée, la Live Client API donne le poste
+des dix joueurs : le Live Coach le confronte au poste prédit et, si besoin, recalcule face-à-face, duel, probabilité et
+plan de build (approche A, validée le 2026-10-08). Déclencheur (source du poste, délai de stabilité) à fixer par le
+spike de la tâche 122. Découpage en SPEC-27 §5 (tâches 122 à 128, 23 pts) :
+
+| # | Tâche | Pts | Dépend de | État |
+|---|---|---|---|---|
+| 122 | Spike : `scripts/spike_live_positions.py`, relevé de 3 parties par @pj35 (champ `position` vs `detectedTeamPosition`), constantes | 3 | — | ⬜ |
+| 123 | `roster_of` dans `LiveGame` et le sujet `ingame`, tests | 2 | — | ⬜ |
+| 124 | `reality_check.py` : `resolve_champions`, `real_lanes`, `compare`, tests | 5 | — | ⬜ |
+| 125 | `LoadoutImporter.retarget` (calcul sans écriture dans le client LoL), `_import` inchangé, tests | 3 | — | ⬜ |
+| 126 | `RealityCheck.step` : stabilité, recalcul de l'analyse et de la build, republication du sujet `game`, console, remise à zéro, appel dans `monitor_loop` | 5 | 122, 123, 124, 125 | ⬜ |
+| 127 | Écran « En partie » : ligne d'état, marquage des lignes corrigées, `FinalAnalysis.reality` | 3 | 126 | ⬜ |
+| 128 | Clôture : `CHANGELOG.md`, statut, `docs/specs/README.md`, `PROJECT_STRUCTURE.md`, recette @pj35 | 2 | 127 | ⬜ |
 
 ### Lot suivant — SPEC-22, attribution complète de l'impact (🟡 rédigée le 2026-10-04)
 
