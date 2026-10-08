@@ -4,6 +4,18 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+## [4.4.0] - 2026-10-08
+
+Nouvel écran Pool dans le client et correctif de l'affichage des runes en draft. Aucune action requise (pas de migration, pas de scrape).
+
+### ✨ Feature
+
+- Écran **Pool** du client (`/pool`, groupe Partie) : choisir le pool actif du Live Coach (pris en compte à son prochain lancement), créer, dupliquer et supprimer des pools perso, cocher ou décocher leurs champions. Les pools système se dupliquent mais ne s'éditent pas ; un pool édité perd ses bans précalculés, le Live Coach les recalcule à la volée.
+
+### 🐛 Fix
+
+- **L'écran de draft montrait la page de runes plusieurs secondes après son import** — le snapshot partait avant l'import du lock-in et sa signature ignorait la build écrite : rien ne le republiait avant le prochain survol, tour ou changement de phase. La signature inclut maintenant la build, le tick suivant republie.
+
 ## [4.3.1] - 2026-10-08
 
 Correctifs de la 4.3.0 : le client entre de nouveau dans l'écran de draft et la boucle du Live Coach ne reste
