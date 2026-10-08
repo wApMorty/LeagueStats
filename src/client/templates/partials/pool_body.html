@@ -1,5 +1,5 @@
 {#- Corps de l'écran Pool : remplacé tel quel par chaque action (htmx). Un refus arrive dans `v.notice`. -#}
-<div id="pool-body" hx-target="#pool-body" hx-swap="outerHTML">
+<div id="pool-body" hx-target="#pool-body" hx-select="#pool-body" hx-swap="outerHTML">
   {% if v.notice %}<p class="notice" role="status">{{ v.notice }}</p>{% endif %}
   <p class="fine">{% if v.active %}Pool actif : <b>{{ v.active }}</b>{% else %}Aucun pool choisi : le Live Coach prend son pool par défaut.{% endif %}</p>
   <div class="cols">
@@ -39,7 +39,7 @@
     <aside class="side">
       <section class="panel">
         <div class="panel-head"><h2>Mes pools</h2></div>
-        <div role="list">
+        <div role="list" hx-target="#view" hx-select="#view">
           {% for p in v.pools %}
           <a class="friend{{ ' is-me' if p.open }}" role="listitem" href="/pool?nom={{ p.name|urlencode }}">
             <span class="friend-text"><b>{{ p.name }}</b><span class="muted">{{ p.size }} champion{{ "s" if p.size > 1 }}{% if p.system %} · système{% endif %}</span></span>

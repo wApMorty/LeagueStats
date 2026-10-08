@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### 🐛 Fix
+
+- **Écran Pool : changer de pool vidait la page, l'ajout d'un champion ne s'affichait pas** — `#pool-body` héritait `hx-select="#view"` de la vue (absent des fragments renvoyés par `POST /pool/...`) et les liens « Mes pools » injectaient la page entière dans `#pool-body`. `#pool-body` sélectionne maintenant `#pool-body` et la liste « Mes pools » cible `#view`. Régression : `tests/regression/test_regression_client_pool_htmx.py`.
+
 ## [4.5.0] - 2026-10-08
 
 L'animation de la partie trouvée reste à l'écran jusqu'à l'ouverture de la draft, et le client bascule tout seul sur « En partie » au démarrage de la partie. Aucune action requise (pas de migration, pas de scrape).
