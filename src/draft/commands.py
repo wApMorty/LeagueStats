@@ -74,12 +74,37 @@ class CommandListener:
                 # Never affects the draft display, so it doesn't set `applied`.
                 self.handle_outcome_command(stripped)
                 continue
+            if stripped.lower().startswith("pool "):
+                applied = self.handle_pool_command(stripped[5:].strip()) or applied
+                continue
             if stripped.lower().split()[:1] in (["bilan"], ["axe"]):
                 self.handle_coaching_command(stripped)  # SPEC-19, hors draft
                 continue
             if self.handle_correction_command(line, state):
                 applied = True
         return applied
+
+    def handle_pool_command(self, name: str) -> bool:
+        """Recharge le pool `name` et chauffe son cache (`pool <nom>`, déposé par l'écran Pool).
+
+        Best-effort : un pool disparu ou une erreur laisse le pool courant en place.
+        """
+        try:
+            from ..pool_manager import PoolManager, pool_role_to_lane
+
+            pool = PoolManager().get_pool(name)
+            if pool is None:
+                print(f"[ALERTE] Pool '{name}' introuvable, pool courant conservé")
+                return False
+            self.m.current_pool = list(pool.champions)
+            self.m.pool_name = pool.name
+            self.m.pool_lane = pool_role_to_lane(pool.role)
+            self.m.assistant.warm_cache(self.m.current_pool)
+            print(f"[OK] Pool rechargé : {pool.name} ({pool.size()} champions)")
+            return True
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            print(f"[ALERTE] Rechargement du pool '{name}' impossible : {e}")
+            return False
 
     def handle_correction_command(self, line: str, state: DraftState) -> bool:
         """Parse and apply one 'r <champion> <lane>' correction command."""

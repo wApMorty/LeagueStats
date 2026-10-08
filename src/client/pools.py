@@ -1,8 +1,8 @@
 """Écran Pool : le pool actif du Live Coach et l'édition des pools perso.
 
 Les pools système (« All Top Champions », « Meta Picks ») se choisissent mais ne s'éditent pas : on les
-duplique. Le pool actif est lu au lancement du Live Coach (`user_prefs.json`) ; un changement vaut donc
-dès son prochain démarrage. Les bans précalculés d'un pool édité sont effacés : sans eux, le Live Coach
+duplique. Le pool actif est mémorisé dans `user_prefs.json` ; un changement ou une édition du pool actif
+est aussi déposé chez le Live Coach (commande `pool <nom>`), qui le recharge dès sa prochaine draft. Les bans précalculés d'un pool édité sont effacés : sans eux, le Live Coach
 recalcule à la volée au lieu de servir une liste périmée.
 """
 
@@ -101,7 +101,7 @@ def edit(
     if action == "actif":
         if not save_pool_name(name):
             raise Refusal("Préférences non enregistrées")
-        return f"Pool actif : « {name} » (pris en compte au prochain lancement du Live Coach)", name
+        return f"Pool actif : « {name} » (appliqué dès la prochaine draft)", name
     if action == "dupliquer":
         if not arg or not manager.duplicate_pool(name, arg):
             raise Refusal("Nom de pool vide ou déjà pris")

@@ -53,7 +53,7 @@ from .lobby import (
 )
 from .lcu_status import LcuProbe
 from .collection import VIEWS, read_collection
-from .pools import champion_names, edit as edit_pool, forget_bans, pools_view
+from .pools import active_pool_name, champion_names, edit as edit_pool, forget_bans, pools_view
 from .historique import read_game, read_history
 from .profil import read_profile
 from .social import read_social
@@ -400,6 +400,10 @@ def create_app(
             else:
                 if action != "actif":
                     forget_bans(app.state.db_path, name)
+                # Le Live Coach recharge le pool actif dès sa prochaine draft, sans redémarrage.
+                active = active_pool_name(manager)
+                if commands is not None and active and active == name:
+                    commands(f"pool {active}")
             return pools_view(manager, selected, names, notice)
 
         view = await in_thread(work)

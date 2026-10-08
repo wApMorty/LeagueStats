@@ -76,7 +76,7 @@ def test_supprimer_retire_le_pool(web):
 def test_choisir_le_pool_actif_ecrit_les_preferences_et_garde_motion(web):
     post(web, "/prefs/motion?mode=reduit")
     reply = post(web, "/pool/actif?name=Meta Picks")
-    assert "prochain lancement" in reply.text
+    assert "prochaine draft" in reply.text
     prefs = json.loads(web.prefs_file.read_text("utf-8"))
     assert prefs["pool_name"] == "Meta Picks" and prefs["motion"] == "reduit"
     assert user_prefs.load_user_prefs().pool_name == "Meta Picks"

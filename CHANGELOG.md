@@ -7,6 +7,7 @@ All notable changes to LeagueStats Coach will be documented in this file.
 ### 🐛 Fix
 
 - **Écran Pool : changer de pool vidait la page, l'ajout d'un champion ne s'affichait pas** — `#pool-body` héritait `hx-select="#view"` de la vue (absent des fragments renvoyés par `POST /pool/...`) et les liens « Mes pools » injectaient la page entière dans `#pool-body`. `#pool-body` sélectionne maintenant `#pool-body` et la liste « Mes pools » cible `#view`. Régression : `tests/regression/test_regression_client_pool_htmx.py`.
+- **Écran Pool : le pool choisi ne servait qu'au redémarrage du client** — le Live Coach lisait le pool une seule fois, au lancement. Choisir le pool actif ou éditer ses champions dépose maintenant une commande `pool <nom>` chez le Live Coach, qui recharge le pool, sa lane et son cache de matchups dès la prochaine draft. Régression : `tests/regression/test_regression_pool_live_reload.py`.
 
 ## [4.5.0] - 2026-10-08
 
