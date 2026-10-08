@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+## [4.5.0] - 2026-10-08
+
+L'animation de la partie trouvée reste à l'écran jusqu'à l'ouverture de la draft, et le client bascule tout seul sur « En partie » au démarrage de la partie. Aucune action requise (pas de migration, pas de scrape).
+
 ### ✨ Feature
 
 - **Bascule automatique vers « En partie » à la fin de la draft (SPEC-26)** — au passage de `ChampSelect` à `GameStart` (famille de phase `draft` vers `game`), le client ouvre tout seul l'écran « En partie » (analyse de la draft, build, win chance), depuis n'importe quelle page, par la transition signature. Pas de bascule à un dodge, à une reconnexion, ni quand le client s'ouvre en pleine partie ; pas de réglage pour la couper. Tests : `tests/test_client_game_switch.py`.
