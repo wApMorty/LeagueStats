@@ -186,8 +186,8 @@ class Crawler:
             db.commit()
             return
         timeline = lcu.get_game_timeline(game_id)
-        if self._throttled(1):
-            return
+        if self._throttled(1) or (not timeline and lcu.last_status_code is None):
+            return  # limite de débit, ou requête abandonnée (draft en cours, SPEC-28) : plus tard
         blue = next((t for t in game.get("teams") or [] if t.get("teamId") == 100), {})
         db.execute(
             "UPDATE crawl_games SET game_version = ?, duration_s = ?, blue_win = ?, read_utc = ?, raw = ? "

@@ -207,6 +207,8 @@ class GameCapture:
             duration_s = game.get("gameDuration") or 0
             timeline = lcu.get_game_timeline(game_id)
             if not (timeline and timeline.get("frames")):
+                if lcu.last_status_code is None:
+                    continue  # requête abandonnée (draft en cours, SPEC-28) : prochain passage
                 timeline = None
                 ended_ms = match["game_creation_ms"] + duration_s * 1000
                 age_s = datetime.now(timezone.utc).timestamp() - ended_ms / 1000
