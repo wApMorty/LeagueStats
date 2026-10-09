@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-10-08 (SPEC-27 : vérification des postes en partie)
+**Mis à jour** : 2026-10-09 (SPEC-28 : draft muette après une partie)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -248,6 +248,23 @@ spike de la tâche 122. Découpage en SPEC-27 §5 (tâches 122 à 128, 23 pts) :
 | 126 | `RealityCheck.step` : stabilité, recalcul de l'analyse et de la build, republication du sujet `game`, console, remise à zéro, appel dans `monitor_loop` | 5 | 122, 123, 124, 125 | ⬜ |
 | 127 | Écran « En partie » : ligne d'état, marquage des lignes corrigées, `FinalAnalysis.reality` | 3 | 126 | ⬜ |
 | 128 | Clôture : `CHANGELOG.md`, statut, `docs/specs/README.md`, `PROJECT_STRUCTURE.md`, recette @pj35 | 2 | 127 | ⬜ |
+
+### Lot suivant — SPEC-28, la draft suivante ne doit plus rester muette (🟡 rédigée le 2026-10-09)
+
+[SPEC-28](docs/specs/SPEC-28-draft-muette-apres-une-partie.md) : à l'enchaînement « Rejouer » puis file, le client dit
+« Champion select » mais la console reste muette et l'écran Draft vide, tantôt en retard, tantôt jusqu'à la fin du
+champ select (@pj35, 2026-10-09). Deux mécanismes : la boucle monofil est occupée par le travail d'après-partie et la
+collecte (durée non mesurée, aucun chronomètre), et l'état de la partie précédente n'est ré-armé que si la boucle voit
+`Lobby` ou `Matchmaking` (reproduit : sinon `_handle_draft_change` n'est jamais appelé). Approche B validée : épisode de
+draft numéroté par le tracker, travail d'arrière-plan qui cède la main au champ select, chronométrage des tours.
+Seuils et journal « à valider » (SPEC-28 §2). Découpage en SPEC-28 §5 (tâches 129 à 132, 15 pts) :
+
+| # | Tâche | Pts | Dépend de | État |
+|---|---|---|---|---|
+| 129 | `TickTimer`, étapes chronométrées de `monitor_loop` et de `GameCapture`, journal rotatif `logs/draft_monitor_ticks.log`, alerte console, délai de la draft | 3 | — | ⬜ |
+| 130 | Épisode de draft : `PhaseTracker.draft_episode`, réarmement dans la branche champ select, régression | 5 | — | ⬜ |
+| 131 | Céder la main : `LCUClient.yield_if`, `draft_pending()`, pose et remise dans `monitor_loop`, régression | 5 | 129 | ⬜ |
+| 132 | Clôture : `CHANGELOG.md`, statuts, README des specs, SPEC-25 §2 renvoyé ici, recette @pj35 | 2 | 130, 131 | ⬜ |
 
 ### Lot suivant — SPEC-22, attribution complète de l'impact (🟡 rédigée le 2026-10-04)
 
