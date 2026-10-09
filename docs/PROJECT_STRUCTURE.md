@@ -60,6 +60,7 @@ src/
 │   ├── pool_selection.py                  # Sélection de la pool de la session
 │   ├── loadout.py, loadout_lcu.py, loadout_import.py  # Import des builds OneTricks (SPEC-15)
 │   ├── phase_tracker.py                 # Phase gameflow : événement WebSocket + sondage de rattrapage (SPEC-25)
+│   ├── tick_timer.py                    # Chronomètre des tours du monitor, journal des tours lents (SPEC-28)
 │   ├── lifecycle.py, phases.py, commands.py,
 │       automation.py, display.py, memory_diagnostics.py
 │

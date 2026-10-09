@@ -1,6 +1,6 @@
 # SPEC-28 — La draft suivante ne doit plus rester muette après une partie
 
-**Statut** : 🟡 Rédigée le 2026-10-09 ; approche B validée par @pj35 (§2), seuils et journal « à valider ».
+**Statut** : ✅ Livrée le 2026-10-09 (tâches 129 à 132) ; approche B, seuils, journal et passage abandonné validés par @pj35 (§2) ; recette en conditions réelles (§6) à faire.
 
 **Origine** : @pj35, 2026-10-09 : « J'ai toujours un problème lors de l'enchaînement des games, le jeu a l'air coincé
 dans l'analyse de la game que je viens de finir et ne me fais pas de suggestion de draft ni n'affiche l'interface de
