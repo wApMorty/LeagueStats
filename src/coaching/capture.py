@@ -59,10 +59,10 @@ class GameCapture:
         """Un passage de la fenêtre d'après-partie."""
         known = self._captured_ids()
         self.read_transients()  # filet : le fil de PostGameWatcher les a déjà lues en général
-        self._safely(self.write_lp_snapshots)
-        self._safely(self.capture_recent)
-        self._safely(lambda: self.analyze(live=True))
-        self._safely(lambda: self.impact(live=True))
+        self._timed("write_lp", self.write_lp_snapshots)
+        self._timed("capture_recent", self.capture_recent)
+        self._timed("analyze", lambda: self.analyze(live=True))
+        self._timed("impact", lambda: self.impact(live=True))
         self._safely(lambda: self._announce(known))
 
     def read_transients(self, lcu=None) -> None:
@@ -251,6 +251,11 @@ class GameCapture:
             "queue_id": game.get("queueId"),
             "participant_id": participant_id,
         }
+
+    def _timed(self, name: str, step: Callable[[], object]) -> None:
+        """`_safely` avec la durée de l'étape au chronomètre du monitor (SPEC-28), s'il en a un."""
+        timer = getattr(self.m, "tick_timer", None)
+        self._safely(step if timer is None else (lambda: timer.run(name, step)))
 
     def _safely(self, step: Callable[[], object]) -> None:
         try:

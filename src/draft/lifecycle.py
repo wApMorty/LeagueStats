@@ -31,17 +31,27 @@ class MonitorLifecycle:
     def __init__(self, monitor) -> None:
         self.m = monitor
         self._exit_ticks = 0  # sondages « hors champ select » consécutifs
+        self._phase = ""  # phase vue au tour courant, pour le journal des tours
 
     def monitor_loop(self) -> None:
-        """Main monitoring loop."""
+        """Main monitoring loop : un tour, chronométré étape par étape (SPEC-28)."""
+        timer = self.m.tick_timer
+        self._phase = ""
+        try:
+            self._tick(timer)
+        finally:
+            timer.end_tick(self._phase)
+
+    def _tick(self, timer) -> None:
         try:
             # Une seule lecture de phase par tour, et aucune quand le tracker la connaît (SPEC-25)
-            gameflow = self.gameflow()
+            gameflow = timer.run("phase", self.gameflow)
             phase = (gameflow or {}).get("phase", "")
+            self._phase = phase
 
             # Check for ready check (queue found) and auto-accept if enabled
             if self.m.auto_accept_queue and phase == "ReadyCheck":
-                self.m._handle_ready_check()
+                timer.run("ready_check", self.m._handle_ready_check)
 
             if phase != "ChampSelect":
                 self._exit_ticks += 1
@@ -85,7 +95,8 @@ class MonitorLifecycle:
                                 time.time() + draft_config.POST_GAME_RETRY_WINDOW
                             )
                             self.m._next_post_game_attempt = 0.0
-                            self.m.crawler.report()  # SPEC-20 : avancement, une fois par partie
+                            # SPEC-20 : avancement, une fois par partie
+                            timer.run("crawler_report", self.m.crawler.report)
                         self.m._last_outcome_trigger_phase = current_phase
                     else:
                         self.m._last_outcome_trigger_phase = None
@@ -94,41 +105,44 @@ class MonitorLifecycle:
                 # SPEC-20 : collecte de fond, jamais en draft (retour plus haut) ni
                 # pendant l'acceptation de la file.
                 if (gameflow or {}).get("phase") != "ReadyCheck":
-                    self.m.crawler.step()
+                    timer.run("crawler_step", self.m.crawler.step)
                 return
 
             self._exit_ticks = 0
             # Get current champion select data
-            champ_select_data = self.m.lcu.get_champion_select_session()
+            champ_select_data = timer.run("champ_select", self.m.lcu.get_champion_select_session)
             if not champ_select_data:
                 return
-
-            # Parse draft state
-            current_state = self.m._parse_draft_state(champ_select_data)
-
-            # SPEC-04 B5: apply any queued "r <champion> <lane>" corrections —
-            # forces a redisplay even when the draft itself hasn't changed.
-            commands_applied = self.m._apply_pending_commands(current_state)
-
-            # Check for changes and provide recommendations (only if draft not complete)
-            if self.m._has_draft_changed(current_state) or commands_applied:
-                # Only show draft updates if we haven't completed the analysis yet
-                if not self.m.has_analyzed_final_draft:
-                    self.m._handle_draft_change(current_state)
-                self.m.last_draft_state = current_state
-            else:
-                self.m.recommender.refresh(current_state)  # survols et tour (SPEC-21)
-
-            # SPEC-15: runes/items/sorts pushed at lock-in, refined at the duel.
-            self.m.loadout.on_tick(champ_select_data, current_state)
-
-            # Check if draft is complete and analyze if needed
-            if self.m._is_draft_complete(current_state) and not self.m.has_analyzed_final_draft:
-                self.m._analyze_complete_draft(current_state)
+            timer.run("draft", lambda: self._handle_champ_select(champ_select_data))
 
         except Exception as e:
             if self.m.verbose:
                 print(f"[WARNING] Monitor error: {e}")
+
+    def _handle_champ_select(self, champ_select_data: dict) -> None:
+        """Traite une session de champ select : recommandations, runes, analyse finale."""
+        # Parse draft state
+        current_state = self.m._parse_draft_state(champ_select_data)
+
+        # SPEC-04 B5: apply any queued "r <champion> <lane>" corrections —
+        # forces a redisplay even when the draft itself hasn't changed.
+        commands_applied = self.m._apply_pending_commands(current_state)
+
+        # Check for changes and provide recommendations (only if draft not complete)
+        if self.m._has_draft_changed(current_state) or commands_applied:
+            # Only show draft updates if we haven't completed the analysis yet
+            if not self.m.has_analyzed_final_draft:
+                self.m._handle_draft_change(current_state)
+            self.m.last_draft_state = current_state
+        else:
+            self.m.recommender.refresh(current_state)  # survols et tour (SPEC-21)
+
+        # SPEC-15: runes/items/sorts pushed at lock-in, refined at the duel.
+        self.m.loadout.on_tick(champ_select_data, current_state)
+
+        # Check if draft is complete and analyze if needed
+        if self.m._is_draft_complete(current_state) and not self.m.has_analyzed_final_draft:
+            self.m._analyze_complete_draft(current_state)
 
     def gameflow(self) -> Optional[dict]:
         """`{"phase": ...}` du tracker ; sans phase confirmée, la session gameflow lue au LCU."""
@@ -158,9 +172,11 @@ class MonitorLifecycle:
         if now >= self.m._post_game_until or now < self.m._next_post_game_attempt:
             return
         self.m._next_post_game_attempt = now + draft_config.POST_GAME_RETRY_INTERVAL
-        self.m._resolve_pending_outcomes()
-        self.m.game_capture.on_post_game()
-        self.m.crawler.seed()  # SPEC-20 : les joueurs de la partie passent en tête de file
+        timer = self.m.tick_timer
+        timer.run("resolve_outcomes", self.m._resolve_pending_outcomes)
+        timer.run("post_game", self.m.game_capture.on_post_game)
+        # SPEC-20 : les joueurs de la partie passent en tête de file
+        timer.run("crawler_seed", self.m.crawler.seed)
 
     def handle_ready_check(self) -> None:
         """Handle ready check (queue found) and auto-accept if enabled."""

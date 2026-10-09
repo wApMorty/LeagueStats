@@ -561,3 +561,23 @@ class TestPhaseTrackerWiring:
         }
         monitor.phase_tracker._on_event(("lcu", event))  # SPEC-25 tâche 117
         assert monitor.game_capture._lp_by_game[7]["leaguePointsDelta"] == -20
+
+
+class TestTickJournal:
+    """SPEC-28 tâche 129 : un tour lent du monitor est écrit avec l'étape fautive."""
+
+    def test_slow_phase_read_is_journaled(self, monitor):
+        from src.draft.tick_timer import TickTimer
+
+        now, lines = [0.0], []
+        monitor.tick_timer = TickTimer(clock=lambda: now[0], sink=lines.append)
+
+        def slow_gameflow():
+            now[0] += 6.0
+            return {"phase": "Lobby"}
+
+        monitor.lcu.get_gameflow_session.side_effect = slow_gameflow
+
+        monitor._monitor_loop()
+
+        assert lines == ["tour 6.0 s phase=Lobby | phase 6.0"]

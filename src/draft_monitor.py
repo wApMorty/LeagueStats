@@ -17,6 +17,7 @@ from .draft.state import ChampionAction, DraftState
 from .draft import phases
 from .draft import display
 from .draft.memory_diagnostics import log_memory_usage
+from .draft.tick_timer import TickTimer, open_journal
 from .analysis.game_eval import GameEvaluator
 from .analysis.shrink import shrink_is_measured
 from .draft.search import CandidatePool, DraftSearch
@@ -109,6 +110,7 @@ class DraftMonitor:
         self.commands = CommandListener(self)
         self.recommender = DraftRecommender(self)
         self.final_analyzer = FinalDraftAnalyzer(self)
+        self.tick_timer = TickTimer()  # SPEC-28 : sans journal avant start_monitoring()
         self.lifecycle = MonitorLifecycle(self)
         # SPEC-25 : la phase gameflow vient du tracker (événements WebSocket + sondage de rattrapage).
         self.phase_tracker = PhaseTracker(lcu_phase_reader(), bus=bus)
@@ -156,6 +158,7 @@ class DraftMonitor:
         if not self.lcu.connect():
             return False
 
+        self.tick_timer.sink = open_journal()  # SPEC-28 : jamais ouvert par les tests
         self.phase_tracker.start()  # SPEC-25 : dès la connexion, avant le rattrapage et le choix de pool
         self.post_game_watcher.start()
 

@@ -383,6 +383,15 @@ class DraftConfig:
     POST_GAME_RETRY_INTERVAL: float = 5.0
     POST_GAME_RETRY_WINDOW: float = 600.0
 
+    # SPEC-28 : chronomètre des tours du monitor (`TickTimer`). Un tour plus long que TICK_SLOW_S
+    # (cadence moyenne observée : 1,3 à 2,3 s) est écrit au journal avec ses étapes d'au moins
+    # TICK_STEP_MIN_S ; au-delà de TICK_ALERT_S (trois requêtes LCU au timeout) la console alerte.
+    TICK_SLOW_S: float = 3.0
+    TICK_ALERT_S: float = 15.0
+    TICK_STEP_MIN_S: float = 0.5
+    TICK_LOG_MAX_BYTES: int = 1_000_000
+    TICK_LOG_BACKUPS: int = 3
+
     # SPEC-25 : suivi de la phase gameflow (`PhaseTracker`). L'événement WebSocket donne la phase à
     # l'instant du changement (relevé du 2026-10-07), le sondage de rattrapage couvre un événement
     # manqué, une reconnexion et le mode console. Pendant la fin de partie, l'écran de fin et la
