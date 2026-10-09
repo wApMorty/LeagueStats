@@ -109,6 +109,7 @@ class MonitorLifecycle:
                 return
 
             self._exit_ticks = 0
+            self._rearm_for_new_draft(timer)
             # Get current champion select data
             champ_select_data = timer.run("champ_select", self.m.lcu.get_champion_select_session)
             if not champ_select_data:
@@ -118,6 +119,17 @@ class MonitorLifecycle:
         except Exception as e:
             if self.m.verbose:
                 print(f"[WARNING] Monitor error: {e}")
+
+    def _rearm_for_new_draft(self, timer) -> None:
+        """Nouvelle draft (esquive, ou partie finie sans que la boucle ait vu `Lobby` ni
+        `Matchmaking`) : l'état de la précédente ne doit pas la rendre muette (SPEC-28)."""
+        tracker = self.m.phase_tracker
+        episode = tracker.draft_episode
+        if episode == self.m._draft_episode:
+            return
+        self.m._draft_episode = episode
+        self.m._reset_for_next_game()
+        timer.draft_seen(tracker.since())
 
     def _handle_champ_select(self, champ_select_data: dict) -> None:
         """Traite une session de champ select : recommandations, runes, analyse finale."""

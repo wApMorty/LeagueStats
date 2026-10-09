@@ -111,6 +111,7 @@ class DraftMonitor:
         self.recommender = DraftRecommender(self)
         self.final_analyzer = FinalDraftAnalyzer(self)
         self.tick_timer = TickTimer()  # SPEC-28 : sans journal avant start_monitoring()
+        self._draft_episode = 0  # SPEC-28 : l'épisode de draft dont la boucle détient l'état
         self.lifecycle = MonitorLifecycle(self)
         # SPEC-25 : la phase gameflow vient du tracker (événements WebSocket + sondage de rattrapage).
         self.phase_tracker = PhaseTracker(lcu_phase_reader(), bus=bus)

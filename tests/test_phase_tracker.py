@@ -259,3 +259,38 @@ def test_les_abonnes_d_evenements_recoivent_les_autres_uri_et_un_abonne_casse_ne
     tracker._on_event(("lcu", None))
     assert seen == [ranked]
     assert tracker.phase == "Lobby"
+
+
+class TestDraftEpisode:
+    """SPEC-28 tâche 130 : `draft_episode`, le numéro de la draft en cours."""
+
+    @pytest.mark.parametrize(
+        "phases, episodes",
+        [
+            (["Matchmaking", "ChampSelect"], 1),
+            (["ReadyCheck", "ChampSelect"], 1),
+            (["EndOfGame", "ChampSelect"], 1),
+            (["ChampSelect", "ChampSelect"], 0),  # même phase : pas d'événement
+            (["ChampSelect"], 0),  # premier événement
+            (["ChampSelect", "Matchmaking", "ChampSelect"], 1),  # esquive
+            (["Matchmaking", "ChampSelect", "InProgress", "Matchmaking"], 1),  # sortie : pas de +1
+            (["Matchmaking", "ChampSelect", "Matchmaking", "ChampSelect"], 2),
+        ],
+    )
+    def test_counts_entries_from_a_known_other_family(self, phases, episodes):
+        tracker, _ = make()
+
+        for phase in phases:
+            tracker.observe(phase)
+
+        assert tracker.draft_episode == episodes
+
+    def test_a_gap_of_the_client_does_not_start_a_new_episode(self):
+        tracker, clock = make()
+        tracker.observe("ChampSelect")
+        clock.now += draft_config.PHASE_STALE_S + 1
+
+        tracker.observe(None)  # phase déclarée inconnue : closed
+        tracker.observe("ChampSelect")
+
+        assert tracker.draft_episode == 0

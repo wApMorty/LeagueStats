@@ -71,6 +71,7 @@ class PhaseTracker:
         self._entered = clock()
         self._entered_epoch = time.time()
         self._confirmed = float("-inf")  # dernier instant où la phase a été confirmée
+        self._draft_episode = 0
         self._callbacks: List[Callback] = []
         self._event_handlers: List[Callable[[dict], None]] = []
         self._unknown_seen: set = set()
@@ -87,6 +88,14 @@ class PhaseTracker:
     def kind(self) -> str:
         """Famille de la phase courante (`kind_of`)."""
         return kind_of(self.phase)
+
+    @property
+    def draft_episode(self) -> int:
+        """Numéro de la draft en cours (SPEC-28) : +1 à chaque entrée en champ select depuis une
+        phase connue d'une autre famille. Ni le premier événement ni un trou du client ne comptent :
+        une draft ne se réarme pas parce que le tracker a perdu la phase."""
+        with self._lock:
+            return self._draft_episode
 
     def since(self) -> float:
         """Secondes passées dans la phase courante."""
@@ -115,6 +124,8 @@ class PhaseTracker:
             if phase == self._phase:
                 return
             old, self._phase = self._phase, phase
+            if kind_of(phase) == "draft" and old is not None and kind_of(old) != "draft":
+                self._draft_episode += 1
             self._entered, self._entered_epoch = now, time.time()
             since_epoch = self._entered_epoch
         self._announce(old, phase, since_epoch)
