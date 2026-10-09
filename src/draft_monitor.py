@@ -239,6 +239,11 @@ class DraftMonitor:
         """Record the process RSS to logs/draft_monitor_memory.log periodically."""
         log_memory_usage(self._loop_count, force=force)
 
+    def draft_pending(self) -> bool:
+        """Le client est en champ select (SPEC-28) : le travail d'arrière-plan doit céder la main.
+        Lit le tracker, aucune requête ; tracker muet : faux."""
+        return self.phase_tracker.kind == "draft"
+
     def _monitor_loop(self):
         """Main monitoring loop."""
         self.lifecycle.monitor_loop()

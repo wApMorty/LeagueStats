@@ -17,12 +17,14 @@ replacement (e.g. ``patch.object(monitor, "_handle_draft_change")`` then
 """
 
 import time
-from typing import Optional
+from typing import Callable, Optional, TypeVar
 
 from ..config_constants import draft_config
 from ..utils.console import clear_console
 from .final_analysis import TOPIC as GAME_TOPIC
 from .state import DraftState
+
+T = TypeVar("T")
 
 
 class MonitorLifecycle:
@@ -96,7 +98,7 @@ class MonitorLifecycle:
                             )
                             self.m._next_post_game_attempt = 0.0
                             # SPEC-20 : avancement, une fois par partie
-                            timer.run("crawler_report", self.m.crawler.report)
+                            self._background("crawler_report", self.m.crawler.report)
                         self.m._last_outcome_trigger_phase = current_phase
                     else:
                         self.m._last_outcome_trigger_phase = None
@@ -105,7 +107,7 @@ class MonitorLifecycle:
                 # SPEC-20 : collecte de fond, jamais en draft (retour plus haut) ni
                 # pendant l'acceptation de la file.
                 if (gameflow or {}).get("phase") != "ReadyCheck":
-                    timer.run("crawler_step", self.m.crawler.step)
+                    self._background("crawler_step", self.m.crawler.step)
                 return
 
             self._exit_ticks = 0
@@ -184,11 +186,20 @@ class MonitorLifecycle:
         if now >= self.m._post_game_until or now < self.m._next_post_game_attempt:
             return
         self.m._next_post_game_attempt = now + draft_config.POST_GAME_RETRY_INTERVAL
-        timer = self.m.tick_timer
-        timer.run("resolve_outcomes", self.m._resolve_pending_outcomes)
-        timer.run("post_game", self.m.game_capture.on_post_game)
+        self._background("resolve_outcomes", self.m._resolve_pending_outcomes)
+        self._background("post_game", self.m.game_capture.on_post_game)
         # SPEC-20 : les joueurs de la partie passent en tête de file
-        timer.run("crawler_seed", self.m.crawler.seed)
+        self._background("crawler_seed", self.m.crawler.seed)
+
+    def _background(self, name: str, work: Callable[[], T]) -> T:
+        """Travail d'arrière-plan chronométré qui cède la main à la draft (SPEC-28) : dès que le tracker
+        dit `draft`, ses requêtes LCU rendent `None` au lieu de patienter jusqu'au timeout."""
+        lcu = self.m.lcu
+        lcu.yield_if = self.m.draft_pending
+        try:
+            return self.m.tick_timer.run(name, work)
+        finally:
+            lcu.yield_if = None
 
     def handle_ready_check(self) -> None:
         """Handle ready check (queue found) and auto-accept if enabled."""

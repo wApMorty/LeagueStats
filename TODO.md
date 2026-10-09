@@ -263,7 +263,7 @@ Seuils et journal « à valider » (SPEC-28 §2). Découpage en SPEC-28 §5 (tâ
 |---|---|---|---|---|
 | 129 | `TickTimer`, étapes chronométrées de `monitor_loop` et de `GameCapture`, journal rotatif `logs/draft_monitor_ticks.log`, alerte console, délai de la draft | 3 | — | ✅ |
 | 130 | Épisode de draft : `PhaseTracker.draft_episode`, réarmement dans la branche champ select, régression | 5 | — | ✅ |
-| 131 | Céder la main : `LCUClient.yield_if`, `draft_pending()`, pose et remise dans `monitor_loop`, régression | 5 | 129 | ⬜ |
+| 131 | Céder la main : `LCUClient.yield_if`, `draft_pending()`, pose et remise dans `monitor_loop`, régression | 5 | 129 | ✅ |
 | 132 | Clôture : `CHANGELOG.md`, statuts, README des specs, SPEC-25 §2 renvoyé ici, recette @pj35 | 2 | 130, 131 | ⬜ |
 
 ### Lot suivant — SPEC-22, attribution complète de l'impact (🟡 rédigée le 2026-10-04)

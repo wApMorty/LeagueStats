@@ -5,7 +5,7 @@ import requests
 import time
 import psutil
 import unicodedata
-from typing import Optional, Dict, Any
+from typing import Any, Callable, Dict, Optional
 from dataclasses import dataclass
 
 from .config_constants import LCU_POSITION_TO_LANE
@@ -41,6 +41,9 @@ class LCUClient(_MatchHistoryMixin):
         self.session.verify = False  # Ignore self-signed SSL cert
         self.verbose = verbose
         self.last_status_code: Optional[int] = None
+        # SPEC-28 : posé par le monitor autour du travail d'arrière-plan ; vrai = la draft a commencé,
+        # la requête est abandonnée (None, comme un client injoignable) pour rendre la main.
+        self.yield_if: Optional[Callable[[], bool]] = None
 
     def find_lcu_credentials(self) -> Optional[LCUCredentials]:
         """
@@ -194,6 +197,8 @@ class LCUClient(_MatchHistoryMixin):
             Response JSON or None if error
         """
         self.last_status_code = None  # SPEC-20 : 429 distinct de 404 ; None = pas de réponse
+        if self.yield_if is not None and self.yield_if():
+            return None
         if not self.credentials:
             return None
 

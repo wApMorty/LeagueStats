@@ -581,3 +581,17 @@ class TestTickJournal:
         monitor._monitor_loop()
 
         assert lines == ["tour 6.0 s phase=Lobby | phase 6.0"]
+
+
+class TestYieldToDraft:
+    """SPEC-28 tâche 131 : `draft_pending` et le cédage de main du travail d'arrière-plan."""
+
+    def test_draft_pending_follows_the_tracker_without_any_request(self, monitor):
+        assert monitor.draft_pending() is False  # tracker muet : comportement d'avant
+
+        monitor.phase_tracker.observe("ChampSelect")
+        assert monitor.draft_pending() is True
+
+        monitor.phase_tracker.observe("InProgress")
+        assert monitor.draft_pending() is False
+        monitor.lcu.assert_not_called()
