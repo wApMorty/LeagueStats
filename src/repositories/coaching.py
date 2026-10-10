@@ -163,15 +163,6 @@ class CoachingRepository:
         count, latest = self._rows("SELECT COUNT(*), MAX(captured_utc) FROM game_records")[0]
         return count, latest
 
-    def latest_findings(self) -> Optional[dict]:
-        """Les constats de la dernière partie qui en a : `game_id` et lignes `{metric, polarity, z,
-        reference, value, norm_mean, norm_n, objective_value}`, négatifs d'abord."""
-        games = self._rows(
-            "SELECT f.game_id FROM game_findings f JOIN game_records g ON g.game_id = f.game_id "
-            "ORDER BY g.game_creation_utc DESC LIMIT 1"
-        )
-        return {"game_id": games[0][0], "rows": self.game_findings(games[0][0])} if games else None
-
     def game_findings(self, game_id: int) -> List[dict]:
         """Constats d'une partie avec la valeur du joueur et ses références, négatifs d'abord."""
         keys = (

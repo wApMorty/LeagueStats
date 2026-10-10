@@ -1,6 +1,6 @@
 # SPEC-29 — Constats sur dix parties et axes de travail choisis par le coach
 
-**Statut** : 🟡 Rédigée le 2026-10-10, arbitrages « à valider » en §2.
+**Statut** : ✅ Livrée le 2026-10-11 (tâches 133 à 137), arbitrages de §2 validés par @pj35 le 2026-10-11 ; recette @pj35 à faire (§6, vérification de bout en bout).
 
 **Origine** : @pj35, 2026-10-10 : « Le GUI m'affiche les métriques marquantes de ma dernière game uniquement,
 dans la section Derniers constats de la page d'accueil. J'aimerais qu'il m'affiche les constats plus loin (sur les
@@ -57,11 +57,11 @@ Objectif : l'accueil montre les écarts de tes **10 dernières parties** (pas d'
 | Règle de choix d'un axe | **Validé (@pj35, 2026-10-10)** : l'écart à l'objectif OneTricks. Le coach prend la métrique à objectif dont le z_objective moyen sur les 10 dernières parties est le plus bas. |
 | Fixation | **Validé (@pj35, 2026-10-10)** : automatique quand le schéma est net, proposition à un clic sinon. |
 | Forme des constats | **Validé (@pj35, 2026-10-10)** : une ligne par métrique sur 10 parties (3 plus faibles, 2 plus fortes, mêmes plafonds qu'aujourd'hui), z moyen, barre divergente et bande de 10 points, un par partie. |
-| Ordre des deux règles | **À valider** : (1) un schéma négatif net face à la norme (comportement actuel, fixé tout seul) reste prioritaire, car c'est un défaut avéré ; (2) à défaut, l'écart à l'objectif OneTricks, proposé d'un clic. Les deux réponses de @pj35 se combinent ainsi ; si tu préfères l'objectif seul, la tâche 134 retire l'étage 1. |
-| Proposer un axe même au-dessus de l'objectif | **À valider** : oui. Sur le top, les trois candidats sont tous au-dessus de l'objectif sur 10 parties ; le coach propose le moins haut et l'écrit (« +0,16 σ : au-dessus de l'objectif, c'est ta marge la plus faible »), plutôt que de ne rien proposer. L'étiquette dit que ce n'est pas un défaut avéré. |
-| Jugement d'un axe d'objectif | **À valider** : contre l'objectif **de la partie** (`z_objective ≥ 0` du champion joué), pas contre un nombre figé. Demande une colonne `reference` sur `coaching_goals` (migration, tâche 133). |
-| Écran de référence | **À valider** : le contenu doit tenir sans défiler dans 1 920 × 950 (zone de la scène de draft, `style.css:208`), soit ≥ 1 500 px de large, deux colonnes. En dessous de 1 500 px la page peut défiler. |
-| Poste des 10 parties | **À valider** : le poste principal (comme `_review`), pas les 10 dernières parties tous postes confondus ; la bande de portraits de la colonne latérale reste, elle, tous postes. |
+| Ordre des deux règles | **Validé (@pj35, 2026-10-11)** : (1) un schéma négatif net face à la norme (comportement actuel, fixé tout seul) reste prioritaire, car c'est un défaut avéré ; (2) à défaut, l'écart à l'objectif OneTricks, proposé d'un clic. Les deux réponses de @pj35 se combinent ainsi ; si tu préfères l'objectif seul, la tâche 134 retire l'étage 1. |
+| Proposer un axe même au-dessus de l'objectif | **Validé (@pj35, 2026-10-11)** : oui. Sur le top, les trois candidats sont tous au-dessus de l'objectif sur 10 parties ; le coach propose le moins haut et l'écrit (« +0,16 σ : au-dessus de l'objectif, c'est ta marge la plus faible »), plutôt que de ne rien proposer. L'étiquette dit que ce n'est pas un défaut avéré. |
+| Jugement d'un axe d'objectif | **Validé (@pj35, 2026-10-11)** : contre l'objectif **de la partie** (`z_objective ≥ 0` du champion joué), pas contre un nombre figé. Demande une colonne `reference` sur `coaching_goals` (migration, tâche 133). |
+| Écran de référence | **Validé (@pj35, 2026-10-11)** : le contenu doit tenir sans défiler dans 1 920 × 950 (zone de la scène de draft, `style.css:208`), soit ≥ 1 500 px de large, deux colonnes. En dessous de 1 500 px la page peut défiler. |
+| Poste des 10 parties | **Validé (@pj35, 2026-10-11)** : le poste principal (comme `_review`), pas les 10 dernières parties tous postes confondus ; la bande de portraits de la colonne latérale reste, elle, tous postes. |
 
 ## 3. Approches considérées
 
@@ -173,9 +173,13 @@ Budget à 1 920 × 950, colonne principale (mesure arithmétique à confirmer pa
 ~110 px + axes (titre 50 + cartes) + marge 30 + constats (titre 50 + en-tête 30 + 5 × 52 = 340). Avec des cartes à
 250 px : ≈ 780 px de contenu + 60 de marge de page = 840 < 950, sans marge pour un message `notice`. Cible : cartes
 d'axe `min-height` 250 → 200, lignes de constats 52 → 44, pour que la colonne principale et la colonne latérale
-(rang, portraits, bilan) restent sous 950 px avec un `notice` affiché. Mesure par rendu **headless** (pas de
-fenêtre réelle ni de curseur, voir `feedback-no-ui-tests-without-permission`) : à autoriser par @pj35 avant la
-tâche 136 ; à défaut, recette visuelle de @pj35.
+(rang, portraits, bilan) restent sous 950 px avec un `notice` affiché. Mesure en **vraie fenêtre** Chrome autorisée par
+@pj35 le 2026-10-11.
+
+**Mesuré (tâche 136)**, 1 920 × 986 (zone utile 950) sur une copie de la base, `notice` affichée : `scrollHeight` 1 351
+avant, 950 après (= `clientHeight`), marge de 57 px. Le défilement ne venait pas de la hauteur des cartes ou des
+lignes mais de `.home-ring` (anneau décoratif en `absolute` dans la page défilante, 400 px de débordement et barre
+horizontale) : passé en `fixed`. Cartes (250 px) et lignes (52 px) **non compactées**, la marge suffit.
 
 ### 4.4 Tests
 
