@@ -51,6 +51,7 @@ class GameAnalysis:
     negatives: List[Finding] = field(default_factory=list)
     positives: List[Finding] = field(default_factory=list)
     norm_n: int = 0  # taille de la norme du rôle (la plus grande par métrique)
+    objective_z: Dict[str, float] = field(default_factory=dict)  # z face à l'objectif du champion
 
 
 def usable_z(norm: Optional[Reference], z_norm, objective: Optional[Reference], z_objective):
@@ -119,6 +120,8 @@ def analyze_game(
             + (objective.source if objective else None, z_obj, coaching_config.GRID_VERSION)
         )
         analysis.values[row.metric] = row.value
+        if z_obj is not None:
+            analysis.objective_z[row.metric] = z_obj
         analysis.norm_n = max(analysis.norm_n, norm.n if norm else 0)
         z, reference = usable_z(norm, z_norm, objective, z_obj)
         if row.metric in grid and z is not None:

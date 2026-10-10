@@ -202,3 +202,59 @@ class TestLiveCoachCommands:
         self._listener(db).handle_coaching_command("axe deaths_before_14")
 
         assert "Nouvel axe" in capsys.readouterr().out
+
+
+class TestObjectiveGoals:
+    def _history(self, zs):
+        return [
+            {"metric": "gold_diff_15", "z_objective": z, "value": 0.0, "objective_value": 100.0}
+            for z in zs
+        ]
+
+    def test_objective_gaps_rank_the_lowest_first_over_the_window(self):
+        history = self._history([0.4] * 10 + [-9.0])  # la 11e plus récente sort de la fenêtre
+        history += [
+            {"metric": "xp_diff_15", "z_objective": -0.2, "value": 0.0, "objective_value": 1.0}
+        ] * 10
+
+        gaps = progression.objective_gaps(history, "top")
+
+        assert [(m, pytest.approx(z), n) for m, z, n in gaps] == [
+            ("xp_diff_15", pytest.approx(-0.2), 10),
+            ("gold_diff_15", pytest.approx(0.4), 10),
+        ]
+
+    def test_no_objective_gap_below_the_minimum_sample(self):
+        assert progression.objective_gaps(self._history([0.1, None, None]), "top") == []
+
+    def test_goal_without_any_objective_is_refused(self, db):
+        repo = _store_history(db, "gold_diff_15", [10.0] * 3, z=0.0)
+
+        assert "aucun objectif" in goals.set_goal(
+            repo, "gold_diff_15", "top", reference="objective"
+        )
+        assert repo.goals() == []
+
+    def test_objective_goal_shows_the_objective_and_is_judged_on_the_game(self, db):
+        repo = _store_history(db, "gold_diff_15", [10.0] * 3, z=0.0)
+        repo.insert_metrics(
+            [(3, 1, "gold_diff_15", 1, "top", 2, 10.0, 1.0, 0.5, 20, 0.0, 150.0, 90.0, "o", 0.1, 1)]
+        )
+        goals.set_goal(repo, "gold_diff_15", "top", reference="objective")
+        (goal,) = repo.goals()
+        assert (goal["reference"], goal["target"]) == ("objective", 150.0)
+        assert "objectif OneTricks de ton champion" in goals.describe(goal)
+
+        # même valeur brute, deux champions d'objectifs différents : verdicts distincts
+        above = _analysis(1, 10.0, metric="gold_diff_15")
+        above.objective_z["gold_diff_15"] = 0.3
+        below = _analysis(2, 10.0, metric="gold_diff_15")
+        below.objective_z["gold_diff_15"] = -0.4
+        no_objective = _analysis(3, 10.0, metric="gold_diff_15")
+
+        assert (
+            "tenu" in goals.judge(repo, above)[0] and "non tenu" not in goals.judge(repo, above)[0]
+        )
+        assert "non tenu" in goals.judge(repo, below)[0]
+        assert goals.judge(repo, no_objective) == []
+        assert repo.verdicts(goal["id"], 5) == [False, True]

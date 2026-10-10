@@ -84,7 +84,7 @@ def axes_view(repo: CoachingRepository, notice: Optional[str] = None) -> dict:
                 "kind": "free",
                 "hue": GOAL_HUES[slot % len(GOAL_HUES)],
                 "proposal": (
-                    {"metric": proposal, "label": METRICS[proposal].label}
+                    {"metric": proposal.metric, "label": METRICS[proposal.metric].label}
                     if proposal and first
                     else None
                 ),

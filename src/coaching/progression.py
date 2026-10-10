@@ -106,6 +106,20 @@ def profile(history: List[dict], role: str) -> List[tuple]:
     return sorted(rows, key=lambda row: row[1])
 
 
+def objective_gaps(history: List[dict], role: str) -> List[tuple]:
+    """(métrique, z_objective moyen, parties) sur les RECURRENCE_WINDOW dernières parties.
+
+    Du plus bas au plus haut ; seules les métriques de la grille qui ont un objectif.
+    """
+    rows = []
+    for metric in GRID.get(role, {}):
+        recent = _series(history, metric)[: coaching_config.RECURRENCE_WINDOW]
+        series = [row["z_objective"] for row in recent if row["z_objective"] is not None]
+        if len(series) >= coaching_config.MIN_TREND_SAMPLE:
+            rows.append((metric, mean(series), len(series)))
+    return sorted(rows, key=lambda row: row[1])
+
+
 def trends(history: List[dict], role: str) -> List[Trend]:
     """Valeur brute des dernières parties contre celles d'avant, par métrique.
 
