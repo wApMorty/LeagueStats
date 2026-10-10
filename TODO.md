@@ -281,7 +281,7 @@ SPEC-29 §5 (tâches 133 à 137, 17 pts) :
 | 133 | Migration `coaching_goals.reference`, dépôt `goals()` / `insert_goal` | 2 | — | ✅ |
 | 134 | Choix par l'objectif : `objective_gaps`, `Proposal`, `next_proposal` à deux étages, `set_goal(reference)`, `judge` contre l'objectif de la partie, régression | 5 | 133 | ✅ |
 | 135 | Constats sur 10 parties : `window_gaps`, `home._findings`, gabarit et bande de points, route `reference` | 5 | 134 | ✅ |
-| 136 | Tenir sur un écran : compacter cartes et lignes, mesure headless (autorisation de @pj35) | 3 | 135 | ⬜ |
+| 136 | Tenir sur un écran : mesure en vraie fenêtre Chrome 1920×986 sur copie de la base, `scrollHeight` 1351 → 950 = `clientHeight` avec `notice` (cause : l'anneau décoratif, passé en `fixed`) ; cartes et lignes non compactées, 57 px de marge | 3 | 135 | ✅ |
 | 137 | Clôture : CHANGELOG, statuts, README des specs, recette @pj35 | 2 | 136 | ⬜ |
 
 ### Lot suivant — SPEC-22, attribution complète de l'impact (🟡 rédigée le 2026-10-04)

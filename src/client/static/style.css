@@ -884,7 +884,7 @@ h2 { margin: 0; font: 600 24px/1 var(--font-title); }
 
 /* Accueil du coaching (tâche 71) */
 .page-accueil { position: relative; }
-.home-ring { position: absolute; right: -300px; bottom: -380px; width: 920px; height: 920px; overflow: visible; pointer-events: none; }
+.home-ring { position: fixed; right: -300px; bottom: -380px; width: 920px; height: 920px; overflow: visible; pointer-events: none; }
 .home-ring circle, .home-ring path { fill: none; stroke-width: 1.2; }
 .ring-a { stroke: oklch(0.7 0.2 290 / 0.3); }
 .ring-b { stroke: oklch(0.74 0.11 55 / 0.08); }
