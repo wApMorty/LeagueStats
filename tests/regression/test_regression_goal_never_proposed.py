@@ -13,6 +13,8 @@ import pytest
 from src.coaching import goals
 from src.config_constants import coaching_config
 from src.repositories.coaching import CoachingRepository
+from tests.test_client_parties import capture
+from tests.test_client_postgame import GAME_ID, assets, modele, page_of  # noqa: F401
 
 # (z_norm, z_objective) par métrique : au-dessus de la norme partout, sous l'objectif sur un seul.
 GAPS = {"gold_diff_15": 0.3, "xp_diff_15": 0.4, "deaths_per_10": -0.1}
@@ -70,3 +72,15 @@ def test_negative_pattern_against_the_norm_stays_first_and_is_fixed_alone(db):
     assert proposal.reference == "norm" and proposal.net and proposal.gap is None
     assert "Nouvel axe" in message
     assert [g["reference"] for g in repo.goals()] == ["norm"]
+
+
+def test_postgame_does_not_show_a_frozen_target_for_an_objective_goal(db, assets, modele):
+    capture(db, pid=1)
+    repo = CoachingRepository(db)
+    repo.insert_goal("gold_diff_15", "top", 150.0, "proposed", reference="objective")
+    repo.insert_verdict(1, GAME_ID, 100.0, True)  # tenu contre l'objectif du champion de la partie
+
+    (axe,) = page_of(db, assets, modele)["axes"]
+
+    assert "150" not in axe["text"]
+    assert axe["text"].endswith("cible objectif OneTricks de ton champion)")

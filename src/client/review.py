@@ -409,8 +409,13 @@ def game_page(
                 "text": (
                     f"Axe « {metric.label} » : {'tenu' if verdict['held'] else 'non tenu'} "
                     f"({format_value(verdict['metric'], verdict['value'])}, cible "
-                    f"{'≥' if metric.sense > 0 else '≤'} "
-                    f"{format_value(verdict['metric'], verdict['target'])})"
+                    + (
+                        "objectif OneTricks de ton champion"
+                        if verdict["reference"] == "objective"
+                        else f"{'≥' if metric.sense > 0 else '≤'} "
+                        f"{format_value(verdict['metric'], verdict['target'])}"
+                    )
+                    + ")"
                 ),
             }
         )

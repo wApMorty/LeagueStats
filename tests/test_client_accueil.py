@@ -391,3 +391,10 @@ def test_un_axe_d_objectif_sans_objectif_en_base_est_refuse_sans_ecriture(db, te
     )
     assert response.status_code == 200 and "aucun objectif OneTricks" in response.text
     assert goals_in(temp_db) == []
+
+
+def test_la_proposition_nette_dit_le_schema_negatif_le_plus_net(db, temp_db, assets):
+    weak_history(db)
+    page = client(temp_db, assets).get("/").text
+    assert "ton schéma négatif le plus net" in page and "Pas un défaut avéré" not in page
+    assert "reference=norm" in page
