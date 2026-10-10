@@ -341,19 +341,31 @@ class CoachingRepository:
     # ---------- axes de travail ----------
 
     def goals(self, status: Optional[str] = "active") -> List[dict]:
-        keys = ("id", "metric", "role", "target", "origin", "status", "started", "acquired")
+        keys = (
+            "id",
+            "metric",
+            "role",
+            "target",
+            "origin",
+            "status",
+            "started",
+            "acquired",
+            "reference",
+        )
         rows = self._rows(
-            "SELECT id, metric, role, target, origin, status, started_utc, acquired_utc "
-            "FROM coaching_goals WHERE (? IS NULL OR status = ?) ORDER BY id",
+            "SELECT id, metric, role, target, origin, status, started_utc, acquired_utc, "
+            "reference FROM coaching_goals WHERE (? IS NULL OR status = ?) ORDER BY id",
             (status, status),
         )
         return [dict(zip(keys, row)) for row in rows]
 
-    def insert_goal(self, metric: str, role: str, target: float, origin: str) -> None:
+    def insert_goal(
+        self, metric: str, role: str, target: float, origin: str, reference: str = "norm"
+    ) -> None:
         self._write(
-            "INSERT INTO coaching_goals (metric, role, target, origin, status, started_utc) "
-            "VALUES (?, ?, ?, ?, 'active', datetime('now'))",
-            [(metric, role, target, origin)],
+            "INSERT INTO coaching_goals (metric, role, target, origin, status, started_utc, "
+            "reference) VALUES (?, ?, ?, ?, 'active', datetime('now'), ?)",
+            [(metric, role, target, origin, reference)],
         )
 
     def set_goal_status(self, goal_id: int, status: str) -> None:

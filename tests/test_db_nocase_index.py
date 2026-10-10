@@ -99,7 +99,8 @@ def test_migration_is_chained_on_head():
     (colonne game_id sur predictions, 2026-09-05), puis SPEC-19 a empilé
     5c19a7e2d4b1 (game_records et rank_snapshots, 2026-09-29), puis
     a4d2e9c7b813 (tables d'analyse du coach de gameplay, 2026-09-29), puis
-    SPEC-20 a empilé c8f3a1d95e26 (table game_impact, 2026-10-02) --
+    SPEC-20 a empilé c8f3a1d95e26 (table game_impact, 2026-10-02), puis
+    SPEC-29 a empilé e5b7d2a14c93 (colonne reference sur coaching_goals, 2026-10-11) --
     recalculé : nouvelle tête de la chaîne.
     """
     from alembic.config import Config
@@ -118,4 +119,5 @@ def test_migration_is_chained_on_head():
     heads = list(script.get_heads())
     assert len(heads) == 1
     assert script.get_revision("c8f3a1d95e26").down_revision == "a4d2e9c7b813"
-    assert heads[0] == "c8f3a1d95e26"
+    assert script.get_revision("e5b7d2a14c93").down_revision == "c8f3a1d95e26"
+    assert heads[0] == "e5b7d2a14c93"

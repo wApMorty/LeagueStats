@@ -79,3 +79,41 @@ def test_games_without_impact_skips_done_and_timeline_less(db):
         [{"participant_id": 1, "event_time_ms": 0, "event_type": "kill", "delta_p": 0.0}],
     )
     assert [g["game_id"] for g in repo.games_without_impact()] == [2]
+
+
+def test_coaching_goals_reference_upgrade_then_downgrade(tmp_path):
+    """Migration e5b7d2a14c93 (SPEC-29 tâche 133) : un axe existant reste `norm`."""
+    db_path = tmp_path / "mig.db"
+    sqlite3.connect(str(db_path)).close()
+    cfg = Config("alembic.ini")
+    cfg.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
+    command.stamp(cfg, "13cbeb46785a")
+    command.upgrade(cfg, "c8f3a1d95e26")
+    conn = sqlite3.connect(str(db_path))
+    conn.execute(
+        "INSERT INTO coaching_goals (metric, role, target, origin, status, started_utc) "
+        "VALUES ('solo_deaths', 'top', 0, 'player', 'closed', '2026-10-06')"
+    )
+    conn.commit()
+    conn.close()
+
+    command.upgrade(cfg, "e5b7d2a14c93")
+    conn = sqlite3.connect(str(db_path))
+    assert conn.execute("SELECT reference FROM coaching_goals").fetchall() == [("norm",)]
+    conn.close()
+
+    command.downgrade(cfg, "c8f3a1d95e26")
+    conn = sqlite3.connect(str(db_path))
+    columns = [row[1] for row in conn.execute("PRAGMA table_info(coaching_goals)")]
+    conn.close()
+    assert "reference" not in columns
+
+
+def test_goal_reference_defaults_to_norm_and_round_trips(db):
+    repo = CoachingRepository(db)
+    repo.insert_goal("cs_10", "top", 70.0, "player")
+    repo.insert_goal("gold_diff_15", "top", 150.0, "proposed", reference="objective")
+    assert [(g["metric"], g["reference"]) for g in repo.goals()] == [
+        ("cs_10", "norm"),
+        ("gold_diff_15", "objective"),
+    ]

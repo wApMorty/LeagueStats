@@ -225,7 +225,8 @@ def temp_db(tmp_path):
             origin TEXT NOT NULL,
             status TEXT NOT NULL,
             started_utc TEXT NOT NULL,
-            acquired_utc TEXT
+            acquired_utc TEXT,
+            reference TEXT NOT NULL DEFAULT 'norm'
         )
     """)
     cursor.execute("""
