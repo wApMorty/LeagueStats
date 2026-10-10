@@ -104,4 +104,4 @@ Voir `CHANGELOG.md`.
 
 ---
 
-**Version** : 4.5.0
+**Version** : 5.0.0
