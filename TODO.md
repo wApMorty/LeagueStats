@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-10-09 (SPEC-28 : draft muette après une partie)
+**Mis à jour** : 2026-10-10 (SPEC-29 : constats sur dix parties et axes par objectif)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -265,6 +265,24 @@ Seuils et journal validés (SPEC-28 §2). Découpage en SPEC-28 §5 (tâches 129
 | 130 | Épisode de draft : `PhaseTracker.draft_episode`, réarmement dans la branche champ select, régression | 5 | — | ✅ |
 | 131 | Céder la main : `LCUClient.yield_if`, `draft_pending()`, pose et remise dans `monitor_loop`, régression | 5 | 129 | ✅ |
 | 132 | Clôture : `CHANGELOG.md`, statuts, README des specs, SPEC-25 §2 renvoyé ici, recette @pj35 | 2 | 130, 131 | ✅ |
+
+### Lot suivant — SPEC-29, constats sur dix parties et axes par objectif (🟡 rédigée le 2026-10-10)
+
+[SPEC-29](docs/specs/SPEC-29-constats-sur-dix-parties-et-axes-par-objectif.md) : « Derniers constats » ne montre que la
+dernière partie, et les axes de travail ne se proposent jamais (@pj35, 2026-10-10). Mesuré : sur 90 parties top, aucun
+schéma négatif face à la norme (z moyen positif sur les 8 métriques), un seul axe jamais jugé en base. Validé : constats
+sur 10 parties en une ligne par métrique avec bande de 10 points, axes choisis par l'écart à l'objectif OneTricks,
+fixés seuls si le schéma est net, d'un clic sinon. Arbitrages « à valider » en SPEC-29 §2 (ordre des deux règles,
+proposition au-dessus de l'objectif, verdict contre l'objectif de la partie, écran de référence). Découpage en
+SPEC-29 §5 (tâches 133 à 137, 17 pts) :
+
+| # | Tâche | Pts | Dépend de | État |
+|---|---|---|---|---|
+| 133 | Migration `coaching_goals.reference`, dépôt `goals()` / `insert_goal` | 2 | — | ⬜ |
+| 134 | Choix par l'objectif : `objective_gaps`, `Proposal`, `next_proposal` à deux étages, `set_goal(reference)`, `judge` contre l'objectif de la partie, régression | 5 | 133 | ⬜ |
+| 135 | Constats sur 10 parties : `window_gaps`, `home._findings`, gabarit et bande de points, route `reference` | 5 | 134 | ⬜ |
+| 136 | Tenir sur un écran : compacter cartes et lignes, mesure headless (autorisation de @pj35) | 3 | 135 | ⬜ |
+| 137 | Clôture : CHANGELOG, statuts, README des specs, recette @pj35 | 2 | 136 | ⬜ |
 
 ### Lot suivant — SPEC-22, attribution complète de l'impact (🟡 rédigée le 2026-10-04)
 
