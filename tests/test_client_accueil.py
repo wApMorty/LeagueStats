@@ -13,6 +13,7 @@ from src.client.app import create_app
 from src.client.assets import Assets
 from src.client.draft_view import Champions
 from src.client.home import axes_view, home_view
+from src.coaching.metrics import METRICS
 from src.config_client import client_config
 from src.config_constants import coaching_config
 from src.repositories.coaching import CoachingRepository
@@ -59,7 +60,7 @@ def test_accueil_sur_base_vide(temp_db, assets):
     page = response.text
     assert response.status_code == 200
     assert "Aucune partie capturée" in page and "Aucune partie analysée : un axe se fixe" in page
-    assert "Pas encore de constat" in page and "0 axe actif sur 2" in page
+    assert "Pas encore assez de parties" in page and "0 axe actif sur 2" in page
     assert page.count("Place libre") == 2
 
 
@@ -84,6 +85,22 @@ def test_sans_schema_negatif_pas_de_proposition_et_le_choix_reste(db, temp_db, a
     page = client(temp_db, assets).get("/").text
     assert "Pas de proposition pour l'instant" in page and "Fixer cet axe" not in page
     assert "Choisir une autre métrique" in page
+
+
+def test_l_ecart_a_l_objectif_est_propose_sans_rien_ecrire(db, temp_db, assets):
+    store(db, "top", "gold_diff_15", [120.0] * 10, z=0.5, objective=100.0, z_objective=0.16)
+    page = client(temp_db, assets).get("/").text
+    assert "+0,16 σ face à l&#39;objectif OneTricks sur tes 10 dernières parties" in page
+    assert "au-dessus de l&#39;objectif : ta marge la plus faible" in page
+    assert "Pas un défaut avéré" in page and "reference=objective" in page
+    assert "ton schéma négatif le plus net" not in page
+    assert goals_in(temp_db) == []
+
+
+def test_sous_l_objectif_le_texte_ne_parle_pas_de_marge(db, temp_db, assets):
+    store(db, "top", "gold_diff_15", [80.0] * 10, z=0.5, objective=100.0, z_objective=-0.4)
+    page = client(temp_db, assets).get("/").text
+    assert "−0,40 σ face à l&#39;objectif" in page and "ta marge la plus faible" not in page
 
 
 def test_les_axes_actifs_et_leurs_verdicts(db, temp_db, assets):
@@ -127,58 +144,69 @@ def test_une_place_libre_apres_un_axe_et_ses_pastilles(db, temp_db, assets):
     assert page.count('class="goal-mark todo"') == 5 and "pas encore jugé" in page
 
 
-def test_derniers_constats_avec_barre_divergente(db, temp_db, assets):
-    capture(db, game_id=1, pid=1)
+def store_window(db, games=11):
+    """`games` parties en Top, six métriques à z moyen différent (la partie 1 est la plus ancienne)."""
+    for metric, z in (
+        ("cs_10", 0.9),
+        ("gold_diff_15", 1.5),
+        ("xp_diff_15", -0.3),
+        ("deaths_before_14", -1.5),
+        ("solo_deaths", -0.6),
+        ("deaths_per_10", 0.2),
+    ):
+        store(db, "top", metric, [2.0] * games, z=z)
+
+
+def test_derniers_constats_sur_dix_parties(db, temp_db, assets):
+    store_window(db)
+    view = home_view(CoachingRepository(db), Champions(assets), NOW)["findings"]
+    rows = view["rows"]
+    # les trois plus faibles puis les deux plus fortes, pondérées par le rang de la grille
+    assert [r["label"] for r in rows] == [
+        METRICS[m].label
+        for m in ("deaths_before_14", "solo_deaths", "xp_diff_15", "gold_diff_15", "cs_10")
+    ]
+    assert view["title"] == "Sur tes 10 dernières parties · Top"
+    worst, best = rows[0], rows[3]
+    assert (worst["z"], worst["good"], worst["left"], worst["width"]) == (
+        "−1,5 σ",
+        False,
+        0.0,
+        50.0,
+    )
+    assert (best["z"], best["good"], best["left"], best["width"]) == ("+1,5 σ", True, 50.0, 50.0)
+    assert all(len(r["dots"]) == 10 for r in rows)
+    assert [d["tone"] for d in worst["dots"]] == ["bad"] * 10
+    assert [d["tone"] for d in best["dots"]] == ["good"] * 10
+    # la 11e partie la plus ancienne n'y est pas, chaque point renvoie à sa partie
+    assert [d["href"] for d in worst["dots"]] == [f"/parties/{i}" for i in range(2, 12)]
+
+
+def test_la_page_montre_cinq_lignes_de_dix_points(db, temp_db, assets):
+    store_window(db)
+    page = client(temp_db, assets).get("/").text
+    assert page.count('class="finding-grid"') == 5 and page.count('class="dot ') == 50
+    assert 'href="/parties/11"' in page and 'href="/parties/1"' not in page
+
+
+def test_une_norme_en_construction_donne_un_point_sans_couleur(db, assets):
+    store(db, "top", "cs_10", [70.0] * 10, z=1.5)
     repo = CoachingRepository(db)
     repo.insert_metrics(
         [
-            (1, 1, "cs_10", 1, "top", 2, 74.0, 71.0, 6.0, NORM_N, 0.5)
-            + (78.0, 5.0, "OneTricks", 0.3, coaching_config.GRID_VERSION),
-            (1, 1, "solo_deaths", 1, "top", 2, 3.0, 1.6, 0.8, NORM_N, -1.75)
-            + (None, None, None, None, coaching_config.GRID_VERSION),
-        ]
-    )
-    repo.insert_findings(
-        [(1, "cs_10", "positive", 1.8, "norm", 1), (1, "solo_deaths", "negative", -1.2, "norm", 1)]
-    )
-    view = home_view(repo, Champions(assets), NOW)
-    rows = view["findings"]["rows"]
-    # négatifs d'abord, puis positifs
-    assert [r["label"] for r in rows] == ["Morts en solo", "CS @10"]
-    solo, cs = rows
-    assert (cs["value"], cs["reference"], cs["z"]) == ("74", "71 · obj. 78", "+1,8 σ")
-    assert (cs["left"], cs["width"], cs["good"]) == (50.0, round(1.8 / 2.27 * 50, 1), True)
-    assert (solo["value"], solo["reference"], solo["z"]) == ("3", "2", "−1,2 σ")
-    assert solo["good"] is False and solo["left"] == round(50 - 1.2 / 2.27 * 50, 1)
-    assert view["findings"]["win"] is True and view["findings"]["href"] == "/parties/1"
-
-
-def test_un_brut_illisible_ne_fait_pas_tomber_l_accueil(db, temp_db, assets):
-    capture(db, game_id=1, pid=1, raw="{}")
-    repo = CoachingRepository(db)
-    repo.insert_metrics(
-        [
-            (1, 1, "cs_10", 1, "top", 2, 74.0, 71.0, 6.0, NORM_N, 0.5)
+            (3, 1, "cs_10", 1, "top", 2, 70.0, 71.0, 6.0, NORM_N - 1, 1.5)
             + (None, None, None, None, coaching_config.GRID_VERSION)
         ]
     )
-    repo.insert_findings([(1, "cs_10", "positive", 1.8, "norm", 1)])
-    response = client(temp_db, assets).get("/")
-    assert response.status_code == 200 and "Pas encore de constat" in response.text
+    (row,) = home_view(repo, Champions(assets), NOW)["findings"]["rows"]
+    assert [d["tone"] for d in row["dots"]] == ["good"] * 2 + ["none"] + ["good"] * 7
+    assert row["z"] == "+1,5 σ"  # moyenne des parties à norme fiable seulement
 
 
-def test_une_norme_en_construction_n_est_pas_affichee(db, assets):
-    capture(db, game_id=1, pid=1)
-    repo = CoachingRepository(db)
-    repo.insert_metrics(
-        [
-            (1, 1, "cs_10", 1, "top", 2, 74.0, 71.0, 6.0, NORM_N - 1, 0.5)
-            + (None, None, None, None, coaching_config.GRID_VERSION)
-        ]
-    )
-    repo.insert_findings([(1, "cs_10", "positive", 1.8, "objective", 1)])
-    row = home_view(repo, Champions(assets), NOW)["findings"]["rows"][0]
-    assert row["reference"] == "—"
+def test_sous_le_minimum_de_parties_pas_de_tableau(db, temp_db, assets):
+    store(db, "top", "cs_10", [70.0] * (coaching_config.MIN_TREND_SAMPLE - 1), z=1.5)
+    assert home_view(CoachingRepository(db), Champions(assets), NOW)["findings"] is None
+    assert "Pas encore assez de parties" in client(temp_db, assets).get("/").text
 
 
 def test_colonne_laterale_rang_parties_et_bilan(db, temp_db, assets):
@@ -258,6 +286,7 @@ def test_fixer_sans_jeton_ou_avec_une_origine_etrangere_est_refuse(db, temp_db, 
         "metric=vision_per_min&role=top",  # une métrique d'un autre poste
         "metric=cs_10&role=toplane",
         "metric=cs_10&role=top&origin=hacker",
+        "metric=cs_10&role=top&reference=inconnu",
         "metric=%27%3B+DROP+TABLE+coaching_goals%3B--&role=top",
     ],
 )
@@ -339,3 +368,26 @@ def test_le_message_de_l_ecriture_est_echappe():
     }
     html = environment.get_template("partials/accueil_axes.html").render(a=axes)
     assert "<script>" not in html and "&lt;script&gt;" in html
+
+
+def test_fixer_un_axe_d_objectif_garde_la_reference(db, temp_db, assets):
+    store(db, "top", "gold_diff_15", [120.0] * 10, z=0.5, objective=100.0, z_objective=0.16)
+    web = client(temp_db, assets)
+    response = web.post(
+        "/accueil/axe?metric=gold_diff_15&role=top&origin=proposed&reference=objective",
+        headers=token(web),
+    )
+    (goal,) = CoachingRepository(db).goals()
+    assert response.status_code == 200
+    assert (goal["reference"], goal["target"]) == ("objective", 100.0)
+    assert "objectif OneTricks de ton champion" in response.text
+
+
+def test_un_axe_d_objectif_sans_objectif_en_base_est_refuse_sans_ecriture(db, temp_db, assets):
+    store(db, "top", "cs_10", [70.0] * 3, z=0.0)
+    web = client(temp_db, assets)
+    response = web.post(
+        "/accueil/axe?metric=cs_10&role=top&reference=objective", headers=token(web)
+    )
+    assert response.status_code == 200 and "aucun objectif OneTricks" in response.text
+    assert goals_in(temp_db) == []

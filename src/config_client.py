@@ -144,11 +144,16 @@ class ClientConfig:
     # Écran Calibration (SPEC-21 tâche 54) : taille du diagramme de fiabilité.
     CALIBRATION_CHART_SIZE: Tuple[int, int] = (620, 520)
 
-    # Accueil du coaching (SPEC-21 tâche 71) : parties en portraits, forces et faiblesses du bilan, et
-    # écart (en σ) qui remplit une demi-barre divergente des constats (22 % de la demi-largeur par σ).
+    # Accueil du coaching (SPEC-21 tâche 71, SPEC-29) : parties en portraits, forces et faiblesses du
+    # bilan, parties lues par les constats (égal à `RECURRENCE_WINDOW`) et leurs métriques les plus faibles
+    # et les plus fortes (`TOP_NEGATIVE` / `TOP_POSITIVE` d'origine), et écart moyen (en σ) qui remplit une
+    # demi-barre divergente (un z moyen sur 10 parties dépasse rarement 1 σ : mesuré +0,04 à +0,53).
     HOME_LAST_GAMES: int = 10
     HOME_STRENGTHS: int = 2
-    HOME_FINDING_Z_FULL: float = 2.27
+    HOME_FINDINGS_GAMES: int = 10
+    HOME_FINDINGS_WEAK: int = 3
+    HOME_FINDINGS_STRONG: int = 2
+    HOME_FINDING_Z_FULL: float = 1.0
 
     # Profil (SPEC-21 tâche 77) : files affichées (le LCU renvoie aussi celles de TFT), catégories de défis.
     PROFILE_QUEUES: Tuple[str, ...] = ("RANKED_SOLO_5x5", "RANKED_FLEX_SR")

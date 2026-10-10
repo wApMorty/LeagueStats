@@ -258,3 +258,32 @@ class TestObjectiveGoals:
         assert "non tenu" in goals.judge(repo, below)[0]
         assert goals.judge(repo, no_objective) == []
         assert repo.verdicts(goal["id"], 5) == [False, True]
+
+
+class TestWindowGaps:
+    def _rows(self, metric, zs, norm_n=20):
+        rows = _history(metric, [1.0] * len(zs), norm_n=norm_n)
+        return [dict(row, z_norm=z, objective_value=None) for row, z in zip(rows, zs)]
+
+    def test_ranked_by_grid_weighted_mean_over_the_window_oldest_first(self):
+        history = self._rows("cs_10", [1.0] * 10) + self._rows("solo_deaths", [-0.5] * 10)
+        history += self._rows("cs_10", [-9.0])  # hors fenêtre de 10 parties
+
+        gaps = progression.window_gaps(history, "top", 10)
+
+        assert [g.metric for g in gaps] == ["solo_deaths", "cs_10"]  # -0,5 × 2 puis +1,0 × 1
+        assert gaps[0].mean_z == pytest.approx(-0.5)
+        assert gaps[0].game_ids == list(range(9, -1, -1))  # de la plus ancienne à la plus récente
+
+    def test_unreliable_norm_is_a_gap_in_the_series_not_a_z(self):
+        history = self._rows("cs_10", [1.0] * 9)
+        history.insert(2, dict(history[0], game_id=99, norm_n=3))
+
+        (gap,) = progression.window_gaps(history, "top", 10)
+
+        assert gap.mean_z == pytest.approx(1.0) and gap.zs.count(None) == 1
+        assert gap.zs[::-1][2] is None  # l'ordre est inversé : la 3e plus récente
+
+    def test_empty_below_the_minimum_of_reliable_games(self):
+        few = self._rows("cs_10", [1.0] * (coaching_config.MIN_TREND_SAMPLE - 1))
+        assert progression.window_gaps(few, "top", 10) == []

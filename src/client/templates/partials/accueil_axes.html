@@ -41,13 +41,13 @@
     <article class="goal-card goal-free" style="--hue: {{ c.hue }}" data-rise="1" data-delay="{{ 180 + loop.index0 * 100 }}">
       <div class="queue-name muted-2">Place libre</div>
       {% if c.proposal %}
-      <div class="goal-quote">Le coach propose « {{ c.proposal.label }} », ton schéma négatif le plus net.</div>
+      <div class="goal-quote">{{ c.proposal.text }}</div>
       <div class="goal-actions">
-        <button type="button" class="btn-primary" hx-post="/accueil/axe?metric={{ c.proposal.metric }}&amp;role={{ a.role }}&amp;origin=proposed">Fixer cet axe</button>
+        <button type="button" class="btn-primary" hx-post="/accueil/axe?metric={{ c.proposal.metric }}&amp;role={{ a.role }}&amp;origin=proposed&amp;reference={{ c.proposal.reference }}">Fixer cet axe</button>
         {{ choose(a) }}
       </div>
       {% elif a.role %}
-      <div class="goal-quote">Pas de proposition pour l'instant : le coach attend un schéma négatif net (au moins {{ a.minimum }} parties analysées en {{ a.role_label }}).</div>
+      <div class="goal-quote">Pas de proposition pour l'instant : ni schéma négatif net ni écart à l'objectif OneTricks (au moins {{ a.minimum }} parties analysées en {{ a.role_label }}).</div>
       <div class="goal-actions">{{ choose(a) }}</div>
       {% else %}
       <div class="goal-quote">Aucune partie analysée : un axe se fixe à partir de ton poste principal.</div>

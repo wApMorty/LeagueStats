@@ -32,7 +32,7 @@ from .data import (
     rank_view,
 )
 from .db import read_only, writable
-from .home import ORIGINS, axes_view, empty_home, home_view
+from .home import ORIGINS, REFERENCES, axes_view, empty_home, home_view
 from .draft_grimoire import grimoire_view
 from .draft_loadout import normalize_page, plan as loadout_plan, runes_payload, send as send_loadout
 from . import found
@@ -280,12 +280,19 @@ def create_app(
         return axes_fragment(request)
 
     @app.post("/accueil/axe", response_class=HTMLResponse)
-    def axe_fixer(request: Request, metric: str, role: str, origin: str = "player"):
+    def axe_fixer(
+        request: Request, metric: str, role: str, origin: str = "player", reference: str = "norm"
+    ):
         """Fixe un axe de travail (SPEC-21 §2 : l'une des deux écritures du coaching dans la base)."""
-        if role not in GRID or metric not in GRID[role] or origin not in ORIGINS:
+        if (
+            role not in GRID
+            or metric not in GRID[role]
+            or origin not in ORIGINS
+            or reference not in REFERENCES
+        ):
             return JSONResponse({"detail": "axe invalide"}, status_code=400)
         with writable(app.state.db_path) as db:
-            message = set_goal(CoachingRepository(db), metric, role, origin)
+            message = set_goal(CoachingRepository(db), metric, role, origin, reference)
         return axes_fragment(request, message.removeprefix("[AXE] "))
 
     @app.post("/accueil/axe/{goal_id}/clore", response_class=HTMLResponse)

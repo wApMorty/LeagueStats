@@ -23,22 +23,23 @@
     <section class="findings">
       <div class="section-head" data-rise="1" data-delay="400">
         <h2 class="grad-title grad-mint">Derniers constats</h2>
-        {% if v.findings %}<a href="{{ v.findings.href }}">{{ v.findings.champion }} · {{ "victoire" if v.findings.win else "défaite" }} · {{ v.findings.ended }} ›</a>{% endif %}
+        {% if v.findings %}<span class="muted">{{ v.findings.title }}</span>{% endif %}
       </div>
       {% if v.findings %}
-      <div class="finding-grid finding-head"><span>Métrique</span><span class="r">Toi</span><span class="r">Norme · objectif</span><span class="c">Écart à la norme</span><span class="r">σ</span></div>
+      <div class="finding-grid finding-head"><span>Métrique</span><span class="r">Moy.</span><span class="r">Norme · objectif</span><span class="c">Parties</span><span class="c">Écart à la norme</span><span class="r">σ</span></div>
       {% for f in v.findings.rows %}
       <div class="finding-grid" data-rise="1" data-delay="{{ f.delay }}">
         <span class="finding-label">{{ f.label }}</span>
         <span class="r you">{{ f.value }}</span>
         <span class="r ref">{{ f.reference }}</span>
+        <span class="dots">{% for d in f.dots %}<a class="dot {{ d.tone }}" href="{{ d.href }}" title="{{ d.title }}"></a>{% endfor %}</span>
         <span class="diverge"><i class="diverge-bar {{ 'good' if f.good else 'bad' }}" data-bar="x" data-delay="{{ f.delay }}"
             style="left: {{ f.left }}%; width: {{ f.width }}%; transform-origin: {{ 'left' if f.good else 'right' }} center"></i></span>
         <span class="r {{ 'ok' if f.good else 'ko' }}">{{ f.z }}</span>
       </div>
       {% endfor %}
       {% else %}
-      <p class="empty">Pas encore de constat : ils arrivent après une partie classée analysée, quand la norme du poste compte assez de parties.</p>
+      <p class="empty">Pas encore assez de parties : les constats arrivent quand le poste compte au moins {{ v.findings_minimum }} parties analysées, avec une norme assez fournie.</p>
       {% endif %}
     </section>
   </div>

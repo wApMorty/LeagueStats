@@ -12,10 +12,10 @@ from typing import Dict, List, Optional
 
 from markupsafe import Markup
 
-from ..coaching.goals import next_proposal
+from ..coaching.goals import Proposal, next_proposal
 from ..coaching.grid import GRID
 from ..coaching.metrics import METRICS, format_value
-from ..coaching.progression import profile
+from ..coaching.progression import WindowGap, profile, window_gaps
 from ..config_client import client_config
 from ..config_constants import coaching_config
 from ..repositories.coaching import CoachingRepository
@@ -25,6 +25,7 @@ from .draft_view import ROLE_LABELS, Champions, signed
 
 GOAL_HUES = (290, 230)  # violet puis bleu : un axe par couleur
 ORIGINS = ("proposed", "player")
+REFERENCES = ("norm", "objective")
 ORIGIN_LABELS = {"proposed": "proposé par le coach", "player": "fixé par toi"}
 
 
@@ -50,7 +51,11 @@ def _goal_card(repo: CoachingRepository, goal: dict, index: int) -> dict:
         "tag": f"Axe {index + 1} · {ORIGIN_LABELS.get(goal['origin'], goal['origin'])}",
         "label": metric.label,
         "role": ROLE_LABELS.get(goal["role"], goal["role"]),
-        "target": f"{'≥' if metric.sense > 0 else '≤'} {format_value(goal['metric'], goal['target'])}",
+        "target": (
+            "objectif OneTricks de ton champion"
+            if goal["reference"] == "objective"
+            else f"{'≥' if metric.sense > 0 else '≤'} {format_value(goal['metric'], goal['target'])}"
+        ),
         "marks": marks,
         "hold": (
             f"Tenu {held} fois sur les {len(verdicts)} dernières · acquis à "
@@ -60,6 +65,18 @@ def _goal_card(repo: CoachingRepository, goal: dict, index: int) -> dict:
         ),
         "since": f"Actif depuis {plural(judged, 'partie')}" if judged else "Fixé, pas encore jugé",
     }
+
+
+def _proposal_text(proposal: Proposal) -> str:
+    label = METRICS[proposal.metric].label
+    if proposal.net:
+        return f"Le coach propose « {label} », ton schéma négatif le plus net."
+    above = ", au-dessus de l'objectif : ta marge la plus faible" if proposal.gap >= 0 else ""
+    return (
+        f"Le coach propose « {label} » : {signed(proposal.gap, 2)} σ face à l'objectif OneTricks "
+        f"sur tes {coaching_config.RECURRENCE_WINDOW} dernières parties{above}. "
+        "Pas un défaut avéré."
+    )
 
 
 def axes_view(repo: CoachingRepository, notice: Optional[str] = None) -> dict:
@@ -84,7 +101,11 @@ def axes_view(repo: CoachingRepository, notice: Optional[str] = None) -> dict:
                 "kind": "free",
                 "hue": GOAL_HUES[slot % len(GOAL_HUES)],
                 "proposal": (
-                    {"metric": proposal.metric, "label": METRICS[proposal.metric].label}
+                    {
+                        "metric": proposal.metric,
+                        "reference": proposal.reference,
+                        "text": _proposal_text(proposal),
+                    }
                     if proposal and first
                     else None
                 ),
@@ -110,42 +131,59 @@ def axes_view(repo: CoachingRepository, notice: Optional[str] = None) -> dict:
     }
 
 
-def _findings(repo: CoachingRepository, champions: Champions, now: datetime) -> Optional[dict]:
-    """Le tableau des derniers constats : ceux de la dernière partie analysée qui en a."""
-    latest = repo.latest_findings()
-    if not latest:
-        return None
-    record = repo.game_record(latest["game_id"])
-    rows = []
-    for i, row in enumerate(latest["rows"]):
-        metric = row["metric"]
-        left, width = diverging(row["z"], client_config.HOME_FINDING_Z_FULL)
-        norm, objective = finding_reference(row)
-        reference = (norm or "—") + (f" · obj. {objective}" if objective else "")
-        rows.append(
-            {
-                "label": METRICS[metric].label,
-                "value": format_value(metric, row["value"]),
-                "reference": reference,
-                "z": f"{signed(row['z'], 1)} σ",
-                "good": row["z"] >= 0,
-                "left": round(left, 1),
-                "width": round(width, 1),
-                "delay": 480 + i * 70,
-            }
-        )
-    try:
-        game = json.loads(record["game"])
-        me = next(p for p in game["participants"] if p["participantId"] == record["pid"])
-    except (KeyError, TypeError, ValueError, StopIteration):
-        return None  # brut illisible : pas de tableau, plutôt qu'un accueil en erreur
+def _finding_row(gap: WindowGap, index: int) -> dict:
+    """Une ligne des constats : l'écart moyen, sa barre divergente et un point par partie."""
+    metric = gap.metric
+    left, width = diverging(gap.mean_z, client_config.HOME_FINDING_Z_FULL)
+    norm, objective = finding_reference(
+        {
+            "metric": metric,
+            "norm_mean": gap.mean_norm,
+            "norm_n": coaching_config.MIN_NORM_SAMPLE,
+            "objective_value": gap.objective,
+        }
+    )
+    threshold = coaching_config.MIN_ABS_Z
+    dots = [
+        {
+            "href": f"/parties/{game_id}",
+            "tone": (
+                "none"
+                if z is None
+                else "bad" if z <= -threshold else "good" if z >= threshold else "mid"
+            ),
+            "title": f"{METRICS[metric].label} : "
+            + ("norme en construction" if z is None else f"{signed(z, 1)} σ"),
+        }
+        for game_id, z in zip(gap.game_ids, gap.zs)
+    ]
     return {
-        "game_id": latest["game_id"],
-        "href": f"/parties/{latest['game_id']}",
-        "win": bool(me["stats"]["win"]),
-        "ended": ago(parse_utc(record["created"]), now),
-        "champion": champions.name(me["championId"]),
-        "rows": rows,
+        "label": METRICS[metric].label,
+        "value": format_value(metric, gap.mean_value),
+        "reference": (norm or "—") + (f" · obj. {objective}" if objective else ""),
+        "z": f"{signed(gap.mean_z, 1)} σ",
+        "good": gap.mean_z >= 0,
+        "left": round(left, 1),
+        "width": round(width, 1),
+        "dots": dots,
+        "delay": 480 + index * 70,
+    }
+
+
+def _findings(repo: CoachingRepository, role: Optional[str]) -> Optional[dict]:
+    """Les constats du poste sur ses dernières parties : les plus faibles puis les plus fortes."""
+    if role is None:
+        return None
+    history = repo.player_history(role, limit=client_config.HOME_FINDINGS_GAMES)
+    ranked = window_gaps(history, role, client_config.HOME_FINDINGS_GAMES)
+    if not ranked:
+        return None
+    weak = ranked[: client_config.HOME_FINDINGS_WEAK]
+    strong = [g for g in ranked[::-1] if g not in weak][: client_config.HOME_FINDINGS_STRONG]
+    games = max(len(g.game_ids) for g in ranked)
+    return {
+        "title": f"Sur tes {plural(games, 'dernière')} parties · {ROLE_LABELS[role]}",
+        "rows": [_finding_row(gap, i) for i, gap in enumerate(weak + strong)],
     }
 
 
@@ -237,7 +275,8 @@ def home_view(
         ),
         "fresh": bool(count),
         "axes": axes_view(repo, notice),
-        "findings": _findings(repo, champions, now),
+        "findings": _findings(repo, role),
+        "findings_minimum": coaching_config.MIN_TREND_SAMPLE,
         "last": _last_games(repo, champions),
         "rank": _rank_card(history),
         "review": _review(repo, role),
@@ -252,6 +291,7 @@ def empty_home() -> Dict[str, object]:
         "fresh": False,
         "axes": None,
         "findings": None,
+        "findings_minimum": coaching_config.MIN_TREND_SAMPLE,
         "last": {"games": [], "title": "Aucune partie"},
         "rank": None,
         "review": None,

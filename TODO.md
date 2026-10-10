@@ -280,7 +280,7 @@ SPEC-29 §5 (tâches 133 à 137, 17 pts) :
 |---|---|---|---|---|
 | 133 | Migration `coaching_goals.reference`, dépôt `goals()` / `insert_goal` | 2 | — | ✅ |
 | 134 | Choix par l'objectif : `objective_gaps`, `Proposal`, `next_proposal` à deux étages, `set_goal(reference)`, `judge` contre l'objectif de la partie, régression | 5 | 133 | ✅ |
-| 135 | Constats sur 10 parties : `window_gaps`, `home._findings`, gabarit et bande de points, route `reference` | 5 | 134 | ⬜ |
+| 135 | Constats sur 10 parties : `window_gaps`, `home._findings`, gabarit et bande de points, route `reference` | 5 | 134 | ✅ |
 | 136 | Tenir sur un écran : compacter cartes et lignes, mesure headless (autorisation de @pj35) | 3 | 135 | ⬜ |
 | 137 | Clôture : CHANGELOG, statuts, README des specs, recette @pj35 | 2 | 136 | ⬜ |
 

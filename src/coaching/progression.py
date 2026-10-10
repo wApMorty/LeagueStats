@@ -39,6 +39,17 @@ class Pattern:
 
 
 @dataclass(frozen=True)
+class WindowGap:
+    metric: str
+    mean_z: float  # z_norm moyen sur la fenêtre (parties à norme fiable seulement)
+    zs: List[Optional[float]]  # un z par partie, de la plus ancienne à la plus récente
+    game_ids: List[int]  # alignés sur `zs`
+    mean_value: float
+    mean_norm: Optional[float]
+    objective: Optional[float]  # objectif OneTricks de la dernière partie
+
+
+@dataclass(frozen=True)
 class Trend:
     metric: str
     before: float
@@ -118,6 +129,33 @@ def objective_gaps(history: List[dict], role: str) -> List[tuple]:
         if len(series) >= coaching_config.MIN_TREND_SAMPLE:
             rows.append((metric, mean(series), len(series)))
     return sorted(rows, key=lambda row: row[1])
+
+
+def window_gaps(history: List[dict], role: str, games: int) -> List[WindowGap]:
+    """Écart moyen de chaque métrique de la grille sur les `games` dernières parties du poste.
+
+    Du plus faible au plus fort, pondéré par le rang de la grille comme `Finding.weighted`.
+    Une métrique sous MIN_TREND_SAMPLE parties à norme fiable n'est pas classée.
+    """
+    found = []
+    for metric in GRID.get(role, {}):
+        recent = _series(history, metric)[:games]
+        reliable = _series(recent, metric, reliable_norm=True)
+        if len(reliable) < coaching_config.MIN_TREND_SAMPLE:
+            continue
+        ordered = recent[::-1]
+        found.append(
+            WindowGap(
+                metric,
+                mean(row["z_norm"] for row in reliable),
+                [row["z_norm"] if row in reliable else None for row in ordered],
+                [row["game_id"] for row in ordered],
+                mean(row["value"] for row in recent),
+                mean(row["norm_mean"] for row in reliable),
+                recent[0]["objective_value"],
+            )
+        )
+    return sorted(found, key=lambda gap: gap.mean_z * GRID[role][gap.metric])
 
 
 def trends(history: List[dict], role: str) -> List[Trend]:
