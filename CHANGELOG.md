@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+## [5.0.1] - 2026-10-12
+
+La draft n'est plus invisible dans la GUI : la purge de `crawl.db` ne bloque plus la boucle du Live Coach, et la collecte de fond a son propre fil. Aucune action requise (pas de migration, pas de scrape) ; l'index de `crawl.db` se crée au premier lancement, quelques secondes.
+
 ### 🐛 Fix
 
 - **La draft restait invisible pendant la purge de `crawl.db`** — le plafond de la purge (`DELETE … LIMIT -1 OFFSET`) lisait chaque ligne de `crawl_games` (blobs d'environ 20 Ko, 710 Mo) pour filtrer `raw IS NOT NULL` ; à froid la boucle du Live Coach y restait 2 à 3 minutes, au démarrage, à chaque fin de partie et toutes les 500 lectures (tours de 135 à 162 s du journal des tours ; pile observé au `py-spy` en `_purge`, `crawl.py:301`). Index partiel `crawl_games_stored` (créé une fois au premier lancement) : le plafond ne lit plus aucune ligne, 1,36 s → 0,06 s à chaud sur une copie. Régression : `tests/regression/test_regression_crawl_purge_covering_index.py`.
