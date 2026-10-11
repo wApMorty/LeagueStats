@@ -76,11 +76,29 @@ def signature(value: Any) -> str:
     return hashlib.md5(raw.encode("utf-8")).hexdigest()[:8]  # nosec - empreinte, pas de sécurité
 
 
+def _squash(label: str) -> str:
+    """Lettres et chiffres en minuscules : `K'Sante`, `KSante` et `ksante` se rejoignent."""
+    return "".join(ch for ch in label.lower() if ch.isalnum())
+
+
 class Champions:
     """Portraits par identifiant numérique Riot, via Data Dragon (`assets.champions()`)."""
 
     def __init__(self, assets: Any) -> None:
-        self._by_key = {c["key"]: c for c in assets.champions()}
+        champions = assets.champions()
+        self._by_key = {c["key"]: c for c in champions}
+        self._by_name: Dict[str, Dict[str, Any]] = {}
+        for c in champions:  # `id` (MonkeyKing) puis `name` (Wukong) : le premier venu garde la clé
+            for label in (c["id"], c["name"]):
+                self._by_name.setdefault(_squash(label), c)
+
+    def by_name(self, name: str) -> Optional[Dict[str, str]]:
+        """`{img, name}` du champion dont l'`id` ou le nom Data Dragon égale `name` (lettres et chiffres
+        seuls, sans casse : `MonkeyKing`, `Kaisa`, `lee sin`) ; None si aucun."""
+        champion = self._by_name.get(_squash(name))
+        if champion is None:
+            return None
+        return {"img": f"/assets/champion/{champion['id']}.png", "name": champion["name"]}
 
     def ddragon_id(self, champion_id: Optional[int]) -> Optional[str]:
         champion = self._by_key.get(champion_id)

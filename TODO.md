@@ -295,7 +295,7 @@ Firefox headless. Passe **avant** la tâche 127 de SPEC-27, réécrite pour ce g
 
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
-| 138 | Vue : `Champions.by_name`, portrait, nom Data Dragon et infobulle Mat/Syn dans `_score`, tests | 3 | — | ⬜ |
+| 138 | Vue : `Champions.by_name`, portrait, nom Data Dragon et infobulle Mat/Syn dans `_score`, tests | 3 | — | ✅ |
 | 139 | Gabarit et CSS : bandeau, grille à deux colonnes, tableau à 5 colonnes, place de la ligne SPEC-27, `GAME_CURVE_SIZE`, tests | 5 | 138 | ⬜ |
 | 140 | Mesure : `scripts/measure_en_partie.py` (Firefox headless, cas le plus lourd, 1 920 × 986, ≥ 30 px de marge), ajustements | 3 | 139 | ⬜ |
 | 141 | Clôture : SPEC-27 §4.6 et tâche 127 réécrites, `CHANGELOG.md`, statuts, README des specs, recette @pj35 | 2 | 140 | ⬜ |

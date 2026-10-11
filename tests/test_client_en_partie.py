@@ -4,6 +4,7 @@ Hermétique : bus en mémoire, base temporaire, analyse construite par `build_fi
 l'évaluateur factice de `test_final_analysis_face_off`. Aucun client LoL, aucun test d'interface réel.
 """
 
+import json
 import re
 
 import pytest
@@ -13,9 +14,11 @@ from src.client import en_partie
 from src.client.app import create_app
 from src.client.assets import Assets
 from src.client.bus import EventBus
+from src.client.draft_view import Champions
+from src.config_client import client_config
 from src.draft.final_analysis import build_final_analysis
 from tests import test_final_analysis_face_off as fo
-from tests.test_client_draft import LOCAL, assets, bus  # noqa: F401  (fixtures)
+from tests.test_client_draft import BASE, CHAMPIONS, LOCAL, assets, bus  # noqa: F401  (fixtures)
 
 
 @pytest.fixture
@@ -207,3 +210,58 @@ def test_le_point_de_depart_de_la_draft_n_est_pas_sur_la_courbe(client, bus):  #
     assert "55" not in chart.replace(
         "0.55", ""
     )  # la probabilité de la draft (55 %) n'est pas tracée
+
+
+# ---------- portraits et infobulle du face-à-face (SPEC-30 tâche 138) ----------
+
+
+@pytest.fixture
+def champions(tmp_path, monkeypatch):
+    """Un `Champions` dont le `champion.json` factice contient Wukong (id `MonkeyKing`) en plus."""
+    monkeypatch.setattr(client_config, "DDRAGON_VERSION", "16.2.1")
+    data = {
+        **CHAMPIONS["data"],
+        "MonkeyKing": {"key": "62", "id": "MonkeyKing", "name": "Wukong", "tags": []},
+    }
+    files = {f"{BASE}/cdn/16.2.1/data/fr_FR/champion.json": json.dumps({"data": data}).encode()}
+    return Champions(Assets(tmp_path / "cache", fetch=files.get))
+
+
+@pytest.mark.parametrize(
+    "name, expected",
+    [
+        ("MonkeyKing", ("MonkeyKing", "Wukong")),
+        ("Wukong", ("MonkeyKing", "Wukong")),
+        ("Lee Sin", ("LeeSin", "Lee Sin")),
+        ("lee sin", ("LeeSin", "Lee Sin")),
+        ("LeeSin", ("LeeSin", "Lee Sin")),
+    ],
+)
+def test_champions_by_name_rapproche_id_et_nom_data_dragon(champions, name, expected):
+    ident, display = expected
+    assert champions.by_name(name) == {"img": f"/assets/champion/{ident}.png", "name": display}
+
+
+def test_champions_by_name_inconnu(champions):
+    assert champions.by_name("Inconnu") is None
+    assert champions.by_name("MonkeyKing")["name"] == "Wukong"
+
+
+def test_face_a_face_portrait_nom_data_dragon_et_infobulle(champions):
+    rows = en_partie.analysis_view(analysis(), champions)["rows"]
+    darius, garen = rows[0]["enemy"], rows[0]["ally"]
+    assert darius["img"] == "/assets/champion/Darius.png" and darius["name"] == "Darius"
+    assert garen["img"] is None and garen["name"] == "Garen"  # inconnu de Data Dragon : nom gardé
+    assert re.fullmatch(r"Matchups [+-]\d+\.\d · Synergies [+-]\d+\.\d", darius["detail"])
+    assert darius["total"] is not None and darius["matchup"] and darius["synergy"]
+
+
+def test_face_a_face_sans_champions_aucun_portrait():
+    rows = en_partie.analysis_view(analysis())["rows"]
+    assert all(r[side]["img"] is None for r in rows for side in ("ally", "enemy") if r[side])
+
+
+def test_champion_aux_donnees_minces_sans_infobulle(champions):
+    rows = en_partie.analysis_view(analysis(thin={"Garen"}), champions)["rows"]
+    garen = rows[0]["ally"]
+    assert garen["thin"] and garen["detail"] is None and garen["total"] is None

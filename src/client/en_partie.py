@@ -13,6 +13,7 @@ from markupsafe import Markup
 from ..config_client import client_config
 from ..config_constants import draft_config
 from .charts import Band, Mark, Series, Tick, line_chart
+from .draft_view import Champions
 from .review import COST_COLOR, CURVE_STOPS, KIND_COLORS
 
 TRAIN_COMMAND = "python -m src.winprob.retrain --force"
@@ -28,17 +29,27 @@ def _points(value: Optional[float]) -> Optional[str]:
     return None if value is None else f"{value:+.1f}"
 
 
-def _score(line: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
-    """Un champion du face-à-face ; `thin` quand ses données sont trop minces pour être chiffrées."""
+def _score(
+    line: Optional[Dict[str, Any]], champions: Optional[Champions] = None
+) -> Optional[Dict[str, Any]]:
+    """Un champion du face-à-face ; `thin` quand ses données sont trop minces pour être chiffrées.
+
+    Portrait (`img`) et nom Data Dragon quand `champions` reconnaît le champion ; sinon ni portrait ni
+    changement de nom. `detail` (infobulle du Total) porte matchups et synergies, None si `thin`.
+    """
     if line is None:
         return None
     thin = line["matchup"] is None
+    known = champions.by_name(line["name"]) if champions is not None else None
+    matchup, synergy = _points(line["matchup"]), _points(line["synergy"])
     return {
-        "name": line["name"],
+        "name": known["name"] if known else line["name"],
+        "img": known["img"] if known else None,
         "thin": thin,
-        "matchup": None if thin else _points(line["matchup"]),
-        "synergy": None if thin else _points(line["synergy"]),
+        "matchup": None if thin else matchup,
+        "synergy": None if thin else synergy,
         "total": None if thin else _points(line["total"]),
+        "detail": None if thin else f"Matchups {matchup} · Synergies {synergy}",
     }
 
 
@@ -51,12 +62,21 @@ def _duel(points: Optional[float]) -> Dict[str, Any]:
     return {"side": side, "chevrons": chevrons, "text": _points(points)}
 
 
-def analysis_view(analysis: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
-    """Le face-à-face de la draft tel que `FinalAnalysis` le porte, None sans analyse."""
+def analysis_view(
+    analysis: Optional[Dict[str, Any]], champions: Optional[Champions] = None
+) -> Optional[Dict[str, Any]]:
+    """Le face-à-face de la draft tel que `FinalAnalysis` le porte, None sans analyse.
+
+    `champions` fournit portraits et noms Data Dragon ; None : aucun portrait.
+    """
     if not analysis:
         return None
     rows: List[Dict[str, Any]] = [
-        {"ally": _score(line["ally"]), "enemy": _score(line["enemy"]), "duel": _duel(line["duel"])}
+        {
+            "ally": _score(line["ally"], champions),
+            "enemy": _score(line["enemy"], champions),
+            "duel": _duel(line["duel"]),
+        }
         for line in analysis["lines"]
     ]
     return {
@@ -267,6 +287,7 @@ def en_partie_view(
     ingame: Optional[Dict[str, Any]],
     analysis: Optional[Dict[str, Any]],
     items: Optional[Dict[int, Dict[str, Any]]] = None,
+    champions: Optional[Champions] = None,
 ) -> Dict[str, Any]:
     """L'écran : état (`idle`, `live`, `ended`), horloge, win chance, analyse de la draft."""
     state = (ingame or {}).get("state", "idle")
@@ -283,5 +304,5 @@ def en_partie_view(
             curve=curve_view(data),
             build=build_view(analysis, data, items),
         )
-    view["analysis"] = analysis_view(analysis)
+    view["analysis"] = analysis_view(analysis, champions)
     return view
