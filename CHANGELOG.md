@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### 🐛 Fix
+
+- **La draft restait invisible pendant la purge de `crawl.db`** — le plafond de la purge (`DELETE … LIMIT -1 OFFSET`) lisait chaque ligne de `crawl_games` (blobs de 100 Ko, 710 Mo) pour filtrer `raw IS NOT NULL` ; à froid la boucle du Live Coach y restait 2 à 3 minutes, au démarrage, à chaque fin de partie et toutes les 500 lectures (tours de 135 à 162 s du journal des tours ; pile observé au `py-spy` en `_purge`, `crawl.py:301`). Index partiel `crawl_games_stored` (créé une fois au premier lancement) : le plafond ne lit plus aucune ligne, 1,36 s → 0,06 s à chaud sur une copie. Régression : `tests/regression/test_regression_crawl_purge_covering_index.py`.
+
 ## [5.0.0] - 2026-10-11
 
 L'accueil du coaching lit les 10 dernières parties et le coach propose enfin des axes de travail ; la draft suivante ne reste plus muette après une partie. **Action requise** : `python -m alembic upgrade head` (colonne `coaching_goals.reference`) ; sans elle l'accueil du client affiche « Base non migrée ». Pas de scrape.

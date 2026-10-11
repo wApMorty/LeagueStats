@@ -46,12 +46,15 @@ CREATE TABLE IF NOT EXISTS crawl_frontier (
 # Sans index, chaque requête de la boucle du Live Coach balaie les 500 Mo de `crawl_games` (blobs
 # compris) : à froid, la boucle y passait des dizaines de secondes et manquait la file trouvée. Les
 # index partiels couvrent le travail à faire ; `read_utc` remplace `length(raw) > 0` dans les comptes.
+# `crawl_games_stored` couvre le plafond de la purge : sans lui, `raw IS NOT NULL` lisait chaque ligne.
 INDEXES = """
 CREATE INDEX IF NOT EXISTS crawl_games_todo ON crawl_games(depth, game_creation_utc DESC)
     WHERE raw IS NULL;
 CREATE INDEX IF NOT EXISTS crawl_games_created ON crawl_games(game_creation_utc);
 CREATE INDEX IF NOT EXISTS crawl_games_version ON crawl_games(game_version);
 CREATE INDEX IF NOT EXISTS crawl_games_read ON crawl_games(read_utc);
+CREATE INDEX IF NOT EXISTS crawl_games_stored ON crawl_games(game_creation_utc)
+    WHERE raw IS NOT NULL;
 CREATE INDEX IF NOT EXISTS crawl_frontier_todo ON crawl_frontier(depth, priority DESC)
     WHERE visited_utc IS NULL;
 """
