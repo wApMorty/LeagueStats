@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-10-11 (SPEC-29 livrée : constats sur dix parties et axes par objectif)
+**Mis à jour** : 2026-10-12 (SPEC-30 rédigée : écran « En partie » sur un seul écran)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -283,6 +283,22 @@ SPEC-29 §5 (tâches 133 à 137, 17 pts) :
 | 135 | Constats sur 10 parties : `window_gaps`, `home._findings`, gabarit et bande de points, route `reference` | 5 | 134 | ✅ |
 | 136 | Tenir sur un écran : mesure en vraie fenêtre Chrome 1920×986 sur copie de la base, `scrollHeight` 1351 → 950 = `clientHeight` avec `notice` (cause : l'anneau décoratif, passé en `fixed`) ; cartes et lignes non compactées, 57 px de marge | 3 | 135 | ✅ |
 | 137 | Clôture : CHANGELOG, statuts, README des specs, `latest_findings` supprimée, recette @pj35 (`alembic upgrade head`, accueil sur la vraie base, un clic sur « Fixer cet axe » puis la partie suivante) | 2 | 136 | ✅ |
+
+### Lot suivant — SPEC-30, écran « En partie » sur un seul écran (🟡 rédigée le 2026-10-12)
+
+[SPEC-30](docs/specs/SPEC-30-ecran-en-partie-sur-un-ecran.md) : l'écran « En partie » empile quatre panneaux sur
+~1 600 px pour 890 utiles à 1 920 × 950 (estimation arithmétique), dont ~600 pour la seule courbe. Validé par @pj35 le
+2026-10-12 : deux colonnes (ma partie à gauche, win chance et face-à-face à droite) sous un bandeau d'une ligne, courbe
+recalibrée, face-à-face sans Mat/Syn (en infobulle) et avec portraits, même écran de référence que l'accueil, mesure en
+Firefox headless. Passe **avant** la tâche 127 de SPEC-27, réécrite pour ce gabarit. Découpage en SPEC-30 §5 (tâches
+138 à 141, 13 pts) :
+
+| # | Tâche | Pts | Dépend de | État |
+|---|---|---|---|---|
+| 138 | Vue : `Champions.by_name`, portrait, nom Data Dragon et infobulle Mat/Syn dans `_score`, tests | 3 | — | ⬜ |
+| 139 | Gabarit et CSS : bandeau, grille à deux colonnes, tableau à 5 colonnes, place de la ligne SPEC-27, `GAME_CURVE_SIZE`, tests | 5 | 138 | ⬜ |
+| 140 | Mesure : `scripts/measure_en_partie.py` (Firefox headless, cas le plus lourd, 1 920 × 986, ≥ 30 px de marge), ajustements | 3 | 139 | ⬜ |
+| 141 | Clôture : SPEC-27 §4.6 et tâche 127 réécrites, `CHANGELOG.md`, statuts, README des specs, recette @pj35 | 2 | 140 | ⬜ |
 
 ### Lot suivant — SPEC-22, attribution complète de l'impact (🟡 rédigée le 2026-10-04)
 
