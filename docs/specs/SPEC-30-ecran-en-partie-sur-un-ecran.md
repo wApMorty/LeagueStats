@@ -1,6 +1,6 @@
 # SPEC-30 — Écran « En partie » lisible et sur un seul écran
 
-**Statut** : 🟡 Rédigée le 2026-10-12, arbitrages de §2 validés par @pj35 le 2026-10-12 ; rien « à valider ».
+**Statut** : ✅ Livrée le 2026-10-12 (tâches 138 à 141) ; arbitrages de §2 validés par @pj35 le 2026-10-12. Recette @pj35 à faire (§6, vérification de bout en bout).
 
 **Origine** : @pj35, 2026-10-12 : « J'aimerais qu'on améliore l'écran de Partie en cours ! Il faudrait repenser son
 design pour qu'il soit plus lisible, et tienne sur un seul écran sans scroll. »

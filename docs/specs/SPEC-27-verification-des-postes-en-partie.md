@@ -160,16 +160,27 @@ n'a été vérifié (c'est le cas avant le relevé, et pour toute draft d'avant 
 
 ### 4.6 Écran « En partie » (tâche 127)
 
-`src/client/en_partie.py`, `templates/partials/en_partie_stage.html` : sous l'en-tête du face-à-face, une ligne d'état
-selon `reality.state`, dite en français et sans jargon :
+Cible : le gabarit à deux colonnes de SPEC-30 (livré le 2026-10-12). `src/client/en_partie.py`,
+`templates/partials/en_partie_stage.html` : dans `section.ig-draft` (colonne de droite), la ligne d'état va **entre
+`.panel-head` et `table.ig-table`** (l'emplacement est marqué par un commentaire Jinja dans le gabarit), en
+`<p class="fine ig-reality">` d'une seule ligne, dite en français et sans jargon, selon `reality.state` :
 
 - `ok` : « Postes vérifiés en partie : 10 sur 10 conformes » ;
 - `corrected` : « Postes corrigés en partie : Ahri (bas, prédit milieu)… Face-à-face et build recalculés » ;
 - `partial` : « Postes adverses non lus en partie : analyse de la draft conservée » ;
 - aucune charge `reality` : rien n'est ajouté (l'écran d'avant).
 
-Les lignes du tableau dont un des deux champions est corrigé portent la marque « poste corrigé ». Le bloc build reprend
-`loadout` tel que la nouvelle charge le porte ; les substitutions du duel citent le vrai adversaire.
+Les lignes du tableau à 5 colonnes (portrait + nom | Tot | Duel | Tot | nom + portrait) dont un des deux champions est
+corrigé portent la classe `is-corrected` et la marque « poste corrigé » en petit (`<span class="fine">`) dans la
+cellule de nom du champion corrigé, après le nom côté allié et avant côté ennemi : pas de colonne ajoutée. La ligne
+d'état tient sur une ligne (elle ajoute ~24 px au panneau, déjà budgétés par SPEC-30 §4.3) ; texte trop long : le
+`corrected` liste au plus deux champions puis « et N autres ». Le bloc build reprend `loadout` tel que la nouvelle charge
+le porte ; les substitutions du duel citent le vrai adversaire.
+
+**Mesure** : `python scripts/measure_en_partie.py` doit rester `[OK]` (marge ≥ 30 px à 1 920 × 986, mesurée à 34 px par
+SPEC-30 tâche 140 avec une ligne simulée) une fois la ligne réelle rendue. La tâche 127 retire donc du script
+l'insertion de la ligne simulée (`.mesure-etat`), publie dans le cas le plus lourd une charge `reality` à l'état
+`corrected` (la ligne la plus longue, deux lignes du tableau marquées), et vérifie la présence de `.ig-reality`.
 
 ### 4.7 Tests
 
@@ -191,7 +202,7 @@ Numéros globaux : à la suite de la tâche 121 de `TODO.md`.
 | 124 | `reality_check.py` : `resolve_champions`, `real_lanes`, `compare`, tests | 5 | — |
 | 125 | `LoadoutImporter.retarget` (calcul sans écriture), `_import` inchangé, tests | 3 | — |
 | 126 | `RealityCheck.step` : stabilité, recalcul de l'analyse et de la build, republication, console, remise à zéro, appel dans `monitor_loop` | 5 | 122, 123, 124, 125 |
-| 127 | Écran « En partie » : ligne d'état, marquage des lignes corrigées, `FinalAnalysis.reality` | 3 | 126 |
+| 127 | Écran « En partie » (gabarit SPEC-30) : ligne d'état entre `.panel-head` et `table.ig-table` de `section.ig-draft`, marquage des lignes corrigées du tableau à 5 colonnes, `FinalAnalysis.reality` ; `scripts/measure_en_partie.py` reste `[OK]` avec la ligne réelle | 3 | 126 |
 | 128 | Clôture : `CHANGELOG.md`, statut, `docs/specs/README.md`, `docs/PROJECT_STRUCTURE.md`, recette @pj35 | 2 | 127 |
 
 ## 6. Critères d'acceptation
@@ -207,7 +218,8 @@ Numéros globaux : à la suite de la tâche 121 de `TODO.md`.
 5. `python -m pytest tests/test_loadout_import.py -v` : `retarget` ne fait aucun appel à `apply_build` ni au LCU, et les
    tests existants d'`_import` passent sans modification.
 6. `python -m pytest tests/test_client_en_partie.py -v` : les états `ok`, `corrected`, `partial` et l'absence de `reality`
-   s'affichent comme au §4.6 ; une ligne du face-à-face dont le champion est corrigé porte « poste corrigé ».
+   s'affichent comme au §4.6 ; une ligne du face-à-face dont le champion est corrigé porte « poste corrigé » ; et
+   `python scripts/measure_en_partie.py` reste `[OK]` (marge ≥ 30 px) avec la ligne réelle rendue.
 7. Aucune requête SQL nouvelle (la spec ne touche pas la base) ; `git grep -n "REALITY_" src/` ne trouve les seuils que
    dans `src/config_constants.py`.
 8. Pas de migration : `python -m alembic upgrade head` n'a rien à appliquer pour cette spec.

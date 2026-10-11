@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### ✨ Feature
+
+- **Écran « En partie » lisible et sur un seul écran (SPEC-30)** — l'écran empilait quatre panneaux sur 1 698 px pour 950 de zone utile à 1 920 × 986 (courbe à elle seule ~600 px). Il tient maintenant sans défilement : un bandeau d'une ligne (horloge et win chance), puis deux colonnes (le build à gauche ; la win chance, courbe recalibrée en `INGAME_CURVE_SIZE` = 736 × 220, puis le face-à-face à droite), une seule colonne qui défile sous 1 500 px. Le face-à-face passe à cinq colonnes (Mat et Syn en infobulle du Total) et affiche le portrait de chaque champion, avec le nom Data Dragon (`Wukong`, `K'Sante`) quand il est trouvé (`Champions.by_name`) ; sans portrait, le nom de la base reste. Mesuré par le nouveau `scripts/measure_en_partie.py` (Firefox headless, aucune fenêtre visible) sur le cas le plus lourd : `scrollHeight` 1 698 → 950 (= `clientHeight`), marge de 34 px, une colonne à 1 400 × 900. Recette réelle (partie en cours, 1 920 × 1 080) à faire par @pj35 (SPEC-30 §6).
+
 ## [5.0.1] - 2026-10-12
 
 La draft n'est plus invisible dans la GUI : la purge de `crawl.db` ne bloque plus la boucle du Live Coach, et la collecte de fond a son propre fil. Aucune action requise (pas de migration, pas de scrape) ; l'index de `crawl.db` se crée au premier lancement, quelques secondes.

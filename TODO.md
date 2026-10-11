@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-10-12 (SPEC-30 rédigée : écran « En partie » sur un seul écran)
+**Mis à jour** : 2026-10-12 (SPEC-30 livrée : écran « En partie » sur un seul écran, recette @pj35 à faire)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -246,7 +246,7 @@ spike de la tâche 122. Découpage en SPEC-27 §5 (tâches 122 à 128, 23 pts) :
 | 124 | `reality_check.py` : `resolve_champions`, `real_lanes`, `compare`, tests | 5 | — | ⬜ |
 | 125 | `LoadoutImporter.retarget` (calcul sans écriture dans le client LoL), `_import` inchangé, tests | 3 | — | ⬜ |
 | 126 | `RealityCheck.step` : stabilité, recalcul de l'analyse et de la build, republication du sujet `game`, console, remise à zéro, appel dans `monitor_loop` | 5 | 122, 123, 124, 125 | ⬜ |
-| 127 | Écran « En partie » : ligne d'état, marquage des lignes corrigées, `FinalAnalysis.reality` | 3 | 126 | ⬜ |
+| 127 | Écran « En partie » (gabarit SPEC-30) : ligne d'état entre `.panel-head` et `table.ig-table` de `section.ig-draft`, marquage des lignes corrigées du tableau à 5 colonnes, `FinalAnalysis.reality` ; `scripts/measure_en_partie.py` reste `[OK]` avec la ligne réelle | 3 | 126 | ⬜ |
 | 128 | Clôture : `CHANGELOG.md`, statut, `docs/specs/README.md`, `PROJECT_STRUCTURE.md`, recette @pj35 | 2 | 127 | ⬜ |
 
 ### Lot suivant — SPEC-28, la draft suivante ne doit plus rester muette (✅ livrée le 2026-10-09, recette @pj35 à faire)
@@ -284,7 +284,7 @@ SPEC-29 §5 (tâches 133 à 137, 17 pts) :
 | 136 | Tenir sur un écran : mesure en vraie fenêtre Chrome 1920×986 sur copie de la base, `scrollHeight` 1351 → 950 = `clientHeight` avec `notice` (cause : l'anneau décoratif, passé en `fixed`) ; cartes et lignes non compactées, 57 px de marge | 3 | 135 | ✅ |
 | 137 | Clôture : CHANGELOG, statuts, README des specs, `latest_findings` supprimée, recette @pj35 (`alembic upgrade head`, accueil sur la vraie base, un clic sur « Fixer cet axe » puis la partie suivante) | 2 | 136 | ✅ |
 
-### Lot suivant — SPEC-30, écran « En partie » sur un seul écran (🟡 rédigée le 2026-10-12)
+### Lot suivant — SPEC-30, écran « En partie » sur un seul écran (✅ livrée le 2026-10-12, recette @pj35 à faire)
 
 [SPEC-30](docs/specs/SPEC-30-ecran-en-partie-sur-un-ecran.md) : l'écran « En partie » empile quatre panneaux sur
 ~1 600 px pour 890 utiles à 1 920 × 950 (estimation arithmétique), dont ~600 pour la seule courbe. Validé par @pj35 le
@@ -298,7 +298,7 @@ Firefox headless. Passe **avant** la tâche 127 de SPEC-27, réécrite pour ce g
 | 138 | Vue : `Champions.by_name`, portrait, nom Data Dragon et infobulle Mat/Syn dans `_score`, tests | 3 | — | ✅ |
 | 139 | Gabarit et CSS : bandeau, grille à deux colonnes, tableau à 5 colonnes, place de la ligne SPEC-27, `GAME_CURVE_SIZE`, tests | 5 | 138 | ✅ |
 | 140 | Mesure : `scripts/measure_en_partie.py` (Firefox headless, cas le plus lourd, 1 920 × 986, ≥ 30 px de marge), ajustements. Mesuré : ancien gabarit `scrollHeight` 1 698 pour `clientHeight` 950 ; nouveau, 950 = 950, contenu 913 / 916 px (sans / avec modèle), marge 37 / **34 px**, `scrollWidth` 1 700 = 1 700 ; 1 400 × 900 : une colonne. Aucun ajustement de CSS (le script mesurait la marge sur `scrollHeight`, plafonné à `clientHeight` : mesure corrigée sur le bas du contenu) | 3 | 139 | ✅ |
-| 141 | Clôture : SPEC-27 §4.6 et tâche 127 réécrites, `CHANGELOG.md`, statuts, README des specs, recette @pj35 | 2 | 140 | ⬜ |
+| 141 | Clôture : SPEC-27 §4.6 et tâche 127 réécrites, `CHANGELOG.md`, statuts, README des specs, recette @pj35 | 2 | 140 | ✅ 2026-10-12 : SPEC-27 §4.6, §5 et critère 6 visent `section.ig-draft` ; entrée `[Unreleased]`, statut de SPEC-30 et README des specs à jour ; recette réelle laissée à @pj35 (SPEC-30 §6) |
 
 ### Lot suivant — SPEC-22, attribution complète de l'impact (🟡 rédigée le 2026-10-04)
 
