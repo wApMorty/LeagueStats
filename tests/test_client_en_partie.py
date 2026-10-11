@@ -286,10 +286,8 @@ def test_fragment_bandeau_grille_et_ordre_des_panneaux(client, bus):  # noqa: F8
         html.index(f'aria-label="{x}"')
         for x in ("Build", "Win chance en direct", "Analyse de la draft")
     )
-    assert html.index("ig-strip") < html.index("ig-grid") < build < curve < draft
-    assert (
-        html.index('class="ig-col"', html.index("ig-grid") + 1) < curve
-    )  # build dans la 1re colonne
+    first, second = (m.start() for m in re.finditer('class="ig-col"', html))
+    assert html.index("ig-strip") < html.index("ig-grid") < first < build < second < curve < draft
 
 
 def test_chaque_champion_connu_a_son_portrait(client, bus):  # noqa: F811
