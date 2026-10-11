@@ -3,8 +3,10 @@
 Une file de joueurs (`crawl_frontier`), amorcée par les joueurs de tes propres
 parties, dont l'historique (20 parties) alimente une file de parties à lire
 (`crawl_games`, `raw` NULL tant que non lue). `step()` fait au plus une unité
-de travail par appel, depuis la boucle du Live Coach : pas de thread, la pause
-en draft va de soi (la boucle ne l'appelle pas).
+de travail par appel. `start()` la boucle dans un fil à part, avec son propre
+client LCU et sa propre connexion SQLite : une requête lente (3 à 17 s la
+timeline d'un inconnu) ne retient plus la boucle du Live Coach, donc ni la file
+trouvée ni la draft. Le fil se tait en champ select et pendant l'acceptation.
 
 Cache recalculable : `data/crawl.db`, hors Alembic, hors `db.db`. Best-effort :
 rien ici n'interrompt le Live Coach.
@@ -12,6 +14,7 @@ rien ici n'interrompt le Live Coach.
 
 import json
 import sqlite3
+import threading
 import time
 import zlib
 from datetime import datetime, timezone
@@ -20,6 +23,8 @@ from typing import Callable, Optional
 
 from ..config import config
 from ..config_coaching import coaching_config
+from ..config_constants import draft_config
+from ..lcu_client import LCUClient
 from ..config_winprob import winprob_config as cfg
 
 SCHEMA = """
@@ -107,7 +112,11 @@ class Crawler:
         self.path = path or Path(config.DATABASE_PATH).with_name(cfg.CRAWL_DB_FILENAME)
         self._clock = clock
         self._next_at = 0.0
-        self._conn: Optional[sqlite3.Connection] = None
+        # Une connexion par fil : le fil de collecte et la boucle (seed, report) écrivent tous deux.
+        self._local = threading.local()
+        self._own_lcu: Optional[LCUClient] = None  # celui du fil de collecte, une fois lancé
+        self._stop = threading.Event()
+        self._thread: Optional[threading.Thread] = None
         self._seeded: set = set()
         # Date de création en dessous de laquelle les parties sont déjà purgées (patch ou
         # plafond) : inutile de les redécouvrir, lire et purger en boucle.
@@ -117,6 +126,48 @@ class Crawler:
         self._warned = False
 
     # ---------- API pour la boucle du Live Coach ----------
+
+    @property
+    def lcu(self):
+        """Le client du fil de collecte ; sans fil (tests, appel direct), celui du moniteur."""
+        return self._own_lcu or self.m.lcu
+
+    def start(self) -> None:
+        """Lance le fil de collecte (daemon) ; sans effet s'il tourne déjà."""
+        if self._thread is not None and self._thread.is_alive():
+            return
+        self._stop.clear()
+        self._thread = threading.Thread(target=self._run, name="crawler", daemon=True)
+        self._thread.start()
+
+    def stop(self) -> None:
+        """Demande l'arrêt ; le fil, daemon, s'éteint au plus tard à sa prochaine attente."""
+        self._stop.set()
+
+    def _paused(self) -> bool:
+        """Champ select ou acceptation de la file : le client LoL n'est à personne d'autre."""
+        tracker = self.m.phase_tracker
+        return tracker.kind == "draft" or tracker.phase == "ReadyCheck"
+
+    def _run(self) -> None:
+        lcu = self._own_lcu = LCUClient()
+        lcu.yield_if = self._paused  # une requête en vol n'est pas coupée, aucune ne part ensuite
+        while not self._stop.is_set():
+            wait = cfg.CRAWL_REQUEST_INTERVAL_S
+            try:
+                if (
+                    self.m.phase_tracker.phase is None
+                ):  # client fermé ou redémarrage : port à relire
+                    lcu.credentials = None
+                    wait = draft_config.PHASE_CREDENTIALS_RETRY_S
+                elif lcu.credentials is None:
+                    lcu.credentials = lcu.find_lcu_credentials()
+                    wait = 0.0 if lcu.credentials else draft_config.PHASE_CREDENTIALS_RETRY_S
+                elif not self._paused():
+                    self.step()
+            except Exception:  # pylint: disable=broad-exception-caught
+                pass  # best-effort : rien ici n'atteint la boucle
+            self._stop.wait(wait)
 
     def step(self) -> None:
         """Une unité de travail (1 à 2 requêtes), si le débit et la pause le permettent."""
@@ -162,8 +213,8 @@ class Crawler:
             self._visit(*player)
 
     def _visit(self, puuid: str, depth: int) -> None:
-        games = self.m.lcu.get_player_games(puuid)
-        if self._throttled(1) or (games is None and self.m.lcu.last_status_code is None):
+        games = self.lcu.get_player_games(puuid)
+        if self._throttled(1) or (games is None and self.lcu.last_status_code is None):
             return  # 429, ou client injoignable : on réessaiera
         db = self._db()
         oldest = max(_utc((time.time() - cfg.CRAWL_MAX_AGE_DAYS * 86400) * 1000), self._floor)
@@ -179,7 +230,7 @@ class Crawler:
         db.commit()
 
     def _read_game(self, game_id: int, depth: int) -> None:
-        lcu = self.m.lcu
+        lcu = self.lcu
         game = lcu.get_game_detail(game_id)
         if self._throttled(1) or (not game and lcu.last_status_code is None):
             return
@@ -319,7 +370,7 @@ class Crawler:
     def _throttled(self, requests_made: int) -> bool:
         """Règle le débit après `requests_made` requêtes ; True au 429 (pause)."""
         wait = requests_made * cfg.CRAWL_REQUEST_INTERVAL_S
-        throttled = self.m.lcu.last_status_code == 429
+        throttled = self.lcu.last_status_code == 429
         if throttled:
             wait = cfg.CRAWL_BACKOFF_S
             print(f"[ALERTE] Collecte SPEC-20 : 429 du LCU, pause de {wait / 60:.0f} min")
@@ -327,21 +378,20 @@ class Crawler:
         return throttled
 
     def _db(self) -> sqlite3.Connection:
-        if self._conn is None:
+        conn = getattr(self._local, "conn", None)
+        if conn is None:
             self.path.parent.mkdir(parents=True, exist_ok=True)
-            self._conn = sqlite3.connect(self.path)
-            self._conn.executescript(SCHEMA)
+            conn = self._local.conn = sqlite3.connect(self.path)
+            conn.executescript(SCHEMA)
             # Bases créées avant `read_utc` (commit 8c80f03) : colonne ajoutée, les parties
             # déjà lues datent de la veille au plus, donc comptées dans les dernières 24 h.
-            columns = [row[1] for row in self._conn.execute("PRAGMA table_info(crawl_games)")]
+            columns = [row[1] for row in conn.execute("PRAGMA table_info(crawl_games)")]
             if "read_utc" not in columns:
-                self._conn.execute("ALTER TABLE crawl_games ADD COLUMN read_utc TEXT")
-                self._conn.execute(
-                    "UPDATE crawl_games SET read_utc = ? WHERE length(raw) > 0", (_now(),)
-                )
-                self._conn.commit()
-            self._conn.executescript(INDEXES)
-        return self._conn
+                conn.execute("ALTER TABLE crawl_games ADD COLUMN read_utc TEXT")
+                conn.execute("UPDATE crawl_games SET read_utc = ? WHERE length(raw) > 0", (_now(),))
+                conn.commit()
+            conn.executescript(INDEXES)
+        return conn
 
     def _safely(self, work: Callable[[], None]) -> None:
         try:

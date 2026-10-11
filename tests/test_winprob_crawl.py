@@ -4,6 +4,7 @@ Hermétiques : LCU simulé, `crawl.db` et base de parties temporaires.
 """
 
 import json
+import threading
 import time
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
@@ -369,7 +370,7 @@ class TestLCUClientStatus:
 
 
 class TestLifecycleWiring:
-    """Une unité de collecte par tick, ni en draft ni pendant le ready check."""
+    """La collecte n'est plus dans la boucle : voir `TestThread` et la régression du 2026-10-11."""
 
     @pytest.fixture
     def monitor(self):
@@ -382,16 +383,6 @@ class TestLifecycleWiring:
         monitor.lcu.is_in_ready_check.return_value = False
         return monitor
 
-    @pytest.mark.parametrize(
-        "phase, steps", [("Lobby", 1), ("InProgress", 1), ("ReadyCheck", 0), ("ChampSelect", 0)]
-    )
-    def test_step_runs_outside_draft_and_ready_check(self, monitor, phase, steps):
-        monitor.lcu.get_gameflow_session.return_value = {"phase": phase}
-        monitor.lcu.is_in_champion_select.return_value = phase == "ChampSelect"
-        monitor.lcu.get_champion_select_session.return_value = None
-        monitor._monitor_loop()
-        assert monitor.crawler.step.call_count == steps
-
     def test_post_game_pass_reseeds_the_queue(self, monitor):
         monitor._post_game_until = time.time() + 60
         monitor._next_post_game_attempt = 0.0
@@ -399,6 +390,49 @@ class TestLifecycleWiring:
         monitor._resolve_pending_outcomes = Mock()
         monitor.lifecycle.retry_post_game()
         monitor.crawler.seed.assert_called_once_with()
+
+
+class TestThread:
+    """Le fil de collecte : une unité par tour, ni en draft ni pendant l'acceptation de la file."""
+
+    @staticmethod
+    def _run_thread(phase, tmp_path):
+        tracker = SimpleNamespace(phase=phase, kind="draft" if phase == "ChampSelect" else "idle")
+        crawler = Crawler(SimpleNamespace(phase_tracker=tracker), path=tmp_path / "crawl.db")
+        stepped = threading.Event()
+        crawler.step = stepped.set
+        with patch("src.winprob.crawl.LCUClient") as client:
+            client.return_value.credentials = object()
+            crawler.start()
+            ran = stepped.wait(0.5)
+            crawler.stop()
+            crawler._thread.join(2)
+        assert not crawler._thread.is_alive()
+        return ran
+
+    @pytest.mark.parametrize(
+        "phase, ran",
+        [("Lobby", True), ("InProgress", True), ("ReadyCheck", False), ("ChampSelect", False)],
+    )
+    def test_steps_outside_draft_and_ready_check(self, phase, ran, tmp_path):
+        assert self._run_thread(phase, tmp_path) is ran
+
+    def test_waits_for_the_client_when_the_phase_is_unknown(self, tmp_path):
+        assert self._run_thread(None, tmp_path) is False
+
+    def test_the_thread_uses_its_own_lcu_client(self, crawler, lcu):
+        assert crawler.lcu is lcu
+        crawler._own_lcu = Mock()
+        assert crawler.lcu is crawler._own_lcu
+
+    def test_each_thread_has_its_own_connection(self, crawler):
+        main = crawler._db()
+        seen = []
+        worker = threading.Thread(target=lambda: seen.append(crawler._db()))
+        worker.start()
+        worker.join()
+        assert seen[0] is not main
+        assert crawler._db() is main
 
 
 class TestProgress:

@@ -171,6 +171,7 @@ class DraftMonitor:
         self._resolve_pending_outcomes(limit=draft_config.OUTCOME_BACKFILL_LIMIT)
         self.game_capture.on_startup()  # SPEC-19: same catch-up, same guarantees
         self.crawler.seed()
+        self.crawler.start()  # SPEC-20 : fil à part, la draft n'attend jamais la collecte
 
         # Load champion ID mappings
         self._load_champion_mappings()
@@ -432,6 +433,7 @@ class DraftMonitor:
         """Clean up resources."""
         self.phase_tracker.stop()
         self.post_game_watcher.stop()
+        self.crawler.stop()
         if self.lcu:
             self.lcu.disconnect()
         if self.assistant:

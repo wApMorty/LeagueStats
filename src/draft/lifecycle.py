@@ -103,11 +103,7 @@ class MonitorLifecycle:
                     else:
                         self.m._last_outcome_trigger_phase = None
 
-                self.retry_post_game()
-                # SPEC-20 : collecte de fond, jamais en draft (retour plus haut) ni
-                # pendant l'acceptation de la file.
-                if (gameflow or {}).get("phase") != "ReadyCheck":
-                    self._background("crawler_step", self.m.crawler.step)
+                self.retry_post_game()  # la collecte SPEC-20 a son propre fil (`Crawler.start`)
                 return
 
             self._exit_ticks = 0

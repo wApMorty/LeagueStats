@@ -1,5 +1,5 @@
 """Régression (2026-10-11) : la purge du plafond de `crawl.db` parcourait les 33 000 lignes (blobs de
-100 Ko) en lecture aléatoire pour filtrer `raw IS NOT NULL`. À froid, elle bloquait la boucle du
+20 Ko) en lecture aléatoire pour filtrer `raw IS NOT NULL`. À froid, elle bloquait la boucle du
 Live Coach plus de deux minutes (au démarrage, à chaque fin de partie, toutes les 500 lectures), et la
 draft restait invisible.
 
