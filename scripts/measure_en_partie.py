@@ -206,7 +206,13 @@ if (panneau && !panneau.querySelector(".mesure-etat")) {
   if (entete) entete.after(ligne); else panneau.prepend(ligne);
 }
 const grille = document.querySelector(".ig-grid");
+// `scrollHeight` est plafonné par le bas à `clientHeight` : la marge se lit sur le bas du dernier enfant,
+// plus le `padding-bottom` de `.page`.
+const haut = page.getBoundingClientRect().top - page.scrollTop;
+const bas = Math.max(...Array.from(page.children).map((e) => e.getBoundingClientRect().bottom));
+const contenu = Math.ceil(bas - haut + parseFloat(getComputedStyle(page).paddingBottom));
 return {
+  contenu,
   panneau: !!panneau,
   grille: grille ? getComputedStyle(grille).gridTemplateColumns : null,
   scrollHeight: page.scrollHeight, clientHeight: page.clientHeight,
@@ -291,11 +297,11 @@ def main() -> int:
                 bus.publish("ingame", partie(avec_modele))
                 charger(driver, url)
                 m = mesure(driver)
-                marge = m["clientHeight"] - m["scrollHeight"]
+                marge = m["clientHeight"] - m["contenu"]
                 nom = "avec modèle" if avec_modele else "sans modèle"
                 print(
                     f"[DATA] {nom} à {m['innerWidth']}x{m['innerHeight']} : "
-                    f"scrollHeight={m['scrollHeight']} clientHeight={m['clientHeight']} "
+                    f"scrollHeight={m['scrollHeight']} contenu={m['contenu']} clientHeight={m['clientHeight']} "
                     f"scrollWidth={m['scrollWidth']} clientWidth={m['clientWidth']} marge={marge} px"
                 )
                 if not m["panneau"]:

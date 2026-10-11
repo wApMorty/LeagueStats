@@ -107,7 +107,8 @@ Ordre et classes (les textes et états actuels sont conservés, seul l'agencemen
   `padding: 6px 10px`.
 - Prochain objet : `.ig-next .ig-item { width: 48px; height: 48px; }`.
 
-`src/config_client.py` : `GAME_CURVE_SIZE = (736, 220)` (au lieu de `(1124, 430)`). Origine : largeur intérieure d'une
+`src/config_client.py` : nouvelle constante `INGAME_CURVE_SIZE = (736, 220)`. `GAME_CURVE_SIZE` reste à `(1124, 430)` : il
+est partagé avec la revue de partie (`src/client/review.py:264`), dont la courbe pleine largeur ne change pas. Origine : largeur intérieure d'une
 colonne à 1 920 px ≈ (1 920 − 220 − 96 − 32) / 2 − 48 − 2 = 736, donc un `viewBox` à l'échelle 1 (ticks à 13 px réels)
 et 220 px de haut. `GAME_CURVE_MARGIN` inchangé sauf si la mesure montre des étiquettes rognées (à noter dans la
 tâche 140).
@@ -116,6 +117,18 @@ tâche 140).
 ~741 par colonne. Droite : courbe 36 + 36 + 220 = 292, gap 24, face-à-face 36 + 36 + ligne SPEC-27 24 + en-tête 30 +
 5 × 44 + légende 20 ≈ 370, soit ~686. Gauche, cas le plus lourd : 36 + 36 + prochain objet 60 + blocs ~3 rangées × 74
 + adaptations ~5 lignes 144 + compétences 40 + notice d'achats 40 ≈ 580.
+
+**Mesuré (tâche 140)**, Firefox headless, 1 920 × 986 (zone utile 950), cas le plus lourd (six blocs pleins, quatre
+adaptations, compétences, ligne SPEC-27 simulée sous `.panel-head`). Avant (ancien gabarit à une colonne, mesuré par le
+script de la tâche 140) : `scrollHeight` 1 698 pour `clientHeight` 950, soit 748 px de défilement. Après : plus de
+défilement, `scrollHeight` 950 = `clientHeight` 950 et `scrollWidth` 1 700 = `clientWidth` 1 700. `scrollHeight` étant
+plafonné par le bas à `clientHeight`, la marge se lit sur le bas du dernier enfant de `.page` plus son
+`padding-bottom` (`contenu`, ajouté au script) : 913 px sans modèle (marge **37 px**, notice « pas de modèle »), 916 px
+avec modèle (marge **34 px**), soit la pire passe à 34 px ≥ 30. La colonne de droite (courbe puis face-à-face) fixe la
+hauteur ; la colonne de gauche s'arrête vers 673 px d'écran. À 1 400 × 900, `grid-template-columns` vaut `1084px` :
+une colonne. Capture jugée à l'œil : étiquettes de la courbe (100 %, 50 %, 0 %, 0 à 30 min, « 50 % » final) entières, rien
+de rogné, noms et chiffres lisibles ; les icônes d'objets et portraits sont des `PLACEHOLDER` transparents (pas de
+réseau) mais occupent leur taille réelle. Ajustements : aucun CSS ni `INGAME_CURVE_SIZE` / `GAME_CURVE_MARGIN` modifié.
 
 ### 4.4 Mesure (`scripts/measure_en_partie.py`, nouveau, tâche 140)
 
@@ -159,7 +172,7 @@ Numéros globaux : à la suite de la tâche 137 du `TODO.md`.
 | # | Tâche | Pts | Dépend de |
 |---|---|---|---|
 | 138 | Vue : `Champions.by_name`, `_score` (portrait, nom Data Dragon, `detail`), `champions` passé par `ingame_view` ; tests | 3 | — |
-| 139 | Gabarit et CSS : bandeau `ig-strip`, grille `ig-grid` à deux colonnes (build / courbe puis face-à-face), tableau à 5 colonnes, emplacement SPEC-27, une colonne sous 1 500 px, `GAME_CURVE_SIZE` ; tests du fragment | 5 | 138 |
+| 139 | Gabarit et CSS : bandeau `ig-strip`, grille `ig-grid` à deux colonnes (build / courbe puis face-à-face), tableau à 5 colonnes, emplacement SPEC-27, une colonne sous 1 500 px, `INGAME_CURVE_SIZE` ; tests du fragment | 5 | 138 |
 | 140 | Mesure : `scripts/measure_en_partie.py` (Firefox headless, cas le plus lourd, 1 920 × 986), ajustements de CSS jusqu'à ≥ 30 px de marge, chiffres consignés en §4.3 | 3 | 139 |
 | 141 | Clôture : SPEC-27 §4.6 et tâche 127 réécrites pour ce gabarit, `CHANGELOG.md`, statut, `docs/specs/README.md`, `TODO.md`, recette @pj35 | 2 | 140 |
 
@@ -176,7 +189,7 @@ Numéros globaux : à la suite de la tâche 137 du `TODO.md`.
    blocs pleins, quatre adaptations, compétences, ligne SPEC-27 occupée).
 5. Le même script à 1 400 × 900 constate une grille à une colonne (`getComputedStyle(.ig-grid).gridTemplateColumns`
    à une valeur).
-6. `grep -n "GAME_CURVE_SIZE" src/config_client.py` donne `(736, 220)` ; aucune valeur de réglage nouvelle en dur dans
+6. `grep -n "INGAME_CURVE_SIZE" src/config_client.py` donne `(736, 220)` (`GAME_CURVE_SIZE` inchangé, partagé avec la revue) ; aucune valeur de réglage nouvelle en dur dans
    `en_partie.py`.
 7. SPEC-27 §4.6 et sa tâche 127 (`TODO.md`) visent le panneau du face-à-face du nouveau gabarit.
 8. `CHANGELOG.md` (`[Unreleased]`), statut de cette spec, `docs/specs/README.md` et `TODO.md` à jour.

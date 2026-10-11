@@ -297,7 +297,7 @@ Firefox headless. Passe **avant** la tâche 127 de SPEC-27, réécrite pour ce g
 |---|---|---|---|---|
 | 138 | Vue : `Champions.by_name`, portrait, nom Data Dragon et infobulle Mat/Syn dans `_score`, tests | 3 | — | ✅ |
 | 139 | Gabarit et CSS : bandeau, grille à deux colonnes, tableau à 5 colonnes, place de la ligne SPEC-27, `GAME_CURVE_SIZE`, tests | 5 | 138 | ✅ |
-| 140 | Mesure : `scripts/measure_en_partie.py` (Firefox headless, cas le plus lourd, 1 920 × 986, ≥ 30 px de marge), ajustements | 3 | 139 | ⬜ |
+| 140 | Mesure : `scripts/measure_en_partie.py` (Firefox headless, cas le plus lourd, 1 920 × 986, ≥ 30 px de marge), ajustements. Mesuré : ancien gabarit `scrollHeight` 1 698 pour `clientHeight` 950 ; nouveau, 950 = 950, contenu 913 / 916 px (sans / avec modèle), marge 37 / **34 px**, `scrollWidth` 1 700 = 1 700 ; 1 400 × 900 : une colonne. Aucun ajustement de CSS (le script mesurait la marge sur `scrollHeight`, plafonné à `clientHeight` : mesure corrigée sur le bas du contenu) | 3 | 139 | ✅ |
 | 141 | Clôture : SPEC-27 §4.6 et tâche 127 réécrites, `CHANGELOG.md`, statuts, README des specs, recette @pj35 | 2 | 140 | ⬜ |
 
 ### Lot suivant — SPEC-22, attribution complète de l'impact (🟡 rédigée le 2026-10-04)
