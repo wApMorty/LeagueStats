@@ -78,7 +78,9 @@ def test_face_a_face_de_la_draft(client, bus):  # noqa: F811
     bus.publish("ingame", LIVE)
     bus.publish("game", analysis())
     html = stage(client)
-    names = re.findall(r'class="ig-side ig-(?:ally|foe)-ink">([^<]+)<', html)
+    names = re.findall(
+        r'class="ig-side ig-(?:ally|foe)-ink">(?:<img[^>]*>)?([^<]+)(?:<img[^>]*>)?</td>', html
+    )
     assert names == [
         "Garen",
         "Darius",
@@ -95,6 +97,10 @@ def test_face_a_face_de_la_draft(client, bus):  # noqa: F811
     assert "‹‹‹ +3.4" in html  # Garen / Darius : trois chevrons vers l'allié
     assert "›› -2.5" in html  # Jinx / Draven : deux chevrons vers l'ennemi
     assert "ig-duel-none" in html and "peu de données" not in html
+    assert "<th>Mat</th>" not in html and "<th>Syn</th>" not in html
+    assert "<th>Tot</th>" in html
+    assert html.count('title="Matchups ') == 10  # un par champion chiffré
+    assert "Synergies " in html
 
 
 def test_analyse_indisponible_sans_la_draft(client, bus):  # noqa: F811
@@ -265,3 +271,52 @@ def test_champion_aux_donnees_minces_sans_infobulle(champions):
     rows = en_partie.analysis_view(analysis(thin={"Garen"}), champions)["rows"]
     garen = rows[0]["ally"]
     assert garen["thin"] and garen["detail"] is None and garen["total"] is None
+
+
+# ---------- gabarit à deux colonnes (SPEC-30 tâche 139) ----------
+
+
+def test_fragment_bandeau_grille_et_ordre_des_panneaux(client, bus):  # noqa: F811
+    bus.publish("ingame", {**LIVE, "series": series(), "me": {"team": "ORDER"}})
+    bus.publish("game", analysis())
+    html = stage(client)
+    assert 'class="ig-strip"' in html and 'class="ig-grid"' in html and "ig-head" not in html
+    assert html.count('class="ig-col"') == 2
+    build, curve, draft = (
+        html.index(f'aria-label="{x}"')
+        for x in ("Build", "Win chance en direct", "Analyse de la draft")
+    )
+    assert html.index("ig-strip") < html.index("ig-grid") < build < curve < draft
+    assert (
+        html.index('class="ig-col"', html.index("ig-grid") + 1) < curve
+    )  # build dans la 1re colonne
+
+
+def test_chaque_champion_connu_a_son_portrait(client, bus):  # noqa: F811
+    bus.publish("ingame", LIVE)
+    bus.publish("game", analysis())
+    html = stage(client)
+    # Darius, Lee Sin, Ahri et Jinx sont dans le champion.json factice ; Garen, Vi, Syndra, etc. non.
+    assert re.findall(r'<img class="ig-champ" src="(/assets/champion/[^"]+\.png)"', html) == [
+        "/assets/champion/Darius.png",
+        "/assets/champion/LeeSin.png",
+        "/assets/champion/Ahri.png",
+        "/assets/champion/Jinx.png",
+    ]
+    # allié : portrait avant le nom ; ennemi : nom avant le portrait
+    assert 'ig-ally-ink"><img class="ig-champ" src="/assets/champion/Ahri.png" alt="">Ahri<' in html
+    assert 'ig-foe-ink">Lee Sin<img class="ig-champ" src="/assets/champion/LeeSin.png"' in html
+    assert 'ig-ally-ink">Garen<' in html  # inconnu de Data Dragon : ni portrait ni nom changé
+
+
+def test_la_courbe_a_la_taille_de_la_colonne(client, bus):  # noqa: F811
+    bus.publish("ingame", {**LIVE, "series": series()})
+    assert 'viewBox="0 0 736 220"' in stage(client)
+
+
+def test_tableau_a_cinq_colonnes_et_legende_courte(client, bus):  # noqa: F811
+    bus.publish("ingame", LIVE)
+    bus.publish("game", analysis(thin={"Garen"}))
+    html = stage(client)
+    assert len(re.findall(r"<th", html.split("<thead>")[1].split("</thead>")[0])) == 5
+    assert "détail au survol" in html and "peu de données" in html

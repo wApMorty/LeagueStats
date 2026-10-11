@@ -151,7 +151,7 @@ def curve_view(ingame: Dict[str, Any]) -> Dict[str, Any]:
                 end_label=f"{points[-1][1]:.0f} %",
             )
         ],
-        size=client_config.GAME_CURVE_SIZE,
+        size=client_config.INGAME_CURVE_SIZE,
         margin=client_config.GAME_CURVE_MARGIN,
         x_domain=(0, end),
         y_domain=(0, 100),

@@ -1077,14 +1077,21 @@ a.chip-btn { display: inline-flex; align-items: center; text-decoration: none; }
 .tb-search .tb-cancel:hover { background: oklch(0.6 0.19 25 / 0.3); color: var(--ink); }
 
 /* Écran « En partie » (SPEC-24 tâche 108) */
-.page-en-partie .ig-head { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 20px; }
+.page-en-partie .page-head { margin-bottom: 16px; }
+.ig-strip { display: flex; align-items: baseline; justify-content: space-between; gap: 24px; margin-bottom: 16px; }
+.ig-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px 32px; align-items: start; }
+.ig-col { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+@media (max-width: 1500px) { .ig-grid { grid-template-columns: minmax(0, 1fr); } }
 .ig-clock b, .ig-chance b { display: block; font-size: 34px; line-height: 1.1; }
 .ig-chance { text-align: right; }
 .ig-notice { margin: 0; }
 .ig-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
-.ig-table th, .ig-table td { padding: 8px 10px; text-align: right; border-bottom: 1px solid oklch(1 0 0 / 0.06); }
+.ig-table th, .ig-table td { padding: 6px 10px; text-align: right; border-bottom: 1px solid oklch(1 0 0 / 0.06); }
 .ig-table th { font-size: 12px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted-2); }
-.ig-table .ig-side { text-align: left; width: 18%; }
+.ig-table .ig-side { text-align: left; width: 34%; }
+.ig-champ { width: 32px; height: 32px; border-radius: 50%; vertical-align: middle; }
+.ig-ally-ink .ig-champ { margin-right: 10px; } .ig-foe-ink .ig-champ { margin-left: 10px; }
+.ig-table .ig-side:last-child { text-align: right; }
 .ig-ally-ink { color: oklch(0.8 0.1 165); }
 .ig-foe-ink { color: oklch(0.74 0.12 355); }
 .ig-duel { text-align: center !important; white-space: nowrap; font-weight: 600; }
@@ -1092,7 +1099,6 @@ a.chip-btn { display: inline-flex; align-items: center; text-decoration: none; }
 .ig-duel-enemy { color: oklch(0.74 0.12 355); }
 .ig-duel-none, .ig-duel-even { color: var(--muted-2); }
 
-.page-en-partie .ig-curve, .page-en-partie .ig-build { margin-bottom: 20px; }
 .ig-next { margin: 0 0 14px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .ig-missing { color: oklch(0.74 0.12 355); }
 .ig-ok { color: oklch(0.8 0.1 165); }
@@ -1100,6 +1106,7 @@ a.chip-btn { display: inline-flex; align-items: center; text-decoration: none; }
 .ig-block-title { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted-2); margin-bottom: 6px; }
 .ig-items { display: flex; flex-wrap: wrap; gap: 6px; }
 .ig-item { width: 32px; height: 32px; border-radius: 6px; vertical-align: middle; }
+.ig-next .ig-item { width: 48px; height: 48px; }
 .ig-item-card { position: relative; display: inline-block; opacity: 0.55; }
 .ig-item-card.is-owned { opacity: 1; box-shadow: 0 0 0 2px oklch(0.8 0.1 165); border-radius: 6px; }
 .ig-item-card i { position: absolute; right: -4px; bottom: -4px; width: 14px; height: 14px; border-radius: 7px; font-size: 10px;

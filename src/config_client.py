@@ -136,6 +136,9 @@ class ClientConfig:
         }
     )
     GAME_CURVE_SIZE: Tuple[int, int] = (1124, 430)
+    # Courbe de l'écran « En partie » (SPEC-30) : une colonne de la grille à 1 920 px, soit
+    # (1920 - 220 - 96 - 32) / 2 - 48 - 2 = 736 de large à l'échelle 1, et 220 de haut.
+    INGAME_CURVE_SIZE: Tuple[int, int] = (736, 220)
     GAME_CURVE_MARGIN: Tuple[int, int, int, int] = (70, 50, 34, 60)
     GAME_CURVE_X_STEP_MIN: int = 5
     GAME_MARKS: int = 10
