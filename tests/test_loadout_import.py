@@ -110,6 +110,29 @@ class TestLockIn:
         assert locked_champion(session(completed=False)) is None
 
 
+def onetricks_sans_chemin(url, params=None, **kwargs):
+    """Page générale de Jinx bot sans ``popPath`` : le chemin du core est introuvable."""
+    data = json.loads((FIXTURES / "onetricks_jinx_bot.json").read_text(encoding="utf-8"))
+    data["firstItemStats"]["all"]["all"].pop("popPath", None)
+    html = f'<script id="__NEXT_DATA__">{json.dumps({"props": {"pageProps": data}})}</script>'
+    return Mock(text=html, raise_for_status=Mock())
+
+
+class TestConsoleSituationnels:
+    """SPEC-31 §4.6 : une ligne de console dit d'où viennent les situationnels."""
+
+    def test_line_gives_the_games_behind_the_core_path(self, importer, lcu, http, capsys):
+        importer.on_tick(session(), state())
+        assert "[INFO] Situationnels : suites du core (283 parties)" in capsys.readouterr().out
+
+    def test_line_says_the_path_is_missing(self, importer, lcu, capsys):
+        with patch("src.draft.loadout.requests.get", side_effect=onetricks_sans_chemin):
+            importer.on_tick(session(), state())
+        out = capsys.readouterr().out
+        assert "[INFO] Situationnels : chemin du core introuvable, items les plus joués" in out
+        assert "suites du core" not in out
+
+
 class TestRefinement:
     def test_direct_opponent_lock_refines_once(self, importer, lcu, http, capsys):
         """§3.5.2 : Draven locké bot -> une comparaison, Fatigue remplace Barrière."""

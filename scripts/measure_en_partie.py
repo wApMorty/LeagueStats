@@ -88,7 +88,7 @@ def fetch_factice(url: str) -> Optional[bytes]:
 
 
 def _blocs() -> Tuple[List[Dict[str, Any]], Dict[str, str]]:
-    """Les six blocs du plan, pleins : Départ, Autres départs, Core, Bottes, Composants, Situationnels."""
+    """Les sept blocs du plan, pleins (dont « Autres cores », en dernier : index 2 et 5 inchangés)."""
     taille = {
         "Départ (62%)": 3,
         "Autres départs": 4,
@@ -96,6 +96,7 @@ def _blocs() -> Tuple[List[Dict[str, Any]], Dict[str, str]]:
         "Bottes (70%)": 3,
         "Composants": 10,
         "Situationnels": draft_config.LOADOUT_SITUATIONAL_ITEMS,
+        "Autres cores": draft_config.LOADOUT_ALT_CORE_ITEMS,
     }
     blocs, noms, suivant = [], {}, 3000
     for titre, nombre in taille.items():

@@ -103,6 +103,23 @@ def test_les_bottes_se_visent_quand_le_core_est_achete_et_les_alternatives_ne_co
     assert done["next"] is None and done["complete"]
 
 
+def test_un_bloc_autres_cores_s_affiche_sans_etre_vise():
+    """SPEC-31 §4.6 : « Autres cores » s'affiche ; seuls « Core » et « Bottes » donnent le prochain objet."""
+    blocks = [
+        {"title": "Départ (60%)", "items": [1120, 1036]},
+        {"title": "Core (45%)", "items": [3071, 3053]},
+        {"title": "Bottes (70%)", "items": [3008, 3047]},
+        {"title": "Situationnels", "items": [3067]},
+        {"title": "Autres cores", "items": [3078, 3079]},
+    ]
+    build = view(owned(1120, 1036), analysis_loadout=loadout(item_blocks=blocks))
+    assert [b["title"] for b in build["blocks"]][-1] == "Autres cores"
+    assert [i["id"] for i in build["blocks"][-1]["items"]] == [3078, 3079]
+    assert build["next"]["id"] == 3071  # le Core, pas un objet d'« Autres cores »
+    done = view(owned(3071, 3053, 3008), analysis_loadout=loadout(item_blocks=blocks))
+    assert done["next"] is None and done["complete"]  # « Autres cores » non possédés : pas de cible
+
+
 def test_le_cout_de_la_partie_reelle():
     real = me_of(
         json.loads((FIXTURES / "spike_live" / "allgamedata_items.json").read_text("utf-8"))

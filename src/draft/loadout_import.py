@@ -268,6 +268,10 @@ class LoadoutImporter:
             )
         if outcome.get("sorts") is None:
             print(f"  {'Sorts':<10} {option_name(page, 'Sorts', build.spells)}")
+        if build.path_games:
+            print(f"[INFO] Situationnels : suites du core ({build.path_games} parties)")
+        else:
+            print("[INFO] Situationnels : chemin du core introuvable, items les plus joués")
         for part, reason in outcome.items():
             if reason:
                 print(f"[INFO] {part} : {reason}")
