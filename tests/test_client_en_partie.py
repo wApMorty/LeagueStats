@@ -461,3 +461,16 @@ def test_lignes_corrigees_rendues_avec_poste_corrige_au_bon_cote(client, bus):  
     )
     assert 'ig-foe-ink"><span class="fine">poste corrigé</span> Draven' in html
     assert "Garen <span" not in html and "Darius <span" not in html
+
+
+def test_etat_corrected_sans_build_recalculee_le_dit():
+    reality = {
+        "state": "corrected",
+        "checked": 10,
+        "mismatches": [mismatch("Ahri", "milieu", "bas")],
+        "build": False,
+    }
+    text = en_partie.analysis_view(with_reality(reality))["reality"]["text"]
+    assert text == (
+        "Postes corrigés en partie : Ahri (bas, prédit milieu). Face-à-face recalculé, build conservée"
+    )

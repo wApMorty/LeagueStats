@@ -302,3 +302,44 @@ def test_recomputes_even_without_a_locked_champion(check):
     _stable(check, _roster(SWAPPED))
     assert check.bus.latest("game")["reality"]["state"] == "corrected"
     check.monitor.loadout.retarget.assert_not_called()
+
+
+class TestAfterACorrection:
+    def test_a_roster_back_to_the_prediction_restores_the_original_analysis(self, check):
+        _stable(check, _roster(SWAPPED))
+        assert check.bus.latest("game")["reality"]["state"] == "corrected"
+        _stable(check, _roster(), 100.0)
+
+        payload = check.bus.latest("game")
+        assert payload["win_probability"] == 0.5  # l'analyse d'origine, pas la recalculée
+        assert payload["reality"]["state"] == "ok"
+        assert check.monitor.loadout.retarget.call_count == 2  # la build revient aux postes prédits
+
+    def test_a_partial_roster_keeps_the_corrected_analysis(self, check):
+        _stable(check, _roster(SWAPPED))
+        _stable(check, _roster(["TOP", "JUNGLE", "BOTTOM", "", "UTILITY"]), 100.0)
+
+        payload = check.bus.latest("game")
+        assert payload["win_probability"] == 0.4
+        assert payload["reality"]["state"] == "corrected"
+
+    def test_the_original_is_forgotten_with_the_game(self, check):
+        _stable(check, _roster(SWAPPED))
+        check.reset()
+        assert check._original is None
+
+
+class TestBuildNotRecomputed:
+    def test_unavailable_onetricks_page_is_said_not_hidden(self, check, capsys):
+        check.monitor.loadout.retarget.return_value = None
+        _stable(check, _roster(SWAPPED))
+
+        assert check.bus.latest("game")["reality"]["build"] is False
+        out = capsys.readouterr().out
+        assert "[INFO] Face-à-face recalculé, build conservée" in out
+        assert "build recalculés" not in out
+
+    def test_recomputed_build_is_said(self, check, capsys):
+        _stable(check, _roster(SWAPPED))
+        assert check.bus.latest("game")["reality"]["build"] is True
+        assert "[INFO] Face-à-face et build recalculés" in capsys.readouterr().out

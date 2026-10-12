@@ -124,6 +124,7 @@ class RealityCheck:
         self._since = 0.0  # temps de jeu depuis lequel il est inchangé
         self._done: Optional[Tuple] = None  # correspondance championId -> lane déjà traitée
         self._corrections = 0
+        self._original: Optional[Dict[str, Any]] = None  # analyse de la draft, avant la correction
 
     def step(self) -> None:
         """Un tour : lit le relevé, attend qu'il soit stable, vérifie et corrige une fois par relevé."""
@@ -169,10 +170,14 @@ class RealityCheck:
         if result["mismatches"]:
             self._correct(draft, real, result, game_time)
         else:
-            self._confirm(bus, result, game_time)
+            self._confirm(bus, draft, result, game_time)
 
-    def _confirm(self, bus, result: Dict[str, Any], game_time: float) -> None:
-        """Aucun écart : l'analyse de la draft reste, avec le constat à côté."""
+    def _confirm(self, bus, draft, result: Dict[str, Any], game_time: float) -> None:
+        """Aucun écart : l'analyse de la draft reste, avec le constat à côté.
+
+        Après une correction, un relevé redevenu conforme rend l'analyse et la build d'origine ; un relevé
+        devenu partiel garde l'analyse corrigée, la seule lecture certaine.
+        """
         complete = result["checked"] > 0 and not result["unverified"]
         state = "ok" if complete else "partial"
         if complete:
@@ -185,6 +190,11 @@ class RealityCheck:
                 f"{len(result['unverified'])} non lus (relevé incomplet ou ambigu)"
             )
         published = bus.latest(GAME_TOPIC)
+        if self._original is not None:
+            if not complete:
+                return
+            published, self._original = self._original, None
+            self._retarget_build(draft, draft.inferred_roles)
         if isinstance(published, dict):
             reality = {
                 "state": state,
@@ -216,25 +226,33 @@ class RealityCheck:
         self._corrections += 1
 
         lanes = {**draft.inferred_roles, **real}
-        self._retarget_build(draft, lanes)
+        if self._original is None:
+            self._original = self.m.bus.latest(GAME_TOPIC)
+        rebuilt = self._retarget_build(draft, lanes)
         analysis = build_final_analysis(self.m, draft.ally_picks, draft.enemy_picks, lanes)
         analysis.reality = {
             "state": "corrected",
             "checked": result["checked"],
             "mismatches": shown,
+            "build": rebuilt,
             "at": game_time,
         }
         if self.m.last_draft_state is not draft or not self.m.has_analyzed_final_draft:
             return  # la partie a changé pendant le calcul : ne rien republier
         self.m.bus.publish(GAME_TOPIC, analysis.to_payload())
-        print("[INFO] Face-à-face et build recalculés")
+        print(
+            "[INFO] Face-à-face et build recalculés"
+            if rebuilt
+            else "[INFO] Face-à-face recalculé, build conservée"
+        )
 
-    def _retarget_build(self, draft, lanes: Dict[int, str]) -> None:
-        """Build du vrai poste et du vrai vis-à-vis ; sans effet si la page est choisie à la main."""
+    def _retarget_build(self, draft, lanes: Dict[int, str]) -> bool:
+        """Build de ces postes et du vis-à-vis qui en résulte ; False si elle n'a pas été recalculée
+        (page choisie à la main, pas de champion verrouillé, page OneTricks indisponible)."""
         loadout = self.m.loadout
         mine = (loadout.state() or {}).get("champion_id")
         if loadout.manual or mine not in lanes:
-            return
+            return False
         merged = replace(draft, inferred_roles=lanes)
         opponent = loadout.direct_opponent(merged, lanes[mine])
-        loadout.retarget(mine, lanes[mine], opponent)
+        return loadout.retarget(mine, lanes[mine], opponent) is not None

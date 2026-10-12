@@ -83,7 +83,12 @@ def _reality_line(reality: Optional[Dict[str, Any]]) -> Optional[Dict[str, str]]
         rest = len(mismatches) - client_config.REALITY_NAMED_MAX
         if rest > 0:
             names += f" et {rest} autres"
-        text = f"Postes corrigés en partie : {names}. Face-à-face et build recalculés"
+        done = (
+            "Face-à-face et build recalculés"
+            if reality.get("build", True)
+            else "Face-à-face recalculé, build conservée"
+        )
+        text = f"Postes corrigés en partie : {names}. {done}"
     elif state == "partial":
         text = "Postes adverses non lus en partie : analyse de la draft conservée"
     else:
