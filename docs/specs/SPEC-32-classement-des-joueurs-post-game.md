@@ -1,6 +1,6 @@
 # SPEC-32 — Classement des joueurs en post-game : MVP et ACE
 
-**Statut** : 🟡 Rédigée le 2026-10-12 ; score, forme et règle de l'ACE validés par @pj35 le 2026-10-12, un point « à valider » en §2 (emplacement dans la page).
+**Statut** : ✅ Implémentée le 2026-10-12 (tâches 147 à 150) ; score, forme, règle de l'ACE et emplacement du panneau validés par @pj35 le 2026-10-12 ; recette à l'œil de @pj35 à faire (§6).
 
 **Origine** : @pj35, 2026-10-12 : « J'aimerais que le post game donne également un classement des joueurs (en utilisant les
 icônes des champions via l'API DataDragons) en fonction de leur impact dans la game (avec un petit badge/couronne pour le
@@ -55,7 +55,7 @@ couronne le meilleur joueur de l'équipe gagnante (MVP) et celui de l'équipe pe
 | Partie sans vainqueur (remake) | **Défaut** : aucun badge si les deux équipes n'ont pas un vainqueur et un perdant ; le classement s'affiche sans couronne. |
 | Ex æquo | **Défaut** : l'ordre se fait sur le ΔP exact, puis sur `participantId` croissant (déterministe) ; l'affichage à 0,1 pt peut montrer deux fois la même valeur. |
 | Où | **Défaut** : `/postgame` et `/parties/{id}` (même gabarit `partie.html`). Pas dans `/historique/{id}` : ses parties ne sont pas capturées, donc sans impact. |
-| Emplacement dans la page | **À valider** : panneau pleine largeur de la colonne principale, entre la courbe de win chance et les deux cartes « plus coûteux / plus rentables ». Au-delà de 1 500 px de large, les deux listes sont côte à côte ; en dessous, empilées (même point de rupture que `.cols`, `style.css:694`). |
+| Emplacement dans la page | **Validé (@pj35, 2026-10-12)** : panneau pleine largeur de la colonne principale, entre la courbe de win chance et les deux cartes « plus coûteux / plus rentables ». Au-delà de 1 500 px de large, les deux listes sont côte à côte ; en dessous, empilées (même point de rupture que `.cols`, `style.css:694`). |
 | Badges | **Défaut** : couronne et texte (« MVP » en or, « ACE » en violet). Le texte porte le sens : la couleur ne l'est pas seule. À voir à l'œil par @pj35. |
 | Constantes | **Défaut** : aucune. Pas de seuil ni de taille réglable : cinq joueurs par équipe, un MVP, un ACE. |
 

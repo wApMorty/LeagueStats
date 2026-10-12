@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### ✨ Feature
+
+- **Classement des joueurs en post-game, MVP et ACE (SPEC-32)** — la revue de partie ne montrait que l'impact du joueur. Elle classe maintenant les dix joueurs par ΔP cumulé de SPEC-20 (somme de `game_impact`, en points de win chance), en deux listes de cinq (« Ton équipe » à gauche, « Équipe adverse » à droite, quel que soit le résultat) avec portrait Data Dragon, poste, KDA et barre divergente sur une échelle commune. Couronne « MVP » (or) sur le n° 1 de l'équipe gagnante, « ACE » (violet) sur le n° 1 de la perdante, même à impact négatif ; aucun badge si aucune équipe n'a gagné (remake). Panneau entre la courbe et les cartes « plus coûteux / plus rentables » de `/postgame` et `/parties/{id}`, listes empilées sous 1 500 px ; absent sans impact ou sans timeline. Aucune migration, aucune requête de plus, aucune constante. Vérifié en lecture seule sur les 98 parties avec impact de l'époque de la spec (les 98 plus anciennes de `data/db.db`) : deux équipes de cinq, un MVP, un ACE, aucune exception, ACE négatif dans 17 parties (valeur du §1) ; sur les 103 parties de la base aujourd'hui : 103 / 103, 18 à ACE négatif. Recette à l'œil (Réduit et complet, 1 400 px) à faire par @pj35 (SPEC-32 §6).
+
 ## [5.2.0] - 2026-10-12
 
 Les items « Situationnels » de la build importée suivent maintenant le core choisi (nouveau bloc « Autres cores » pour les seconds items des autres cores), et les supports reçoivent enfin une build OneTricks. Aucune action requise (pas de migration, pas de scrape).
