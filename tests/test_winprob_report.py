@@ -123,3 +123,16 @@ def test_lost_objectives_are_described_and_never_break_the_report():
     assert _describe(baron, 6, {}, events, lost=True) == "Nashor perdu à 22:05"
     for pid in range(1, 11):  # lignes lost_* dans `rows` : aucun KeyError
         assert _report(pid)[0].startswith("[DATA] Impact sur la win chance")
+
+
+def test_levels_and_respawn_rows_are_listed_without_an_event():
+    result = impacts(MODEL, GAME, TIMELINE)
+    rows = [r for r in result["rows"] if r["event_type"] not in ("levels", "respawn")]
+    big = [
+        {"participant_id": 5, "event_time_ms": 1488000, "event_type": "levels", "delta_p": -0.4},
+        {"participant_id": 5, "event_time_ms": 1488000, "event_type": "respawn", "delta_p": 0.4},
+    ]
+    lines = impact_report(MODEL, GAME, TIMELINE, 5, {**result, "rows": rows + big})
+    text = "\n".join(lines)
+    assert "-40 pts, niveaux face à ton adversaire de lane" in text
+    assert "+40 pts, récupération après mort" in text

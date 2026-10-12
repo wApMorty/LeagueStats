@@ -21,6 +21,11 @@ LABELS = {
     "inhibitor": "inhibiteur",
 }
 TAKEN = {"tower": "tour détruite", "inhibitor": "inhibiteur détruit"}
+# Lignes `levels` et `respawn` : une par joueur et par partie, sans événement ni heure.
+PER_GAME = {
+    "levels": "niveaux face à ton adversaire de lane",
+    "respawn": "récupération après mort",
+}
 LOST = {"tower": "tour perdue", "grubs": "larves perdues"}
 # Une mort suivie d'un objectif adverse dans ce délai est signalée avec lui.
 FOLLOW_UP_MS = 60_000
@@ -96,12 +101,14 @@ def impact_report(model: WinModel, game: dict, timeline: dict, pid: int, result:
         ),
     ):
         for r in rows[:TOP]:
-            lost = r["event_type"].startswith("lost_")
-            kind = r["event_type"][len("lost_") :] if lost else r["event_type"]
-            e = by_key[(r["event_time_ms"], "kill" if kind in KILL_TYPES else kind)]
-            lines.append(
-                f"  {title} : {_pts(r['delta_p'])} pts, {_describe(e, pid, teams, events, lost)}"
-            )
+            if r["event_type"] in PER_GAME:
+                what = PER_GAME[r["event_type"]]
+            else:
+                lost = r["event_type"].startswith("lost_")
+                kind = r["event_type"][len("lost_") :] if lost else r["event_type"]
+                e = by_key[(r["event_time_ms"], "kill" if kind in KILL_TYPES else kind)]
+                what = _describe(e, pid, teams, events, lost)
+            lines.append(f"  {title} : {_pts(r['delta_p'])} pts, {what}")
     team = result["teams"].get(teams[pid])
     if team:
         lines.append(

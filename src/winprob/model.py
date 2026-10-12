@@ -68,10 +68,25 @@ class WinModel:
         x = expand(state, self.inputs)
         return [(v - m) / s for v, m, s in zip(x, self.mean, self.scale)]
 
+    def logit(self, state: dict) -> float:
+        """Logit de la probabilité que l'équipe bleue gagne."""
+        z = self._z(state)
+        return sum(w * v for w, v in zip(self.weights, z)) + self.weights[-1]
+
     def predict(self, state: dict) -> float:
         """Probabilité que l'équipe bleue gagne."""
-        z = self._z(state)
-        return _sigmoid(sum(w * v for w, v in zip(self.weights, z)) + self.weights[-1])
+        return _sigmoid(self.logit(state))
+
+    def logit_parts(self, a: dict, b: dict) -> dict:
+        """Contribution de chaque variable d'entrée au changement de logit de `a` vers `b` (produit
+        direct et produit avec le temps réunis) ; leur somme vaut `logit(b) - logit(a)`."""
+        d = len(self.inputs)
+        ta, tb = a["time_min"] / TIME_SCALE_MIN, b["time_min"] / TIME_SCALE_MIN
+        return {
+            name: self.weights[i] / self.scale[i] * (b[name] - a[name])
+            + self.weights[d + i] / self.scale[d + i] * (b[name] * tb - a[name] * ta)
+            for i, name in enumerate(self.inputs)
+        }
 
     def to_json(self) -> str:
         return json.dumps(

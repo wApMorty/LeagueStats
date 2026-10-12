@@ -123,3 +123,94 @@ def test_event_kind_names():
     assert (
         event_kind({"type": "BUILDING_KILL", "buildingType": "INHIBITOR_BUILDING"}) == "inhibitor"
     )
+
+
+def _only(**weights):
+    """Modèle jouet qui ne pèse que les variables nommées (logit par unité d'avance)."""
+    d = 2 * len(INPUTS)
+    w = [0.0] * (d + 1)
+    for name, value in weights.items():
+        w[INPUTS.index(name)] = value
+    return WinModel(INPUTS, [0.0] * d, [1.0] * d, w)
+
+
+def _kill(ts, victim, killer, assists=()):
+    return {
+        "type": "CHAMPION_KILL",
+        "timestamp": ts,
+        "victimId": victim,
+        "killerId": killer,
+        "assistingParticipantIds": list(assists),
+    }
+
+
+def _mini(levels, kills):
+    """Dix joueurs, cinq images d'une minute ; les niveaux `levels` arrivent à la 3e image, entre
+    deux kills (`kills` : `(image, événement)`) : un intervalle sans événement les porte."""
+    game = {
+        "participants": [
+            {"participantId": i, "teamId": BLUE if i <= 5 else RED} for i in range(1, 11)
+        ]
+    }
+    frames = []
+    for n in range(5):
+        pf = {
+            str(i): {
+                "level": (levels.get(i, 1) if n >= 2 else 1),
+                "minionsKilled": 0,
+                "jungleMinionsKilled": 0,
+                "totalGold": 0,
+            }
+            for i in range(1, 11)
+        }
+        frames.append(
+            {
+                "timestamp": 60000 * n,
+                "events": [e for at, e in kills if at == n],
+                "participantFrames": pf,
+            }
+        )
+    return game, {"frames": frames}
+
+
+LANES = {i: ["top", "jungle", "middle", "bottom", "utility"][(i - 1) % 5] for i in range(1, 11)}
+
+
+def test_level_and_respawn_leave_no_residual_with_a_model_that_only_weighs_them():
+    model = _only(level=0.4, dead=-0.3, dead_s=-0.05)
+    result = impacts(model, GAME, TIMELINE)
+    for summary in result["teams"].values():
+        assert summary["unattributed"] == pytest.approx(0.0, abs=1e-9)
+    assert {"levels", "respawn"} <= {r["event_type"] for r in result["rows"]}
+
+
+def test_levels_of_two_lane_opponents_cancel_and_teams_do_not_depend_on_roles():
+    game, timeline = _mini({1: 4, 6: 2}, [(1, _kill(70000, 3, 8)), (3, _kill(200000, 9, 4))])
+    model = _only(level=0.5)
+    paired = impacts(model, game, timeline, LANES)["rows"]
+    blind = impacts(model, game, timeline)["rows"]
+    by = lambda rows: {
+        r["participant_id"]: r["delta_p"] for r in rows if r["event_type"] == "levels"
+    }
+    top, anywhere = by(paired), by(blind)
+    assert top[1] > 0 and top[1] == pytest.approx(-top[6])  # même poste : lignes opposées
+    assert len(top) == 10 and sum(top.values()) == pytest.approx(0.0)
+    assert sum(top[i] for i in range(1, 6)) == pytest.approx(sum(anywhere[i] for i in range(1, 6)))
+    assert anywhere[1] != pytest.approx(top[1])  # sans poste : moyenne des cinq adverses
+
+
+def test_respawn_goes_to_the_victim_and_is_charged_to_killer_and_assistant():
+    game, timeline = _mini({}, [(1, _kill(65000, 1, 6, [7])), (3, _kill(200000, 8, 2))])
+    rows = impacts(_only(dead=-0.3, dead_s=-0.05), game, timeline)["rows"]
+    got = {r["participant_id"]: r["delta_p"] for r in rows if r["event_type"] == "respawn"}
+    assert got[1] > 0 and got[6] == pytest.approx(-got[1] / 2) == pytest.approx(got[7])
+    assert all(got[i] == 0 for i in (2, 3, 4, 5, 8, 9, 10))
+
+
+def test_respawn_without_a_killer_charges_nobody():
+    game, timeline = _mini({}, [(1, _kill(65000, 1, 0)), (3, _kill(200000, 8, 2))])
+    result = impacts(_only(dead=-0.3, dead_s=-0.05), game, timeline)
+    got = {
+        r["participant_id"]: r["delta_p"] for r in result["rows"] if r["event_type"] == "respawn"
+    }
+    assert got[1] > 0 and all(got[i] == 0 for i in range(2, 11))

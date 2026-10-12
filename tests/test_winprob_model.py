@@ -5,6 +5,8 @@ import random
 import sqlite3
 from pathlib import Path
 
+import pytest
+
 from src.winprob import train
 from src.winprob.crawl import SCHEMA, pack
 from src.winprob.model import INPUTS, WinModel, _sigmoid, _solve, evaluate, expand, fit
@@ -96,3 +98,21 @@ def test_cross_validate_pools_every_game_once(tmp_path):
     result = train.cross_validate(tmp_path / "crawl.db", folds=5)
     after_10_min = sum(1 for f in TIMELINE["frames"] if f["timestamp"] >= 600_000)
     assert result["images"] == 10 * after_10_min
+
+
+def test_logit_parts_sum_to_the_logit_change():
+    rng = random.Random(3)
+    d = 2 * len(INPUTS)
+    model = WinModel(
+        INPUTS,
+        [rng.uniform(-1, 1) for _ in range(d)],
+        [rng.uniform(0.5, 3) for _ in range(d)],
+        [rng.uniform(-1, 1) for _ in range(d + 1)],
+    )
+    a, b = (
+        {**dict.fromkeys(FEATURES, 0.0), **{n: rng.uniform(-5, 5) for n in INPUTS}, "time_min": t}
+        for t in (7.0, 23.5)
+    )
+    parts = model.logit_parts(a, b)
+    assert set(parts) == set(INPUTS)
+    assert sum(parts.values()) == pytest.approx(model.logit(b) - model.logit(a))

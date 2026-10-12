@@ -8,18 +8,21 @@ de vue de l'équipe concernée. Conventions (à revoir sur données) :
   coéquipiers présents (position à l'image la plus proche, rayon `WINPROB_PRESENCE_RADIUS`) ;
   l'équipe adverse porte la perte (`lost_<k>`, ΔP négatif) à parts égales entre ses joueurs
   absents (les cinq si aucun n'est absent) ;
-- la variation entre deux événements (temps, farm, niveaux) n'est **pas attribuée** : elle est
-  renvoyée en résidu par équipe (les objectifs perdus n'en font plus partie).
-  # ponytail: à répartir au prorata des CS/XP face à l'adversaire de lane
-  si le résidu pèse trop à l'usage (~0,2 de P en moyenne par partie, mesuré le 2026-10-02).
+- la variation entre deux événements est décomposée par joueur, exactement (le modèle est linéaire
+  en logit sur des sommes par joueur) : `levels` (ses niveaux moins ceux de son adversaire de lane)
+  et `respawn` (la récupération après une mort va à la victime, l'avance qui s'évapore débite son
+  tueur et ses assistants) ; une ligne par joueur et par partie ;
+- le reste (compteurs × temps, expiration des buffs, morts sans tueur) n'est pas attribuable à un
+  joueur : il est renvoyé en résidu par équipe.
 """
 
 import math
+from statistics import mean
 from typing import Dict, List, Optional
 
 from ..config_winprob import winprob_config as cfg
 from .model import WinModel
-from .state import BLUE, RED, _other, transitions
+from .state import BLUE, RED, _other, segments, transitions
 
 _MONSTERS = {"BARON_NASHOR": "baron", "RIFTHERALD": "herald", "HORDE": "grubs"}
 _BUILDINGS = {"TOWER_BUILDING": "tower", "INHIBITOR_BUILDING": "inhibitor"}
@@ -65,9 +68,74 @@ def _present(timeline: dict, e: dict, team_players: List[int]) -> List[int]:
     return near
 
 
-def impacts(model: WinModel, game: dict, timeline: dict) -> dict:
-    """Impacts de la partie : `rows` (une ligne par joueur et événement), `teams` (par équipe :
-    attribué, total et résidu non attribué, en probabilité)."""
+def _lane_opponents(teams: Dict[int, int], roles: Optional[dict]) -> Dict[int, List[int]]:
+    """Adversaire(s) de lane de chaque joueur : celui du même poste si les dix postes sont connus et
+    distincts par équipe, sinon les cinq joueurs de l'autre équipe (la somme d'équipe reste exacte).
+    """
+    roles = roles or {}
+    by_team = {t: [p for p, team in teams.items() if team == t] for t in (BLUE, RED)}
+    lanes = {t: {roles.get(p) for p in players} for t, players in by_team.items()}
+    paired = (
+        len(teams) == 10
+        and all(len(lanes[t]) == 5 and None not in lanes[t] for t in lanes)
+        and lanes[BLUE] == lanes[RED]
+    )
+    return {
+        p: (
+            [q for q in by_team[_other(t)] if roles[q] == roles[p]]
+            if paired
+            else by_team[_other(t)]
+        )
+        for p, t in teams.items()
+    }
+
+
+def _segment_rows(
+    model: WinModel, timeline: dict, teams: Dict[int, int], roles: Optional[dict], segs
+) -> List[dict]:
+    """Lignes `levels` et `respawn` : la variation de P entre deux événements, par joueur.
+
+    Un joueur est évalué seul avec les poids du modèle (ses niveaux, sa mort), ce qui donne sa part
+    exacte du changement de logit ; le rapport ΔP / Δlogit du segment la convertit en probabilité,
+    orientée vers l'équipe du joueur.
+    """
+    zero = dict.fromkeys(model.inputs, 0.0)
+    level, respawn = dict.fromkeys(teams, 0.0), dict.fromkeys(teams, 0.0)
+    for a, b, players_a, players_b, killers in segs:
+        p_a, p_b = model.predict(a), model.predict(b)
+        d_logit = model.logit(b) - model.logit(a)
+        ratio = (p_b - p_a) / d_logit if abs(d_logit) > 1e-9 else p_a * (1 - p_a)
+        for pid in teams:
+            solo = [
+                {
+                    **zero,
+                    "time_min": s["time_min"],
+                    **{n: float(v[n][pid]) for n in ("level", "dead", "dead_s") if n in zero},
+                }
+                for s, v in ((a, players_a), (b, players_b))
+            ]
+            parts = model.logit_parts(*solo)
+            level[pid] += parts.get("level", 0.0) * ratio
+            recovered = (parts.get("dead", 0.0) + parts.get("dead_s", 0.0)) * ratio
+            respawn[pid] += recovered
+            for killer in killers.get(pid, ()):
+                respawn[killer] -= recovered / len(killers[pid])
+    opponents = _lane_opponents(teams, roles)
+    at = timeline["frames"][-1]["timestamp"]
+    return [
+        {"participant_id": pid, "event_time_ms": at, "event_type": label, "delta_p": delta}
+        for label, values in (
+            ("levels", {p: level[p] - mean(level[q] for q in opponents[p]) for p in teams}),
+            ("respawn", respawn),
+        )
+        for pid, delta in values.items()
+    ]
+
+
+def impacts(model: WinModel, game: dict, timeline: dict, roles: Optional[dict] = None) -> dict:
+    """Impacts de la partie : `rows` (une ligne par joueur et événement, plus `levels` et `respawn`
+    par joueur), `teams` (par équipe : attribué, total et résidu non attribué, en probabilité).
+    `roles` (`participant_roles`) apparie les adversaires de lane ; sans lui, la moyenne adverse."""
     teams = {p["participantId"]: p["teamId"] for p in game["participants"]}
     rows: List[dict] = []
     start = end = None
@@ -116,6 +184,8 @@ def impacts(model: WinModel, game: dict, timeline: dict) -> dict:
             losers = absent or foes
             for pid in losers:
                 give(pid, loser, 1 / len(losers), "lost_" + kind)
+    if start is not None:
+        rows += _segment_rows(model, timeline, teams, roles, segments(game, timeline))
     return {"rows": rows, "teams": _team_summary(rows, teams, start, end)}
 
 

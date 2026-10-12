@@ -64,6 +64,7 @@ class _Replay:
         self.baron_t = {BLUE: None, RED: None}
         self.elder_t = {BLUE: None, RED: None}
         self.deaths = {}  # participantId -> (instant de la mort en ms, réapparition en s)
+        self.killers = {}  # participantId -> tueur et assistants de sa dernière mort
         self.level = dict.fromkeys(teams, 1)
         self.cs = dict.fromkeys(teams, 0)
         self.gold = dict.fromkeys(teams, 0)
@@ -83,6 +84,11 @@ class _Replay:
             victim = e["victimId"]
             self.count[_other(self.teams[victim])]["kills"] += 1
             self.deaths[victim] = (ts, _respawn_s(self.level[victim], ts / 1000))
+            self.killers[victim] = [
+                p
+                for p in [e.get("killerId"), *e.get("assistingParticipantIds", [])]
+                if p in self.teams and self.teams[p] != self.teams[victim]
+            ]
         elif kind == "BUILDING_KILL":
             # `teamId` est le propriétaire du bâtiment détruit.
             key = {"TOWER_BUILDING": "towers", "INHIBITOR_BUILDING": "inhibitors"}.get(
@@ -107,6 +113,16 @@ class _Replay:
             return False
         return True
 
+    def players(self, t_ms: float) -> dict:
+        """Niveau, mort (0 ou 1) et secondes de réapparition restantes de chaque joueur : les
+        variables de `state()` qui sont des sommes par joueur, avant leur différence d'équipes."""
+        left = {p: (d + r * 1000 - t_ms) / 1000 for p, (d, r) in self.deaths.items()}
+        return {
+            "level": dict(self.level),
+            "dead": {p: int(left.get(p, 0) > 0) for p in self.teams},
+            "dead_s": {p: max(left.get(p, 0), 0) for p in self.teams},
+        }
+
     def state(self, t_ms: float) -> dict:
         def active(started, buff_s):
             return {
@@ -122,9 +138,8 @@ class _Replay:
             self.elder_t, cfg.ELDER_BUFF_S
         )
         lvl, cs, gold = by_team(self.level), by_team(self.cs), by_team(self.gold)
-        left = {p: (d + r * 1000 - t_ms) / 1000 for p, (d, r) in self.deaths.items()}
-        dead = by_team({p: 1 for p, s in left.items() if s > 0})
-        dead_s = by_team({p: s for p, s in left.items() if s > 0})
+        per_player = self.players(t_ms)
+        dead, dead_s = by_team(per_player["dead"]), by_team(per_player["dead_s"])
         soul = {t: int(c[t]["dragons"] >= cfg.SOUL_DRAGONS) for t in (BLUE, RED)}
         state = {"time_min": t_ms / 60000, "soul": soul[BLUE] - soul[RED]}
         for name, a, b in (
@@ -171,6 +186,26 @@ def transitions(game: dict, timeline: dict) -> Iterator[tuple]:
             before = replay.state(e["timestamp"])
             if replay.event(e):
                 yield e, before, replay.state(e["timestamp"])
+        replay.frame(frame)
+
+
+def segments(game: dict, timeline: dict) -> Iterator[tuple]:
+    """`(état après un événement suivi, état avant le suivant, `players()` aux deux instants, killers)`.
+
+    Entre deux événements, seuls le temps, les niveaux (images) et la réapparition bougent : ce
+    sont ces intervalles que `transitions` ne couvre pas. `killers` : tueur et assistants de la
+    dernière mort de chaque joueur au début de l'intervalle.
+    """
+    replay = _Replay({p["participantId"]: p["teamId"] for p in game["participants"]})
+    previous = None
+    for frame in timeline["frames"]:
+        for e in frame["events"]:
+            ts = e["timestamp"]
+            before = (replay.state(ts), replay.players(ts))
+            if replay.event(e):
+                if previous is not None:
+                    yield previous[0], before[0], previous[1], before[1], previous[2]
+                previous = (replay.state(ts), replay.players(ts), dict(replay.killers))
         replay.frame(frame)
 
 

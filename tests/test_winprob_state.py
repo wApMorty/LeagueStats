@@ -6,6 +6,8 @@ Hermétiques : fixtures anonymisées du spike du 2026-09-28 (24 min 48, bleu gag
 import json
 from pathlib import Path
 
+import pytest
+
 from src.winprob.state import FEATURES, _respawn_s, blue_win, frame_states, to_vector, walk
 
 FIXTURES = Path(__file__).parent / "fixtures" / "spike_gameplay"
@@ -103,3 +105,24 @@ def test_soul_and_baron_buff_expiry():
 
 def test_respawn_grows_with_level_and_late_game():
     assert _respawn_s(1, 60) < _respawn_s(18, 60) < _respawn_s(18, 40 * 60)
+
+
+def test_players_sum_to_the_team_difference_of_state_and_segments_chain_the_events():
+    from src.winprob.state import _Replay, segments, transitions
+
+    teams = {p["participantId"]: p["teamId"] for p in GAME["participants"]}
+    replay = _Replay(teams)
+    for frame in TIMELINE["frames"]:
+        replay.frame(frame)
+        t = frame["timestamp"] + 30000
+        state, per = replay.state(t), replay.players(t)
+        for name in ("level", "dead", "dead_s"):
+            by_team = {100: 0.0, 200: 0.0}
+            for pid, value in per[name].items():
+                by_team[teams[pid]] += value
+            assert by_team[100] - by_team[200] == pytest.approx(state[name])
+    follows = list(segments(GAME, TIMELINE))
+    events = list(transitions(GAME, TIMELINE))
+    assert len(follows) == len(events) - 1
+    for k, (a, b, _, _, _) in enumerate(follows):
+        assert a == events[k][2] and b == events[k + 1][1]
