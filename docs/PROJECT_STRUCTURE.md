@@ -80,6 +80,7 @@ src/
 │   ├── lcu_proxy.py, lcu_status.py           # Liste blanche des appels au LCU, sonde « client ouvert »
 │   ├── charts.py                              # Graphiques SVG purs (courbes, sparklines, histogramme, fiabilité)
 │   ├── data.py, home.py, review.py             # Données des écrans du coaching : rang, progression, calibration ; accueil ; parties et post-game
+│   ├── classement.py                           # Classement des dix joueurs d'une partie par ΔP, MVP et ACE (SPEC-32)
 │   ├── draft_*.py, found.py, assets.py          # Draft interactive, partie trouvée, Data Dragon local
 │   ├── profil.py, historique.py, collection.py   # Écrans du groupe Client lus dans le LCU : profil, historique, collection
 │   ├── draft_swaps.py                             # Échanges d'ordre et de rôle (l'id lu dans la session)
