@@ -69,6 +69,8 @@ class FinalAnalysis:
     draft_diff: float  # écart entre les deux camps, en points
     evaluation: str
     loadout: Optional[Dict[str, Any]] = field(default=None)
+    # SPEC-27 : vérification des postes en partie (état, écarts), None tant que rien n'est vérifié.
+    reality: Optional[Dict[str, Any]] = field(default=None)
 
     def to_payload(self) -> Dict[str, Any]:
         """Charge utile du bus (types simples, sérialisable en JSON)."""

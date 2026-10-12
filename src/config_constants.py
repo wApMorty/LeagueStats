@@ -287,6 +287,13 @@ class DraftConfig:
     # l'ordre de grandeur d'un palier de DUEL ; à recalibrer sur le bruit du modèle (tâche 103).
     SWAP_MIN_GAIN_PTS: float = 1.0
 
+    # SPEC-27 : vérification des postes adverses en partie. Le relevé de la Live Client API doit
+    # rester identique pendant ce temps de jeu (s) avant d'être pris en compte : 10 s, sans échange
+    # de lane observé sur le relevé du 2026-10-12 (SPEC-27 §4.1). Recalculs au plus par partie :
+    # borne de sûreté contre un champ instable, aucune mesure derrière.
+    REALITY_STABLE_S: float = 10.0
+    REALITY_MAX_CORRECTIONS: int = 3
+
     # SPEC-15 / ADR-003 : build OneTricks importée au lock-in. Le User-Agent de
     # navigateur fait passer le checkpoint anti-bot Vercel, acceptable tant que
     # le volume reste celui d'une consultation manuelle (2 pages par draft).

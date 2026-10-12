@@ -31,6 +31,7 @@ from .draft.final_analysis import FinalDraftAnalyzer
 from .draft.lifecycle import MonitorLifecycle
 from .draft.phase_tracker import PhaseTracker, lcu_phase_reader
 from .draft.loadout_import import LoadoutImporter
+from .draft.reality_check import RealityCheck
 from .draft.outcome_tracker import OutcomeTracker
 
 
@@ -123,6 +124,7 @@ class DraftMonitor:
         self.phase_tracker.subscribe_events(self.game_capture.on_lcu_event)  # notification de LP
         self.crawler = Crawler(self)  # SPEC-20 : collecte de parties tierces
         self.loadout = LoadoutImporter(self)  # SPEC-15
+        self.reality = RealityCheck(self)  # SPEC-27 : postes adverses vérifiés en partie
         self.last_recommendation = None  # Track last recommendation to avoid spam
         self.last_ban_recommendation = None  # Track last ban recommendation to avoid spam
         self.has_done_initial_hover = False  # Track if we've done the initial hover

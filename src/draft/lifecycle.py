@@ -104,6 +104,8 @@ class MonitorLifecycle:
                         self.m._last_outcome_trigger_phase = None
 
                 self.retry_post_game()  # la collecte SPEC-20 a son propre fil (`Crawler.start`)
+                if phase == "InProgress":  # SPEC-27 : jamais d'exception, voir RealityCheck.step
+                    timer.run("reality_check", self.m.reality.step)
                 return
 
             self._exit_ticks = 0
@@ -299,6 +301,7 @@ class MonitorLifecycle:
         self.m._last_prediction_id = None  # SPEC-05 B7: predictions don't carry to the next game
         self.m._last_outcome_trigger_phase = None  # SPEC-08: re-arm the transition detector
         self.m.loadout.reset()  # SPEC-15: a new draft imports again
+        self.m.reality.reset()  # SPEC-27: la vérification de la partie précédente ne survit pas
         # SPEC-24 tâche 106 : l'analyse de la draft précédente ne survit pas à la partie suivante.
         try:
             bus = getattr(self.m, "bus", None)

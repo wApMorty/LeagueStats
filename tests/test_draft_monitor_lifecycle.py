@@ -595,3 +595,25 @@ class TestYieldToDraft:
         monitor.phase_tracker.observe("InProgress")
         assert monitor.draft_pending() is False
         monitor.lcu.assert_not_called()
+
+
+class TestRealityCheckHook:
+    """SPEC-27 : la vérification des postes tourne en partie, et seulement en partie."""
+
+    def test_in_progress_runs_the_step(self, monitor):
+        monitor.lcu.get_gameflow_session.return_value = {"phase": "InProgress"}
+        with patch.object(monitor.reality, "step") as step:
+            monitor._monitor_loop()
+        step.assert_called_once_with()
+
+    @pytest.mark.parametrize("phase", ["Lobby", "Matchmaking", "EndOfGame", "WaitingForStats"])
+    def test_other_phases_do_not(self, monitor, phase):
+        monitor.lcu.get_gameflow_session.return_value = {"phase": phase}
+        with patch.object(monitor.reality, "step") as step:
+            monitor._monitor_loop()
+        step.assert_not_called()
+
+    def test_reset_for_next_game_resets_the_check(self, monitor):
+        with patch.object(monitor.reality, "reset") as reset:
+            monitor._reset_for_next_game()
+        reset.assert_called_once_with()
