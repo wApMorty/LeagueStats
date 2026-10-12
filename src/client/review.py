@@ -22,6 +22,7 @@ from ..winprob.model import WinModel
 from ..winprob.report import LABELS, TAKEN, curve_points
 from ..winprob.train import model_path
 from .charts import Band, Mark, Series, Tick, diverging, line_chart
+from .classement import ranking
 from .data import ago, date_fr, finding_reference, parse_utc, plural, tier_name
 from .draft_view import ROLE_LABELS, Champions, fr, signed
 
@@ -345,6 +346,7 @@ def game_page(
         "curve_note": None,
         "impact_note": None,
         "impact": {"available": False, "costly": [], "profitable": [], "events": []},
+        "ranking": None,
         "lp": None,
         "axes": [],
         "findings": [],
@@ -388,6 +390,17 @@ def game_page(
             "attributed": _pts(sum(e["mine_delta"] for e in mine)),
             "residual": _pts(residual) if residual is not None else None,
         }
+        classed = ranking(rows, game, roles, pid, champions)
+        if classed:
+            ranked_players = [player for team in classed["teams"] for player in team["players"]]
+            scale = max(abs(player["impact"]) for player in ranked_players) or 1.0
+            for player in ranked_players:
+                player.update(
+                    impact_text=_pts(player["impact"]),
+                    tone="gain" if player["impact"] >= 0 else "cost",
+                    **_bar(player["impact"], scale),
+                )
+            page["ranking"] = classed
     elif timeline is not None:
         page["impact_note"] = "Impact non calculé pour cette partie."
     if points:

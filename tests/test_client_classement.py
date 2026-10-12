@@ -1,13 +1,18 @@
 """Classement des dix joueurs par impact ΔP (SPEC-32 tâche 147) : fonctions pures, brut construit à la main."""
 
 import json
+import re
+from datetime import datetime, timezone
 
 import pytest
 
 from src.client.assets import Assets
 from src.client.classement import ranking
 from src.client.draft_view import Champions
+from src.client.review import game_page
 from src.config_client import client_config
+from src.repositories.coaching import CoachingRepository
+from tests.test_client_parties import capture, impact, modele, roles  # noqa: F401 (fixture modele)
 
 CHAMPIONS = {
     "data": {
@@ -154,3 +159,88 @@ def test_role_nom_portrait_et_kda(champions):
     assert top["champion"] == "Champion 1"
     assert top["portrait"] == "/assets/champion/Champ1.png"
     assert top["kda"] == "1 / 2 / 3"
+
+
+# ---------- pages (tâche 148 : clé `ranking` de `game_page`) ----------
+
+GAME_ID = 7998195590
+NOW = datetime(2026, 10, 5, 18, 0, tzinfo=timezone.utc)
+FR_POINTS = re.compile(r"[+−]\d+,\d|0,0")
+PAGE_CHAMPIONS = {
+    "data": {
+        cid: {"key": str(key), "id": cid, "name": label, "tags": []}
+        for key, cid, label in [
+            (2, "Olaf", "Olaf"),
+            (57, "Maokai", "Maokai"),
+            (4, "TwistedFate", "Twisted Fate"),
+            (236, "Lucian", "Lucian"),
+            (412, "Thresh", "Thresh"),
+            (240, "Kled", "Kled"),
+            (141, "Kayn", "Kayn"),
+            (45, "Veigar", "Veigar"),
+            (804, "Yunara", "Yunara"),
+            (117, "Lulu", "Lulu"),
+        ]
+    }
+}
+
+
+@pytest.fixture
+def assets(tmp_path):
+    base = client_config.DDRAGON_BASE
+    files = {
+        f"{base}/api/versions.json": json.dumps(["16.2.1"]).encode(),
+        f"{base}/cdn/16.2.1/data/fr_FR/champion.json": json.dumps(PAGE_CHAMPIONS).encode(),
+    }
+    return Assets(tmp_path / "cache", fetch=files.get)
+
+
+def _page(db, assets, model):
+    return game_page(CoachingRepository(db), GAME_ID, Champions(assets), model, NOW)
+
+
+def test_page_classe_dix_joueurs_en_deux_equipes_de_cinq(db, assets, modele):
+    capture(db, pid=1)
+    roles(db, GAME_ID)
+    impact(db)
+    ranking_view = _page(db, assets, modele)["ranking"]
+    assert [len(team["players"]) for team in ranking_view["teams"]] == [5, 5]
+    assert ranking_view["teams"][0]["mine"] is True
+    for player in (p for team in ranking_view["teams"] for p in team["players"]):
+        assert FR_POINTS.fullmatch(player["impact_text"]), player["impact_text"]
+        assert player["tone"] == ("gain" if player["impact"] >= 0 else "cost")
+
+
+def test_barres_sur_une_echelle_commune_le_plus_grand_ecart_remplit_la_moitie(db, assets, modele):
+    capture(db, pid=1)
+    roles(db, GAME_ID)
+    impact(db)
+    ranking_view = _page(db, assets, modele)["ranking"]
+    players = [p for team in ranking_view["teams"] for p in team["players"]]
+    biggest = max(players, key=lambda p: abs(p["impact"]))
+    scale = abs(biggest["impact"])
+    assert scale > 0 and biggest["width"] == 50
+    for player in players:
+        expected = min(50, abs(player["impact"]) / scale * 50)
+        assert player["width"] == pytest.approx(expected, abs=0.06)
+        if player["impact"] >= 0:
+            assert player["left"] == 50
+        else:
+            assert player["left"] == pytest.approx(50 - player["width"], abs=0.06)
+
+
+def test_sans_impact_pas_de_classement_et_notes_inchangees(db, assets, modele):
+    capture(db, pid=1)
+    page = _page(db, assets, modele)
+    assert page["ranking"] is None
+    assert page["curve"] and page["curve_note"] is None
+    assert page["impact_note"] == "Impact non calculé pour cette partie."
+
+
+def test_sans_timeline_pas_de_classement_meme_avec_impact_stocke(db, assets, modele):
+    capture(db, pid=1, timeline=False)
+    impact(db)
+    page = _page(db, assets, modele)
+    assert page["ranking"] is None
+    assert page["curve_note"].startswith("Pas de timeline")
+    assert page["impact_note"] is None

@@ -328,7 +328,7 @@ Reste à valider : l'emplacement du panneau (entre la courbe et les cartes). Dé
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
 | 147 | `src/client/classement.py` : `ranking` (ΔP par participant, équipes, MVP / ACE, ex æquo, remake) et tests purs | 3 | — | ✅ 2026-10-12 : 12 tests purs |
-| 148 | `game_page` : clé `ranking`, formatage et barres sur les dix joueurs, absence sans impact, tests de page | 2 | 147 | ⬜ |
+| 148 | `game_page` : clé `ranking`, formatage et barres sur les dix joueurs, absence sans impact, tests de page | 2 | 147 | ✅ 2026-10-12 : 4 tests de page, review.py 471 lignes |
 | 149 | Gabarit et CSS : deux listes, portraits, barres, badges MVP et ACE, rupture à 1 500 px, tests de rendu | 5 | 148 | ⬜ |
 | 150 | Clôture : vérification sur les 98 parties de la base, module ajouté aux listes, `CHANGELOG.md`, statuts, recette @pj35 | 2 | 149 | ⬜ |
 
