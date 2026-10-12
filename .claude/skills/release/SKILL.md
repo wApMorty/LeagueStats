@@ -14,5 +14,5 @@ Numéro SemVer : majeure = fonctionnalité retirée ou action requise de l'utili
 1. Mettre le numéro dans `src/__init__.py` et `README.md`.
 2. `CHANGELOG.md` : renommer `[Unreleased]` en `[X.Y.Z] - AAAA-MM-JJ`, résumé de 2-3 lignes en tête (actions requises comprises), puis rouvrir un `[Unreleased]` vide.
 3. Commit `🚀 Deploy: version X.Y.Z`, puis tag annoté `vX.Y.Z`.
-4. `python build_app.py`, puis `echo 7 | ./LeagueStatsCoach.exe` dans `LeagueStatsCoach_Release/` pour vérifier qu'il démarre.
+4. `python build_app.py`, puis `echo 8 | ./LeagueStatsCoach.exe` dans `LeagueStatsCoach_Release/` pour vérifier qu'il démarre (8 = Quitter ; 7 ouvre la fenêtre du client).
 5. Résumer à @pj35 et attendre sa validation, puis `git push origin master` et `git push origin vX.Y.Z`.
