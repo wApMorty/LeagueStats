@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+## [5.1.0] - 2026-10-12
+
+Le Live Coach vérifie les postes adverses une fois la partie lancée et corrige le face-à-face et la build s'ils étaient faux, et l'écran « En partie » tient sur un seul écran. Aucune action requise (pas de migration, pas de scrape).
+
 ### ✨ Feature
 
 - **Postes adverses vérifiés une fois la partie lancée (SPEC-27)** — les postes ennemis n'étaient que devinés pendant la draft (59 équipes adverses sur 69 entièrement justes, 85 %) et jamais revérifiés : un poste faux changeait le duel, la probabilité et la build. Une fois la partie lancée, le Live Coach lit `allPlayers[*].position` de la Live Client API (nouvelle clé `roster` du sujet `ingame`, sans identité de joueur), attend que le relevé reste identique `REALITY_STABLE_S` = 10 s de temps de jeu, puis confronte chaque champion à son poste prédit. Tout conforme : `[OK] Postes vérifiés en partie : 10/10 conformes`. Sinon `[ALERTE] Postes corrigés en partie : …`, recalcul du face-à-face, de la probabilité et du plan de build (`LoadoutImporter.retarget`, sans rien écrire dans le client LoL) et republication du sujet `game`, au plus `REALITY_MAX_CORRECTIONS` = 3 fois par partie ; équipe au relevé incomplet ou ambigu : rien n'est touché. L'écran « En partie » affiche la ligne d'état (quatre états) et marque « poste corrigé » les lignes du tableau concernées ; `measure_en_partie.py` reste `[OK]`, marge de 30 px (seuil 30). Relevé du spike (`scripts/spike_live_positions.py`, une partie classée de 28 min) : `position` rempli pour les dix joueurs dès l'écran de chargement, jamais modifié, 100 % conforme à `detectedTeamPosition` de l'écran de fin. Recette en partie réelle et deux relevés de plus (dont une normale blind) à faire par @pj35 (SPEC-27 §6).
