@@ -313,7 +313,7 @@ bruit (liste plus courte). Restent à valider : valeur des deux seuils et volume
 |---|---|---|---|---|
 | 142 | `_core_path`, `_item_blocks` (Situationnels par le chemin, bloc « Autres cores », repli), `Build.path_games`, constantes, fixture Ambessa, tests | 5 | — | ✅ 2026-10-12 : Ambessa = Death's Dance, Maw, Mortal Reminder / Autres cores Shojin, Voltaic, Profane Hydra (147 parties) ; Jinx 5 situationnels + 2 autres cores |
 | 143 | Duel : chemin lu sur les deux pages, items du duel dans le chemin ou « Autres cores », `blocks[-1]` corrigé, tests réécrits | 3 | 142 | ✅ 2026-10-12 : core substitué par le duel (5 parties) = Situationnels vide, ancien core en tête d'« Autres cores » (seuils de §4.2, à relire) |
-| 144 | Banc `scripts/bench_loadout_paths.py` (12 pages espacées de 20 s), réglage des deux seuils | 3 | 143 | ⬜ |
+| 144 | Banc `scripts/bench_loadout_paths.py` (12 pages espacées de 20 s), réglage des deux seuils | 3 | 143 | ✅ 2026-10-12 : hors chemin 53 → 0, repli 0 / 12, médiane 8 → 4 situationnels ; seuils 5 % / 3 parties inchangés ; supports non mesurables (404, rôle `supp`) |
 | 145 | Ligne console, bloc « Autres cores » dans l'écran « En partie », remesure `measure_en_partie.py` | 2 | 143 | ✅ 2026-10-12 : remesuré à 1 920 × 986, marge 33 / **30 px** (sans / avec modèle, était 37 / 34), une colonne à 1 400 × 900 |
 | 146 | Clôture : `CHANGELOG.md`, notes SPEC-15, statuts, README des specs, recette @pj35 | 2 | 144, 145 | ⬜ |
 

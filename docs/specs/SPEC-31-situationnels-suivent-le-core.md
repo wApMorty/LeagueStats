@@ -36,6 +36,13 @@ les fonctions du dépôt lues sur `src/draft/loadout.py`.
   rangs / part du core), parties dérivées de `patchStats["all"]` : Ambessa, Death's Dance 52 % (77 parties), Maw 14 %
   (20), Mortal Reminder 11 % (16), Guardian Angel 1,2 % (1,7), Endless Hunger 0,7 % (1,1) ; Yorick, dont le core ne pèse
   que 43 parties, Sterak's 33 % (14), Guardian Angel 7 % (3), Randuin's 5 % (2,3).
+- **Banc du 2026-10-12** (`scripts/bench_loadout_paths.py`, 12 pages : Ambessa, Yorick, Darius, Garen top ; Lee Sin, Viego
+  jungle ; Ahri, Orianna, Syndra mid ; Jinx, Kai'Sa, Ezreal bot, aux seuils de départ 5 % et 3 parties) : items de
+  « Situationnels » hors du chemin du core, **53 avant, 0 après** ; repli 0 / 12 ; nombre de situationnels, médiane 8 avant,
+  **4 après** (de 2 à 6). Les seuils de départ sont conservés : aucune page ne justifie de les bouger (Guardian Angel de
+  Yorick, 7 % et 3 parties sur un core de 44 parties, reste le cas limite). Les pages de support n'ont pas pu être
+  mesurées : OneTricks nomme ce poste `supp` et `LANE_TO_ONETRICKS_ROLE` ne le traduit pas, la page répond 404 (hors
+  périmètre, voir le rapport).
 - **Après un changement de core par le duel** (`chosen["Core"]`, `loadout.py:406`), le chemin à lire est celui du nouveau
   core. La page du duel publie son propre `popPath`, aligné sur son propre `popCore`, mais sur ~40 parties.
 - **Le test de non-régression actuel fige le comportement à changer** :
