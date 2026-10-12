@@ -25,9 +25,9 @@ from ..config_constants import draft_config
 from ..constants import normalize_champion_name_for_onetricks
 
 ONETRICKS_BUILD_URL = "https://www.onetricks.gg/champions/builds/{}"
-# Lanes internes -> paramètre ?role= d'OneTricks ("mid"/"bot" au lieu de
-# "middle"/"bottom" ; top, jungle et support sont identiques).
-LANE_TO_ONETRICKS_ROLE = {"middle": "mid", "bottom": "bot"}
+# Lanes internes -> paramètre ?role= d'OneTricks ("mid"/"bot"/"supp" au lieu de
+# "middle"/"bottom"/"support" ; top et jungle sont identiques). Un autre nom donne une 404.
+LANE_TO_ONETRICKS_ROLE = {"middle": "mid", "bottom": "bot", "support": "supp"}
 _NEXT_DATA = re.compile(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', re.S)
 
 # (champion, lane, adversaire) -> page ; adversaire None = page générale.
