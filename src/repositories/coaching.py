@@ -8,6 +8,8 @@ Sans try/except, comme game_records.py : les appelants sont best-effort.
 
 from typing import Dict, List, Optional, Sequence, Tuple
 
+from ..config_winprob import winprob_config
+
 
 class CoachingRepository:
     """Lectures et écritures de l'analyse des parties capturées."""
@@ -271,17 +273,26 @@ class CoachingRepository:
     # ---------- impact sur la win chance (SPEC-20) ----------
 
     def games_without_impact(self) -> List[dict]:
-        """Parties capturées avec une timeline et sans impact, de la plus ancienne à la plus récente."""
-        rows = self._rows("""
-            SELECT game_id, player_participant_id, raw_game, raw_timeline FROM game_records
+        """Parties capturées avec une timeline et sans impact, ou dont l'impact n'a pas la convention
+        courante (`WINPROB_IMPACT_CONVENTION`), de la plus ancienne à la plus récente."""
+        rows = self._rows(
+            """
+            SELECT game_id, player_participant_id, raw_game, raw_timeline, raw_eog FROM game_records
             WHERE raw_timeline IS NOT NULL
-              AND game_id NOT IN (SELECT DISTINCT game_id FROM game_impact)
+              AND (game_id NOT IN (SELECT DISTINCT game_id FROM game_impact)
+                   OR game_id IN (SELECT DISTINCT game_id FROM game_impact
+                                  WHERE model_version NOT LIKE ?))
             ORDER BY game_creation_utc
-            """)
-        return [dict(zip(("game_id", "player_pid", "game", "timeline"), row)) for row in rows]
+            """,
+            (f"%+c{winprob_config.WINPROB_IMPACT_CONVENTION}",),
+        )
+        keys = ("game_id", "player_pid", "game", "timeline", "eog")
+        return [dict(zip(keys, row)) for row in rows]
 
     def save_impact(self, game_id: int, model_version: str, rows: Sequence[dict]) -> None:
-        """Remplace les impacts de la partie par ceux de `rows` (sortie de `winprob.impact`)."""
+        """Remplace les impacts de la partie par ceux de `rows` (sortie de `winprob.impact`), rangés
+        sous `model_version` suivi de la convention d'attribution courante (`+c2`)."""
+        model_version = f"{model_version}+c{winprob_config.WINPROB_IMPACT_CONVENTION}"
         cursor = self.db.connection.cursor()
         cursor.execute("DELETE FROM game_impact WHERE game_id = ?", (game_id,))
         cursor.executemany(

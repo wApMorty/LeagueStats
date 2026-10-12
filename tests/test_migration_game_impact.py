@@ -62,7 +62,7 @@ def test_save_replaces_and_reads_back_in_event_order(db):
     repo.save_impact(1, "wp-bbb", [row(1, 4000, -0.04)])  # remplace, ne cumule pas
     rows = repo.impact_rows(1)
     assert [(r["participant_id"], r["delta_p"], r["model_version"]) for r in rows] == [
-        (1, -0.04, "wp-bbb")
+        (1, -0.04, "wp-bbb+c2")
     ]
     repo.save_impact(2, "wp-bbb", [row(1, 8000, 0.1), row(1, 2000, 0.2), row(3, 2000, 0.3)])
     assert [r["event_time_ms"] for r in repo.impact_rows(2, participant_id=1)] == [2000, 8000]

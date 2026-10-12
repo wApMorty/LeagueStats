@@ -465,7 +465,7 @@ def _residual(
     """Ce que le temps, le farm et les niveaux ont changé hors des événements, pour l'équipe du joueur
     (non attribué). Recalculé avec le modèle qui a produit les lignes stockées : d'une autre version,
     il ne leur correspondrait plus et n'est pas affiché."""
-    if model is None or rows[0]["model_version"] != model.version:
+    if model is None or rows[0]["model_version"].split("+")[0] != model.version:
         return None
     summary = impacts(model, game, timeline)["teams"].get(team)
     return summary["unattributed"] if summary else None
