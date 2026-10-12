@@ -151,14 +151,20 @@ class LoadoutImporter:
         except Exception as error:
             print(f"[INFO] Build non importée : erreur inattendue ({type(error).__name__})")
 
-    def _import(self, champion_id: int, lane: Optional[str], opponent: Optional[str]) -> None:
+    def _compute(
+        self, champion_id: int, lane: Optional[str], opponent: Optional[str]
+    ) -> Optional[Tuple]:
+        """Calcule la build cible sans rien écrire ; None si la page OneTricks est indisponible.
+
+        Renvoie ``(label, target, general, duel, substitutions, duel_games)``.
+        """
         name = self.m._get_display_name(champion_id)
         label = f"{name} {lane}" if lane else name
         general = get_page(name, lane)
         build = pick_build(general) if general else None
         if build is None:
             print(f"[INFO] Build non importée : page OneTricks indisponible pour {label}")
-            return
+            return None
 
         substitutions, duel_games, duel = [], None, None
         if opponent:
@@ -174,14 +180,37 @@ class LoadoutImporter:
                         f"[INFO] Duel vs {opponent} ({duel_games} parties) : aucun écart "
                         "significatif, build générale conservée"
                     )
+        return label, (champion_id, label, build), general, duel, substitutions, duel_games
 
-        target = (champion_id, label, build)
+    def _import(self, champion_id: int, lane: Optional[str], opponent: Optional[str]) -> None:
+        computed = self._compute(champion_id, lane, opponent)
+        if computed is None:
+            return
+        label, target, general, duel, substitutions, duel_games = computed
         if target == self._applied:
             return
+        build = target[2]
         outcome = apply_build(self.m.lcu, build, champion_id, label)
         self._applied = target
         self._duel_info = self._describe(build, substitutions, general, duel)
         self._report(label, build, opponent, duel_games, substitutions, general, outcome)
+
+    def retarget(
+        self, champion_id: int, lane: Optional[str], opponent: Optional[str]
+    ) -> Optional[Dict]:
+        """Recalcule la build pour un autre poste ou adversaire, sans écrire dans le client LoL.
+
+        SPEC-27 : en partie, la page de runes ne se change plus ; seuls l'état et l'écran « En
+        partie » (objets, compétences, duel) suivent. None si la page est indisponible : l'état
+        d'avant est alors conservé.
+        """
+        computed = self._compute(champion_id, lane, opponent)
+        if computed is None:
+            return None
+        _, target, general, duel, substitutions, _ = computed
+        self._applied = target
+        self._duel_info = self._describe(target[2], substitutions, general, duel)
+        return self.state(with_duel=True)
 
     @staticmethod
     def _describe(

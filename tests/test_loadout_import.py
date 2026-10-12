@@ -188,3 +188,29 @@ class TestSwitchAndFailures:
         importer.m.hover._resolve_player_lane.side_effect = RuntimeError("boom")
         importer.on_tick(session(), DraftState())  # lane inconnue -> _resolve_player_lane
         assert "erreur inattendue (RuntimeError)" in capsys.readouterr().out
+
+
+class TestRetarget:
+    """SPEC-27 tâche 125 : recalcul en partie, sans écriture dans le client LoL."""
+
+    def test_retarget_never_writes_to_the_client(self, importer, lcu, http):
+        importer.retarget(JINX, "bottom", "Draven")
+        assert lcu.calls == []
+
+    def test_retarget_updates_state_with_the_duel(self, importer, lcu, http):
+        importer.on_tick(session(), state())
+        general = importer.state(with_duel=True)
+        assert general["substitutions"] == []
+
+        refined = importer.retarget(JINX, "bottom", "Draven")
+
+        assert refined == importer.state(with_duel=True)
+        assert refined["champion_id"] == JINX and refined["label"] == "Jinx bottom"
+        assert refined["substitutions"] and 3 in refined["spells"]  # Fatigue remplace Barrière
+        assert writes(lcu).count(("POST", "/lol-perks/v1/pages")) == 1  # seul le lock-in a écrit
+
+    def test_retarget_unavailable_page_keeps_the_previous_state(self, importer, lcu, capsys):
+        with patch("src.draft.loadout.requests.get", side_effect=requests.ConnectionError):
+            assert importer.retarget(JINX, "bottom", None) is None
+        assert importer.state() is None
+        assert "[INFO] Build non importée" in capsys.readouterr().out
