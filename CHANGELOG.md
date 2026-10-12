@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+## [5.3.0] - 2026-10-13
+
+L'impact des événements d'une partie est maintenant attribué en entier aux joueurs (objectifs perdus, niveaux, récupération après mort : le « −20 pts non attribué » devient +0,8 pt), et la revue de partie classe les dix joueurs avec badges MVP et ACE. Aucune action requise (pas de migration, pas de scrape) : au prochain lancement, le rattrapage du Live Coach recalcule seul les impacts des parties déjà capturées.
+
 ### ✨ Feature
 
 - **Attribution complète de l'impact (SPEC-22)** — le « −20 pts non attribué » du rapport de fin de partie était un biais de construction : `impacts()` créditait l'équipe qui prenait un objectif mais ne débitait personne dans celle qui le perdait (−23,7 pts par partie sur 109 parties). Les objectifs perdus (`lost_tower`, `lost_baron`, …) sont maintenant débités à parts égales aux coéquipiers absents du lieu (les cinq si tous étaient présents) ; les niveaux sont attribués face à l'adversaire de lane (`levels`, repli sur la moyenne adverse si un poste est inconnu) et la récupération après une mort va à la victime, débitée à son tueur et à ses assistants (`respawn`), par une décomposition exacte du modèle de SPEC-20 (`WinModel.logit_parts`, segments par joueur dans `state.py`), sans second modèle. Résidu de l'équipe du joueur : **−21,4 → +0,8 pt en moyenne, 24,0 → 10,1 en valeur absolue** ; il ne garde que la valeur des avances qui évolue avec l'horloge (ligne « Temps » du rapport). Le rapport et le bilan listent les nouveaux types ; `attributed` de la page d'une partie suit le cumul complet du joueur. `model_version` porte la convention (`wp-xxxxxxxx+c2`, `WINPROB_IMPACT_CONVENTION`) : le rattrapage du Live Coach recalcule les parties rangées avant, avec les postes de l'écran de fin (absent ou corrompu : moyenne adverse, jamais d'exception). Mesure : `python scripts/bench_impact_residual.py`. Recalcul de la base réelle à laisser au Live Coach (joué sur une copie : 107 parties, aucune hors `+c2`).

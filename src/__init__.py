@@ -11,5 +11,5 @@ Modules:
 - config: Global configuration
 """
 
-__version__ = "5.2.0"
+__version__ = "5.3.0"
 __author__ = "League Stats Coach"
