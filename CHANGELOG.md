@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+## [5.2.0] - 2026-10-12
+
+Les items « Situationnels » de la build importée suivent maintenant le core choisi (nouveau bloc « Autres cores » pour les seconds items des autres cores), et les supports reçoivent enfin une build OneTricks. Aucune action requise (pas de migration, pas de scrape).
+
 ### 🐛 Fix
 
 - **Aucune build importée pour les supports** — OneTricks nomme ce poste `supp` ; `?role=support` répond 404, donc `get_page` échouait et rien n'était importé, et les parties `supp` n'étaient jamais retrouvées pour l'objectif du coach de gameplay (`objective_from_history`, même table). `LANE_TO_ONETRICKS_ROLE` traduit maintenant `support` en `supp`. Découvert par le banc de SPEC-31. Régression : `tests/regression/test_regression_onetricks_support_role.py`.
