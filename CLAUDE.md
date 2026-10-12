@@ -45,7 +45,7 @@ python build_app.py                              # exe PyInstaller
 - Continue jusqu'à ce que tout ce qui est demandé soit fait ; ne t'arrête que si tu es bloqué ou avant une action risquée.
 - Quand le travail demandé est fait et vérifié, arrête-toi et rapporte. N'ajoute ni fonctionnalité, ni test, ni doc, ni refactor non demandés ; propose-les à la fin.
 - Avant de dire « terminé » sur du code exécutable, lance un vrai check qui exerce le changement (pytest ciblé puis suite complète). Un `py_compile` seul ne compte pas.
-- Pas de revue par sous-agents sauf demande ; seuls `/implement` (agent `spec-verifier`) et `/ship` (agent `test-runner`) en lancent d'office. `/code-review` à la demande de @pj35.
+- Pas de revue par sous-agents sauf demande ; seuls `/implement` (agents `task-implementer` en Haiku 5.5, relu avant chaque commit, puis `spec-verifier`) et `/ship` (agent `test-runner`) en lancent d'office. `/code-review` à la demande de @pj35.
 - Fin de tâche : 3 à 6 lignes (fait, chiffre clé, question). Le détail va dans le CHANGELOG ou le commit.
 
 ## Où chercher
