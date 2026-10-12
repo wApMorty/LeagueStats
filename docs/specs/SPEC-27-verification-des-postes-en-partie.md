@@ -88,6 +88,20 @@ jeu (0-30 s, 30-60 s, 1-3 min, 3-10 min, 10 min et plus), la part des joueurs do
 blind au moins, pour les alliés inférés), consigné ici en §4.1 avec : minute d'apparition du champ, changements
 observés, conformité à l'écran de fin. La tâche s'arrête là : les constantes du §4.5 sont fixées d'après le relevé.
 
+**Relevé du 2026-10-12** (@pj35, `scripts/spike_live_positions.py`, une seule partie : solo classée, file 420, 28 min,
+341 relevés toutes les 5 s ; les deux parties demandées en plus, dont une normale blind, restent à relever et deviennent
+une vérification de la recette de §6) :
+
+- `position` est renseigné pour les **dix** joueurs, adversaires compris, dès le premier relevé, pendant l'écran de
+  chargement (`game_time` figé à 0,027 s) ; aucun changement de poste sur toute la partie.
+- Conformité à `detectedTeamPosition` de l'écran de fin : 100 % (alliés 1 705 relevés sur 1 705, adversaires 1 705 sur
+  1 705), dans chacune des cinq tranches de temps.
+- Noms : `rawChampionName` de Séraphine vaut `Character_Seraphine_Name` (pas `Seraphine`) ; `championName` est juste.
+  `resolve_champions` y retombe (raw puis champion). Wukong, Nunu & Willump et Renata Glasc : non observés.
+- Constantes : `REALITY_STABLE_S` = 10 s de temps de jeu (défaut conservé : aucun échange de lane observé, donc rien
+  ne justifie de le changer) ; source du poste : `allPlayers[*].position`, sans repli Châtiment.
+
+
 ### 4.2 Liste des joueurs dans le sujet `ingame` (tâche 123)
 
 `src/client/ingame.py` : `roster_of(data: dict) -> List[Dict[str, str]]`, fonction pure à côté de `me_of` : une entrée
