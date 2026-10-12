@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-10-12 (SPEC-30 livrée : écran « En partie » sur un seul écran, recette @pj35 à faire)
+**Mis à jour** : 2026-10-12 (SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette @pj35 à faire)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -299,6 +299,23 @@ Firefox headless. Passe **avant** la tâche 127 de SPEC-27, réécrite pour ce g
 | 139 | Gabarit et CSS : bandeau, grille à deux colonnes, tableau à 5 colonnes, place de la ligne SPEC-27, `GAME_CURVE_SIZE`, tests | 5 | 138 | ✅ |
 | 140 | Mesure : `scripts/measure_en_partie.py` (Firefox headless, cas le plus lourd, 1 920 × 986, ≥ 30 px de marge), ajustements. Mesuré : ancien gabarit `scrollHeight` 1 698 pour `clientHeight` 950 ; nouveau, 950 = 950, contenu 913 / 916 px (sans / avec modèle), marge 37 / **34 px**, `scrollWidth` 1 700 = 1 700 ; 1 400 × 900 : une colonne. Aucun ajustement de CSS (le script mesurait la marge sur `scrollHeight`, plafonné à `clientHeight` : mesure corrigée sur le bas du contenu) | 3 | 139 | ✅ |
 | 141 | Clôture : SPEC-27 §4.6 et tâche 127 réécrites, `CHANGELOG.md`, statuts, README des specs, recette @pj35 | 2 | 140 | ✅ 2026-10-12 : SPEC-27 §4.6, §5 et critère 6 visent `section.ig-draft` ; entrée `[Unreleased]`, statut de SPEC-30 et README des specs à jour ; recette réelle laissée à @pj35 (SPEC-30 §6) |
+
+### Lot suivant — SPEC-31, situationnels liés au core (🟡 rédigée le 2026-10-12)
+
+[SPEC-31](docs/specs/SPEC-31-situationnels-suivent-le-core.md) : « Situationnels » est rempli avec `popularItems`, sans
+rapport avec le core choisi (mesuré le 2026-10-12 : 4 à 6 items sur 8 hors du chemin du core à Ambessa et Yorick) ;
+`popPath`, que la page OneTricks publie par core, n'est jamais lu. Validé par @pj35 le 2026-10-12 : situationnels = suites
+du core, autres seconds items de core dans un bloc « Autres cores », items du duel admis seulement dans le chemin, seuil de
+bruit (liste plus courte). Restent à valider : valeur des deux seuils et volume du banc (12 pages). Découpage en SPEC-31 §5
+(tâches 142 à 146, 15 pts) :
+
+| # | Tâche | Pts | Dépend de | État |
+|---|---|---|---|---|
+| 142 | `_core_path`, `_item_blocks` (Situationnels par le chemin, bloc « Autres cores », repli), `Build.path_games`, constantes, fixture Ambessa, tests | 5 | — | ⬜ |
+| 143 | Duel : chemin lu sur les deux pages, items du duel dans le chemin ou « Autres cores », `blocks[-1]` corrigé, tests réécrits | 3 | 142 | ⬜ |
+| 144 | Banc `scripts/bench_loadout_paths.py` (12 pages espacées de 20 s), réglage des deux seuils | 3 | 143 | ⬜ |
+| 145 | Ligne console, bloc « Autres cores » dans l'écran « En partie », remesure `measure_en_partie.py` | 2 | 143 | ⬜ |
+| 146 | Clôture : `CHANGELOG.md`, notes SPEC-15, statuts, README des specs, recette @pj35 | 2 | 144, 145 | ⬜ |
 
 ### Lot suivant — SPEC-22, attribution complète de l'impact (🟡 rédigée le 2026-10-04)
 
