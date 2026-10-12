@@ -56,6 +56,7 @@ src/
 │   ├── scoring.py                     # DraftScorer (blend matchup + synergie)
 │   ├── recommendations.py              # Recommandations de pick en direct
 │   ├── final_analysis.py                # Écran de fin de draft
+│   ├── reality_check.py                 # Postes prédits vs réels en partie, recalcul du face-à-face (SPEC-27)
 │   ├── ban_advice.py                     # 3 écrans de bans (auto-hover, draft, adaptatif)
 │   ├── pool_selection.py                  # Sélection de la pool de la session
 │   ├── loadout.py, loadout_lcu.py, loadout_import.py  # Import des builds OneTricks (SPEC-15)

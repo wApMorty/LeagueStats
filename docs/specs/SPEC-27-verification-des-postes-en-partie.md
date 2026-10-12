@@ -1,12 +1,19 @@
 # SPEC-27 — Vérification des postes en partie et recalcul de l'écran « En partie »
 
-**Statut** : 🟡 Rédigée le 2026-10-08. Approche validée par @pj35 (§3, A) ; le déclencheur exact dépend du spike de la
-tâche 122 (§2, « À valider »).
+**Statut** : ✅ Livrée le 2026-10-12 (tâches 122 à 128). Approche validée par @pj35 (§3, A) ; déclencheur fixé par le
+relevé de la tâche 122 (§4.1). Recette en partie réelle et deux relevés de plus (dont une normale blind) à faire par
+@pj35 (§6).
 
 **Origine** : @pj35, 2026-10-08 : « vérifier une fois la game lancée que les ennemis sont au rôle prédit, et ajuster
 les données de l'écran "En partie", avec les données du matchup et les builds recommandés ».
 
 **Effort** : ~2,5 jours, 7 tâches (§5, 23 pts), dont un relevé sur de vraies parties joué par @pj35.
+
+**Écarts de réalisation** : `EOG_LANES` n'est pas dupliqué (`reality_check` importe `EOG_POSITIONS` de
+`coaching/metrics.py`) ; `real_lanes` n'accepte une équipe que si ses cinq champions sont résolus et ses cinq postes
+valides et distincts (un nom introuvable rend toute l'équipe `partial`) ; page de build choisie à la main
+(`loadout.manual`) : l'analyse est recalculée, la build conservée ; `REALITY_NAMED_MAX` (2, écran) vit dans
+`src/config_client.py`, les deux seuils de décision dans `src/config_constants.py` ; `at` est le temps de jeu du relevé.
 
 ---
 
@@ -169,7 +176,7 @@ d'identité sur les cas de `tests/test_loadout_import.py`).
 `mismatches` avec nom du champion, poste prédit et poste réel en français, `at` : temps de jeu du relevé). `None` : rien
 n'a été vérifié (c'est le cas avant le relevé, et pour toute draft d'avant la spec).
 
-`src/config_constants.py`, `DraftConfig` : `REALITY_STABLE_S: float = 10.0` (défaut proposé, fixé par la tâche 122) ;
+`src/config_constants.py`, `DraftConfig` : `REALITY_STABLE_S: float = 10.0` (fixé par le relevé de la tâche 122, §4.1) ;
 `REALITY_MAX_CORRECTIONS: int = 3` (borne de sûreté, aucune mesure derrière).
 
 ### 4.6 Écran « En partie » (tâche 127)
@@ -234,8 +241,8 @@ Numéros globaux : à la suite de la tâche 121 de `TODO.md`.
 6. `python -m pytest tests/test_client_en_partie.py -v` : les états `ok`, `corrected`, `partial` et l'absence de `reality`
    s'affichent comme au §4.6 ; une ligne du face-à-face dont le champion est corrigé porte « poste corrigé » ; et
    `python scripts/measure_en_partie.py` reste `[OK]` (marge ≥ 30 px) avec la ligne réelle rendue.
-7. Aucune requête SQL nouvelle (la spec ne touche pas la base) ; `git grep -n "REALITY_" src/` ne trouve les seuils que
-   dans `src/config_constants.py`.
+7. Aucune requête SQL nouvelle (la spec ne touche pas la base) ; `git grep -n "REALITY_" src/` ne trouve les seuils
+   que dans `src/config_constants.py` (et `REALITY_NAMED_MAX`, d'affichage, dans `src/config_client.py`).
 8. Pas de migration : `python -m alembic upgrade head` n'a rien à appliquer pour cette spec.
 9. `CHANGELOG.md` (`[Unreleased]`), statut de cette spec et `docs/specs/README.md` à jour.
 
@@ -243,7 +250,8 @@ Numéros globaux : à la suite de la tâche 121 de `TODO.md`.
 faux poste avec la commande du Live Coach (`r <champion> <lane>`, SPEC-04 B5) sur un champion adverse ; une fois la
 partie lancée et le relevé stable, la console affiche `[ALERTE] Postes corrigés en partie : …`, l'écran « En partie »
 montre la ligne « Postes corrigés » et le tableau recalculé, et la build cite le vrai vis-à-vis. Sans poste forcé, une
-draft juste affiche `[OK] Postes vérifiés en partie : 10/10 conformes`.
+draft juste affiche `[OK] Postes vérifiés en partie : 10/10 conformes`. Faire aussi deux relevés de plus avec
+`scripts/spike_live_positions.py`, dont une normale blind (alliés inférés), pour confirmer §4.1.
 
 ## 7. Hors périmètre
 

@@ -230,7 +230,7 @@ séquence se rejoue) ; il doit rester jusqu'à l'ouverture de la draft. À la fi
 | 120 | Bascule vers « En partie » : `Transition.go` exposé, sujet `phase` dans `found.js` | 3 | 119 | ✅ 2026-10-08 : 13 tests ; `window.Transition = { go }`, `found.js` écoute le sujet `phase` et appelle `Transition.go("/en-partie")` au seul passage `draft` vers `game` (jamais au premier événement vu, ni si `/en-partie` est déjà ouverte), `en_partie.js` inchangé ; **recette @pj35** : verrouiller les 10 champions, le client bascule sur « En partie » depuis la draft puis depuis une autre page |
 | 121 | Clôture : SPEC-24 et SPEC-25 rouvertes, `CHANGELOG.md`, statuts | 2 | 119, 120 | ✅ 2026-10-08 : entrées Fix et Feature sous `[Unreleased]`, statut de SPEC-26, SPEC-24 §2 et §7, SPEC-25 §7 et README des specs à jour ; recette réelle laissée à @pj35 (SPEC-26 §6) |
 
-### Lot suivant — SPEC-27, vérification des postes en partie (🟡 rédigée le 2026-10-08)
+### Lot suivant — SPEC-27, vérification des postes en partie (✅ livrée le 2026-10-12, recette @pj35 à faire)
 
 [SPEC-27](docs/specs/SPEC-27-verification-des-postes-en-partie.md) : les postes adverses sont devinés pendant la draft
 (85 % d'équipes adverses entièrement justes sur 69 parties, mesure rejouée) et plus jamais vérifiés ; l'écran « En
@@ -247,7 +247,7 @@ spike de la tâche 122. Découpage en SPEC-27 §5 (tâches 122 à 128, 23 pts) :
 | 125 | `LoadoutImporter.retarget` (calcul sans écriture dans le client LoL), `_import` inchangé, tests | 3 | — | ✅ 2026-10-12 : 3 tests ; `_import` scindé en `_compute` + application, `retarget` sans écriture dans le client LoL, tests existants inchangés |
 | 126 | `RealityCheck.step` : stabilité, recalcul de l'analyse et de la build, republication du sujet `game`, console, remise à zéro, appel dans `monitor_loop` | 5 | 122, 123, 124, 125 | ✅ 2026-10-12 : 18 tests ; `RealityCheck.step` (stabilité 10 s de jeu, recalcul de `game` et de la build, `REALITY_MAX_CORRECTIONS` = 3, remise à zéro), appel dans `monitor_loop` en `InProgress` ; page choisie à la main : analyse recalculée, build conservée |
 | 127 | Écran « En partie » (gabarit SPEC-30) : ligne d'état entre `.panel-head` et `table.ig-table` de `section.ig-draft`, marquage des lignes corrigées du tableau à 5 colonnes, `FinalAnalysis.reality` ; `scripts/measure_en_partie.py` reste `[OK]` avec la ligne réelle | 3 | 126 | ✅ 2026-10-12 : 12 tests ; ligne `.ig-reality` (quatre états), lignes `is-corrected` + « poste corrigé », `FinalAnalysis.reality` ; `measure_en_partie.py` `[OK]` : marge **30 px** (seuil 30, sans marge de sécurité : 33 px sans modèle, 30 px avec) |
-| 128 | Clôture : `CHANGELOG.md`, statut, `docs/specs/README.md`, `PROJECT_STRUCTURE.md`, recette @pj35 | 2 | 127 | ⬜ |
+| 128 | Clôture : `CHANGELOG.md`, statut, `docs/specs/README.md`, `PROJECT_STRUCTURE.md`, recette @pj35 | 2 | 127 | ✅ 2026-10-12 : `CHANGELOG.md`, statut de SPEC-27, README des specs et `PROJECT_STRUCTURE.md` à jour ; recette réelle laissée à @pj35 (SPEC-27 §6) |
 
 ### Lot suivant — SPEC-28, la draft suivante ne doit plus rester muette (✅ livrée le 2026-10-09, recette @pj35 à faire)
 
