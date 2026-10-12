@@ -347,7 +347,7 @@ Découpage en SPEC-22 §5 (tâches 57 à 61, 16 pts) :
 | 58 | Objectifs perdus : lignes `lost_*` aux coéquipiers absents | 3 | 57 | ✅ 2026-10-13 : 4 tests (symétrie, cinq présents, absents seuls, kill) + 1 test du rapport |
 | 59 | `WinModel.logit_parts`, segments par joueur, lignes `levels` et `respawn` | 5 | 58 | ✅ 2026-10-13 : résidu de 109 parties : +0,8 / 10,1 pts (max 39,6), 7 tests |
 | 60 | Convention versionnée dans `model_version`, `raw_eog`, recalcul des 45 parties | 3 | 59 | ✅ 2026-10-13 : rattrapage joué sur une copie de la base (107 parties, 0 hors `+c2`) ; recalcul de la base réelle ⬜ @pj35 |
-| 61 | Rapport, bilan, libellés, mesure finale, `CHANGELOG.md` | 3 | 60 | ⬜ |
+| 61 | Rapport, bilan, libellés, mesure finale, `CHANGELOG.md` | 3 | 60 | ✅ 2026-10-13 : résidu +0,8 / 10,1 pts sur 109 parties (avant −21,4 / 24,0) |
 
 ### Lot suivant — SPEC-23, débit de la collecte (🟡 rédigée le 2026-10-04)
 

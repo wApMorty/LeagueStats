@@ -52,7 +52,7 @@ def test_report_for_a_blue_player_lists_costs_and_gains():
     assert any(line.startswith("  Courbe") for line in lines)
     costly = [line for line in lines if line.startswith("  Plus coûteux")]
     assert costly and "mort à 1:34" in " ".join(costly)  # tué avec assistance : pas « solo »
-    assert any("Non attribué" in line for line in lines)
+    assert any(line.startswith("  Temps (valeur des avances") for line in lines)
 
 
 def test_solo_death_is_flagged_with_the_objective_lost_right_after():
@@ -136,3 +136,24 @@ def test_levels_and_respawn_rows_are_listed_without_an_event():
     text = "\n".join(lines)
     assert "-40 pts, niveaux face à ton adversaire de lane" in text
     assert "+40 pts, récupération après mort" in text
+
+
+def test_review_names_the_new_types_and_counts_levels_and_respawn_once_per_game():
+    from src.winprob.report import TYPE_LABELS, impact_review
+
+    rows = []
+    for game_id in range(3, 0, -1):
+        rows += [
+            _row(game_id, "lost_tower", -0.05),
+            _row(game_id, "lost_tower", -0.05),
+            _row(game_id, "levels", -0.08),
+            _row(game_id, "respawn", 0.07),
+            _row(game_id, "kill", 0.01),
+        ]
+    lines = impact_review(rows)
+    text = "\n".join(lines)
+    assert "farm" not in text and "temps" not in lines[0]
+    assert "Niveaux face à ton adversaire de lane" in text
+    assert "Tours perdues" in text and "2.0 par partie" in text  # deux tours perdues par partie
+    assert "1.0 par partie" in text  # `levels` : une ligne par partie
+    assert all(TYPE_LABELS[f"lost_{k}"] for k in ("baron", "dragon", "elder", "herald", "grubs"))

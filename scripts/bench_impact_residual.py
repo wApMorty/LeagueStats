@@ -2,12 +2,12 @@
 
 Lit `data/db.db` en lecture seule, rejoue `impacts()` avec le modèle courant sur les parties
 ayant une timeline, et imprime pour l'équipe du joueur le résidu non attribué (en points, ×100) :
-moyenne, moyenne en valeur absolue, maximum en valeur absolue, puis sa composition :
-objectifs pris par l'équipe adverse (somme du ΔP des événements qu'elle marque) et dérive
-(résidu moins objectifs adverses).
+moyenne, moyenne en valeur absolue, maximum en valeur absolue, puis ce que les lignes de
+l'équipe portent hors événements de combat : objectifs perdus (`lost_*`), niveaux et respawn.
 
 Ce n'est pas un test : les chiffres dépendent de la base réelle et du modèle entraîné.
-Base de référence au §1 de SPEC-22 : −20,3 / 25,1 sur 45 parties (2026-10-04).
+Base de référence (avant SPEC-22) : −20,3 / 25,1 sur 45 parties (2026-10-04), −21,4 / 24,0 sur
+les 108 parties de la base au 2026-10-13.
 
 USAGE:
     python scripts/bench_impact_residual.py
@@ -23,9 +23,8 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from src.config import config  # noqa: E402
-from src.winprob.impact import event_kind, impacts, scoring_team  # noqa: E402
+from src.winprob.impact import impacts  # noqa: E402
 from src.winprob.model import WinModel  # noqa: E402
-from src.winprob.state import BLUE, transitions  # noqa: E402
 from src.winprob.train import model_path  # noqa: E402
 
 
@@ -34,24 +33,17 @@ def _points(value: float) -> str:
     return f"{value * 100:.1f}".replace(".", ",")
 
 
-def _side(team: int, delta: float) -> float:
-    """ΔP d'un événement orienté du point de vue de `team` (même convention que `impacts()`)."""
-    return delta if team == BLUE else -delta
-
-
-def _objectives_against(
-    model: WinModel, game: dict, timeline: dict, team: int, teams: dict
-) -> float:
-    """Somme du ΔP des objectifs (hors kills) marqués par l'équipe adverse, orienté `team`."""
-    total = 0.0
-    for e, before, after in transitions(game, timeline):
-        if event_kind(e) == "kill":
+def _carried(result: dict, teams: dict, team: int) -> dict:
+    """Somme, pour l'équipe `team`, des lignes `lost_*`, `levels` et `respawn` de `impacts()`."""
+    carried = {"objectifs perdus": 0.0, "niveaux": 0.0, "respawn": 0.0}
+    for r in result["rows"]:
+        if teams[r["participant_id"]] != team:
             continue
-        scorer = scoring_team(e, teams)
-        if scorer is None or scorer == team:
-            continue
-        total += _side(team, model.predict(after) - model.predict(before))
-    return total
+        label = "objectifs perdus" if r["event_type"].startswith("lost_") else r["event_type"]
+        label = {"levels": "niveaux"}.get(label, label)
+        if label in carried:
+            carried[label] += r["delta_p"]
+    return carried
 
 
 def _read_games(conn: sqlite3.Connection) -> Tuple[List[Tuple[dict, dict, int]], int]:
@@ -94,15 +86,13 @@ def main() -> None:
     finally:
         conn.close()
 
-    residuals, objectives, drifts = [], [], []
+    residuals, carried = [], []
     for game, timeline, team in games:
         result = impacts(model, game, timeline)
         residual = result["teams"].get(team, {}).get("unattributed", 0.0)
         teams = {p["participantId"]: p["teamId"] for p in game["participants"]}
-        against = _objectives_against(model, game, timeline, team, teams)
         residuals.append(residual)
-        objectives.append(against)
-        drifts.append(residual - against)
+        carried.append(_carried(result, teams, team))
 
     n = len(residuals)
     print(f"[DATA] Modèle {model.version}, parties avec timeline rejouées : {n}")
@@ -118,10 +108,8 @@ def main() -> None:
         f"[DATA] Résidu équipe du joueur (pts) : moyenne {_points(mean)}, "
         f"valeur absolue {_points(absolute)}, maximum en valeur absolue {_points(maximum)}"
     )
-    print(
-        f"[DATA] Composition (moyenne, pts) : objectifs adverses "
-        f"{_points(sum(objectives) / n)}, dérive {_points(sum(drifts) / n)}"
-    )
+    parts = ", ".join(f"{k} {_points(sum(c[k] for c in carried) / n)}" for k in carried[0])
+    print(f"[DATA] Porté par les lignes de l'équipe (moyenne, pts) : {parts}")
 
 
 if __name__ == "__main__":

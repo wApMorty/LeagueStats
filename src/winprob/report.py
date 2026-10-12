@@ -112,8 +112,9 @@ def impact_report(model: WinModel, game: dict, timeline: dict, pid: int, result:
     team = result["teams"].get(teams[pid])
     if team:
         lines.append(
-            f"  Non attribué (temps, farm, niveaux) : {_pts(team['unattributed'])} pts pour ton "
-            "équipe ; vision, placement et gestion de vague ne sont pas mesurés"
+            f"  Temps (valeur des avances qui évolue avec l'horloge, non attribuable) : "
+            f"{_pts(team['unattributed'])} pts pour ton équipe ; vision, placement et gestion de "
+            "vague ne sont pas mesurés"
         )
     return lines
 
@@ -132,6 +133,15 @@ TYPE_LABELS = {
     "kill": "Kills",
     "assist": "Assistances",
     **{kind: label.capitalize() for kind, label in LABELS.items()},
+    "lost_baron": "Nashors perdus",
+    "lost_dragon": "Dragons perdus",
+    "lost_elder": "Anciens perdus",
+    "lost_herald": "Hérauts perdus",
+    "lost_grubs": "Larves perdues",
+    "lost_tower": "Tours perdues",
+    "lost_inhibitor": "Inhibiteurs perdus",
+    "levels": "Niveaux face à ton adversaire de lane",
+    "respawn": "Récupération après mort",
 }
 
 
@@ -149,7 +159,7 @@ def impact_review(rows: List[dict]) -> List[str]:
     n = len(totals)
     lines = [
         f"\n  Impact sur la win chance, sur {n} partie(s) : {_pts(mean(totals))} pts par partie "
-        "en moyenne (tes événements, hors temps, farm et niveaux)"
+        "en moyenne (tes événements, niveaux et récupérations après mort compris)"
     ]
     half = n // 2
     if half >= coaching_config.MIN_TREND_SAMPLE:

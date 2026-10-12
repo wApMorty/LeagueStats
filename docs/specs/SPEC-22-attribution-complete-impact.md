@@ -32,6 +32,10 @@ Mesuré le 2026-10-04 sur les 45 parties du joueur qui ont une timeline (`data/d
   (`dead_s`) et les niveaux (`level`). Attribués aux joueurs (§4.2 et §4.3), il reste **−1,5 pt en
   moyenne, 10,3 en valeur absolue** (maximum 39,6) : compteurs × temps (9,4) et expiration du
   buff de Nashor ou d'Ancien (1,8). Prototype jetable, non versionné.
+- **Mesure après implémentation (2026-10-13)** : `python scripts/bench_impact_residual.py`, 109 parties
+  avec timeline (la base en comptait 45 à la rédaction, 108 à la tâche 57 : −21,4 / 24,0), même modèle
+  `wp-361f2990` : résidu de l'équipe du joueur **+0,8 pt en moyenne, 10,1 en valeur absolue** (maximum
+  39,6). Objectifs perdus portés par l'équipe : −23,7 pts, respawn +1,6, niveaux −0,0 (somme d'équipe).
 - Le libellé du rapport (`src/winprob/report.py:93`) est faux sur un point : le **CS n'est pas dans le
   modèle** (`INPUTS` exclut `cs`, `src/winprob/model.py:20`, spike du 2026-10-02) ; « farm » n'y
   entre que par les niveaux (l'XP).

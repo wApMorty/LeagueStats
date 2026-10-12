@@ -387,7 +387,7 @@ def game_page(
             "profitable": sorted(
                 (e for e in mine if e["mine_delta"] > 0), key=lambda e: -e["mine_delta"]
             )[: client_config.GAME_TOP],
-            "attributed": _pts(sum(e["mine_delta"] for e in mine)),
+            "attributed": _pts(sum(r["delta_p"] for r in rows if r["participant_id"] == pid)),
             "residual": _pts(residual) if residual is not None else None,
         }
         classed = ranking(rows, game, roles, pid, champions)
@@ -462,8 +462,8 @@ def _bar(delta: float, biggest: float) -> dict:
 def _residual(
     model: Optional[WinModel], game: dict, timeline: dict, rows: List[dict], team: int
 ) -> Optional[float]:
-    """Ce que le temps, le farm et les niveaux ont changé hors des événements, pour l'équipe du joueur
-    (non attribué). Recalculé avec le modèle qui a produit les lignes stockées : d'une autre version,
+    """Ce que la valeur des avances a changé avec l'horloge, hors des événements, pour l'équipe du
+    joueur (non attribuable). Recalculé avec le modèle qui a produit les lignes stockées : d'une autre version,
     il ne leur correspondrait plus et n'est pas affiché."""
     if model is None or rows[0]["model_version"].split("+")[0] != model.version:
         return None
