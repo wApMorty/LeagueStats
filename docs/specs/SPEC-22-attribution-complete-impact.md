@@ -1,7 +1,9 @@
 # SPEC-22 — Attribution complète de l'impact (objectifs perdus, niveaux, respawn)
 
-**Statut** : 🟡 **Rédigée le 2026-10-04**, périmètre, règle des objectifs perdus et modèle unique
-validés par @pj35 (§2). Trois conventions restent « à valider » (§2).
+**Statut** : ✅ **Implémentée le 2026-10-13** (tâches 57 à 61), périmètre, règle des objectifs perdus et
+modèle unique validés par @pj35 (§2) ; les trois conventions « à valider » ont été appliquées telles
+qu'écrites avec le plan du 2026-10-13. Reste à faire par @pj35 : laisser le Live Coach recalculer les
+parties de `data/db.db` (critère 6, joué ici sur une copie : 107 parties, 0 hors `+c2`).
 
 **Origine** : @pj35, 2026-10-04, sur le rapport de fin de partie : « Non attribué (temps, farm,
 niveaux) : −20 pts pour ton équipe ; vision, placement et gestion de vague ne sont pas mesurés. Il
