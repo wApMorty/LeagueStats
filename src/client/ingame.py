@@ -33,6 +33,8 @@ OBJECTIVES = {
     "InhibKilled": "inhibitor",
 }
 _STRUCTURE_OWNER = {"TOrder": "ORDER", "TChaos": "CHAOS", "T1": "ORDER", "T2": "CHAOS"}
+# Format de l'API : `rawChampionName` vaut « game_character_displayname_<Nom> ».
+_RAW_CHAMPION_PREFIX = "game_character_displayname_"
 
 
 def _load_model() -> Optional[WinModel]:
@@ -84,6 +86,22 @@ def me_of(data: dict) -> Optional[dict]:
             if key != "Passive"
         },
     }
+
+
+def roster_of(data: dict) -> List[Dict[str, str]]:
+    """Les dix joueurs de `allPlayers` : champion, nom brut, équipe et poste (`""` si absent).
+
+    Aucune identité de joueur (`summonerName`, `riotId`) : seuls le champion et son poste sortent.
+    """
+    return [
+        {
+            "champion": player.get("championName") or "",
+            "raw": (player.get("rawChampionName") or "").removeprefix(_RAW_CHAMPION_PREFIX),
+            "team": player.get("team") or "",
+            "position": player.get("position") or "",
+        }
+        for player in data["allPlayers"]
+    ]
 
 
 def objectives_of(data: dict) -> List[Dict[str, Any]]:
@@ -195,6 +213,7 @@ class LiveGame:
             "delta": delta,
             "objectives": objectives_of(data),
             "me": me_of(data),
+            "roster": roster_of(data),
         }
         self._publish(
             "live", {**self._last_payload, "series": [list(point) for point in self.series]}

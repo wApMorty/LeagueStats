@@ -242,7 +242,7 @@ spike de la tâche 122. Découpage en SPEC-27 §5 (tâches 122 à 128, 23 pts) :
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
 | 122 | Spike : `scripts/spike_live_positions.py`, relevé de 3 parties par @pj35 (champ `position` vs `detectedTeamPosition`), constantes | 3 | — | ⬜ |
-| 123 | `roster_of` dans `LiveGame` et le sujet `ingame`, tests | 2 | — | ⬜ |
+| 123 | `roster_of` dans `LiveGame` et le sujet `ingame`, tests | 2 | — | ✅ 2026-10-12 : 3 tests ; `roster_of` dans `src/client/ingame.py`, clé `roster` dans les états `live` et `ended`, aucune identité |
 | 124 | `reality_check.py` : `resolve_champions`, `real_lanes`, `compare`, tests | 5 | — | ⬜ |
 | 125 | `LoadoutImporter.retarget` (calcul sans écriture dans le client LoL), `_import` inchangé, tests | 3 | — | ⬜ |
 | 126 | `RealityCheck.step` : stabilité, recalcul de l'analyse et de la build, republication du sujet `game`, console, remise à zéro, appel dans `monitor_loop` | 5 | 122, 123, 124, 125 | ⬜ |

@@ -11,7 +11,7 @@ from unittest.mock import Mock
 import pytest
 
 from src.client.bus import EventBus
-from src.client.ingame import TOPIC, LiveGame, me_of, objectives_of
+from src.client.ingame import TOPIC, LiveGame, me_of, objectives_of, roster_of
 from src.config_client import client_config
 from src.winprob import live
 from src.winprob.model import fit
@@ -169,6 +169,45 @@ def test_moi_objets_or_et_competences_de_la_partie_reelle():
     assert me["gold"] == pytest.approx(858.0, abs=0.1)
     assert [item["id"] for item in me["items"]][:3] == [1120, 1036, 3071]
     assert me["abilities"] == {"Q": 5, "W": 1, "E": 5, "R": 2}
+
+
+def test_roster_dix_joueurs_cinq_par_equipe_sans_identite():
+    data = load("allgamedata_items.json")
+    roster = roster_of(data)
+    assert len(roster) == 10
+    teams = [entry["team"] for entry in roster]
+    assert teams.count("ORDER") == 5 and teams.count("CHAOS") == 5
+    by_champion = {entry["champion"]: entry for entry in roster}
+    assert by_champion["Lee Sin"]["raw"] == "LeeSin"
+    assert by_champion["Twisted Fate"]["raw"] == "TwistedFate"
+    assert by_champion["Yorick"] == {
+        "champion": "Yorick",
+        "raw": "Yorick",
+        "team": "ORDER",
+        "position": "TOP",
+    }
+    assert all(set(entry) == {"champion", "raw", "team", "position"} for entry in roster)
+    dumped = json.dumps(roster)
+    for player in data["allPlayers"]:
+        for key in ("summonerName", "riotId", "riotIdGameName"):
+            if player.get(key):
+                assert player[key] not in dumped
+
+
+def test_roster_position_absente_donne_chaine_vide():
+    data = load("allgamedata_items.json")
+    del data["allPlayers"][0]["position"]
+    assert roster_of(data)[0]["position"] == ""
+
+
+def test_le_sujet_live_et_ended_portent_le_roster():
+    live_game, bus = game(Feed(load("allgamedata_items.json")))
+    live_game.tick()
+    assert len(bus.latest(TOPIC)["roster"]) == 10
+    live_game.phases["value"] = "EndOfGame"
+    live_game.tick()
+    ended = bus.latest(TOPIC)
+    assert ended["state"] == "ended" and len(ended["roster"]) == 10
 
 
 def test_objectifs_avec_leur_camp():
