@@ -241,7 +241,7 @@ spike de la tâche 122. Découpage en SPEC-27 §5 (tâches 122 à 128, 23 pts) :
 
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
-| 122 | Spike : `scripts/spike_live_positions.py`, relevé de 3 parties par @pj35 (champ `position` vs `detectedTeamPosition`), constantes | 3 | — | ⬜ |
+| 122 | Spike : `scripts/spike_live_positions.py`, relevé de 3 parties par @pj35 (champ `position` vs `detectedTeamPosition`), constantes | 3 | — | ⬜ script livré (`scripts/spike_live_positions.py`, `--compare` essayé sur base temporaire), relevé de 3 parties par @pj35 en attente |
 | 123 | `roster_of` dans `LiveGame` et le sujet `ingame`, tests | 2 | — | ✅ 2026-10-12 : 3 tests ; `roster_of` dans `src/client/ingame.py`, clé `roster` dans les états `live` et `ended`, aucune identité |
 | 124 | `reality_check.py` : `resolve_champions`, `real_lanes`, `compare`, tests | 5 | — | ✅ 2026-10-12 : 13 tests ; `resolve_champions`, `real_lanes` (équipe retenue si 5 postes valides et distincts), `compare` ; formes de noms Wukong, Nunu, Renata à confirmer par le relevé 122 |
 | 125 | `LoadoutImporter.retarget` (calcul sans écriture dans le client LoL), `_import` inchangé, tests | 3 | — | ✅ 2026-10-12 : 3 tests ; `_import` scindé en `_compute` + application, `retarget` sans écriture dans le client LoL, tests existants inchangés |
