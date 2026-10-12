@@ -43,6 +43,27 @@
       <p class="empty">{{ g.curve_note }}</p>
       {% endif %}
     </section>
+    {% if g.ranking %}
+    <section class="panel ranking" data-fade="1" data-delay="400">
+      <div class="ranking-head"><h2>Classement de la partie</h2><span class="muted-2">impact sur la win chance, pts</span></div>
+      <div class="ranking-teams">
+        {% for team in g.ranking.teams %}
+        <div class="rank-team {{ 'win' if team.win else 'loss' }}">
+          <div class="queue-name">{{ 'Ton équipe' if team.mine else 'Équipe adverse' }} · {{ 'Victoire' if team.win else 'Défaite' }}</div>
+          {% for p in team.players %}
+          <div class="rank-row {{ p.tone }}{% if p.me %} is-me{% endif %}" data-rise="1" data-delay="{{ 600 + loop.index0 * 70 }}">
+            <span class="rank-n tab muted-2">{{ p.rank }}</span>
+            {% if p.portrait %}<img class="rank-champ" src="{{ p.portrait }}" alt="{{ p.champion }}" width="40" height="40">{% else %}<span class="rank-champ"></span>{% endif %}
+            <span class="rank-who"><span class="rank-name"><b>{{ p.champion }}{% if p.me %}<em>toi</em>{% endif %}</b>{% if p.badge %}<span class="rank-badge {{ p.badge|lower }}" aria-label="{{ p.badge }} de la partie"><svg viewBox="0 0 24 16" width="16" height="11" aria-hidden="true"><path d="M2 14 L1 3 L7 8 L12 1 L17 8 L23 3 L22 14 Z"/></svg>{{ p.badge }}</span>{% endif %}</span><i>{% if p.role %}{{ p.role }} · {% endif %}{{ p.kda }}</i></span>
+            <span class="diverge"><i class="diverge-bar" style="left: {{ p.left }}%; width: {{ p.width }}%"></i></span>
+            <b class="rank-pts tab">{{ p.impact_text }}</b>
+          </div>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
     {% if g.impact.available %}
     <div class="tops">
       {% for title, tone, rows in (("Les plus coûteux", "cost", g.impact.costly), ("Les plus rentables", "gain", g.impact.profitable)) %}

@@ -12,7 +12,13 @@ from src.client.draft_view import Champions
 from src.client.review import game_page
 from src.config_client import client_config
 from src.repositories.coaching import CoachingRepository
-from tests.test_client_parties import capture, impact, modele, roles  # noqa: F401 (fixture modele)
+from tests.test_client_parties import (  # noqa: F401 (fixture modele)
+    capture,
+    client,
+    impact,
+    modele,
+    roles,
+)
 
 CHAMPIONS = {
     "data": {
@@ -244,3 +250,41 @@ def test_sans_timeline_pas_de_classement_meme_avec_impact_stocke(db, assets, mod
     assert page["ranking"] is None
     assert page["curve_note"].startswith("Pas de timeline")
     assert page["impact_note"] is None
+
+
+# ---------- rendu (tâche 149 : panneau « Classement de la partie ») ----------
+
+
+@pytest.mark.parametrize("url", ["/postgame", f"/parties/{GAME_ID}"])
+def test_panneau_dix_portraits_un_mvp_un_ace_une_ligne_toi(db, temp_db, assets, modele, url):
+    capture(db, pid=1)
+    roles(db, GAME_ID)
+    impact(db)
+    html = client(temp_db, assets).get(url).text
+    assert "Classement de la partie" in html
+    assert len(re.findall(r'<img class="rank-champ" src="/assets/champion/\w+\.png"', html)) == 10
+    assert html.count('aria-label="MVP de la partie"') == 1
+    assert html.count('aria-label="ACE de la partie"') == 1
+    assert html.count("rank-row ") == 10 and html.count(" is-me") == 1
+    assert html.count("<em>toi</em></b>") == 1
+
+
+def test_panneau_defaite_equipe_du_joueur_a_gauche_avec_l_ace(db, temp_db, assets, modele):
+    capture(db, pid=6)
+    roles(db, GAME_ID)
+    impact(db)
+    html = client(temp_db, assets).get(f"/parties/{GAME_ID}").text
+    first, second = html.split('<div class="rank-team ')[1:3]
+    assert first.startswith("loss") and "Ton équipe · Défaite" in first
+    assert 'aria-label="ACE de la partie"' in first and "MVP" not in first.split("<img")[0]
+    assert second.startswith("win") and 'aria-label="MVP de la partie"' in second
+
+
+@pytest.mark.parametrize("timeline", [True, False])
+def test_sans_impact_ou_sans_timeline_le_panneau_est_absent(db, temp_db, assets, modele, timeline):
+    capture(db, pid=1, timeline=timeline)
+    if not timeline:
+        impact(db)
+    response = client(temp_db, assets).get(f"/parties/{GAME_ID}")
+    assert response.status_code == 200
+    assert "Classement de la partie" not in response.text

@@ -825,6 +825,36 @@ h2 { margin: 0; font: 600 24px/1 var(--font-title); }
 .top-row i { display: block; font-style: normal; font-size: 13px; color: var(--muted); }
 .top-delta { font: 600 30px/1 var(--font-title); }
 
+/* Classement de la partie (SPEC-32) : deux listes de cinq, portraits, barres, couronnes MVP et ACE */
+.ranking { display: flex; flex-direction: column; gap: 14px; }
+.ranking-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.ranking-head span { font-size: 12px; }
+.ranking-teams { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; }
+.rank-team { --c: var(--mint); min-width: 0; }
+.rank-team.loss { --c: var(--rose); }
+.rank-team .queue-name { padding-bottom: 8px; border-bottom: 1px solid oklch(0.74 0.11 55 / 0.2); }
+.rank-row { --t: var(--mint); display: grid; grid-template-columns: 18px 40px minmax(0, 1fr) 96px 52px; align-items: center; gap: 10px;
+  height: 54px; border-bottom: 1px solid oklch(0.74 0.11 55 / 0.07); font-size: 14px; }
+.rank-row.cost { --t: var(--rose); }
+.rank-row.is-me { background: linear-gradient(90deg, oklch(0.74 0.11 55 / 0.12), transparent); }
+.rank-n { text-align: center; }
+.rank-champ { display: block; width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--c); background: var(--surface); object-fit: cover; }
+.rank-who { min-width: 0; }
+.rank-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.rank-who b { display: block; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font: 600 18px/1.1 var(--font-title); }
+.rank-who em { margin-left: 6px; font: 11px var(--font-ui); font-style: normal; letter-spacing: 0.1em; text-transform: uppercase; color: var(--copper); }
+.rank-who i { display: block; font-style: normal; font-size: 13px; color: var(--muted); }
+.rank-badge { --b: var(--gold); display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px;
+  border: 1px solid var(--b); color: var(--b); font-size: 11px; font-weight: 700; letter-spacing: 0.12em; }
+.rank-badge.ace { --b: var(--violet); }
+.rank-badge svg { fill: currentColor; }
+.rank-row .diverge { margin: 0; }
+.rank-row .diverge-bar { background: var(--t); box-shadow: 0 0 8px var(--t); }
+.rank-pts { text-align: right; color: var(--t); }
+@media (max-width: 1500px) {
+  .ranking-teams { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+}
+
 /* Post-game (tâche 75) : en-tête, axes jugés, LP, pile d'impact, écarts */
 .page-game { --halo-1: 100% 10%; --halo-2: 10% 0%; --halo-3: 40% 100%; }
 .game-hero { align-items: center; }
