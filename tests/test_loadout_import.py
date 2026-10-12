@@ -214,3 +214,18 @@ class TestRetarget:
             assert importer.retarget(JINX, "bottom", None) is None
         assert importer.state() is None
         assert "[INFO] Build non importée" in capsys.readouterr().out
+
+
+def test_describe_resolves_the_names_of_an_other_cores_substitution():
+    """SPEC-31 : un item du duel en « Autres cores » reçoit son nom dans l'écran."""
+    pages = [
+        json.loads((FIXTURES / name).read_text(encoding="utf-8"))
+        for name in ("onetricks_jinx_bot.json", "onetricks_jinx_bot_vs_draven.json")
+    ]
+    general, duel = (loadout._trim(raw) for raw in pages)  # les pages du cache ont des noms seuls
+    duel["firstItemStats"]["all"]["all"]["popularItems"] = [["3046", 0.5]]
+    build, substitutions = loadout.adapt_to_matchup(general, duel)
+    info = LoadoutImporter._describe(build, substitutions, general, duel)
+    row = next(row for row in info["substitutions"] if row["category"] == "Autres cores")
+    assert row["new"] == general["itemData"]["3046"]
+    assert "3046" in info["item_names"]

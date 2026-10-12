@@ -25,7 +25,7 @@ from .loadout_lcu import apply_build
 from .state import DraftState
 
 # Catégories de substitution dont les options sont des objets (les autres : runes, sorts).
-ITEM_CATEGORIES = ("Départ", "Core", "Bottes", "Situationnels")
+ITEM_CATEGORIES = ("Départ", "Core", "Bottes", "Situationnels", "Autres cores")
 
 # (championId, lane, adversaire) : ce qui détermine la build cible.
 ImportKey = Tuple[int, Optional[str], Optional[str]]

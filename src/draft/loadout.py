@@ -169,11 +169,38 @@ def _core_path(
     ]
 
 
+def _other_core_items(stats: dict, core: Tuple[int, ...]) -> List[int]:
+    """Items des options de ``popCore`` autres que ``core``, du core le plus joué au moins joué."""
+    return [
+        item
+        for option, _ in stats.get("popCore") or []
+        if _option(option) != core
+        for item in _option(option)
+    ]
+
+
+def _read_path(
+    pages: List[Tuple[dict, int]], core: Tuple[int, ...], filtered: bool = True
+) -> Tuple[Optional[List[PathItem]], int]:
+    """Chemin du core sur la première page qui le publie, avec les parties du core derrière.
+
+    ``pages`` : (agrégat ALL, parties), la page générale d'abord (500 parties contre ~40).
+    ``(None, 0)`` si aucune page ne le publie.
+    """
+    for stats, games in pages:
+        path = _core_path(stats, games, core, filtered)
+        if path is not None:
+            share = {_option(raw): share for raw, share in stats["popCore"]}[core]
+            return path, round(share * games)
+    return None, 0
+
+
 def _item_blocks(
     stats: dict,
     chosen: Dict[str, Tuple[Tuple[int, ...], float]],
     matchup_items: Tuple[int, ...] = (),
     path: Optional[List[PathItem]] = None,
+    matchup_alt: Tuple[int, ...] = (),
 ) -> tuple:
     """Blocs du set, du choix le plus joué aux alternatives, façon Coachless.
 
@@ -184,7 +211,9 @@ def _item_blocks(
     les seconds items des autres cores vont dans « Autres cores », après (un item
     des deux reste situationnel : Death's Dance d'Ambessa, 2026-09-25). Sans
     chemin (None), « Situationnels » garde les items les plus joués.
-    ``matchup_items`` : items que le duel sur-représente, en tête du bloc qui les accepte.
+    ``matchup_items`` : items que le duel sur-représente et qui sont dans le chemin du
+    core, en tête de « Situationnels » ; ``matchup_alt`` : ceux qui n'y sont pas mais
+    appartiennent à un autre core, en tête de « Autres cores » (``adapt_to_matchup`` les trie).
     """
     (start, start_share), (core, core_share), (boots, boots_share) = (
         chosen[category] for category, _ in _ITEM_CHOICES
@@ -197,16 +226,9 @@ def _item_blocks(
     if path is None:
         situational = [*matchup_items, *ids("popularItems")]
     else:
-        situational = [
-            *(item for item in matchup_items if item in in_path),
-            *in_path,
-        ]
+        situational = [*matchup_items, *in_path]
     items_of_other_cores = [
-        item
-        for option, _ in stats.get("popCore") or []
-        if _option(option) != core
-        for item in _option(option)
-        if path is None or item not in in_path
+        item for item in _other_core_items(stats, core) if path is None or item not in in_path
     ]
     blocks = [(f"Départ ({start_share:.0%})", start)]
     seen = set(start)
@@ -218,11 +240,10 @@ def _item_blocks(
         ("Situationnels", situational, draft_config.LOADOUT_SITUATIONAL_ITEMS),
     ]
     if path is not None:
-        alt_matchup = [item for item in matchup_items if item in items_of_other_cores]
         sections.append(
             (
                 "Autres cores",
-                [*alt_matchup, *items_of_other_cores],
+                [*matchup_alt, *items_of_other_cores],
                 draft_config.LOADOUT_ALT_CORE_ITEMS,
             )
         )
@@ -231,11 +252,6 @@ def _item_blocks(
         seen.update(kept)
         blocks.append((title, tuple(kept)))
     return tuple(blocks)
-
-
-def _path_games(path: Optional[List[PathItem]], core_share: float, games: int) -> int:
-    """Parties du core derrière son chemin ; 0 quand le chemin manque (repli)."""
-    return 0 if path is None else round(core_share * games)
 
 
 def _chosen_items(stats: dict) -> Dict[str, Tuple[Tuple[int, ...], float]]:
@@ -255,7 +271,7 @@ def pick_build(page: dict) -> Optional[Build]:
         spell1, spell2 = stats["sSpells"][0][0]
         games = int(page["patchStats"]["all"])
         chosen = _chosen_items(stats)
-        path = _core_path(stats, games, chosen["Core"][0])
+        path, path_games = _read_path([(stats, games)], chosen["Core"][0])
         return Build(
             primary_style=int(primary_style),
             sub_style=int(sub_style),
@@ -264,7 +280,7 @@ def pick_build(page: dict) -> Optional[Build]:
             item_blocks=_item_blocks(stats, chosen, path=path),
             spells=(int(spell1), int(spell2)),
             games=games,
-            path_games=_path_games(path, chosen["Core"][1], games),
+            path_games=path_games,
         )
     except (KeyError, IndexError, TypeError, ValueError):
         return None
@@ -474,14 +490,31 @@ def adapt_to_matchup(general: dict, duel: dict) -> Optional[Tuple[Build, List[Su
             else:
                 chosen[sub.category] = (sub.new, sub.duel_share)
         matchup = _matchup_items(general, duel, duel_games)
-        # Chemin du core final, lu sur la page générale (SPEC-31).
-        general_games = int(general["patchStats"]["all"])
-        path = _core_path(general_stats, general_games, chosen["Core"][0])
-        blocks = _item_blocks(general_stats, chosen, tuple(sub.new[0] for sub in matchup), path)
-        # Seuls ceux qui atterrissent en situationnels changent le set (pas un item du core).
-        situational = dict(blocks)["Situationnels"]
-        substitutions += [sub for sub in matchup if sub.new[0] in situational]
-        build = replace(build, path_games=_path_games(path, chosen["Core"][1], general_games))
+        # SPEC-31 : le core final (peut-être celui du duel) a son chemin lu sur la page
+        # générale, sinon sur celle du duel ; un item du duel n'entre en tête que s'il suit le core.
+        core = chosen["Core"][0]
+        duel_stats = duel["firstItemStats"]["all"]["all"]
+        pages = [(general_stats, int(general["patchStats"]["all"])), (duel_stats, duel_games)]
+        path, path_games = _read_path(pages, core)
+        in_path, in_cores = set(), set()
+        for stats, games in pages:
+            in_path.update(item for item, _, _ in _core_path(stats, games, core, False) or [])
+            in_cores.update(_other_core_items(stats, core))
+        if path is None:
+            in_path = {sub.new[0] for sub in matchup}  # repli : l'ancien calcul les promeut tous
+        followers = tuple(sub.new[0] for sub in matchup if sub.new[0] in in_path)
+        elsewhere = tuple(
+            sub.new[0] for sub in matchup if sub.new[0] not in in_path and sub.new[0] in in_cores
+        )
+        blocks = _item_blocks(general_stats, chosen, followers, path, elsewhere)
+        # Seuls ceux qui atterrissent dans le set le changent (pas un item du core).
+        placed = dict(blocks)
+        for sub in matchup:
+            if sub.new[0] in followers and sub.new[0] in placed["Situationnels"]:
+                substitutions.append(sub)
+            elif sub.new[0] in elsewhere and sub.new[0] in placed["Autres cores"]:
+                substitutions.append(replace(sub, category="Autres cores"))
+        build = replace(build, path_games=path_games)
         return replace(build, item_blocks=blocks), substitutions
     except (KeyError, IndexError, TypeError, ValueError, ZeroDivisionError):
         return None

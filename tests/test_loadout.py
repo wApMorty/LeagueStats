@@ -325,8 +325,12 @@ class TestAdaptToMatchup:
         build, subs = adapt_to_matchup(load(GENERAL), load(DUEL))
         blocks = dict(build.item_blocks)
         assert blocks["Core (13%)"] == (2523, 3031)  # popularité dans le duel
-        assert blocks["Situationnels"][0] == 3085  # l'ancien core, le plus joué
-        assert 3031 not in blocks["Situationnels"]
+        # Le nouveau core n'existe que dans le duel (5 parties) : son chemin y est relu, mais
+        # aucune suite n'atteint 3 parties ; Runaan's, l'ancien core, passe en tête d'« Autres cores ».
+        assert build.path_games == 5
+        assert blocks["Situationnels"] == ()
+        assert blocks["Autres cores"][0] == 3085
+        assert 3031 not in blocks["Situationnels"] + blocks["Autres cores"]
 
     def test_most_played_significant_option_wins(self):
         general, duel = load(GENERAL), load(DUEL)
@@ -413,6 +417,38 @@ class TestMatchupItems:
         build, subs = adapt_to_matchup(general, duel)
         assert build.item_blocks == pick_build(general).item_blocks
         assert subs[-1].category != "Situationnels"
+
+    def test_item_in_the_duel_page_path_only_leads_the_situationals(self):
+        """Dans le chemin du core lu sur la page du duel, sans seuil de parties."""
+        general, duel = load(GENERAL), load(DUEL)
+        stats(duel)["popularItems"] = [["6672", 0.5]]
+        stats(duel)["popPath"][0][0].append(["6672", 0.001])  # sous les seuils : le duel l'a testé
+        build, subs = adapt_to_matchup(general, duel)
+        assert dict(build.item_blocks)["Situationnels"][0] == 6672
+        assert [sub.new for sub in subs if sub.category == "Situationnels"] == [(6672,)]
+
+    def test_item_outside_the_path_but_in_another_core_leads_the_other_cores(self):
+        general, duel = load(GENERAL), load(DUEL)
+        before = dict(pick_build(general).item_blocks)["Autres cores"]
+        assert before == (3032, 3046)  # Phantom Dancer : second item du core (2523, 3046)
+        stats(duel)["popularItems"] = [["3046", 0.5]]
+        build, subs = adapt_to_matchup(general, duel)
+        blocks = dict(build.item_blocks)
+        assert blocks["Autres cores"] == (3046, 3032)
+        assert 3046 not in blocks["Situationnels"]
+        assert [sub.new for sub in subs if sub.category == "Autres cores"] == [(3046,)]
+        assert not [sub for sub in subs if sub.category == "Situationnels"]
+
+    def test_without_any_path_the_duel_items_lead_the_old_situationals(self):
+        general, duel = load(GENERAL), load(DUEL)
+        stats(general).pop("popPath")
+        stats(duel).pop("popPath")
+        stats(duel)["popularItems"] = [["6672", 0.5]]
+        build, subs = adapt_to_matchup(general, duel)
+        blocks = dict(build.item_blocks)
+        assert build.path_games == 0 and "Autres cores" not in blocks
+        assert blocks["Situationnels"][0] == 6672
+        assert [sub.new for sub in subs if sub.category == "Situationnels"] == [(6672,)]
 
     def test_item_outside_the_core_path_stays_out_of_the_situationals(self):
         """Kraken Slayer (hors chemin et hors de tout core) : ignoré, non signalé."""
