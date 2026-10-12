@@ -300,7 +300,7 @@ Firefox headless. Passe **avant** la tâche 127 de SPEC-27, réécrite pour ce g
 | 140 | Mesure : `scripts/measure_en_partie.py` (Firefox headless, cas le plus lourd, 1 920 × 986, ≥ 30 px de marge), ajustements. Mesuré : ancien gabarit `scrollHeight` 1 698 pour `clientHeight` 950 ; nouveau, 950 = 950, contenu 913 / 916 px (sans / avec modèle), marge 37 / **34 px**, `scrollWidth` 1 700 = 1 700 ; 1 400 × 900 : une colonne. Aucun ajustement de CSS (le script mesurait la marge sur `scrollHeight`, plafonné à `clientHeight` : mesure corrigée sur le bas du contenu) | 3 | 139 | ✅ |
 | 141 | Clôture : SPEC-27 §4.6 et tâche 127 réécrites, `CHANGELOG.md`, statuts, README des specs, recette @pj35 | 2 | 140 | ✅ 2026-10-12 : SPEC-27 §4.6, §5 et critère 6 visent `section.ig-draft` ; entrée `[Unreleased]`, statut de SPEC-30 et README des specs à jour ; recette réelle laissée à @pj35 (SPEC-30 §6) |
 
-### Lot suivant — SPEC-31, situationnels liés au core (🟡 rédigée le 2026-10-12)
+### Lot suivant — SPEC-31, situationnels liés au core (✅ livrée le 2026-10-12, recette @pj35 à faire)
 
 [SPEC-31](docs/specs/SPEC-31-situationnels-suivent-le-core.md) : « Situationnels » est rempli avec `popularItems`, sans
 rapport avec le core choisi (mesuré le 2026-10-12 : 4 à 6 items sur 8 hors du chemin du core à Ambessa et Yorick) ;
@@ -315,7 +315,7 @@ bruit (liste plus courte). Restent à valider : valeur des deux seuils et volume
 | 143 | Duel : chemin lu sur les deux pages, items du duel dans le chemin ou « Autres cores », `blocks[-1]` corrigé, tests réécrits | 3 | 142 | ✅ 2026-10-12 : core substitué par le duel (5 parties) = Situationnels vide, ancien core en tête d'« Autres cores » (seuils de §4.2, à relire) |
 | 144 | Banc `scripts/bench_loadout_paths.py` (12 pages espacées de 20 s), réglage des deux seuils | 3 | 143 | ✅ 2026-10-12 : hors chemin 53 → 0, repli 0 / 12, médiane 8 → 4 situationnels ; seuils 5 % / 3 parties inchangés ; supports non mesurables (404, rôle `supp`) |
 | 145 | Ligne console, bloc « Autres cores » dans l'écran « En partie », remesure `measure_en_partie.py` | 2 | 143 | ✅ 2026-10-12 : remesuré à 1 920 × 986, marge 33 / **30 px** (sans / avec modèle, était 37 / 34), une colonne à 1 400 × 900 |
-| 146 | Clôture : `CHANGELOG.md`, notes SPEC-15, statuts, README des specs, recette @pj35 | 2 | 144, 145 | ⬜ |
+| 146 | Clôture : `CHANGELOG.md`, notes SPEC-15, statuts, README des specs, recette @pj35 | 2 | 144, 145 | ✅ 2026-10-12 (recette réelle laissée à @pj35, SPEC-31 §6) |
 
 ### Lot suivant — SPEC-32, classement des joueurs en post-game (🟡 rédigée le 2026-10-12)
 

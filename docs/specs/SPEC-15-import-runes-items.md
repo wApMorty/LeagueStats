@@ -176,6 +176,8 @@ la plus jouée du duel qu'on copie : sur 40 parties, elle diffère surtout par l
 
 ### 3.1 Module
 
+> **Révisé par [SPEC-31](SPEC-31-situationnels-suivent-le-core.md)** : « Situationnels » n'est plus rempli avec `popularItems` mais avec les suites du core choisi (`popPath`), et un bloc « Autres cores » existe (blocs d'items de `_item_blocks`).
+
 `src/draft/loadout.py` (nouveau) contient trois responsabilités, séparées en fonctions :
 
 - **`fetch_page(champion, lane, opponent=None) -> Optional[dict]`** : `GET
@@ -306,6 +308,8 @@ Jinx contre Draven (fixtures, 40 parties) :
 Sur la page du 2026-09-25, l'arbre secondaire passe aussi (62,7 % contre 41,8 %).
 
 #### 3.2.3 Items situationnels (@pj35, 2026-09-29)
+
+> **Révisé par [SPEC-31](SPEC-31-situationnels-suivent-le-core.md) §4.4** : le test ci-dessous est inchangé, mais un item significatif n'est promu en tête de « Situationnels » que s'il suit le core choisi ; sinon il va en tête d'« Autres cores » (autre core) ou est ignoré.
 
 Les items légendaires (`popularItems`) passent le même test que §3.2.1, **item par item** :
 `popularItems` donne la part des parties où chaque item est acheté, pas un choix exclusif.

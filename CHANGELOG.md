@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### ✨ Feature
+
+- **Situationnels liés au core (SPEC-31)** — « Situationnels » était rempli avec les items les plus achetés de la page OneTricks, sans rapport avec le core choisi (4 à 7 items sur 8 hors du chemin du core à Ambessa et Yorick) ; `popPath`, que la page publie par core, n'était jamais lu. « Situationnels » ne contient plus que les suites du core choisi (3ᵉ à 5ᵉ items, `LOADOUT_PATH_MIN_SHARE` = 5 % des parties du core et `LOADOUT_PATH_MIN_GAMES` = 3 parties au moins : la liste peut compter 2 à 6 items), et les seconds items des autres cores vont dans un nouveau bloc « Autres cores » (`LOADOUT_ALT_CORE_ITEMS` = 4), après. Au duel, un item sur-représenté n'est promu en tête de « Situationnels » que s'il suit le core, sinon en tête d'« Autres cores » s'il appartient à un autre core, sinon il est ignoré ; un core substitué par le duel relit son chemin sur la page du duel. Chemin introuvable (`popPath` absent, structure inattendue) : ancien calcul, et la console le dit (`[INFO] Situationnels : suites du core (N parties)` ou `chemin du core introuvable`). Banc sur 12 pages réelles (`scripts/bench_loadout_paths.py`) : items hors chemin 53 → 0, repli 0 / 12, médiane de 8 à 4 situationnels. L'écran « En partie » affiche « Autres cores » ; marge remesurée à 30 px (seuil 30). Recette en partie réelle à faire par @pj35 (SPEC-31 §6).
+
 ## [5.1.0] - 2026-10-12
 
 Le Live Coach vérifie les postes adverses une fois la partie lancée et corrige le face-à-face et la build s'ils étaient faux, et l'écran « En partie » tient sur un seul écran. Aucune action requise (pas de migration, pas de scrape).
