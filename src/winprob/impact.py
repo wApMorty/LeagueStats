@@ -6,9 +6,12 @@ de vue de l'équipe concernée. Conventions (à revoir sur données) :
 - kill : la victime porte la baisse de son équipe ; tueur et assistants se partagent la hausse ;
 - bâtiment, monstre épique : l'équipe qui marque porte ΔP, réparti entre tueur, assistants et
   coéquipiers présents (position à l'image la plus proche, rayon `WINPROB_PRESENCE_RADIUS`) ;
+  l'équipe adverse porte la perte (`lost_<k>`, ΔP négatif) à parts égales entre ses joueurs
+  absents (les cinq si aucun n'est absent) ;
 - la variation entre deux événements (temps, farm, niveaux) n'est **pas attribuée** : elle est
-  renvoyée en résidu par équipe. # ponytail: à répartir au prorata des CS/XP face à l'adversaire
-  de lane si le résidu pèse trop à l'usage (~0,2 de P en moyenne par partie, mesuré le 2026-10-02).
+  renvoyée en résidu par équipe (les objectifs perdus n'en font plus partie).
+  # ponytail: à répartir au prorata des CS/XP face à l'adversaire de lane
+  si le résidu pèse trop à l'usage (~0,2 de P en moyenne par partie, mesuré le 2026-10-02).
 """
 
 import math
@@ -106,6 +109,13 @@ def impacts(model: WinModel, game: dict, timeline: dict) -> dict:
                 1 / len(gainers),
                 "assist" if kind == "kill" and pid != e["killerId"] else kind,
             )
+        if kind != "kill":
+            loser = _other(team)
+            foes = [p for p, t in teams.items() if t == loser]
+            absent = sorted(set(foes) - set(_present(timeline, e, foes)))
+            losers = absent or foes
+            for pid in losers:
+                give(pid, loser, 1 / len(losers), "lost_" + kind)
     return {"rows": rows, "teams": _team_summary(rows, teams, start, end)}
 
 

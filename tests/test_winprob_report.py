@@ -111,3 +111,15 @@ def test_player_impact_feeds_the_bilan(db, tmp_path):
     rows = CoachingRepository(db).player_impact(10)
     assert rows and all(r["game_id"] == 1 for r in rows)
     assert any("Impact sur la win chance" in line for line in review(db))
+
+
+def test_lost_objectives_are_described_and_never_break_the_report():
+    from src.winprob.report import _describe
+
+    events = [e for f in TIMELINE["frames"] for e in f["events"]]
+    tower = next(e for e in events if e["timestamp"] == 905206)
+    baron = next(e for e in events if e["timestamp"] == 1325162)
+    assert _describe(tower, 6, {}, events, lost=True) == "tour perdue à 15:05"
+    assert _describe(baron, 6, {}, events, lost=True) == "Nashor perdu à 22:05"
+    for pid in range(1, 11):  # lignes lost_* dans `rows` : aucun KeyError
+        assert _report(pid)[0].startswith("[DATA] Impact sur la win chance")

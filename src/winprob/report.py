@@ -21,6 +21,7 @@ LABELS = {
     "inhibitor": "inhibiteur",
 }
 TAKEN = {"tower": "tour détruite", "inhibitor": "inhibiteur détruit"}
+LOST = {"tower": "tour perdue", "grubs": "larves perdues"}
 # Une mort suivie d'un objectif adverse dans ce délai est signalée avec lui.
 FOLLOW_UP_MS = 60_000
 TOP = 3
@@ -52,8 +53,12 @@ def curve(model: WinModel, game: dict, timeline: dict, team: int) -> str:
     return "".join(SPARK[min(int(p * len(SPARK)), len(SPARK) - 1)] for p in probs)
 
 
-def _describe(e: dict, pid: int, teams: Dict[int, int], events: List[dict]) -> str:
+def _describe(
+    e: dict, pid: int, teams: Dict[int, int], events: List[dict], lost: bool = False
+) -> str:
     kind, at = event_kind(e), _clock(e["timestamp"])
+    if lost:
+        return f"{LOST.get(kind, LABELS[kind] + ' perdu')} à {at}"
     if kind == "kill":
         if e["victimId"] == pid:
             solo = e["killerId"] in teams and not e.get("assistingParticipantIds")
@@ -91,11 +96,11 @@ def impact_report(model: WinModel, game: dict, timeline: dict, pid: int, result:
         ),
     ):
         for r in rows[:TOP]:
-            e = by_key[
-                (r["event_time_ms"], "kill" if r["event_type"] in KILL_TYPES else r["event_type"])
-            ]
+            lost = r["event_type"].startswith("lost_")
+            kind = r["event_type"][len("lost_") :] if lost else r["event_type"]
+            e = by_key[(r["event_time_ms"], "kill" if kind in KILL_TYPES else kind)]
             lines.append(
-                f"  {title} : {_pts(r['delta_p'])} pts, {_describe(e, pid, teams, events)}"
+                f"  {title} : {_pts(r['delta_p'])} pts, {_describe(e, pid, teams, events, lost)}"
             )
     team = result["teams"].get(teams[pid])
     if team:

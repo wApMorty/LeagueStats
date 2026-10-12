@@ -344,7 +344,7 @@ Découpage en SPEC-22 §5 (tâches 57 à 61, 16 pts) :
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
 | 57 | `scripts/bench_impact_residual.py` : base de référence du résidu (−20,3 / 25,1 pts) | 2 | — | ✅ 2026-10-13 : base à 108 parties (45 en spec) : −21,4 / 24,0, objectifs adverses −24,0, dérive +2,5 ; maximum 144,7 |
-| 58 | Objectifs perdus : lignes `lost_*` aux coéquipiers absents | 3 | 57 | ⬜ |
+| 58 | Objectifs perdus : lignes `lost_*` aux coéquipiers absents | 3 | 57 | ✅ 2026-10-13 : 4 tests (symétrie, cinq présents, absents seuls, kill) + 1 test du rapport |
 | 59 | `WinModel.logit_parts`, segments par joueur, lignes `levels` et `respawn` | 5 | 58 | ⬜ |
 | 60 | Convention versionnée dans `model_version`, `raw_eog`, recalcul des 45 parties | 3 | 59 | ⬜ |
 | 61 | Rapport, bilan, libellés, mesure finale, `CHANGELOG.md` | 3 | 60 | ⬜ |
