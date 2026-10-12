@@ -1113,6 +1113,9 @@ a.chip-btn { display: inline-flex; align-items: center; text-decoration: none; }
   line-height: 14px; text-align: center; font-style: normal; color: oklch(0.16 0.02 170); background: oklch(0.8 0.1 165); }
 .ig-subs { margin-top: 14px; } .ig-subs ul { margin: 0; padding-left: 18px; }
 .ig-skills { margin: 14px 0 0; }
+.ig-reality { margin: 0 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ig-table tr.is-corrected td { background: oklch(0.74 0.11 55 / 0.07); }
+.is-corrected .fine { font-size: 11px; white-space: nowrap; }
 
 /* Échanges de la draft (SPEC-24 tâche 104) : boutons sur la légende d'un allié, bandeau d'une demande reçue. */
 .d-swaps { display: flex; justify-content: center; gap: 6px; margin-top: 4px; }

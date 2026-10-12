@@ -6,7 +6,7 @@ n'a pas vu la draft de cette partie (ignorance visible) ; sans modèle, il dit c
 """
 
 from collections import Counter
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Collection, Dict, List, Optional, Sequence
 
 from markupsafe import Markup
 
@@ -30,12 +30,15 @@ def _points(value: Optional[float]) -> Optional[str]:
 
 
 def _score(
-    line: Optional[Dict[str, Any]], champions: Optional[Champions] = None
+    line: Optional[Dict[str, Any]],
+    champions: Optional[Champions] = None,
+    corrected: Collection[str] = (),
 ) -> Optional[Dict[str, Any]]:
     """Un champion du face-à-face ; `thin` quand ses données sont trop minces pour être chiffrées.
 
     Portrait (`img`) et nom Data Dragon quand `champions` reconnaît le champion ; sinon ni portrait ni
     changement de nom. `detail` (infobulle du Total) porte matchups et synergies, None si `thin`.
+    `corrected` : `True` si le nom d'affichage du champion figure parmi les postes corrigés en partie.
     """
     if line is None:
         return None
@@ -50,6 +53,7 @@ def _score(
         "synergy": None if thin else synergy,
         "total": None if thin else _points(line["total"]),
         "detail": None if thin else f"Matchups {matchup} · Synergies {synergy}",
+        "corrected": line["name"] in corrected,
     }
 
 
@@ -62,19 +66,47 @@ def _duel(points: Optional[float]) -> Dict[str, Any]:
     return {"side": side, "chevrons": chevrons, "text": _points(points)}
 
 
+def _reality_line(reality: Optional[Dict[str, Any]]) -> Optional[Dict[str, str]]:
+    """La ligne d'état des postes (SPEC-27 §4.6) selon `reality.state` ; None sans charge `reality`."""
+    if not reality:
+        return None
+    state = reality.get("state")
+    if state == "ok":
+        checked = reality.get("checked", 0)
+        text = f"Postes vérifiés en partie : {checked} sur {checked} conformes"
+    elif state == "corrected":
+        mismatches = reality.get("mismatches") or []
+        names = ", ".join(
+            f"{m['champion']} ({m['real']}, prédit {m['predicted']})"
+            for m in mismatches[: client_config.REALITY_NAMED_MAX]
+        )
+        rest = len(mismatches) - client_config.REALITY_NAMED_MAX
+        if rest > 0:
+            names += f" et {rest} autres"
+        text = f"Postes corrigés en partie : {names}. Face-à-face et build recalculés"
+    elif state == "partial":
+        text = "Postes adverses non lus en partie : analyse de la draft conservée"
+    else:
+        return None
+    return {"state": state, "text": text}
+
+
 def analysis_view(
     analysis: Optional[Dict[str, Any]], champions: Optional[Champions] = None
 ) -> Optional[Dict[str, Any]]:
     """Le face-à-face de la draft tel que `FinalAnalysis` le porte, None sans analyse.
 
-    `champions` fournit portraits et noms Data Dragon ; None : aucun portrait.
+    `champions` fournit portraits et noms Data Dragon ; None : aucun portrait. `reality` : la ligne d'état
+    des postes (None sans charge `reality`) ; les champions de ses `mismatches` sont marqués `corrected`.
     """
     if not analysis:
         return None
+    reality = analysis.get("reality")
+    corrected = {m["champion"] for m in (reality or {}).get("mismatches") or []}
     rows: List[Dict[str, Any]] = [
         {
-            "ally": _score(line["ally"], champions),
-            "enemy": _score(line["enemy"], champions),
+            "ally": _score(line["ally"], champions, corrected),
+            "enemy": _score(line["enemy"], champions, corrected),
             "duel": _duel(line["duel"]),
         }
         for line in analysis["lines"]
@@ -84,6 +116,7 @@ def analysis_view(
         "probability": round(analysis["win_probability"] * 100, 1),
         "diff": _points(analysis["draft_diff"]),
         "evaluation": analysis["evaluation"],
+        "reality": _reality_line(reality),
     }
 
 

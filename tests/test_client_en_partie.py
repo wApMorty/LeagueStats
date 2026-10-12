@@ -318,3 +318,146 @@ def test_tableau_a_cinq_colonnes_et_legende_courte(client, bus):  # noqa: F811
     html = stage(client)
     assert len(re.findall(r"<th", html.split("<thead>")[1].split("</thead>")[0])) == 5
     assert "détail au survol" in html and "peu de données" in html
+
+
+# ---------- ligne d'état des postes (SPEC-27 tâche 127, §4.6) ----------
+
+
+def with_reality(reality):
+    return {**analysis(), "reality": reality}
+
+
+def mismatch(champion, predicted, real):
+    return {"champion": champion, "predicted": predicted, "real": real}
+
+
+def test_sans_charge_reality_aucune_ligne_ni_marque():
+    view = en_partie.analysis_view(analysis())
+    assert view["reality"] is None
+    sides = [side for row in view["rows"] for side in (row["ally"], row["enemy"]) if side]
+    assert sides and all(side["corrected"] is False for side in sides)
+
+
+def test_reality_absent_ou_etat_inconnu_donne_none():
+    assert en_partie.analysis_view(with_reality(None))["reality"] is None
+    assert en_partie.analysis_view(with_reality({"state": "bizarre"}))["reality"] is None
+
+
+def test_etat_ok_texte_exact():
+    view = en_partie.analysis_view(with_reality({"state": "ok", "checked": 10, "mismatches": []}))
+    assert view["reality"] == {
+        "state": "ok",
+        "text": "Postes vérifiés en partie : 10 sur 10 conformes",
+    }
+
+
+def test_etat_corrected_texte_exact_avec_deux_champions():
+    reality = {
+        "state": "corrected",
+        "checked": 10,
+        "mismatches": [mismatch("Ahri", "milieu", "bas"), mismatch("Jinx", "bas", "haut")],
+    }
+    view = en_partie.analysis_view(with_reality(reality))
+    assert view["reality"] == {
+        "state": "corrected",
+        "text": "Postes corrigés en partie : Ahri (bas, prédit milieu), Jinx (haut, prédit bas). "
+        "Face-à-face et build recalculés",
+    }
+
+
+def test_etat_corrected_au_dela_de_deux_champions_et_n_autres():
+    reality = {
+        "state": "corrected",
+        "checked": 10,
+        "mismatches": [
+            mismatch("Ahri", "milieu", "bas"),
+            mismatch("Jinx", "bas", "haut"),
+            mismatch("Draven", "bas", "milieu"),
+            mismatch("Rell", "support", "jungle"),
+        ],
+    }
+    text = en_partie.analysis_view(with_reality(reality))["reality"]["text"]
+    assert text == (
+        "Postes corrigés en partie : Ahri (bas, prédit milieu), Jinx (haut, prédit bas) "
+        "et 2 autres. Face-à-face et build recalculés"
+    )
+    assert "Draven" not in text and "Rell" not in text
+
+
+def test_etat_partial_texte_exact():
+    view = en_partie.analysis_view(
+        with_reality({"state": "partial", "checked": 0, "mismatches": []})
+    )
+    assert view["reality"] == {
+        "state": "partial",
+        "text": "Postes adverses non lus en partie : analyse de la draft conservée",
+    }
+
+
+def test_les_lignes_corrigees_sont_marquees_des_deux_cotes_seulement():
+    # Ahri est alliée (ligne 2), Draven ennemie (ligne 3) ; Garen (ligne 0) n'est pas corrigé.
+    reality = {
+        "state": "corrected",
+        "checked": 10,
+        "mismatches": [mismatch("Ahri", "milieu", "bas"), mismatch("Draven", "bas", "milieu")],
+    }
+    rows = en_partie.analysis_view(with_reality(reality))["rows"]
+    assert rows[2]["ally"]["corrected"] is True and rows[2]["enemy"]["corrected"] is False
+    assert rows[3]["enemy"]["corrected"] is True and rows[3]["ally"]["corrected"] is False
+    assert rows[0]["ally"]["corrected"] is False and rows[0]["enemy"]["corrected"] is False
+
+
+def test_marquage_sur_le_nom_et_pas_sur_le_portrait(champions):
+    reality = {
+        "state": "corrected",
+        "checked": 10,
+        "mismatches": [mismatch("Darius", "haut", "bas")],
+    }
+    rows = en_partie.analysis_view(with_reality(reality), champions)["rows"]
+    assert rows[0]["enemy"]["name"] == "Darius" and rows[0]["enemy"]["corrected"] is True
+    assert rows[0]["ally"]["corrected"] is False
+
+
+def test_etat_ok_rendu_entre_panel_head_et_table(client, bus):  # noqa: F811
+    bus.publish("ingame", LIVE)
+    bus.publish("game", with_reality({"state": "ok", "checked": 10, "mismatches": []}))
+    html = stage(client)
+    line = '<p class="fine ig-reality">Postes vérifiés en partie : 10 sur 10 conformes</p>'
+    draft = html.index('aria-label="Analyse de la draft"')
+    assert html.index(line) > html.index("panel-head", draft)
+    assert html.index(line) < html.index('<table class="ig-table">')
+    assert html.count('class="fine ig-reality"') == 1
+
+
+def test_sans_reality_pas_de_ligne_d_etat(client, bus):  # noqa: F811
+    bus.publish("ingame", LIVE)
+    bus.publish("game", analysis())
+    html = stage(client)
+    assert "ig-reality" not in html and "is-corrected" not in html and "poste corrigé" not in html
+
+
+def test_etat_partial_rendu_sans_marque(client, bus):  # noqa: F811
+    bus.publish("ingame", LIVE)
+    bus.publish("game", with_reality({"state": "partial", "checked": 0, "mismatches": []}))
+    html = stage(client)
+    assert "Postes adverses non lus en partie : analyse de la draft conservée" in html
+    assert "is-corrected" not in html
+
+
+def test_lignes_corrigees_rendues_avec_poste_corrige_au_bon_cote(client, bus):  # noqa: F811
+    bus.publish("ingame", LIVE)
+    reality = {
+        "state": "corrected",
+        "checked": 10,
+        "mismatches": [mismatch("Ahri", "milieu", "bas"), mismatch("Draven", "bas", "milieu")],
+    }
+    bus.publish("game", with_reality(reality))
+    html = stage(client)
+    assert html.count('<tr class="is-corrected">') == 2
+    assert html.count("poste corrigé") == 2
+    assert (
+        'ig-ally-ink"><img class="ig-champ" src="/assets/champion/Ahri.png" alt="">Ahri <span class="fine">poste corrigé</span></td>'
+        in html
+    )
+    assert 'ig-foe-ink"><span class="fine">poste corrigé</span> Draven' in html
+    assert "Garen <span" not in html and "Darius <span" not in html

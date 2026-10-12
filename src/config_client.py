@@ -142,6 +142,8 @@ class ClientConfig:
     GAME_CURVE_MARGIN: Tuple[int, int, int, int] = (70, 50, 34, 60)
     GAME_CURVE_X_STEP_MIN: int = 5
     GAME_MARKS: int = 10
+    # SPEC-27 : champions nommés dans la ligne « Postes corrigés » de l'écran « En partie », le reste en « et N autres ».
+    REALITY_NAMED_MAX: int = 2
     GAME_TOP: int = 3
 
     # Écran Calibration (SPEC-21 tâche 54) : taille du diagramme de fiabilité.

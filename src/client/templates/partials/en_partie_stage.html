@@ -64,13 +64,15 @@
 <section class="panel ig-draft" aria-label="Analyse de la draft">
   <div class="panel-head"><h2>Face-à-face de la draft</h2><span class="muted">{{ a.evaluation }} · {{ a.probability }} % ({{ a.diff }} pts d'écart)</span></div>
   {#- Emplacement de la ligne d'état de SPEC-27 (§4.6) : rien n'est rendu tant que la charge n'a pas `reality`. -#}
+  {% if a.reality %}<p class="fine ig-reality">{{ a.reality.text }}</p>{% endif %}
   <table class="ig-table">
     <thead><tr><th class="ig-side">Allié</th><th>Tot</th><th>Duel</th><th>Tot</th><th class="ig-side">Ennemi</th></tr></thead>
     <tbody>
     {% for row in a.rows %}
-      <tr>
+      {% set fixed = (row.ally and row.ally.corrected) or (row.enemy and row.enemy.corrected) %}
+      <tr{% if fixed %} class="is-corrected"{% endif %}>
         {% if row.ally %}
-        <td class="ig-side ig-ally-ink">{% if row.ally.img %}<img class="ig-champ" src="{{ row.ally.img }}" alt="">{% endif %}{{ row.ally.name }}</td>
+        <td class="ig-side ig-ally-ink">{% if row.ally.img %}<img class="ig-champ" src="{{ row.ally.img }}" alt="">{% endif %}{{ row.ally.name }}{% if row.ally.corrected %} <span class="fine">poste corrigé</span>{% endif %}</td>
         {% if row.ally.thin %}<td class="muted">peu de données</td>
         {% else %}<td title="{{ row.ally.detail }}">{{ row.ally.total }}</td>{% endif %}
         {% else %}<td class="ig-side"></td><td></td>{% endif %}
@@ -78,7 +80,7 @@
         {% if row.enemy %}
         {% if row.enemy.thin %}<td class="muted">peu de données</td>
         {% else %}<td title="{{ row.enemy.detail }}">{{ row.enemy.total }}</td>{% endif %}
-        <td class="ig-side ig-foe-ink">{{ row.enemy.name }}{% if row.enemy.img %}<img class="ig-champ" src="{{ row.enemy.img }}" alt="">{% endif %}</td>
+        <td class="ig-side ig-foe-ink">{% if row.enemy.corrected %}<span class="fine">poste corrigé</span> {% endif %}{{ row.enemy.name }}{% if row.enemy.img %}<img class="ig-champ" src="{{ row.enemy.img }}" alt="">{% endif %}</td>
         {% else %}<td></td><td class="ig-side"></td>{% endif %}
       </tr>
     {% endfor %}

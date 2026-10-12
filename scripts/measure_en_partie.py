@@ -136,6 +136,16 @@ def analyse() -> Dict[str, Any]:
         "win_probability": 0.55,
         "draft_diff": 3.4,
         "evaluation": "Avantage de draft majeur",
+        # Cas le plus lourd : deux postes corrigés, dont les deux noms les plus longs (ligne la plus longue).
+        "reality": {
+            "state": "corrected",
+            "checked": 10,
+            "mismatches": [
+                {"champion": "Nunu et Willump", "predicted": "jungle", "real": "bas"},
+                {"champion": "Miss Fortune", "predicted": "milieu", "real": "support"},
+            ],
+            "at": 1800.0,
+        },
         "loadout": {
             "champion_id": 86,
             "label": "Garen top",
@@ -193,18 +203,8 @@ def partie(avec_modele: bool) -> Dict[str, Any]:
     }
 
 
-# Insère la ligne d'état de SPEC-27 (une ligne `fine` sous l'en-tête du panneau du face-à-face) puis mesure,
-# dans le même appel : une relecture du fragment par le bus ne peut pas l'effacer entre les deux.
 MESURE_JS = """
 const page = document.querySelector(".page");
-const panneau = document.querySelector('[aria-label="Analyse de la draft"]');
-if (panneau && !panneau.querySelector(".mesure-etat")) {
-  const ligne = document.createElement("p");
-  ligne.className = "fine mesure-etat";
-  ligne.textContent = "Ligne d'état de SPEC-27 : postes vérifiés, une ligne.";
-  const entete = panneau.querySelector(".panel-head");
-  if (entete) entete.after(ligne); else panneau.prepend(ligne);
-}
 const grille = document.querySelector(".ig-grid");
 // `scrollHeight` est plafonné par le bas à `clientHeight` : la marge se lit sur le bas du dernier enfant,
 // plus le `padding-bottom` de `.page`.
@@ -213,11 +213,12 @@ const bas = Math.max(...Array.from(page.children).map((e) => e.getBoundingClient
 const contenu = Math.ceil(bas - haut + parseFloat(getComputedStyle(page).paddingBottom));
 return {
   contenu,
-  panneau: !!panneau,
   grille: grille ? getComputedStyle(grille).gridTemplateColumns : null,
   scrollHeight: page.scrollHeight, clientHeight: page.clientHeight,
   scrollWidth: page.scrollWidth, clientWidth: page.clientWidth,
   innerWidth: window.innerWidth, innerHeight: window.innerHeight,
+  ligne: document.querySelectorAll(".ig-reality").length,
+  corrigees: document.querySelectorAll(".ig-table tr.is-corrected").length,
 };
 """
 
@@ -304,10 +305,12 @@ def main() -> int:
                     f"scrollHeight={m['scrollHeight']} contenu={m['contenu']} clientHeight={m['clientHeight']} "
                     f"scrollWidth={m['scrollWidth']} clientWidth={m['clientWidth']} marge={marge} px"
                 )
-                if not m["panneau"]:
+                if m["ligne"] != 1 or m["corrigees"] != 2:
                     print(
-                        '[ALERTE] Panneau aria-label="Analyse de la draft" introuvable : pas de ligne SPEC-27'
+                        f"[ERREUR] {nom} : .ig-reality x{m['ligne']} (attendu 1), "
+                        f"lignes corrigées x{m['corrigees']} (attendu 2)"
                     )
+                    ok = False
                 if pire is None or marge < pire["marge"]:
                     pire = {**m, "marge": marge, "nom": nom}
 
