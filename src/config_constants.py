@@ -314,9 +314,17 @@ class DraftConfig:
     # Préfixe de la page de runes et du set d'items écrits par le coach : seuls
     # les éléments portant ce préfixe sont jamais supprimés ou remplacés.
     LOADOUT_PREFIX: str = "LS "
-    # Items les plus joués ajoutés en fin de set (bloc « Situationnels »), hors
-    # départ, core, bottes et composants déjà listés.
+    # Plafond du bloc « Situationnels » : les suites du core choisi (popPath
+    # d'OneTricks), hors départ, core, bottes et composants déjà listés (SPEC-31).
     LOADOUT_SITUATIONAL_ITEMS: int = 8
+    # Une suite du core n'est gardée que si elle est prise par au moins cette part
+    # des parties du core ET par au moins ce nombre de parties : à 5 % et 3 parties,
+    # Guardian Angel d'Ambessa (1,2 %, 1,7 partie) tombe, Bloodthirster de Jinx
+    # (5,2 %, 9 parties) reste (mesure du 2026-10-12, SPEC-31 §1).
+    LOADOUT_PATH_MIN_SHARE: float = 0.05
+    LOADOUT_PATH_MIN_GAMES: int = 3
+    # Taille du bloc « Autres cores » : seconds items des autres cores (Ambessa 3, Jinx 2).
+    LOADOUT_ALT_CORE_ITEMS: int = 4
 
     # Draft phase detection
     READY_CHECK_COOLDOWN: float = 2.0  # Seconds after accepting queue

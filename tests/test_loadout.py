@@ -26,6 +26,7 @@ from src.draft.loadout import (
     option_name,
     pick_build,
 )
+from src.draft.loadout import _core_path, _option
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -64,10 +65,12 @@ class TestPickBuild:
                 ("Core (57%)", (2523, 3085)),
                 ("Bottes (78%)", (3006, 3008, 3047)),
                 ("Composants", (1037, 6670, 1036, 1083, 1038, 3144)),
-                ("Situationnels", (3031, 3036, 3032, 3033, 3046, 3026, 6672, 3072)),
+                ("Situationnels", (3031, 3036, 3033, 3026, 3072)),
+                ("Autres cores", (3032, 3046)),
             ),
             spells=(21, 4),
             games=500,
+            path_games=283,
         )
 
     def test_matchup_page_has_the_same_shape(self):
@@ -89,6 +92,113 @@ class TestPickBuild:
         page = load("onetricks_jinx_bot.json")
         breakage(page)
         assert pick_build(page) is None
+
+
+GENERAL = "onetricks_jinx_bot.json"
+DUEL = "onetricks_jinx_bot_vs_draven.json"
+AMBESSA = "onetricks_ambessa_top.json"
+PAGES = (GENERAL, DUEL, AMBESSA)
+
+
+def chosen_core(page):
+    return _option(page["firstItemStats"]["all"]["all"]["popCore"][0][0])
+
+
+class TestSituationalsFollowTheCore:
+    """SPEC-31 : « Situationnels » = suites du core choisi (popPath), « Autres cores » = le reste."""
+
+    @pytest.mark.parametrize("name", PAGES)
+    def test_every_situational_is_in_the_core_path(self, name):
+        page = load(name)
+        build = pick_build(page)
+        path = _core_path(page["firstItemStats"]["all"]["all"], build.games, chosen_core(page))
+        blocks = dict(build.item_blocks)
+        assert set(blocks["Situationnels"]) <= {item for item, _, _ in path}
+        assert build.path_games > 0
+        listed = [
+            item
+            for title, items in build.item_blocks
+            for item in items
+            if not title.startswith("Départ")
+        ]
+        assert len(listed) == len(set(listed))  # pas de doublon hors départ
+
+    def test_ambessa_split_between_path_and_other_cores(self):
+        page = load(AMBESSA)
+        build = pick_build(page)
+        names = page["itemData"]
+        blocks = {
+            title.split(" (")[0]: [names[str(item)] for item in items]
+            for title, items in build.item_blocks
+        }
+        assert blocks["Situationnels"] == [
+            "Death's Dance",
+            "Maw of Malmortius",
+            "Mortal Reminder",
+        ]
+        assert blocks["Autres cores"] == ["Spear of Shojin", "Voltaic Cyclosword", "Profane Hydra"]
+        assert "Bastionbreaker" not in sum(blocks.values(), [])
+        assert build.path_games == 147
+
+    def test_path_shares_are_part_of_the_core_games(self):
+        page = load(AMBESSA)
+        path = _core_path(page["firstItemStats"]["all"]["all"], 500, chosen_core(page))
+        assert [(item, games) for item, _, games in path] == [(6333, 77), (3156, 20), (3033, 16)]
+        assert path[0][1] == pytest.approx(0.522, abs=0.001)
+
+    def test_thresholds_are_read_from_the_config(self, monkeypatch):
+        page = load(AMBESSA)
+        stats_ = page["firstItemStats"]["all"]["all"]
+        core = chosen_core(page)
+        monkeypatch.setattr(draft_config, "LOADOUT_PATH_MIN_SHARE", 0.12)
+        assert [item for item, _, _ in _core_path(stats_, 500, core)] == [6333, 3156]
+        monkeypatch.setattr(draft_config, "LOADOUT_PATH_MIN_SHARE", 0.0)
+        monkeypatch.setattr(draft_config, "LOADOUT_PATH_MIN_GAMES", 17)
+        assert [item for item, _, _ in _core_path(stats_, 500, core)] == [6333, 3156]
+        monkeypatch.setattr(draft_config, "LOADOUT_PATH_MIN_GAMES", 0)
+        assert len(_core_path(stats_, 500, core)) == 5
+        assert len(_core_path(stats_, 500, core, filtered=False)) == 5
+
+    def test_unfiltered_path_keeps_the_noise(self):
+        page = load(AMBESSA)
+        path = _core_path(page["firstItemStats"]["all"]["all"], 500, chosen_core(page), False)
+        assert [item for item, _, _ in path][-2:] == [3026, 2517]
+
+    def test_alt_core_size_is_read_from_the_config(self, monkeypatch):
+        monkeypatch.setattr(draft_config, "LOADOUT_ALT_CORE_ITEMS", 1)
+        assert len(dict(pick_build(load(AMBESSA)).item_blocks)["Autres cores"]) == 1
+
+    @pytest.mark.parametrize(
+        "breakage",
+        [
+            lambda stats_: stats_.pop("popPath"),
+            lambda stats_: stats_.update(popPath=[]),
+            lambda stats_: stats_.update(popPath=[None]),
+            lambda stats_: stats_.update(popPath=[[[["x", "y"]]]]),
+            lambda stats_: stats_.update(popCore=[[[6692, 3071], 0.0]]),  # part nulle
+        ],
+    )
+    def test_missing_or_malformed_path_falls_back_to_the_popular_items(self, breakage):
+        page = load(AMBESSA)
+        stats_ = page["firstItemStats"]["all"]["all"]
+        popular = [int(item) for item, _ in stats_["popularItems"]]
+        breakage(stats_)
+        build = pick_build(page)
+        blocks = dict(build.item_blocks)
+        assert build.path_games == 0
+        assert "Autres cores" not in blocks
+        listed = {
+            item for title, items in build.item_blocks if title != "Situationnels" for item in items
+        }
+        assert blocks["Situationnels"] == tuple(
+            [item for item in dict.fromkeys(popular) if item not in listed][
+                : draft_config.LOADOUT_SITUATIONAL_ITEMS
+            ]
+        )
+
+    def test_the_core_missing_from_popcore_gives_no_path(self):
+        page = load(AMBESSA)
+        assert _core_path(page["firstItemStats"]["all"]["all"], 500, (1, 2)) is None
 
 
 class TestFetchPage:
@@ -169,10 +279,6 @@ class TestGetPage:
             get_page("Jinx", "bottom", "Draven")
             get_page("Jinx", "bottom", "Draven")
         assert get.call_count == 2
-
-
-GENERAL = "onetricks_jinx_bot.json"
-DUEL = "onetricks_jinx_bot_vs_draven.json"
 
 
 def stats(page):
@@ -274,6 +380,11 @@ class TestAdaptToMatchup:
         assert adapt_to_matchup(load(GENERAL), duel) is None
 
 
+def put_in_path(page, *items):
+    """Suites du core choisi : ajoute ``items`` (25 parties de 500) au 3e item de popPath[0]."""
+    stats(page)["popPath"][0][0].extend([item, 0.05] for item in items)
+
+
 class TestMatchupItems:
     """Situationnels : les items que le duel sur-représente passent en tête."""
 
@@ -281,6 +392,7 @@ class TestMatchupItems:
         general, duel = load(GENERAL), load(DUEL)
         # Kraken Slayer 5,9 % -> 20 % ; Randuin's, non publié (majorant 2,3 %) -> 20 %.
         stats(duel)["popularItems"] = [["6672", 0.2], ["3143", 0.2]]
+        put_in_path(general, 6672, 3143)  # SPEC-31 : seules les suites du core montent en tête
         build, subs = adapt_to_matchup(general, duel)
         assert dict(build.item_blocks)["Situationnels"][:2] == (3143, 6672)
         randuin = next(sub for sub in subs if sub.new == (3143,))
@@ -298,8 +410,17 @@ class TestMatchupItems:
         general, duel = load(GENERAL), load(DUEL)
         stats(general).pop("popularItems")
         stats(duel)["popularItems"] = [["6672", 0.5]]
-        build, _ = adapt_to_matchup(general, duel)
-        assert dict(build.item_blocks)["Situationnels"] == ()
+        build, subs = adapt_to_matchup(general, duel)
+        assert build.item_blocks == pick_build(general).item_blocks
+        assert subs[-1].category != "Situationnels"
+
+    def test_item_outside_the_core_path_stays_out_of_the_situationals(self):
+        """Kraken Slayer (hors chemin et hors de tout core) : ignoré, non signalé."""
+        general, duel = load(GENERAL), load(DUEL)
+        stats(duel)["popularItems"] = [["6672", 0.5]]
+        build, subs = adapt_to_matchup(general, duel)
+        assert 6672 not in [item for _, items in build.item_blocks for item in items]
+        assert not [sub for sub in subs if sub.category == "Situationnels"]
 
 
 class TestRuneSlots:

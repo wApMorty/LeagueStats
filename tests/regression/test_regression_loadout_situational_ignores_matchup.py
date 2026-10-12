@@ -23,6 +23,8 @@ def test_item_over_represented_in_the_duel_leads_the_situationals():
     popular = general["firstItemStats"]["all"]["all"]["popularItems"]
     boosted = {str(KRAKEN_SLAYER): 0.25, str(HEXOPTICS): 0.95}  # 5,9 % et 74 % en général
     duel_items = [[item, boosted.get(item, share)] for item, share in popular]
+    # SPEC-31 : seules les suites du core choisi montent en tête des situationnels.
+    general["firstItemStats"]["all"]["all"]["popPath"][0][0].append([str(KRAKEN_SLAYER), 0.05])
     duel["firstItemStats"]["all"]["all"]["popularItems"] = duel_items
     build, subs = adapt_to_matchup(general, duel)
     assert dict(build.item_blocks)["Situationnels"][0] == KRAKEN_SLAYER
