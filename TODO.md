@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-10-12 (SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette @pj35 à faire)
+**Mis à jour** : 2026-10-12 (SPEC-32 rédigée : classement MVP / ACE en post-game ; SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette @pj35 à faire)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -316,6 +316,21 @@ bruit (liste plus courte). Restent à valider : valeur des deux seuils et volume
 | 144 | Banc `scripts/bench_loadout_paths.py` (12 pages espacées de 20 s), réglage des deux seuils | 3 | 143 | ⬜ |
 | 145 | Ligne console, bloc « Autres cores » dans l'écran « En partie », remesure `measure_en_partie.py` | 2 | 143 | ⬜ |
 | 146 | Clôture : `CHANGELOG.md`, notes SPEC-15, statuts, README des specs, recette @pj35 | 2 | 144, 145 | ⬜ |
+
+### Lot suivant — SPEC-32, classement des joueurs en post-game (🟡 rédigée le 2026-10-12)
+
+[SPEC-32](docs/specs/SPEC-32-classement-des-joueurs-post-game.md) : la revue de partie ne montre que l'impact du joueur ;
+elle classe maintenant les dix joueurs par ΔP cumulé de SPEC-20 (portraits Data Dragon, déjà servis par `assets.py`), en deux
+listes de cinq, avec la couronne MVP sur le meilleur de l'équipe gagnante et ACE sur le meilleur de la perdante. Validé par
+@pj35 le 2026-10-12 : score = ΔP seul (pas de composite), deux listes, ACE attribué même à impact négatif (17 parties sur 98).
+Reste à valider : l'emplacement du panneau (entre la courbe et les cartes). Découpage en SPEC-32 §5 (tâches 147 à 150, 12 pts) :
+
+| # | Tâche | Pts | Dépend de | État |
+|---|---|---|---|---|
+| 147 | `src/client/classement.py` : `ranking` (ΔP par participant, équipes, MVP / ACE, ex æquo, remake) et tests purs | 3 | — | ⬜ |
+| 148 | `game_page` : clé `ranking`, formatage et barres sur les dix joueurs, absence sans impact, tests de page | 2 | 147 | ⬜ |
+| 149 | Gabarit et CSS : deux listes, portraits, barres, badges MVP et ACE, rupture à 1 500 px, tests de rendu | 5 | 148 | ⬜ |
+| 150 | Clôture : vérification sur les 98 parties de la base, module ajouté aux listes, `CHANGELOG.md`, statuts, recette @pj35 | 2 | 149 | ⬜ |
 
 ### Lot suivant — SPEC-22, attribution complète de l'impact (🟡 rédigée le 2026-10-04)
 
