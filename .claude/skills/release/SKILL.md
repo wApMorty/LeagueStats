@@ -1,6 +1,6 @@
 ---
 name: release
-description: Publier une version de LeagueStats Coach (numéro SemVer, CHANGELOG, tag, build de l'exe).
+description: Vérifier puis publier une version de LeagueStats Coach (pytest complet, numéro SemVer, CHANGELOG, tag, build de l'exe, push après validation).
 disable-model-invocation: true
 ---
 
@@ -11,6 +11,7 @@ Quand proposer une release : fin d'une spec ou d'un sprint du `TODO.md` (mineure
 Numéro SemVer : majeure = fonctionnalité retirée ou action requise de l'utilisateur (migration Alembic, scrape complet) ; mineure = nouvelle fonctionnalité compatible ; patch = corrections seulement.
 
 Étapes :
+0. Suite complète via l'agent `test-runner` (il gère le piège « 1 error » du Live Coach, voir `.claude/rules/tests.md`) ; si elle est rouge, s'arrêter et rapporter. Vérifier que README.md et docs/ suivent les changements de comportement listés dans `[Unreleased]`.
 1. Mettre le numéro dans `src/__init__.py` et `README.md`.
 2. `CHANGELOG.md` : renommer `[Unreleased]` en `[X.Y.Z] - AAAA-MM-JJ`, résumé de 2-3 lignes en tête (actions requises comprises), puis rouvrir un `[Unreleased]` vide.
 3. Commit `🚀 Deploy: version X.Y.Z`, puis tag annoté `vX.Y.Z`.

@@ -35,7 +35,7 @@ python build_app.py                              # exe PyInstaller
 
 - Travail direct sur `master` à jour. Une branche reste possible pour un chantier long.
 - Commits atomiques, format `<gitmoji> Type: description` (✨ Feature, 🐛 Fix, ♻️ Refactor, ✅ Test, 📝 Docs, 🔧 Chore, ⚡ Perf, 🔒 Security, 🎨 Style, 🚀 Deploy, 🗃️ Database). Pas de ligne `Co-Authored-By`.
-- IMPORTANT : ne jamais pousser sans validation explicite de @pj35. Avant un push, lancer `/ship`.
+- IMPORTANT : ne jamais pousser sans validation explicite de @pj35. Un push passe par `/release`.
 - Décision d'architecture non triviale : proposer 2-3 approches avec leurs compromis et attendre le choix de @pj35.
 - Specs : `/spec <sujet>` rédige la spec et met à jour le `TODO.md` ; `/implement SPEC-NN tâches a-b` l'exécute (un commit par tâche, jamais de push).
 - Release : la proposer sans attendre à la fin d'une spec ou d'un sprint du `TODO.md`, ou dès 8 entrées sous `[Unreleased]` ; la procédure est `/release`.
@@ -45,7 +45,7 @@ python build_app.py                              # exe PyInstaller
 - Continue jusqu'à ce que tout ce qui est demandé soit fait ; ne t'arrête que si tu es bloqué ou avant une action risquée.
 - Quand le travail demandé est fait et vérifié, arrête-toi et rapporte. N'ajoute ni fonctionnalité, ni test, ni doc, ni refactor non demandés ; propose-les à la fin.
 - Avant de dire « terminé » sur du code exécutable, lance un vrai check qui exerce le changement (pytest ciblé puis suite complète). Un `py_compile` seul ne compte pas.
-- Pas de revue par sous-agents sauf demande ; seuls `/implement` (agents `task-implementer` en Haiku 5.5, relu avant chaque commit, puis `spec-verifier`) et `/ship` (agent `test-runner`) en lancent d'office. `/code-review` à la demande de @pj35.
+- Pas de revue par sous-agents sauf demande ; seuls `/implement` (agents `task-implementer` en Haiku 5.5, relu avant chaque commit, puis `spec-verifier`) et `/release` (agent `test-runner`) en lancent d'office. `/code-review` à la demande de @pj35.
 - Fin de tâche : 3 à 6 lignes (fait, chiffre clé, question). Le détail va dans le CHANGELOG ou le commit.
 
 ## Où chercher
