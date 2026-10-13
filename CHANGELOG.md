@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### ✨ Feature
+
+- **Éclaireur des joueurs en partie, socle (SPEC-33 tâches 151 à 154, 156, 158)** — dès le passage en partie (écran de chargement), le Live Coach lit les dix joueurs dans la session gameflow et lance un éclaireur : un pool de threads dédié (`src/winprob/scout.py`, `SCOUT_WORKERS` = 8 en attendant le banc, 2 une fois la partie commencée) lit l'historique de chacun (forme brute : taux de victoire, KDA, CS/min, parties sur le champion, `src/winprob/form.py`), puis le détail et la timeline de leurs parties classées par rang (la plus récente de chacun d'abord) pour en tirer l'impact ΔP moyen à 5 / 10 / 20 parties. Une partie déjà dans `crawl.db` ne coûte aucune requête, une partie lue y est rangée ; la collecte se tait pendant l'éclaireur, un 429 l'arrête et met la collecte en pause. Résultat publié sur le sujet `players` du bus (l'affichage des pastilles viendra avec la tâche 157) et une ligne `[DATA] Éclaireur : formes en X s, 10 impacts en Y s, chargement Z s…` par partie ; la première partie réelle journalise aussi la forme de la session gameflow (`[INFO] Éclaireur : gameData …`), jamais vérifiée jusqu'ici. Le client LCU garde le statut HTTP par thread (absorbe SPEC-23 tâche 62). La collecte range désormais la forme brute de chaque historique visité dans `crawl_histories` (aucune requête de plus), pour mesurer plus tard si la forme améliore la win chance (tâche 159). Banc : `python scripts/bench_scout.py --dry-run` (client ouvert en lobby, Live Coach fermé), puis le banc complet de la tâche 155 par @pj35.
+
 ## [5.3.0] - 2026-10-13
 
 L'impact des événements d'une partie est maintenant attribué en entier aux joueurs (objectifs perdus, niveaux, récupération après mort : le « −20 pts non attribué » devient +0,8 pt), et la revue de partie classe les dix joueurs avec badges MVP et ACE. Aucune action requise (pas de migration, pas de scrape) : au prochain lancement, le rattrapage du Live Coach recalcule seul les impacts des parties déjà capturées.

@@ -1,6 +1,6 @@
 # SPEC-33 — Éclaireur des joueurs en partie
 
-**Statut** : 🟢 Validée par @pj35 le 2026-10-13, spike retiré le même jour (relevés de SPEC-25 et SPEC-27 suffisants, §1). Indicateur, win chance, affichage, déclencheur, concurrence,
+**Statut** : 🟢 Validée par @pj35 le 2026-10-13 ; tâches 151 à 154, 156 et 158 implémentées le même jour (reste le banc réel 155, puis 157, 159 à 161). Spike retiré le même jour (relevés de SPEC-25 et SPEC-27 suffisants, §1). Indicateur, win chance, affichage, déclencheur, concurrence,
 fenêtre, files, suite en partie, seuils de couleur et seuil d'adoption validés par @pj35 (§2).
 
 **Origine** : @pj35, 2026-10-13 : « ajouter une analyse des joueurs dans l'analyse in-game. Si on arrive
@@ -240,6 +240,7 @@ consignée en §7 et le modèle ne change pas.
 | `SCOUT_WORKERS` | 8 puis banc (tâche 155) | ~10 historiques en vol au départ ; remplacée par la mesure |
 | `SCOUT_IN_GAME_WORKERS` | 2 | @pj35, 2026-10-13 (§2) ; ordre de grandeur du débit en partie de SPEC-23 |
 | `SCOUT_TICK_S` | 0,25 | le coordinateur range et publie 4 fois par seconde : pastilles fluides, coût négligeable |
+| `SCOUT_LIVE_POLL_S` | 1,0 | ajoutée à l'implémentation (2026-10-13) : lecture de la Live Client API par l'éclaireur, jusqu'au premier `gameTime` > 0 seulement (mode console compris) |
 | `SCOUT_WINDOWS` | `(5, 10, 20)` | @pj35, 2026-10-13 |
 | `SCOUT_BADGE_WINDOW` | 10 | @pj35, 2026-10-13 |
 | `SCOUT_MIN_IMPACT_GAMES` | 3 | en dessous, la moyenne est un tirage ; la pastille montre le taux de victoire |
