@@ -24,7 +24,7 @@ from ..config_coaching import coaching_config
 from ..config_winprob import winprob_config as cfg
 from ..lcu_client import LCUClient
 from . import live
-from .crawl import store_game, unpack
+from .crawl import store_game, store_history, unpack
 from .form import form, player_impact, ranked_games
 from .model import WinModel
 from .train import load_model
@@ -106,6 +106,7 @@ class _Run:
             if kind == "history":
                 self.histories[key] = value
                 if value is not None:
+                    store_history(db, key, value)
                     self.s.crawler.mark_visited(key, value[0]["creation_ms"] if value else 0)
             else:
                 game_id, puuids = key

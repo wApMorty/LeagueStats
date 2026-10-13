@@ -26,6 +26,7 @@ from ..config_coaching import coaching_config
 from ..config_constants import draft_config
 from ..lcu_client import LCUClient
 from ..config_winprob import winprob_config as cfg
+from .form import ranked_games
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS crawl_games (
@@ -45,6 +46,22 @@ CREATE TABLE IF NOT EXISTS crawl_frontier (
     priority INTEGER NOT NULL,  -- création (ms) de la partie la plus récente vue
     discovered_utc TEXT NOT NULL,
     visited_utc TEXT
+);
+-- ponytail: pas de purge de crawl_histories (~20 lignes par visite, quelques dizaines de Mo par mois) ;
+-- purge par âge à ajouter si la base grossit.
+CREATE TABLE IF NOT EXISTS crawl_histories (
+    puuid TEXT NOT NULL,
+    game_id INTEGER NOT NULL,
+    creation_utc TEXT NOT NULL,
+    queue_id INTEGER,
+    champion_id INTEGER,
+    win INTEGER,
+    kills INTEGER,
+    deaths INTEGER,
+    assists INTEGER,
+    cs INTEGER,
+    duration_s INTEGER,
+    PRIMARY KEY (puuid, game_id)
 );
 """
 
@@ -125,6 +142,34 @@ def store_game(db: sqlite3.Connection, game: dict, timeline: Optional[dict], dep
             _now(),
             pack(game, timeline if timeline and timeline.get("frames") else None),
         ),
+    )
+
+
+def store_history(db: sqlite3.Connection, puuid: str, games: list) -> None:
+    """Range l'historique classé d'un joueur (sorties de `form.ranked_games`) dans `crawl_histories`.
+
+    Une partie déjà rangée est ignorée (une revisite n'ajoute rien). Sans commit : c'est l'appelant
+    qui valide.
+    """
+    db.executemany(
+        "INSERT OR IGNORE INTO crawl_histories (puuid, game_id, creation_utc, queue_id, champion_id, "
+        "win, kills, deaths, assists, cs, duration_s) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [
+            (
+                puuid,
+                g["game_id"],
+                _utc(g["creation_ms"]),
+                g["queue_id"],
+                g["champion_id"],
+                int(g["win"]),
+                g["kills"],
+                g["deaths"],
+                g["assists"],
+                g["cs"],
+                g["duration_s"],
+            )
+            for g in games
+        ],
     )
 
 
@@ -245,19 +290,23 @@ class Crawler:
             self._visit(*player)
 
     def _visit(self, puuid: str, depth: int) -> None:
-        games = self.lcu.get_player_games(puuid)
-        if self._throttled(1) or (games is None and self.lcu.last_status_code is None):
+        payload = self.lcu.get_player_history(puuid)
+        if self._throttled(1) or (payload is None and self.lcu.last_status_code is None):
             return  # 429, ou client injoignable : on réessaiera
+        games = ranked_games(
+            ((payload or {}).get("games") or {}).get("games"), coaching_config.QUEUE_IDS
+        )
         db = self._db()
         oldest = max(_utc((time.time() - cfg.CRAWL_MAX_AGE_DAYS * 86400) * 1000), self._floor)
-        for g in games or []:
-            created = _utc(g["game_creation_ms"])
-            if g["queue_id"] in coaching_config.QUEUE_IDS and created >= oldest:
+        for g in games:
+            created = _utc(g["creation_ms"])
+            if created >= oldest:
                 db.execute(
                     "INSERT OR IGNORE INTO crawl_games (game_id, queue_id, game_creation_utc, depth) "
                     "VALUES (?, ?, ?, ?)",
                     (g["game_id"], g["queue_id"], created, depth),
                 )
+        store_history(db, puuid, games)
         db.execute("UPDATE crawl_frontier SET visited_utc = ? WHERE puuid = ?", (_now(), puuid))
         db.commit()
 

@@ -38,11 +38,30 @@ def _game(game_id, puuids, version="16.19.1", created=NOW_MS, blue_win=True):
 
 
 def _entry(game_id, created=NOW_MS, queue_id=420):
-    return {"game_id": game_id, "game_creation_ms": created, "queue_id": queue_id}
+    """Une entrée brute de l'historique LCU (SPEC-33 tâche 158 : forme complète, un participant)."""
+    return {
+        "gameId": game_id,
+        "gameCreation": created,
+        "gameDuration": 1500,
+        "queueId": queue_id,
+        "participants": [
+            {
+                "championId": 103,
+                "stats": {
+                    "win": True,
+                    "kills": 3,
+                    "deaths": 1,
+                    "assists": 4,
+                    "totalMinionsKilled": 150,
+                    "neutralMinionsKilled": 10,
+                },
+            }
+        ],
+    }
 
 
 class FakeLCU:
-    """Historique par puuid, détails par partie ; `last_status_code` comme le vrai client."""
+    """Historique par puuid (entrées brutes), détails par partie ; `last_status_code` comme le vrai client."""
 
     def __init__(self):
         self.histories = {}
@@ -54,8 +73,11 @@ class FakeLCU:
         self.requests.append(label)
         return value if self.status == 200 else None
 
-    def get_player_games(self, puuid):
-        return self._answer(("history", puuid), self.histories.get(puuid))
+    def get_player_history(self, puuid):
+        entries = self.histories.get(puuid)
+        return self._answer(
+            ("history", puuid), None if entries is None else {"games": {"games": entries}}
+        )
 
     def get_game_detail(self, game_id):
         return self._answer(("detail", game_id), self.games.get(game_id))
@@ -225,6 +247,36 @@ class TestCrawl:
         assert _rows(crawler, "SELECT length(raw) FROM crawl_games") == [(0,)]
 
 
+class TestHistories:
+    """SPEC-33 tâche 158 : la forme brute de chaque visite est rangée dans `crawl_histories`."""
+
+    def test_a_visit_stores_the_ranked_history_and_a_revisit_adds_no_row(
+        self, crawler, db, lcu, clock
+    ):
+        _capture_own_game(db)
+        crawler.seed()
+        lcu.histories = {"a": [_entry(10), _entry(11, queue_id=450)], "b": []}
+        lcu.games = {10: _game(10, ["a"])}
+        _drain(crawler, clock)
+        assert _rows(
+            crawler,
+            "SELECT puuid, game_id, queue_id, champion_id, win, kills, deaths, assists, cs, "
+            "duration_s FROM crawl_histories",
+        ) == [
+            ("a", 10, 420, 103, 1, 3, 1, 4, 160, 1500)
+        ]  # la 450 n'est pas classée
+        assert len(lcu.requests) == 4  # historiques a et b, détail et timeline de 10 : inchangé
+
+        # revisite de `a` : même historique, aucun doublon, aucune requête de plus pour la partie
+        lcu.requests.clear()
+        crawler._db().execute("UPDATE crawl_frontier SET visited_utc = NULL WHERE puuid = 'a'")
+        crawler._db().commit()
+        lcu.histories["a"] = [_entry(10)]
+        _drain(crawler, clock)
+        assert _rows(crawler, "SELECT COUNT(*) FROM crawl_histories") == [(1,)]
+        assert lcu.requests == [("history", "a")]
+
+
 class TestRateAndPause:
     def test_step_respects_the_request_interval(self, crawler, db, lcu, clock):
         _capture_own_game(db)
@@ -267,7 +319,7 @@ class TestRateAndPause:
         ]
 
     def test_an_error_never_propagates(self, crawler, lcu, clock):
-        lcu.get_player_games = Mock(side_effect=RuntimeError("boom"))
+        lcu.get_player_history = Mock(side_effect=RuntimeError("boom"))
         crawler._db().execute(
             "INSERT INTO crawl_frontier (puuid, depth, priority, discovered_utc) VALUES ('a', 1, 1, 'x')"
         )
@@ -365,7 +417,9 @@ class TestLCUClientStatus:
         client = self._client()
         payload = {"games": {"games": [{"gameId": 5, "gameCreation": 7, "queueId": 420}, {"x": 1}]}}
         with patch.object(client, "_make_request", return_value=payload) as request:
-            assert client.get_player_games("abc") == [_entry(5, created=7)]
+            assert client.get_player_games("abc") == [
+                {"game_id": 5, "game_creation_ms": 7, "queue_id": 420}
+            ]
         assert "/products/lol/abc/matches?begIndex=0&endIndex=19" in request.call_args[0][0]
 
     def test_get_player_history_returns_raw_payload(self):

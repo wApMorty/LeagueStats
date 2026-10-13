@@ -250,6 +250,21 @@ def test_read_games_are_stored_like_the_crawler_and_players_marked_visited(
     assert visited == 10
 
 
+def test_the_history_read_by_the_scout_is_stored_in_crawl_histories(monitor, crawler, lcu, clock):
+    lcu.histories = {PUUIDS[0]: _history(7, 8)}
+    scout = _scout(monitor, crawler, lcu, clock)
+    scout.start(_players(PUUIDS[:1]))
+    _drain(scout, clock)
+    rows = (
+        crawler._db()
+        .execute(
+            "SELECT puuid, game_id, champion_id, win, kills FROM crawl_histories ORDER BY game_id"
+        )
+        .fetchall()
+    )
+    assert rows == [(PUUIDS[0], 7, 103, 1, 3), (PUUIDS[0], 8, 103, 1, 3)]
+
+
 def test_429_stops_submissions_keeps_forms_and_pauses_the_crawl(
     monitor, crawler, lcu, clock, capsys
 ):

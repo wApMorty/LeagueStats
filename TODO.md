@@ -351,7 +351,7 @@ Tous les arbitrages validés par @pj35 le 2026-10-13 (suite en partie à 2 threa
 | 155 | Banc réel par @pj35 (lobby, Live Coach fermé) : `SCOUT_WORKERS` et quartiles fixés | 1 | 154 | ⬜ |
 | 156 | Branchement : lancement en `InProgress`, arrêt, pause de la collecte, sujet `players` | 3 | 153 | ✅ 2026-10-13 : 5 tests ; forme de la session gameflow journalisée à la première partie réelle |
 | 157 | Écran « En partie » : pastilles et infobulle dans le face-à-face, remesure de la marge | 5 | 155, 156 | ⬜ |
-| 158 | `crawl_histories` : forme brute rangée à chaque visite d'historique (aucune requête de plus) | 3 | 152, 153 | ⬜ |
+| 158 | `crawl_histories` : forme brute rangée à chaque visite d'historique (aucune requête de plus) | 3 | 152, 153 | ✅ 2026-10-13 : 2 tests (visite de la collecte, éclaireur) |
 | 159 | `scripts/measure_form_term.py` : seuil figé, mesure du terme de forme une fois `crawl_histories` fournie | 5 | 158 | ⬜ |
 | 160 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure, exe, recette @pj35 | 2 | 157, 159 | ⬜ |
 | 161 | *Conditionnelle* : terme de forme dans le modèle si la tâche 159 l'adopte | 3 | 159 | ⬜ |
