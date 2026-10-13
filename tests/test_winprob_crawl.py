@@ -368,6 +368,47 @@ class TestLCUClientStatus:
             assert client.get_player_games("abc") == [_entry(5, created=7)]
         assert "/products/lol/abc/matches?begIndex=0&endIndex=19" in request.call_args[0][0]
 
+    def test_get_player_history_returns_raw_payload(self):
+        client = self._client()
+        payload = {"games": {"games": [{"gameId": 5}]}}
+        with patch.object(client, "_make_request", return_value=payload) as request:
+            assert client.get_player_history("abc") == payload
+        assert request.call_args[0][0] == (
+            "/lol-match-history/v1/products/lol/abc/matches?begIndex=0&endIndex=19"
+        )
+
+    def test_status_code_is_per_thread(self):
+        client = self._client()
+        barrier = threading.Barrier(2, timeout=5)
+        seen = {}
+
+        def fake_get(url, **kwargs):
+            return Mock(status_code=404 if url.endswith("/a") else 429)
+
+        def worker(name, endpoint):
+            client._make_request(endpoint)
+            barrier.wait()  # les deux requêtes ont eu lieu avant les lectures
+            seen[name] = client.last_status_code
+
+        with patch.object(client.session, "get", side_effect=fake_get):
+            threads = [
+                threading.Thread(target=worker, args=(name, endpoint))
+                for name, endpoint in (("a", "/a"), ("b", "/b"))
+            ]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join()
+        assert seen == {"a": 404, "b": 429}
+        assert client.last_status_code is None  # le fil principal n'a rien demandé
+
+    def test_pooled_session_sizes_the_https_pool(self):
+        client = self._client()
+        session = client.pooled_session(16)
+        assert session is not client.session
+        assert session.verify is False
+        assert session.get_adapter("https://x")._pool_maxsize == 16
+
 
 class TestLifecycleWiring:
     """La collecte n'est plus dans la boucle : voir `TestThread` et la régression du 2026-10-11."""

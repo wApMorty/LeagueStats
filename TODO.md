@@ -344,7 +344,7 @@ Tous les arbitrages validés par @pj35 le 2026-10-13 (suite en partie à 2 threa
 
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
-| 151 | `LCUClient` : statut thread-local, `pooled_session`, `get_player_history` (absorbe la tâche 62) | 2 | — | ⬜ |
+| 151 | `LCUClient` : statut thread-local, `pooled_session`, `get_player_history` (absorbe la tâche 62) | 2 | — | ✅ 2026-10-13 : 3 tests (statut par thread, pool, historique brut) |
 | 152 | `src/winprob/form.py` (forme brute et impact par fenêtre) et tests | 2 | 151 | ⬜ |
 | 153 | `src/winprob/scout.py` : pool, coordinateur, ordre par rang, cache et rangement dans `crawl.db`, 429, publication | 5 | 151, 152 | ⬜ |
 | 154 | `scripts/bench_scout.py` (copie temporaire, paliers de workers, critères d'arrêt, quartiles) | 3 | 153 | ⬜ |
@@ -385,7 +385,7 @@ Découpage en SPEC-23 §5 (tâches 62 à 67, 16 pts) :
 
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
-| 62 | `LCUClient.last_status_code` thread-local, session de collecte à pool dimensionné | 2 | — | ⬜ absorbée par SPEC-33 tâche 151 |
+| 62 | `LCUClient.last_status_code` thread-local, session de collecte à pool dimensionné | 2 | — | ✅ 2026-10-13, absorbée par SPEC-33 tâche 151 |
 | 63 | `Crawler` : exécuteur, jetons, en vol, 429, mesures ; constantes ; tests | 5 | 62 | ⬜ |
 | 64 | Débit en partie et croisière : `step(phase)`, `_target_reached()` | 3 | 63 | ⬜ |
 | 65 | `scripts/bench_crawl_rate.py` (copie temporaire, paliers, critères d'arrêt) | 3 | 63 | ⬜ |

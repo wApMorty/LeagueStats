@@ -188,7 +188,7 @@ Numéros globaux : suite du `TODO.md` (dernière tâche : 61).
 
 | # | Tâche | Pts | Dépend de |
 |---|---|---|---|
-| 62 | `LCUClient.last_status_code` thread-local, session `crawl_session()` à pool dimensionné, test 8 | 2 | — |
+| 62 | ✅ Absorbée par SPEC-33 tâche 151 (2026-10-13) : `last_status_code` thread-local, `pooled_session(size)` au lieu de `crawl_session()` | 2 | — |
 | 63 | `Crawler` : exécuteur, jetons, en vol, rangement dans la boucle, 429, mesures ; constantes ; tests 1-3, 6, 7, 9 ; `_drain` adapté | 5 | 62 |
 | 64 | Débit en partie et croisière : `step(phase)`, `lifecycle.py`, `_target_reached()`, tests 4-5 | 3 | 63 |
 | 65 | `scripts/bench_crawl_rate.py` (copie temporaire, paliers, critères d'arrêt, `--dry-run`) | 3 | 63 |

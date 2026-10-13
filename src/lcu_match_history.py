@@ -72,6 +72,15 @@ class _MatchHistoryMixin:
                 continue
         return matches
 
+    def get_player_history(self, puuid: str) -> Optional[Dict[str, Any]]:
+        """Réponse brute de l'historique des 20 dernières parties d'un joueur (SPEC-33 tâche 151).
+
+        None si indisponible (check `last_status_code`).
+        """
+        return self._make_request(
+            f"/lol-match-history/v1/products/lol/{puuid}/matches?begIndex=0&endIndex=19"
+        )
+
     def get_player_games(self, puuid: str) -> Optional[List[Dict[str, Any]]]:
         """The 20 latest games of ANY player, newest first (SPEC-20 §3, probed
         2026-10-01): [{"game_id", "game_creation_ms", "queue_id"}].
@@ -79,9 +88,7 @@ class _MatchHistoryMixin:
         None when the history is unavailable (check `last_status_code`),
         [] when it is served but empty or oddly shaped.
         """
-        response = self._make_request(
-            f"/lol-match-history/v1/products/lol/{puuid}/matches?begIndex=0&endIndex=19"
-        )
+        response = self.get_player_history(puuid)
         if response is None:
             return None
         games = (response.get("games") or {}).get("games")

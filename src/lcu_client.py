@@ -2,9 +2,11 @@ import os
 import json
 import base64
 import requests
+import threading
 import time
 import psutil
 import unicodedata
+from requests.adapters import HTTPAdapter
 from typing import Any, Callable, Dict, Optional
 from dataclasses import dataclass
 
@@ -40,10 +42,32 @@ class LCUClient(_MatchHistoryMixin):
         self.session = requests.Session()
         self.session.verify = False  # Ignore self-signed SSL cert
         self.verbose = verbose
+        # SPEC-33 : statut par thread, les workers de l'éclaireur partagent ce client.
+        self._status = threading.local()
         self.last_status_code: Optional[int] = None
         # SPEC-28 : posé par le monitor autour du travail d'arrière-plan ; vrai = la draft a commencé,
         # la requête est abandonnée (None, comme un client injoignable) pour rendre la main.
         self.yield_if: Optional[Callable[[], bool]] = None
+
+    @property
+    def last_status_code(self) -> Optional[int]:
+        """Code HTTP de la dernière requête du thread courant ; None = pas de réponse."""
+        return getattr(self._status, "code", None)
+
+    @last_status_code.setter
+    def last_status_code(self, value: Optional[int]) -> None:
+        self._status.code = value
+
+    def pooled_session(self, size: int) -> requests.Session:
+        """Session dédiée à la collecte parallèle, pool de `size` connexions.
+
+        Le pool par défaut (10) jette des connexions au-delà. L'authentification reste
+        par requête (en-tête de `_make_request`) : mêmes identifiants que `self.session`.
+        """
+        session = requests.Session()
+        session.verify = False  # Certificat auto-signé du LCU
+        session.mount("https://", HTTPAdapter(pool_connections=1, pool_maxsize=size))
+        return session
 
     def find_lcu_credentials(self) -> Optional[LCUCredentials]:
         """
