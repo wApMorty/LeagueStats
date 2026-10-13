@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-10-12 (SPEC-32 livrée : classement MVP / ACE en post-game, recette @pj35 à faire ; SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette @pj35 à faire)
+**Mis à jour** : 2026-10-13 (SPEC-33 rédigée : éclaireur des joueurs en partie ; SPEC-32 livrée : classement MVP / ACE en post-game, recette @pj35 à faire ; SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette @pj35 à faire)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -332,6 +332,31 @@ Emplacement du panneau (entre la courbe et les cartes) validé le 2026-10-12. D�
 | 149 | Gabarit et CSS : deux listes, portraits, barres, badges MVP et ACE, rupture à 1 500 px, tests de rendu | 5 | 148 | ✅ 2026-10-12 : 4 tests de rendu (rendu à l'œil laissé à @pj35) |
 | 150 | Clôture : vérification sur les 98 parties de la base, module ajouté aux listes, `CHANGELOG.md`, statuts, recette @pj35 | 2 | 149 | ✅ 2026-10-12 : 98 / 98 parties, 17 ACE négatifs ; recette à l'œil laissée à @pj35 |
 
+### Lot suivant — SPEC-33, éclaireur des joueurs en partie (🟡 rédigée le 2026-10-13)
+
+[SPEC-33](docs/specs/SPEC-33-eclaireur-des-joueurs-en-partie.md) : dès l'écran de chargement, une pastille de niveau à côté
+de chacun des dix champions du face-à-face (ΔP moyen sur 10 parties classées, taux de victoire en attendant), détail 5 / 10 / 20
+en infobulle. Pool de threads dédié (« éclaireur ») avec son propre client LCU, parties rangées dans `crawl.db`, collecte en
+pause pendant ce temps. Le terme de forme n'entre dans la win chance que s'il bat le modèle en place ; `crawl.db` ne couvre les dix joueurs que de 0,9 % des parties, d'où une table `crawl_histories` alimentée par la collecte.
+Indicateur, win chance, affichage, déclencheur, concurrence, fenêtre et files validés par @pj35 le 2026-10-13 ; suite en
+partie, seuils de couleur et seuil d'adoption à valider. Absorbe la tâche 62 de SPEC-23. Découpage en SPEC-33 §5 (tâches 151
+à 162, 36 pts) :
+
+| # | Tâche | Pts | Dépend de | État |
+|---|---|---|---|---|
+| 151 | Spike en partie réelle par @pj35 : `puuid` des dix dans la session gameflow, durée du chargement | 2 | — | ⬜ |
+| 152 | `LCUClient` : statut thread-local, `pooled_session`, `get_player_history` (absorbe la tâche 62) | 2 | — | ⬜ |
+| 153 | `src/winprob/form.py` (forme brute et impact par fenêtre) et tests | 2 | 152 | ⬜ |
+| 154 | `src/winprob/scout.py` : pool, coordinateur, ordre par rang, cache et rangement dans `crawl.db`, 429, publication | 5 | 152, 153 | ⬜ |
+| 155 | `scripts/bench_scout.py` (copie temporaire, paliers de workers, critères d'arrêt, quartiles) | 3 | 154 | ⬜ |
+| 156 | Banc réel par @pj35 (lobby, Live Coach fermé) : `SCOUT_WORKERS` et quartiles fixés | 1 | 155 | ⬜ |
+| 157 | Branchement : lancement en `InProgress`, arrêt, pause de la collecte, sujet `players` | 3 | 151, 154 | ⬜ |
+| 158 | Écran « En partie » : pastilles et infobulle dans le face-à-face, remesure de la marge | 5 | 156, 157 | ⬜ |
+| 159 | `crawl_histories` : forme brute rangée à chaque visite d'historique (aucune requête de plus) | 3 | 153, 154 | ⬜ |
+| 160 | `scripts/measure_form_term.py` : seuil figé, mesure du terme de forme une fois `crawl_histories` fournie | 5 | 159 | ⬜ |
+| 161 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure, exe, recette @pj35 | 2 | 158, 160 | ⬜ |
+| 162 | *Conditionnelle* : terme de forme dans le modèle si la tâche 160 l'adopte | 3 | 160 | ⬜ |
+
 ### Lot suivant — SPEC-22, attribution complète de l'impact (🟡 rédigée le 2026-10-04)
 
 [SPEC-22](docs/specs/SPEC-22-attribution-complete-impact.md) : le « −20 pts non attribué » du rapport
@@ -361,7 +386,7 @@ Découpage en SPEC-23 §5 (tâches 62 à 67, 16 pts) :
 
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
-| 62 | `LCUClient.last_status_code` thread-local, session de collecte à pool dimensionné | 2 | — | ⬜ |
+| 62 | `LCUClient.last_status_code` thread-local, session de collecte à pool dimensionné | 2 | — | ⬜ absorbée par SPEC-33 tâche 152 |
 | 63 | `Crawler` : exécuteur, jetons, en vol, 429, mesures ; constantes ; tests | 5 | 62 | ⬜ |
 | 64 | Débit en partie et croisière : `step(phase)`, `_target_reached()` | 3 | 63 | ⬜ |
 | 65 | `scripts/bench_crawl_rate.py` (copie temporaire, paliers, critères d'arrêt) | 3 | 63 | ⬜ |
