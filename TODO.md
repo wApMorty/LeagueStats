@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-10-13 (SPEC-33 rédigée : éclaireur des joueurs en partie ; SPEC-32 livrée : classement MVP / ACE en post-game, recette @pj35 à faire ; SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette @pj35 à faire)
+**Mis à jour** : 2026-10-13 (SPEC-33 validée : éclaireur des joueurs en partie ; SPEC-32 livrée : classement MVP / ACE en post-game, recette @pj35 à faire ; SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette @pj35 à faire)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -332,14 +332,14 @@ Emplacement du panneau (entre la courbe et les cartes) validé le 2026-10-12. D�
 | 149 | Gabarit et CSS : deux listes, portraits, barres, badges MVP et ACE, rupture à 1 500 px, tests de rendu | 5 | 148 | ✅ 2026-10-12 : 4 tests de rendu (rendu à l'œil laissé à @pj35) |
 | 150 | Clôture : vérification sur les 98 parties de la base, module ajouté aux listes, `CHANGELOG.md`, statuts, recette @pj35 | 2 | 149 | ✅ 2026-10-12 : 98 / 98 parties, 17 ACE négatifs ; recette à l'œil laissée à @pj35 |
 
-### Lot suivant — SPEC-33, éclaireur des joueurs en partie (🟡 rédigée le 2026-10-13)
+### Lot suivant — SPEC-33, éclaireur des joueurs en partie (🟢 validée le 2026-10-13)
 
 [SPEC-33](docs/specs/SPEC-33-eclaireur-des-joueurs-en-partie.md) : dès l'écran de chargement, une pastille de niveau à côté
 de chacun des dix champions du face-à-face (ΔP moyen sur 10 parties classées, taux de victoire en attendant), détail 5 / 10 / 20
 en infobulle. Pool de threads dédié (« éclaireur ») avec son propre client LCU, parties rangées dans `crawl.db`, collecte en
 pause pendant ce temps. Le terme de forme n'entre dans la win chance que s'il bat le modèle en place ; `crawl.db` ne couvre les dix joueurs que de 0,9 % des parties, d'où une table `crawl_histories` alimentée par la collecte.
-Indicateur, win chance, affichage, déclencheur, concurrence, fenêtre et files validés par @pj35 le 2026-10-13 ; suite en
-partie, seuils de couleur et seuil d'adoption à valider. Absorbe la tâche 62 de SPEC-23. Découpage en SPEC-33 §5 (tâches 151
+Tous les arbitrages validés par @pj35 le 2026-10-13 (suite en partie à 2 threads, seuils de couleur au banc, adoption à
+−0,002 de Brier sur les 10 premières minutes). Absorbe la tâche 62 de SPEC-23. Découpage en SPEC-33 §5 (tâches 151
 à 161, 34 pts) :
 
 | # | Tâche | Pts | Dépend de | État |

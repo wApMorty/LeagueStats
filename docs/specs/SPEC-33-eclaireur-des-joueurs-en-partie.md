@@ -1,7 +1,7 @@
 # SPEC-33 — Éclaireur des joueurs en partie
 
-**Statut** : 🟡 Rédigée le 2026-10-13, spike retiré le même jour (relevés de SPEC-25 et SPEC-27 suffisants, §1). Indicateur, win chance, affichage, déclencheur, concurrence,
-fenêtre et files validés par @pj35 (§2) ; trois points « à valider ».
+**Statut** : 🟢 Validée par @pj35 le 2026-10-13, spike retiré le même jour (relevés de SPEC-25 et SPEC-27 suffisants, §1). Indicateur, win chance, affichage, déclencheur, concurrence,
+fenêtre, files, suite en partie, seuils de couleur et seuil d'adoption validés par @pj35 (§2).
 
 **Origine** : @pj35, 2026-10-13 : « ajouter une analyse des joueurs dans l'analyse in-game. Si on arrive
 à crawl assez rapidement les stats de chaque joueur dans ses 20 dernières games pendant l'écran de
@@ -83,9 +83,9 @@ l'intégrer au modèle que si elle le fait.
 | Concurrence | **Validé (@pj35, 2026-10-13)** : pool dédié « éclaireur » (`ThreadPoolExecutor`, stdlib), son propre `LCUClient` et une session à pool dimensionné, statut HTTP par thread (tâche 62 de SPEC-23 absorbée). La collecte se tait pendant l'éclaireur. Les parties lues sont rangées dans `crawl.db`, depuis le fil coordinateur seul. Nombre de workers fixé par un banc par paliers (§4.5). |
 | Fenêtre | **Validé (@pj35, 2026-10-13)** : la pastille porte 10 parties ; 5 et 20 dans l'infobulle. |
 | Files | **Validé (@pj35, 2026-10-13)** : Solo/Duo et Flex seules (`coaching_config.QUEUE_IDS`), comme la collecte ; pas de seconde page d'historique. Moins de N parties classées sur les 20 : la pastille le dit (« 6 parties »). |
-| Fin du chargement avant la fin de l'éclaireur | **À valider** : on continue en partie avec `SCOUT_IN_GAME_WORKERS` = 2 (l'ordre de grandeur du débit en partie accepté en SPEC-23 §2), jusqu'à la fin. Alternative : tout arrêter au premier `gameTime > 0`. |
-| Seuils de couleur de la pastille | **À valider** : quartiles des moyennes à 10 parties des joueurs de `crawl.db`, mesurés au banc (tâche 155) et consignés en §7 ; pas de valeur choisie à la main. |
-| Seuil d'adoption du terme de forme | **À valider, à figer avant la mesure** : validation croisée poolée à 5 blocs (celle de SPEC-20 §4.3 bis), Brier sur les images ≤ 10 min amélioré d'au moins **0,002** (l'ordre de grandeur du coût de l'or, SPEC-20 §4.3 bis), et écart de calibration par décile ≤ 5 pts sur toutes les images. |
+| Fin du chargement avant la fin de l'éclaireur | **Validé (@pj35, 2026-10-13)** : on continue en partie avec `SCOUT_IN_GAME_WORKERS` = 2 (l'ordre de grandeur du débit en partie accepté en SPEC-23 §2), jusqu'à la fin. Alternative : tout arrêter au premier `gameTime > 0`. |
+| Seuils de couleur de la pastille | **Validé (@pj35, 2026-10-13)** : quartiles des moyennes à 10 parties des joueurs de `crawl.db`, mesurés au banc (tâche 155) et consignés en §7 ; pas de valeur choisie à la main. |
+| Seuil d'adoption du terme de forme | **Validé (@pj35, 2026-10-13)**, figé avant la mesure : validation croisée poolée à 5 blocs (celle de SPEC-20 §4.3 bis), Brier sur les images ≤ 10 min amélioré d'au moins **0,002** (l'ordre de grandeur du coût de l'or, SPEC-20 §4.3 bis), et écart de calibration par décile ≤ 5 pts sur toutes les images. |
 
 ## 3. Approches considérées
 
@@ -163,7 +163,7 @@ class Scout:
 - **Ordre** : §3.2. Parties hors `QUEUE_IDS` ignorées. Au plus 20 par joueur.
 - **429** : plus aucune soumission pour cette partie, `[ALERTE]` une fois, les pastilles gardent ce
   qu'elles ont ; la collecte repart en pause `CRAWL_BACKOFF_S` comme aujourd'hui (même horloge).
-- **En partie** (à valider, §2) : dès que la Live Client API répond (`live.fetch()` non vide, `gameTime` >
+- **En partie** (§2) : dès que la Live Client API répond (`live.fetch()` non vide, `gameTime` >
   0), plus de `SCOUT_IN_GAME_WORKERS` requêtes en vol.
 - **Journal** : à la fin (ou à l'arrêt), une ligne `[DATA] Éclaireur : formes en X s, 10 impacts en Y s, chargement Z s, N requêtes, C % du cache` ; Z = de `InProgress` au premier `gameTime` > 0 de la Live Client API.
 - **Publication** : sujet de bus `players` (`TOPIC = "players"`), `snapshot()` après chaque `step()` qui a
@@ -238,12 +238,12 @@ consignée en §7 et le modèle ne change pas.
 | Constante | Valeur | Origine |
 |---|---|---|
 | `SCOUT_WORKERS` | 8 puis banc (tâche 155) | ~10 historiques en vol au départ ; remplacée par la mesure |
-| `SCOUT_IN_GAME_WORKERS` | 2 | **à valider** (§2) ; ordre de grandeur du débit en partie de SPEC-23 |
+| `SCOUT_IN_GAME_WORKERS` | 2 | @pj35, 2026-10-13 (§2) ; ordre de grandeur du débit en partie de SPEC-23 |
 | `SCOUT_TICK_S` | 0,25 | le coordinateur range et publie 4 fois par seconde : pastilles fluides, coût négligeable |
 | `SCOUT_WINDOWS` | `(5, 10, 20)` | @pj35, 2026-10-13 |
 | `SCOUT_BADGE_WINDOW` | 10 | @pj35, 2026-10-13 |
 | `SCOUT_MIN_IMPACT_GAMES` | 3 | en dessous, la moyenne est un tirage ; la pastille montre le taux de victoire |
-| `SCOUT_IMPACT_QUARTILES` | banc (tâche 155) | **à valider** (§2) |
+| `SCOUT_IMPACT_QUARTILES` | banc (tâche 155) | quartiles mesurés (§2, @pj35, 2026-10-13) |
 | `FORM_MIN_COVERED_GAMES` | 5 000 | `WINPROB_MIN_PATCH_GAMES` : la taille à laquelle la logistique de SPEC-20 est calibrée |
 
 ### 4.8 Tests (hermétiques : `FakeLCU`, exécuteur synchrone, `crawl.db` temporaire, fixtures)
