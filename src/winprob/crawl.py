@@ -101,6 +101,33 @@ def unpack(raw: bytes) -> dict:
     return json.loads(zlib.decompress(raw))
 
 
+def store_game(db: sqlite3.Connection, game: dict, timeline: Optional[dict], depth: int) -> None:
+    """Range une partie lue (détail + timeline) dans `crawl_games`, ligne créée si absente.
+
+    Partagée par la collecte et l'éclaireur (SPEC-33) : même `pack`, même `blue_win`. Une timeline
+    sans images est rangée vide. Sans commit : c'est l'appelant qui valide.
+    """
+    blue = next((t for t in game.get("teams") or [] if t.get("teamId") == 100), {})
+    db.execute(
+        "INSERT INTO crawl_games (game_id, queue_id, game_version, game_creation_utc, duration_s, "
+        "blue_win, depth, read_utc, raw) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) "
+        "ON CONFLICT(game_id) DO UPDATE SET game_version = excluded.game_version, "
+        "duration_s = excluded.duration_s, blue_win = excluded.blue_win, "
+        "read_utc = excluded.read_utc, raw = excluded.raw, depth = MIN(depth, excluded.depth)",
+        (
+            game["gameId"],
+            game.get("queueId"),
+            game.get("gameVersion"),
+            _utc(game.get("gameCreation") or 0),
+            game.get("gameDuration"),
+            int(blue["win"] == "Win") if blue else None,
+            depth,
+            _now(),
+            pack(game, timeline if timeline and timeline.get("frames") else None),
+        ),
+    )
+
+
 class Crawler:
     def __init__(
         self,
@@ -145,9 +172,14 @@ class Crawler:
         self._stop.set()
 
     def _paused(self) -> bool:
-        """Champ select ou acceptation de la file : le client LoL n'est à personne d'autre."""
+        """Champ select, acceptation de la file ou éclaireur en cours : le client LoL est pris."""
         tracker = self.m.phase_tracker
-        return tracker.kind == "draft" or tracker.phase == "ReadyCheck"
+        scout = getattr(self.m, "scout", None)  # SPEC-33 : l'éclaireur a le client pour lui
+        return (
+            tracker.kind == "draft"
+            or tracker.phase == "ReadyCheck"
+            or bool(getattr(scout, "active", False))
+        )
 
     def _run(self) -> None:
         lcu = self._own_lcu = LCUClient()
@@ -242,19 +274,7 @@ class Crawler:
         timeline = lcu.get_game_timeline(game_id)
         if self._throttled(1) or (not timeline and lcu.last_status_code is None):
             return  # limite de débit, ou requête abandonnée (draft en cours, SPEC-28) : plus tard
-        blue = next((t for t in game.get("teams") or [] if t.get("teamId") == 100), {})
-        db.execute(
-            "UPDATE crawl_games SET game_version = ?, duration_s = ?, blue_win = ?, read_utc = ?, raw = ? "
-            "WHERE game_id = ?",
-            (
-                game.get("gameVersion"),
-                game.get("gameDuration"),
-                int(blue["win"] == "Win") if blue else None,
-                _now(),
-                pack(game, timeline if timeline and timeline.get("frames") else None),
-                game_id,
-            ),
-        )
+        store_game(db, {**game, "gameId": game_id}, timeline, depth)
         if depth + 1 <= cfg.CRAWL_MAX_DEPTH:
             priority = game.get("gameCreation") or 0
             for identity in game.get("participantIdentities") or []:
@@ -311,6 +331,15 @@ class Crawler:
                 "now": _now(),
                 "mine": int(from_my_game),
             },
+        )
+
+    def mark_visited(self, puuid: str, priority: int) -> None:
+        """Le joueur dont l'éclaireur vient de lire l'historique (SPEC-33) : visité, sans commit."""
+        self._db().execute(
+            "INSERT INTO crawl_frontier (puuid, depth, priority, discovered_utc, visited_utc) "
+            "VALUES (:puuid, 1, :priority, :now, :now) "
+            "ON CONFLICT(puuid) DO UPDATE SET visited_utc = :now",
+            {"puuid": puuid, "priority": priority, "now": _now()},
         )
 
     def _mark_self(self, puuid: str, priority: int) -> None:

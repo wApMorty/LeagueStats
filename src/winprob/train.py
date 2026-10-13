@@ -27,6 +27,15 @@ def model_path() -> Path:
     return Path(config.DATABASE_PATH).with_name(cfg.WINPROB_MODEL_FILENAME)
 
 
+def load_model() -> Optional[WinModel]:
+    """Le modèle de win chance entraîné, None s'il n'existe pas ou ne se lit pas."""
+    try:
+        path = model_path()
+        return WinModel.from_json(path.read_text(encoding="utf-8")) if path.exists() else None
+    except (OSError, ValueError, KeyError):
+        return None
+
+
 def games(path: Optional[Path] = None, seed: int = 0) -> List[Tuple[List[dict], int]]:
     """Parties lues, de la plus ancienne à la plus récente : (images tirées, victoire bleue).
 

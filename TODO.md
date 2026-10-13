@@ -346,7 +346,7 @@ Tous les arbitrages validés par @pj35 le 2026-10-13 (suite en partie à 2 threa
 |---|---|---|---|---|
 | 151 | `LCUClient` : statut thread-local, `pooled_session`, `get_player_history` (absorbe la tâche 62) | 2 | — | ✅ 2026-10-13 : 3 tests (statut par thread, pool, historique brut) |
 | 152 | `src/winprob/form.py` (forme brute et impact par fenêtre) et tests | 2 | 151 | ✅ 2026-10-13 : 5 tests (dont `player_impact` sur la fixture 7998195590) |
-| 153 | `src/winprob/scout.py` : pool, coordinateur, ordre par rang, cache et rangement dans `crawl.db`, 429, publication | 5 | 151, 152 | ⬜ |
+| 153 | `src/winprob/scout.py` : pool, coordinateur, ordre par rang, cache et rangement dans `crawl.db`, 429, publication | 5 | 151, 152 | ✅ 2026-10-13 : 13 tests (dont la garde SQLite sur un vrai pool) |
 | 154 | `scripts/bench_scout.py` (copie temporaire, paliers de workers, critères d'arrêt, quartiles) | 3 | 153 | ⬜ |
 | 155 | Banc réel par @pj35 (lobby, Live Coach fermé) : `SCOUT_WORKERS` et quartiles fixés | 1 | 154 | ⬜ |
 | 156 | Branchement : lancement en `InProgress`, arrêt, pause de la collecte, sujet `players` | 3 | 153 | ⬜ |

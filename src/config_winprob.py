@@ -113,5 +113,18 @@ class WinProbConfig:
     OVERLAY_GRACE_POLLS: int = 10
     OVERLAY_TREND_S: float = 60.0
 
+    # Éclaireur des joueurs en partie (SPEC-33 §4.7). Workers du pool avant la fin du chargement
+    # (8 en attendant le banc de la tâche 155), puis en partie (@pj35, 2026-10-13) ; cadence du fil
+    # coordinateur ; lecture de la Live Client API jusqu'au premier `gameTime` > 0.
+    SCOUT_WORKERS: int = 8
+    SCOUT_IN_GAME_WORKERS: int = 2
+    SCOUT_TICK_S: float = 0.25
+    SCOUT_LIVE_POLL_S: float = 1.0
+    # Fenêtres de la forme (la plus grande borne les parties lues par joueur), celle de la pastille,
+    # et le nombre de parties d'impact en dessous duquel la pastille montre le taux de victoire.
+    SCOUT_WINDOWS: tuple = (5, 10, 20)
+    SCOUT_BADGE_WINDOW: int = 10
+    SCOUT_MIN_IMPACT_GAMES: int = 3
+
 
 winprob_config = WinProbConfig()

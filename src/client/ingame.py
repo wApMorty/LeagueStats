@@ -19,7 +19,7 @@ from ..config_client import client_config
 from ..winprob import live
 from ..winprob.model import WinModel
 from ..winprob.overlay import Tracker
-from ..winprob.train import model_path
+from ..winprob.train import load_model as _load_model
 
 TOPIC = "ingame"
 IN_PROGRESS = "InProgress"
@@ -35,15 +35,6 @@ OBJECTIVES = {
 _STRUCTURE_OWNER = {"TOrder": "ORDER", "TChaos": "CHAOS", "T1": "ORDER", "T2": "CHAOS"}
 # Format de l'API : `rawChampionName` vaut « game_character_displayname_<Nom> ».
 _RAW_CHAMPION_PREFIX = "game_character_displayname_"
-
-
-def _load_model() -> Optional[WinModel]:
-    """Le modèle de win chance entraîné, None s'il n'existe pas (l'écran dit comment l'entraîner)."""
-    try:
-        path = model_path()
-        return WinModel.from_json(path.read_text(encoding="utf-8")) if path.exists() else None
-    except (OSError, ValueError, KeyError):
-        return None
 
 
 def _my_player(data: dict) -> Optional[dict]:
