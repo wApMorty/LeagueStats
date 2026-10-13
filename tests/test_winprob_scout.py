@@ -373,3 +373,72 @@ def test_the_data_line_is_printed_once_at_the_end(monitor, crawler, lcu, clock, 
     out = capsys.readouterr().out
     assert out.count("[DATA] Éclaireur : formes en") == 1
     assert "3 requêtes, 0 % du cache" in out  # historique, puis détail et timeline
+
+
+class TestLifecycle:
+    """Test 11 : lancé une fois par partie en `InProgress`, jamais en draft, arrêté au reset."""
+
+    @pytest.fixture
+    def live_monitor(self):
+        from unittest.mock import Mock
+
+        from src.draft_monitor import DraftMonitor
+
+        with patch("src.draft_monitor.Assistant", return_value=Mock()):
+            with patch("src.draft_monitor.LCUClient", return_value=Mock()):
+                monitor = DraftMonitor(verbose=False, auto_hover=False)
+        monitor.scout = Mock(armed=False)
+        monitor.reality = Mock()
+        monitor.bus = Mock()
+        monitor.lcu.is_in_ready_check.return_value = False
+        return monitor
+
+    @staticmethod
+    def _session(missing=0):
+        teams = {
+            key: [{"puuid": f"{side}{i}", "championId": i} for i in range(5)]
+            for key, side in (("teamOne", "a"), ("teamTwo", "b"))
+        }
+        for player in teams["teamTwo"][:missing]:
+            player["puuid"] = ""
+        return {"phase": "InProgress", "gameData": teams}
+
+    def _tick(self, monitor, phase):
+        monitor.phase_tracker = SimpleNamespace(
+            phase=phase, kind="draft" if phase == "ChampSelect" else "game", draft_episode=0
+        )
+        monitor._draft_episode = 0
+        monitor.lifecycle.monitor_loop()
+
+    def test_in_progress_starts_the_scout_with_the_ten_players(self, live_monitor):
+        live_monitor.lcu.get_gameflow_session.return_value = self._session()
+        self._tick(live_monitor, "InProgress")
+        (players,), _ = live_monitor.scout.start.call_args
+        assert len(players) == 10
+        assert players[0] == {"puuid": "a0", "champion_id": 0, "team": 100}
+        assert players[-1] == {"puuid": "b4", "champion_id": 4, "team": 200}
+
+    def test_once_armed_the_session_is_not_read_again(self, live_monitor):
+        live_monitor.scout.armed = True
+        self._tick(live_monitor, "InProgress")
+        live_monitor.lcu.get_gameflow_session.assert_not_called()
+        live_monitor.scout.start.assert_not_called()
+
+    def test_an_incomplete_session_is_retried_without_error(self, live_monitor, capsys):
+        live_monitor.lcu.get_gameflow_session.return_value = self._session(missing=1)
+        self._tick(live_monitor, "InProgress")
+        live_monitor.lcu.get_gameflow_session.return_value = None
+        self._tick(live_monitor, "InProgress")
+        live_monitor.scout.start.assert_not_called()
+        assert capsys.readouterr().out.count("[INFO] Éclaireur : gameData") == 1
+
+    def test_never_started_during_the_draft(self, live_monitor):
+        live_monitor.lcu.get_gameflow_session.return_value = self._session()
+        live_monitor.lcu.get_champion_select_session.return_value = None
+        self._tick(live_monitor, "ChampSelect")
+        live_monitor.scout.start.assert_not_called()
+
+    def test_reset_stops_the_scout_and_clears_players(self, live_monitor):
+        live_monitor.lifecycle.reset_for_next_game()
+        live_monitor.scout.stop.assert_called_once_with()
+        live_monitor.bus.publish.assert_any_call("players", None)

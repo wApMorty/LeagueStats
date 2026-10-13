@@ -21,6 +21,7 @@ from typing import Callable, Optional, TypeVar
 
 from ..config_constants import draft_config
 from ..utils.console import clear_console
+from ..winprob.scout import TOPIC as SCOUT_TOPIC
 from .final_analysis import TOPIC as GAME_TOPIC
 from .state import DraftState
 
@@ -34,6 +35,8 @@ class MonitorLifecycle:
         self.m = monitor
         self._exit_ticks = 0  # sondages « hors champ select » consécutifs
         self._phase = ""  # phase vue au tour courant, pour le journal des tours
+        # SPEC-33 : forme de la session gameflow journalisée une fois.
+        self._scout_keys_logged = False
 
     def monitor_loop(self) -> None:
         """Main monitoring loop : un tour, chronométré étape par étape (SPEC-28)."""
@@ -106,6 +109,7 @@ class MonitorLifecycle:
                 self.retry_post_game()  # la collecte SPEC-20 a son propre fil (`Crawler.start`)
                 if phase == "InProgress":  # SPEC-27 : jamais d'exception, voir RealityCheck.step
                     timer.run("reality_check", self.m.reality.step)
+                    timer.run("scout", self.launch_scout)  # SPEC-33, best-effort
                 return
 
             self._exit_ticks = 0
@@ -119,6 +123,35 @@ class MonitorLifecycle:
         except Exception as e:
             if self.m.verbose:
                 print(f"[WARNING] Monitor error: {e}")
+
+    def launch_scout(self) -> None:
+        """En partie : arme l'éclaireur avec les dix joueurs de la session gameflow, une fois par partie
+        (SPEC-33 §4.4). Session absente ou incomplète : rien, réessai au tour suivant. Ne lève jamais.
+        """
+        try:
+            scout = self.m.scout
+            if scout.armed:
+                return
+            data = (self.m.lcu.get_gameflow_session() or {}).get("gameData") or {}
+            # Forme jamais vérifiée avant SPEC-33 : journalisée à la première session lue.
+            if data and not self._scout_keys_logged:
+                self._scout_keys_logged = True
+                first = next(iter(data.get("teamOne") or []), {})
+                print(
+                    f"[INFO] Éclaireur : gameData {sorted(data)}, "
+                    f"teamOne[0] {sorted(first) if isinstance(first, dict) else type(first).__name__}"
+                )
+            players = [
+                {"puuid": p.get("puuid"), "champion_id": p.get("championId"), "team": team}
+                for key, team in (("teamOne", 100), ("teamTwo", 200))
+                for p in data.get(key) or []
+                if isinstance(p, dict)
+            ]
+            if len(players) == 10 and all(p["puuid"] for p in players):
+                scout.start(players)
+        except Exception as error:  # pylint: disable=broad-exception-caught
+            if self.m.verbose:
+                print(f"[WARNING] Éclaireur : lancement impossible ({error})")
 
     def _rearm_for_new_draft(self, timer) -> None:
         """Nouvelle draft (esquive, ou partie finie sans que la boucle ait vu `Lobby` ni
@@ -307,6 +340,8 @@ class MonitorLifecycle:
             bus = getattr(self.m, "bus", None)
             if bus is not None:
                 bus.publish(GAME_TOPIC, None)
+                bus.publish(SCOUT_TOPIC, None)
+            self.m.scout.stop()  # SPEC-33 : rien n'est soumis pendant la draft suivante
         except Exception:  # pylint: disable=broad-exception-caught
             pass
 

@@ -13,6 +13,7 @@ from .config_constants import analysis_config, draft_config
 from .coaching.capture import GameCapture
 from .coaching.post_game_watcher import PostGameWatcher
 from .winprob.crawl import Crawler
+from .winprob.scout import Scout
 from .draft.state import ChampionAction, DraftState
 from .draft import phases
 from .draft import display
@@ -123,6 +124,7 @@ class DraftMonitor:
         self.post_game_watcher = PostGameWatcher(self.phase_tracker, self.game_capture)
         self.phase_tracker.subscribe_events(self.game_capture.on_lcu_event)  # notification de LP
         self.crawler = Crawler(self)  # SPEC-20 : collecte de parties tierces
+        self.scout = Scout(self, self.crawler)  # SPEC-33 : éclaireur des joueurs en partie
         self.loadout = LoadoutImporter(self)  # SPEC-15
         self.reality = RealityCheck(self)  # SPEC-27 : postes adverses vérifiés en partie
         self.last_recommendation = None  # Track last recommendation to avoid spam
@@ -174,6 +176,7 @@ class DraftMonitor:
         self.game_capture.on_startup()  # SPEC-19: same catch-up, same guarantees
         self.crawler.seed()
         self.crawler.start()  # SPEC-20 : fil à part, la draft n'attend jamais la collecte
+        self.scout.serve()  # SPEC-33 : fil coordinateur, inactif hors partie
 
         # Load champion ID mappings
         self._load_champion_mappings()
@@ -436,6 +439,7 @@ class DraftMonitor:
         self.phase_tracker.stop()
         self.post_game_watcher.stop()
         self.crawler.stop()
+        self.scout.shutdown()
         if self.lcu:
             self.lcu.disconnect()
         if self.assistant:
