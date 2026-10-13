@@ -198,7 +198,7 @@ class Scout:
 ### 4.6 Mesure du terme de forme (phase 2)
 
 `scripts/measure_form_term.py` (tâche 160) : pour chaque partie lue de `crawl.db`, la forme de chacun des dix joueurs
-**avant** la partie, tirée de ses parties antérieures présentes dans `crawl.db` (impact ΔP moyen et taux de
+**avant** la partie, tirée de ses parties antérieures dans `crawl_histories` (forme brute) et `crawl.db` (impact ΔP moyen), voir « Données » ci-dessous (taux de
 victoire sur 10, à défaut sur ce qui existe, au moins `SCOUT_MIN_IMPACT_GAMES`) ; variable d'équipe =
 différence des moyennes bleu − rouge ; joueur sans forme = 0. Ajustement de la logistique de `model.py`
 avec cette variable et son produit avec le temps, validation croisée poolée à 5 blocs de parties, contre le
