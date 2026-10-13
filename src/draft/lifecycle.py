@@ -340,8 +340,11 @@ class MonitorLifecycle:
             bus = getattr(self.m, "bus", None)
             if bus is not None:
                 bus.publish(GAME_TOPIC, None)
+            # SPEC-33 : rien n'est soumis pendant la draft suivante. Arrêt avant la remise à zéro du
+            # sujet : un tour du coordinateur en cours ne republie plus après le `None`.
+            self.m.scout.stop()
+            if bus is not None:
                 bus.publish(SCOUT_TOPIC, None)
-            self.m.scout.stop()  # SPEC-33 : rien n'est soumis pendant la draft suivante
         except Exception:  # pylint: disable=broad-exception-caught
             pass
 

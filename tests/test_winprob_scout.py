@@ -320,6 +320,18 @@ def test_no_sqlite_access_outside_the_coordinator_thread(monitor, crawler, lcu):
     assert threads and set(threads) == {threading.current_thread().name}
 
 
+def test_an_error_in_the_coordinator_ends_the_run_and_frees_the_crawl(
+    monitor, crawler, lcu, clock, capsys
+):
+    lcu.histories = {PUUIDS[0]: _history(1)}
+    scout = _scout(monitor, crawler, lcu, clock)
+    scout.start(_players(PUUIDS[:1]))
+    with patch.object(crawler, "_db", side_effect=sqlite3.OperationalError("database is locked")):
+        _drain(scout, clock, steps=3)  # ne lève pas
+    assert not scout.active and not crawler._paused()
+    assert capsys.readouterr().out.count("database is locked") == 1
+
+
 def test_the_crawl_is_paused_while_the_scout_is_active(monitor, crawler, lcu, clock):
     lcu.histories = {PUUIDS[0]: _history(1)}
     scout = _scout(monitor, crawler, lcu, clock)
@@ -453,7 +465,13 @@ class TestLifecycle:
         self._tick(live_monitor, "ChampSelect")
         live_monitor.scout.start.assert_not_called()
 
-    def test_reset_stops_the_scout_and_clears_players(self, live_monitor):
+    def test_reset_stops_the_scout_before_clearing_players(self, live_monitor):
+        from unittest.mock import Mock, call
+
+        order = Mock()
+        order.attach_mock(live_monitor.scout.stop, "stop")
+        order.attach_mock(live_monitor.bus.publish, "publish")
         live_monitor.lifecycle.reset_for_next_game()
         live_monitor.scout.stop.assert_called_once_with()
-        live_monitor.bus.publish.assert_any_call("players", None)
+        calls = order.mock_calls
+        assert calls.index(call.stop()) < calls.index(call.publish("players", None))

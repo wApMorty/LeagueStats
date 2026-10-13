@@ -306,6 +306,7 @@ class Scout:
             if run.step() and self._run is run:
                 self._publish(run.snapshot())
         except Exception as error:  # pylint: disable=broad-exception-caught
+            run.close()  # une erreur qui se répéterait à chaque tour tairait la collecte toute la partie
             if not self._warned:
                 self._warned = True
                 print(f"[INFO] Éclaireur SPEC-33 : {type(error).__name__}: {error}")
