@@ -35,7 +35,7 @@ python build_app.py                              # exe PyInstaller
 
 - Travail direct sur `master` à jour. Une branche reste possible pour un chantier long.
 - Commits atomiques, format `<gitmoji> Type: description` (✨ Feature, 🐛 Fix, ♻️ Refactor, ✅ Test, 📝 Docs, 🔧 Chore, ⚡ Perf, 🔒 Security, 🎨 Style, 🚀 Deploy, 🗃️ Database). Pas de ligne `Co-Authored-By`.
-- IMPORTANT : ne jamais pousser sans validation explicite de @pj35. Un push passe par `/release`.
+- IMPORTANT : ne jamais pousser sans validation explicite de @pj35. Un push passe par `/release`, dont l'appel par @pj35 vaut validation.
 - Décision d'architecture non triviale : proposer 2-3 approches avec leurs compromis et attendre le choix de @pj35.
 - Specs : `/spec <sujet>` rédige la spec et met à jour le `TODO.md` ; `/implement SPEC-NN tâches a-b` l'exécute (un commit par tâche, jamais de push).
 - Release : la proposer sans attendre à la fin d'une spec ou d'un sprint du `TODO.md`, ou dès 8 entrées sous `[Unreleased]` ; la procédure est `/release`.
