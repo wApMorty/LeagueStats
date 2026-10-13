@@ -340,22 +340,21 @@ en infobulle. Pool de threads dédié (« éclaireur ») avec son propre client 
 pause pendant ce temps. Le terme de forme n'entre dans la win chance que s'il bat le modèle en place ; `crawl.db` ne couvre les dix joueurs que de 0,9 % des parties, d'où une table `crawl_histories` alimentée par la collecte.
 Indicateur, win chance, affichage, déclencheur, concurrence, fenêtre et files validés par @pj35 le 2026-10-13 ; suite en
 partie, seuils de couleur et seuil d'adoption à valider. Absorbe la tâche 62 de SPEC-23. Découpage en SPEC-33 §5 (tâches 151
-à 162, 36 pts) :
+à 161, 34 pts) :
 
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
-| 151 | Spike en partie réelle par @pj35 : `puuid` des dix dans la session gameflow, durée du chargement | 2 | — | ⬜ |
-| 152 | `LCUClient` : statut thread-local, `pooled_session`, `get_player_history` (absorbe la tâche 62) | 2 | — | ⬜ |
-| 153 | `src/winprob/form.py` (forme brute et impact par fenêtre) et tests | 2 | 152 | ⬜ |
-| 154 | `src/winprob/scout.py` : pool, coordinateur, ordre par rang, cache et rangement dans `crawl.db`, 429, publication | 5 | 152, 153 | ⬜ |
-| 155 | `scripts/bench_scout.py` (copie temporaire, paliers de workers, critères d'arrêt, quartiles) | 3 | 154 | ⬜ |
-| 156 | Banc réel par @pj35 (lobby, Live Coach fermé) : `SCOUT_WORKERS` et quartiles fixés | 1 | 155 | ⬜ |
-| 157 | Branchement : lancement en `InProgress`, arrêt, pause de la collecte, sujet `players` | 3 | 151, 154 | ⬜ |
-| 158 | Écran « En partie » : pastilles et infobulle dans le face-à-face, remesure de la marge | 5 | 156, 157 | ⬜ |
-| 159 | `crawl_histories` : forme brute rangée à chaque visite d'historique (aucune requête de plus) | 3 | 153, 154 | ⬜ |
-| 160 | `scripts/measure_form_term.py` : seuil figé, mesure du terme de forme une fois `crawl_histories` fournie | 5 | 159 | ⬜ |
-| 161 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure, exe, recette @pj35 | 2 | 158, 160 | ⬜ |
-| 162 | *Conditionnelle* : terme de forme dans le modèle si la tâche 160 l'adopte | 3 | 160 | ⬜ |
+| 151 | `LCUClient` : statut thread-local, `pooled_session`, `get_player_history` (absorbe la tâche 62) | 2 | — | ⬜ |
+| 152 | `src/winprob/form.py` (forme brute et impact par fenêtre) et tests | 2 | 151 | ⬜ |
+| 153 | `src/winprob/scout.py` : pool, coordinateur, ordre par rang, cache et rangement dans `crawl.db`, 429, publication | 5 | 151, 152 | ⬜ |
+| 154 | `scripts/bench_scout.py` (copie temporaire, paliers de workers, critères d'arrêt, quartiles) | 3 | 153 | ⬜ |
+| 155 | Banc réel par @pj35 (lobby, Live Coach fermé) : `SCOUT_WORKERS` et quartiles fixés | 1 | 154 | ⬜ |
+| 156 | Branchement : lancement en `InProgress`, arrêt, pause de la collecte, sujet `players` | 3 | 153 | ⬜ |
+| 157 | Écran « En partie » : pastilles et infobulle dans le face-à-face, remesure de la marge | 5 | 155, 156 | ⬜ |
+| 158 | `crawl_histories` : forme brute rangée à chaque visite d'historique (aucune requête de plus) | 3 | 152, 153 | ⬜ |
+| 159 | `scripts/measure_form_term.py` : seuil figé, mesure du terme de forme une fois `crawl_histories` fournie | 5 | 158 | ⬜ |
+| 160 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure, exe, recette @pj35 | 2 | 157, 159 | ⬜ |
+| 161 | *Conditionnelle* : terme de forme dans le modèle si la tâche 159 l'adopte | 3 | 159 | ⬜ |
 
 ### Lot suivant — SPEC-22, attribution complète de l'impact (🟡 rédigée le 2026-10-04)
 
@@ -386,7 +385,7 @@ Découpage en SPEC-23 §5 (tâches 62 à 67, 16 pts) :
 
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
-| 62 | `LCUClient.last_status_code` thread-local, session de collecte à pool dimensionné | 2 | — | ⬜ absorbée par SPEC-33 tâche 152 |
+| 62 | `LCUClient.last_status_code` thread-local, session de collecte à pool dimensionné | 2 | — | ⬜ absorbée par SPEC-33 tâche 151 |
 | 63 | `Crawler` : exécuteur, jetons, en vol, 429, mesures ; constantes ; tests | 5 | 62 | ⬜ |
 | 64 | Débit en partie et croisière : `step(phase)`, `_target_reached()` | 3 | 63 | ⬜ |
 | 65 | `scripts/bench_crawl_rate.py` (copie temporaire, paliers, critères d'arrêt) | 3 | 63 | ⬜ |

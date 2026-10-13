@@ -1,6 +1,6 @@
 # SPEC-33 — Éclaireur des joueurs en partie
 
-**Statut** : 🟡 Rédigée le 2026-10-13. Indicateur, win chance, affichage, déclencheur, concurrence,
+**Statut** : 🟡 Rédigée le 2026-10-13, spike retiré le même jour (relevés de SPEC-25 et SPEC-27 suffisants, §1). Indicateur, win chance, affichage, déclencheur, concurrence,
 fenêtre et files validés par @pj35 (§2) ; trois points « à valider ».
 
 **Origine** : @pj35, 2026-10-13 : « ajouter une analyse des joueurs dans l'analyse in-game. Si on arrive
@@ -9,7 +9,7 @@ chargement, on peut d'office mettre à jour la win chance de la game de manière
 un avis rapidement sur le niveau d'un joueur, peut-être en calculant son impact moyen dans les 5, 10 ou 20
 dernières games. Il y a un enjeu majeur sur les performances […] la question du multi-threading se pose. »
 
-**Effort** : ~4,5 jours, 12 tâches (151 à 162), 36 pts (§5), dont une tâche conditionnelle.
+**Effort** : ~4,5 jours, 11 tâches (151 à 160), 34 pts (§5), dont une tâche conditionnelle.
 
 ---
 
@@ -22,7 +22,7 @@ Mesuré le 2026-10-13 (lecture du code, `data/crawl.db` ouverte en lecture seule
   participant, **lui**, avec ses 118 stats (`win`, `kills`, `deaths`, `assists`, `totalMinionsKilled`,
   `neutralMinionsKilled`…) et `gameDuration` : forme brute sans autre requête. L'impact ΔP de SPEC-20
   exige en plus le **détail** et la **timeline** de chaque partie (`get_game_detail`, `get_game_timeline`,
-  `src/lcu_match_history.py:147-155`) : 2 requêtes par partie, ~400 pour 10 joueurs à 20 parties.
+  `src/lcu_match_history.py:147-154`) : 2 requêtes par partie, ~400 pour 10 joueurs à 20 parties.
 - **Latences** (SPEC-23 §1) : détail 60 à 280 ms, timeline 13 à 213 ms, mais **3 à 17 s** la timeline
   d'une partie jamais lue d'après le commentaire de `src/winprob/crawl.py:6-7`. En séquentiel, 400
   requêtes ne tiennent pas dans un écran de chargement : seule la concurrence le permet.
@@ -49,10 +49,20 @@ Mesuré le 2026-10-13 (lecture du code, `data/crawl.db` ouverte en lecture seule
   produits avec le temps (`src/winprob/model.py:17-30`). Au chargement, il dit ~50 % quelles que soient
   les équipes ; la probabilité de la draft (`analysis_view`, `src/client/en_partie.py:121`) est un autre
   chiffre, d'un autre modèle.
-- **Identité des joueurs en partie** : personne ne lit aujourd'hui les `puuid` des dix joueurs. La Live
-  Client API ne sert que des `riotId` (`src/winprob/live.py:39`) ; la session gameflow
-  (`LCUClient.get_gameflow_session`, `lcu_client.py:266`) porte vraisemblablement `gameData.teamOne` /
-  `teamTwo` avec `puuid` et `championId` : **non vérifié**, objet du spike (tâche 151).
+- **Le chargement est déjà relevé, pas besoin d'un nouveau spike.** Chronologie de SPEC-25
+  (`tests/fixtures/lcu_endgame/gameflow_events.json`) : `ChampSelect` → `GameStart` à 197,06 s →
+  `InProgress` à 197,25 s : la phase `InProgress` couvre l'écran de chargement. Relevé de SPEC-27
+  (2026-10-12) : la Live Client API sert les dix joueurs (`riotId`, `team`, `position`, `championName`) dès
+  le premier relevé, pendant le chargement (`game_time` figé à 0,027 s).
+- **Seul point non relevé : les `puuid` des dix joueurs en partie.** La Live Client API ne sert que des
+  `riotId` (`src/winprob/live.py:39`). La session gameflow (`LCUClient.get_gameflow_session`,
+  `lcu_client.py:266`, lue aujourd'hui pour sa seule `phase`) porte `gameData.teamOne` / `teamTwo` avec
+  `puuid` et `championId` d'après les outils tiers du LCU ; jamais vérifié dans ce projet. Pas de spike
+  dédié : le branchement (tâche 156) lit ces champs défensivement et journalise leur forme à la première
+  partie réelle (§4.4) ; s'ils manquent, la recette le dit et un repli par `riotId` est spécifié à ce
+  moment-là.
+- **La durée du chargement** n'est relevée nulle part ; elle ne conditionne rien (l'éclaireur est
+  progressif) et la ligne `[DATA]` de fin d'éclaireur la mesure (§4.3).
 - **Écran « En partie »** : tient sur un écran à 1 920 × 986 avec **30 px** de marge (SPEC-31 tâche 145) ;
   le face-à-face est rendu par `analysis_view` (`en_partie.py:99`), une ligne par lane, allié et ennemi.
 
@@ -155,6 +165,7 @@ class Scout:
   qu'elles ont ; la collecte repart en pause `CRAWL_BACKOFF_S` comme aujourd'hui (même horloge).
 - **En partie** (à valider, §2) : dès que la Live Client API répond (`live.fetch()` non vide, `gameTime` >
   0), plus de `SCOUT_IN_GAME_WORKERS` requêtes en vol.
+- **Journal** : à la fin (ou à l'arrêt), une ligne `[DATA] Éclaireur : formes en X s, 10 impacts en Y s, chargement Z s, N requêtes, C % du cache` ; Z = de `InProgress` au premier `gameTime` > 0 de la Live Client API.
 - **Publication** : sujet de bus `players` (`TOPIC = "players"`), `snapshot()` après chaque `step()` qui a
   changé quelque chose ; `None` à la remise à zéro.
 - **Invariants** : aucune écriture SQLite hors du fil coordinateur ; aucune exception ne sort de `step()`
@@ -166,7 +177,7 @@ class Scout:
 - `Crawler._paused()` : `… or self.m.scout.active`.
 - `lifecycle._tick` : en `InProgress` (là où `reality.step` tourne, `lifecycle.py:107`), si l'éclaireur n'a
   pas été lancé pour cet épisode, lire `get_gameflow_session()` et en tirer les dix joueurs
-  (`gameData.teamOne` / `teamTwo`, champs confirmés au spike) ; lecture absente ou incomplète : réessai au
+  (`gameData.teamOne` / `teamTwo` : `puuid`, `championId`, `team` ; la première fois, une ligne `[INFO]` donne les clés reçues) ; lecture absente ou incomplète : réessai au
   tick suivant, sans erreur.
 - `reset_for_next_game` (`lifecycle.py:286`) : `scout.stop()`, publication `players` à `None`.
 - `src/client/en_partie.py` : `en_partie_view(..., players=None)` ; `analysis_view` ajoute à chaque côté du
@@ -197,7 +208,7 @@ class Scout:
 
 ### 4.6 Mesure du terme de forme (phase 2)
 
-`scripts/measure_form_term.py` (tâche 160) : pour chaque partie lue de `crawl.db`, la forme de chacun des dix joueurs
+`scripts/measure_form_term.py` (tâche 159) : pour chaque partie lue de `crawl.db`, la forme de chacun des dix joueurs
 **avant** la partie, tirée de ses parties antérieures dans `crawl_histories` (forme brute) et `crawl.db` (impact ΔP moyen), voir « Données » ci-dessous (taux de
 victoire sur 10, à défaut sur ce qui existe, au moins `SCOUT_MIN_IMPACT_GAMES`) ; variable d'équipe =
 différence des moyennes bleu − rouge ; joueur sans forme = 0. Ajustement de la logistique de `model.py`
@@ -206,7 +217,7 @@ modèle en place sur les **mêmes** blocs. Sortie : Brier toutes images et ≤ 1
 nombre de parties couvertes. Seuil d'adoption du §2, figé avant de lancer.
 
 **Données** : la couverture du §1 (0,9 % des parties à dix joueurs couverts) exclut de mesurer la forme
-par l'impact sur `crawl.db` seul. La tâche 159 ajoute donc à la collecte une table
+par l'impact sur `crawl.db` seul. La tâche 158 ajoute donc à la collecte une table
 `crawl_histories(puuid, game_id, creation_utc, queue_id, champion_id, win, kills, deaths, assists, cs,
 duration_s)`, clé (`puuid`, `game_id`), remplie à chaque visite d'historique par `form.ranked_games` (la
 réponse est déjà lue, aucune requête de plus), et l'éclaireur y range aussi les historiques qu'il lit. La
@@ -216,7 +227,7 @@ d'impact), et signalée comme telle. La mesure attend que `crawl_histories` couv
 `FORM_MIN_COVERED_GAMES` parties à dix joueurs connus (à quelques jours de collecte : chaque partie lue de
 profondeur 1 fait visiter ses dix joueurs).
 
-**Si le terme est adopté** (tâche 162, conditionnelle) : `INPUTS` gagne `form`, `state_from_live` reçoit la
+**Si le terme est adopté** (tâche 161, conditionnelle) : `INPUTS` gagne `form`, `state_from_live` reçoit la
 forme d'équipe de l'éclaireur (0 tant qu'inconnue), la timeline la reçoit de la même façon pour les impacts
 d'après-partie (0 : pas de forme connue pour les parties passées), et l'écran affiche la win chance au
 chargement. À détailler par un amendement de cette spec une fois la mesure faite. **Sinon**, la mesure est
@@ -226,13 +237,13 @@ consignée en §7 et le modèle ne change pas.
 
 | Constante | Valeur | Origine |
 |---|---|---|
-| `SCOUT_WORKERS` | 8 puis banc (tâche 156) | ~10 historiques en vol au départ ; remplacée par la mesure |
+| `SCOUT_WORKERS` | 8 puis banc (tâche 155) | ~10 historiques en vol au départ ; remplacée par la mesure |
 | `SCOUT_IN_GAME_WORKERS` | 2 | **à valider** (§2) ; ordre de grandeur du débit en partie de SPEC-23 |
 | `SCOUT_TICK_S` | 0,25 | le coordinateur range et publie 4 fois par seconde : pastilles fluides, coût négligeable |
 | `SCOUT_WINDOWS` | `(5, 10, 20)` | @pj35, 2026-10-13 |
 | `SCOUT_BADGE_WINDOW` | 10 | @pj35, 2026-10-13 |
 | `SCOUT_MIN_IMPACT_GAMES` | 3 | en dessous, la moyenne est un tirage ; la pastille montre le taux de victoire |
-| `SCOUT_IMPACT_QUARTILES` | banc (tâche 156) | **à valider** (§2) |
+| `SCOUT_IMPACT_QUARTILES` | banc (tâche 155) | **à valider** (§2) |
 | `FORM_MIN_COVERED_GAMES` | 5 000 | `WINPROB_MIN_PATCH_GAMES` : la taille à laquelle la logistique de SPEC-20 est calibrée |
 
 ### 4.8 Tests (hermétiques : `FakeLCU`, exécuteur synchrone, `crawl.db` temporaire, fixtures)
@@ -263,18 +274,17 @@ Numéros globaux : suite du `TODO.md` (dernière tâche : 150).
 
 | # | Tâche | Pts | Dépend de |
 |---|---|---|---|
-| 151 | Spike en partie réelle (par @pj35) : `scripts/spike_gameflow_players.py` relève toutes les secondes la phase, `gameData.teamOne` / `teamTwo` (clés, `puuid`, `championId`) et l'instant où la Live Client API répond avec `gameTime` > 0 ; consigner en §7 (forme, durée du chargement) | 2 | — |
-| 152 | `LCUClient` : `last_status_code` thread-local, `pooled_session`, `get_player_history` ; test 9 ; SPEC-23 tâche 62 marquée absorbée | 2 | — |
-| 153 | `src/winprob/form.py` et tests 1-2 | 2 | 152 |
-| 154 | `src/winprob/scout.py` : pool, coordinateur, ordre par rang, cache et rangement dans `crawl.db` (`store_game` extrait de `_read_game`), 429, en partie, publication ; constantes ; tests 3-8 | 5 | 152, 153 |
-| 155 | `scripts/bench_scout.py` (copie temporaire, paliers, critères d'arrêt, quartiles, `--dry-run`) | 3 | 154 |
-| 156 | **Banc réel (par @pj35, client ouvert en lobby, Live Coach fermé)** : consigner le tableau en §7, fixer `SCOUT_WORKERS` et `SCOUT_IMPACT_QUARTILES` | 1 | 155 |
-| 157 | Branchement : `lifecycle` (lancement en `InProgress` depuis la session gameflow, arrêt), pause de la collecte, sujet `players` ; test 11 | 3 | 151, 154 |
-| 158 | Écran : `analysis_view` (`form`), `app.py`, gabarit, CSS ; test 10 ; `scripts/measure_en_partie.py` avec pastilles : marge ≥ 20 px à 1 920 × 986 | 5 | 156, 157 |
-| 159 | `crawl_histories` : table, remplissage à chaque visite de la collecte et par l'éclaireur ; test 12 | 3 | 153, 154 |
-| 160 | `scripts/measure_form_term.py` : seuil du §2 figé, attente de `FORM_MIN_COVERED_GAMES`, forme brute puis forme par l'impact sur le sous-ensemble couvert, résultat en §7 | 5 | 159 |
-| 161 | Clôture : `CHANGELOG.md`, statut, README des specs, `PROJECT_STRUCTURE.md`, modules ajoutés à `check_exe_assets.py`, recette @pj35 | 2 | 158, 160 |
-| 162 | *Conditionnelle* : terme de forme dans le modèle (§4.6), si la tâche 160 l'adopte ; amendement de la spec d'abord | 3 | 160 |
+| 151 | `LCUClient` : `last_status_code` thread-local, `pooled_session`, `get_player_history` ; test 9 ; SPEC-23 tâche 62 marquée absorbée | 2 | — |
+| 152 | `src/winprob/form.py` et tests 1-2 | 2 | 151 |
+| 153 | `src/winprob/scout.py` : pool, coordinateur, ordre par rang, cache et rangement dans `crawl.db` (`store_game` extrait de `_read_game`), 429, en partie, publication ; constantes ; tests 3-8 | 5 | 151, 152 |
+| 154 | `scripts/bench_scout.py` (copie temporaire, paliers, critères d'arrêt, quartiles, `--dry-run`) | 3 | 153 |
+| 155 | **Banc réel (par @pj35, client ouvert en lobby, Live Coach fermé)** : consigner le tableau en §7, fixer `SCOUT_WORKERS` et `SCOUT_IMPACT_QUARTILES` | 1 | 154 |
+| 156 | Branchement : `lifecycle` (lancement en `InProgress` depuis la session gameflow, arrêt), pause de la collecte, sujet `players` ; test 11 | 3 | 153 |
+| 157 | Écran : `analysis_view` (`form`), `app.py`, gabarit, CSS ; test 10 ; `scripts/measure_en_partie.py` avec pastilles : marge ≥ 20 px à 1 920 × 986 | 5 | 155, 156 |
+| 158 | `crawl_histories` : table, remplissage à chaque visite de la collecte et par l'éclaireur ; test 12 | 3 | 152, 153 |
+| 159 | `scripts/measure_form_term.py` : seuil du §2 figé, attente de `FORM_MIN_COVERED_GAMES`, forme brute puis forme par l'impact sur le sous-ensemble couvert, résultat en §7 | 5 | 158 |
+| 160 | Clôture : `CHANGELOG.md`, statut, README des specs, `PROJECT_STRUCTURE.md`, modules ajoutés à `check_exe_assets.py`, recette @pj35 | 2 | 157, 159 |
+| 161 | *Conditionnelle* : terme de forme dans le modèle (§4.6), si la tâche 159 l'adopte ; amendement de la spec d'abord | 3 | 159 |
 
 ## 6. Critères d'acceptation
 
@@ -282,7 +292,7 @@ Numéros globaux : suite du `TODO.md` (dernière tâche : 150).
 2. `grep -n "check_same_thread" src/winprob/scout.py` ne renvoie rien (SQLite mono-thread).
 3. Les constantes du §4.7 sont dans `src/config_winprob.py` ; aucune valeur de réglage en dur dans `scout.py` ni `form.py`.
 4. `python scripts/bench_scout.py --dry-run` (client ouvert, hors partie) imprime un palier, un p95 par type de requête, et laisse `data/crawl.db` intacte (mtime et taille).
-5. Le banc complet (tâche 156) s'arrête sans 429, imprime `[DATA] Workers retenus : N` et les quartiles ; le tableau est consigné en §7, avec le temps jusqu'aux dix formes brutes et jusqu'à 10 impacts pour les dix.
+5. Le banc complet (tâche 155) s'arrête sans 429, imprime `[DATA] Workers retenus : N` et les quartiles ; le tableau est consigné en §7, avec le temps jusqu'aux dix formes brutes et jusqu'à 10 impacts pour les dix.
 6. `python scripts/measure_en_partie.py` : marge ≥ 20 px à 1 920 × 986 avec les pastilles, `scrollWidth` = `clientWidth`.
 7. `python scripts/measure_form_term.py` imprime Brier (toutes images, ≤ 10 min), écart par décile et décision au seuil du §2 ; résultat consigné en §7.
 8. `CHANGELOG.md` (`[Unreleased]`), statut de cette spec, `docs/specs/README.md`, `TODO.md` et SPEC-23 (tâche 62) à jour.
@@ -295,7 +305,7 @@ n'est pas ralentie (`logs/draft_monitor_ticks.log`).
 
 ## 7. Résultats
 
-*Spike (tâche 151), banc (tâche 156) et mesure du terme de forme (tâche 160) : à remplir.*
+*Forme de la session gameflow (recette), banc (tâche 155) et mesure du terme de forme (tâche 159) : à remplir.*
 
 ## 8. Hors périmètre
 
