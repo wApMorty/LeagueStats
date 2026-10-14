@@ -80,7 +80,7 @@ l'intégrer au modèle que si elle le fait.
 | Win chance | **Validé (@pj35, 2026-10-13)** : mesurer d'abord. Un terme de forme n'entre dans le modèle que s'il bat le modèle en place sur le jeu de validation (§4.6). Les pastilles s'affichent dans tous les cas. |
 | Affichage | **Validé (@pj35, 2026-10-13)** : pastille dans le face-à-face, détail 5 / 10 / 20 en infobulle ; l'écran tient toujours sur un écran. |
 | Déclencheur | **Validé (@pj35, 2026-10-13)** : passage en partie (écran de chargement), les dix joueurs. Rien pendant la draft, que SPEC-28 a protégée. |
-| Concurrence | **Validé (@pj35, 2026-10-13)** : pool dédié « éclaireur » (`ThreadPoolExecutor`, stdlib), son propre `LCUClient` et une session à pool dimensionné, statut HTTP par thread (tâche 62 de SPEC-23 absorbée). La collecte se tait pendant l'éclaireur. Les parties lues sont rangées dans `crawl.db`, depuis le fil coordinateur seul. Nombre de workers fixé par un banc par paliers (§4.5). **Amendé (@pj35, 2026-10-14)** après le premier banc (§7) : un seul historique en vol (`SCOUT_HISTORY_WORKERS`), le LCU les sert un par un ; délai de requête de l'éclaireur porté à `SCOUT_REQUEST_TIMEOUT_S`. |
+| Concurrence | **Validé (@pj35, 2026-10-13)** : pool dédié « éclaireur » (`ThreadPoolExecutor`, stdlib), son propre `LCUClient` et une session à pool dimensionné, statut HTTP par thread (tâche 62 de SPEC-23 absorbée). La collecte se tait pendant l'éclaireur. Les parties lues sont rangées dans `crawl.db`, depuis le fil coordinateur seul. Nombre de workers fixé par un banc par paliers (§4.5). **Amendé (@pj35, 2026-10-14)** après le premier banc (§7) : un seul historique en vol (`SCOUT_HISTORY_WORKERS`), le LCU les sert un par un ; délai de requête de l'éclaireur porté à `SCOUT_REQUEST_TIMEOUT_S`. **Banc du 2026-10-15** : `SCOUT_WORKERS` = 4. |
 | Fenêtre | **Validé (@pj35, 2026-10-13)** : la pastille porte 10 parties ; 5 et 20 dans l'infobulle. |
 | Files | **Validé (@pj35, 2026-10-13)** : Solo/Duo et Flex seules (`coaching_config.QUEUE_IDS`), comme la collecte ; pas de seconde page d'historique. Moins de N parties classées sur les 20 : la pastille le dit (« 6 parties »). |
 | Fin du chargement avant la fin de l'éclaireur | **Validé (@pj35, 2026-10-13)** : on continue en partie avec `SCOUT_IN_GAME_WORKERS` = 2 (l'ordre de grandeur du débit en partie accepté en SPEC-23 §2), jusqu'à la fin. Alternative : tout arrêter au premier `gameTime > 0`. |
@@ -97,14 +97,13 @@ l'intégrer au modèle que si elle le fait.
 | SPEC-23 d'abord, joueurs en tête de file | Un seul mécanisme, mais dépend d'une spec non démarrée, et son débit est pensé pour la croisière, pas pour une rafale de 400 requêtes en une minute. |
 | asyncio + aiohttp | Nouvelle dépendance pour rien : le débit est borné par le LCU, pas par les threads Python (`requests` libère le GIL en I/O). |
 
-**3.2 Ordre de lecture** (**amendé par @pj35 le 2026-10-14**, après le banc du §7) : les historiques des dix
-joueurs un par un (le LCU les sert l'un après l'autre : 1,5 s chacun, ~15 s pour les dix, sans gain en
-parallèle), et **dès qu'un historique revient**, les parties de ce joueur, sans attendre les autres. Entre
-joueurs dont l'historique est connu, les parties vont **par rang** (la plus récente de chacun, puis la
-deuxième…). Une partie commune à plusieurs joueurs connus est lue une fois ; un joueur dont la partie est en
-vol pour un autre l'attend, puis la reçoit du cache. *Avant l'amendement* : les dix historiques en parallèle,
-puis les parties par rang une fois les dix revenus ; le banc a montré que les historiques ne vont pas plus
-vite en parallèle et qu'ils dépassent alors le délai de 5 s du client.
+**3.2 Ordre de lecture** (**amendé par @pj35 les 2026-10-14 et 2026-10-15**, bancs du §7) : les historiques des dix
+joueurs **un par un** (le LCU les sert l'un après l'autre ; seuls, 0,1 s chacun, ~4 s pour les dix), puis, une
+fois les dix revenus, les parties **par rang** (la plus récente de chacun, puis la deuxième…) avec le reste du
+pool. Une partie commune à plusieurs joueurs est lue une fois. *Historique* : à l'origine, les dix historiques
+en parallèle (le banc du 2026-10-13 a montré qu'ils n'en vont pas plus vite et dépassent le délai de 5 s) ; le
+2026-10-14, les parties d'un joueur dès le retour de son historique (le banc du 2026-10-15 a montré qu'elles
+ralentissent alors les historiques suivants : formes en 17,6 s au lieu de 3,6 s), abandonné le 2026-10-15.
 
 ## 4. Détail
 
@@ -165,7 +164,7 @@ class Scout:
   forme exacte de `Crawler._read_game` (même `pack`, `depth` = 1, `read_utc`) : extraire de `_read_game`
   une fonction `store_game(db, game, timeline, depth)` partagée plutôt que dupliquer. Les dix `puuid` sont
   marqués visités dans `crawl_frontier` (leurs historiques viennent d'être lus).
-- **Ordre** : §3.2. Au plus `SCOUT_HISTORY_WORKERS` historiques en vol, le reste du pool pour les parties. Parties hors `QUEUE_IDS` ignorées. Au plus 20 par joueur. Une partie illisible n'est pas redemandée pour un autre joueur.
+- **Ordre** : §3.2. Au plus `SCOUT_HISTORY_WORKERS` historiques en vol ; les parties une fois les dix historiques revenus. Parties hors `QUEUE_IDS` ignorées. Au plus 20 par joueur. Une partie illisible n'est pas redemandée pour un autre joueur.
 - **429** : plus aucune soumission pour cette partie, `[ALERTE]` une fois, les pastilles gardent ce
   qu'elles ont ; la collecte repart en pause `CRAWL_BACKOFF_S` comme aujourd'hui (même horloge).
 - **En partie** (§2) : dès que la Live Client API répond (`live.fetch()` non vide, `gameTime` >
@@ -242,7 +241,7 @@ consignée en §7 et le modèle ne change pas.
 
 | Constante | Valeur | Origine |
 |---|---|---|
-| `SCOUT_WORKERS` | 8 puis banc (tâche 155) | ~10 historiques en vol au départ ; remplacée par la mesure |
+| `SCOUT_WORKERS` | 4 | banc du 2026-10-15 (§7) : 10 impacts au plus tôt (21,6 s), p95 timeline doublé à 12 |
 | `SCOUT_IN_GAME_WORKERS` | 2 | @pj35, 2026-10-13 (§2) ; ordre de grandeur du débit en partie de SPEC-23 |
 | `SCOUT_TICK_S` | 0,25 | le coordinateur range et publie 4 fois par seconde : pastilles fluides, coût négligeable |
 | `SCOUT_HISTORY_WORKERS` | 1 | banc du 2026-10-13 (§7) : historiques servis un par un par le LCU |
@@ -261,7 +260,7 @@ consignée en §7 et le modèle ne change pas.
 1. `ranked_games` : files hors `QUEUE_IDS` écartées, entrée mal formée ignorée, ordre conservé.
 2. `form` : KDA sans mort, CS/min, `on_champion`, fenêtre plus grande que l'historique (`n` réel), impact
    `None` sans partie d'impact.
-3. Ordre §3.2 (amendé le 2026-10-14) : un historique en vol à la fois ; les parties d'un joueur partent dès son historique revenu ; entre joueurs connus, par rang.
+3. Ordre §3.2 (amendé les 2026-10-14 et 2026-10-15) : un historique en vol à la fois ; les parties une fois les dix historiques revenus, par rang.
 4. Une partie présente dans `crawl.db` ne déclenche aucune requête et a son impact.
 5. Une partie lue est rangée dans `crawl_games` sous la forme de `Crawler._read_game` (même `unpack`), et
    les dix `puuid` sont marqués visités.
