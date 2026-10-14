@@ -114,9 +114,9 @@ class WinProbConfig:
     OVERLAY_TREND_S: float = 60.0
 
     # Éclaireur des joueurs en partie (SPEC-33 §4.7). Workers du pool avant la fin du chargement
-    # (8 en attendant le banc de la tâche 155), puis en partie (@pj35, 2026-10-13) ; cadence du fil
-    # coordinateur ; lecture de la Live Client API jusqu'au premier `gameTime` > 0.
-    SCOUT_WORKERS: int = 8
+    # (4 : banc du 2026-10-15, 10 impacts au plus tôt, SPEC-33 §7), puis en partie (@pj35, 2026-10-13) ;
+    # cadence du fil coordinateur ; lecture de la Live Client API jusqu'au premier `gameTime` > 0.
+    SCOUT_WORKERS: int = 4
     SCOUT_IN_GAME_WORKERS: int = 2
     SCOUT_TICK_S: float = 0.25
     SCOUT_LIVE_POLL_S: float = 1.0

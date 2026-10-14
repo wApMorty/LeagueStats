@@ -1,8 +1,8 @@
 """Éclaireur des joueurs en partie (SPEC-33 §4.3).
 
 Dès l'écran de chargement, lit l'historique des dix joueurs (forme brute, un à la fois : le LCU les sert
-un par un, banc du 2026-10-13), et, dès qu'un historique revient, les parties classées de ce joueur par
-rang (à rang égal entre joueurs connus, l'ordre des joueurs) pour en tirer l'impact ΔP de SPEC-20.
+un par un), puis leurs parties classées par rang (la plus récente de chacun, puis la deuxième...) pour en
+tirer l'impact ΔP de SPEC-20 (bancs des 2026-10-13 et 2026-10-15, SPEC-33 §7).
 
 - Un pool de threads (`ThreadPoolExecutor`) ne fait que les requêtes LCU et le calcul d'impact ; son
   client LCU a une session à pool dimensionné et un statut HTTP par thread (SPEC-33 tâche 151).
@@ -186,12 +186,13 @@ class _Run:
         self.in_flight[self.executor.submit(work, *args)] = key
 
     def _next_game(self) -> Optional[Tuple[int, List[str]]]:
-        """La prochaine partie à lire : le plus petit rang parmi les joueurs dont l'historique est revenu
-        (à rang égal, l'ordre des joueurs), sans attendre les autres historiques. Une partie déjà soumise,
-        lue ou illisible est sautée ; une partie en vol pour un autre joueur est attendue (elle sera
-        ensuite servie par le cache). La partie est soumise pour tous les joueurs connus qui l'ont jouée.
+        """La prochaine partie à lire, une fois les dix historiques revenus : lues en même temps, les
+        parties ralentissaient les historiques (banc du 2026-10-15, formes en 17,6 s au lieu de 3,6 s).
+        Le plus petit rang d'abord (à rang égal, l'ordre des joueurs). Une partie déjà soumise, lue ou
+        illisible est sautée ; une partie en vol pour un autre joueur est attendue (elle sera ensuite
+        servie par le cache). La partie est soumise pour tous les joueurs qui l'ont jouée.
         Sans modèle de win chance, aucun impact à calculer : aucune partie à lire."""
-        if self.s._model is None:
+        if self.s._model is None or len(self.histories) < len(self.players):
             return None
         depth = max(cfg.SCOUT_WINDOWS)
         flying = {key[0] for kind, key in self.in_flight.values() if kind == "game"}

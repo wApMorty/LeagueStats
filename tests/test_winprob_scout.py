@@ -186,8 +186,8 @@ def model():
         yield
 
 
-def test_games_start_as_soon_as_a_history_is_back(monitor, crawler, lcu, clock):
-    """Banc du 2026-10-13 : un historique à la fois, et les parties de chacun sans attendre les autres."""
+def test_histories_one_at_a_time_then_games_by_rank(monitor, crawler, lcu, clock):
+    """Bancs des 2026-10-13 et 2026-10-15 : un historique à la fois, les parties une fois les dix revenus."""
     players = PUUIDS[:3]
     lcu.histories = {
         p: _history(*(100 * i + r for r in range(3))) for i, p in enumerate(players, 1)
@@ -200,15 +200,15 @@ def test_games_start_as_soon_as_a_history_is_back(monitor, crawler, lcu, clock):
     assert labels == [
         ("history", players[0]),
         ("history", players[1]),
-        ("detail", 100),
-        ("detail", 101),
-        ("detail", 102),
         ("history", players[2]),
+        ("detail", 100),
         ("detail", 200),
-        ("detail", 201),
-        ("detail", 202),
         ("detail", 300),
+        ("detail", 101),
+        ("detail", 201),
         ("detail", 301),
+        ("detail", 102),
+        ("detail", 202),
         ("detail", 302),
     ]
     window = scout.snapshot()[players[0]]["windows"][5]
@@ -216,7 +216,7 @@ def test_games_start_as_soon_as_a_history_is_back(monitor, crawler, lcu, clock):
     assert not scout.active
 
 
-def test_among_known_histories_games_go_by_rank(monitor, crawler, lcu, clock):
+def test_games_go_by_rank_with_parallel_histories(monitor, crawler, lcu, clock):
     players = PUUIDS[:2]
     lcu.histories = {
         p: _history(*(100 * i + r for r in range(3))) for i, p in enumerate(players, 1)
@@ -306,7 +306,7 @@ def test_the_history_read_by_the_scout_is_stored_in_crawl_histories(monitor, cra
 def test_429_stops_submissions_keeps_forms_and_pauses_the_crawl(
     monitor, crawler, lcu, clock, capsys
 ):
-    games = list(range(1, cfg.SCOUT_WORKERS + 5))  # plus de parties que de workers
+    games = list(range(1, max(cfg.SCOUT_WORKERS, 10) + 3))  # plus de parties que de workers
     lcu.histories = {PUUIDS[0]: _history(*games)}
     lcu.status = {"detail": 429}
     scout = _scout(monitor, crawler, lcu, clock)
