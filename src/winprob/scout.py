@@ -1,7 +1,8 @@
 """Éclaireur des joueurs en partie (SPEC-33 §4.3).
 
-Dès l'écran de chargement, lit l'historique des dix joueurs (forme brute), puis leurs parties classées
-par rang (la plus récente de chacun, puis la deuxième...) pour en tirer l'impact ΔP de SPEC-20.
+Dès l'écran de chargement, lit l'historique des dix joueurs (forme brute, un à la fois : le LCU les sert
+un par un, banc du 2026-10-13), et, dès qu'un historique revient, les parties classées de ce joueur par
+rang (à rang égal entre joueurs connus, l'ordre des joueurs) pour en tirer l'impact ΔP de SPEC-20.
 
 - Un pool de threads (`ThreadPoolExecutor`) ne fait que les requêtes LCU et le calcul d'impact ; son
   client LCU a une session à pool dimensionné et un statut HTTP par thread (SPEC-33 tâche 151).
@@ -53,7 +54,10 @@ class _Run:
         self.in_flight: Dict[Future, Tuple[str, Any]] = {}
         self.histories: Dict[str, Optional[List[dict]]] = {}  # None : historique en échec
         self.to_ask = list(self.players)  # historiques pas encore demandés
-        self.queue: Optional[List[Tuple[int, List[str]]]] = None  # parties par rang, dédupliquées
+        self.cursor: Dict[str, int] = {p: 0 for p in self.players}  # rang de la prochaine partie
+        self.claimed: Dict[str, set] = {p: set() for p in self.players}  # parties soumises pour lui
+        self.unavailable: set = set()  # parties illisibles : pas de nouvelle requête
+        self.idle = False  # dernière soumission : plus rien à lancer pour l'instant
         self.impacts: Dict[str, Dict[int, float]] = {p: {} for p in self.players}
         self.resolved: Dict[str, set] = {p: set() for p in self.players}
         self.throttled = False
@@ -111,6 +115,8 @@ class _Run:
             else:
                 game_id, puuids = key
                 self.stats["games"] += 1
+                if value is None and status != 429:
+                    self.unavailable.add(game_id)
                 if value is not None:
                     if "game" in value:
                         store_game(db, value["game"], value["timeline"], 1)
@@ -126,7 +132,8 @@ class _Run:
         elapsed = self.s._clock() - self.t0
         if self.stats["forms_s"] is None and len(self.histories) == len(self.players):
             self.stats["forms_s"] = elapsed
-        if self.stats["impacts_s"] is None and self.queue is not None and not self.throttled:
+        all_known = len(self.histories) == len(self.players)
+        if self.stats["impacts_s"] is None and all_known and not self.throttled:
             badge = cfg.SCOUT_BADGE_WINDOW
             if all(
                 {g["game_id"] for g in (self.histories[p] or [])[:badge]} <= self.resolved[p]
@@ -147,17 +154,21 @@ class _Run:
             self.stats["loading_s"] = now - self.t0
 
     def _submit(self) -> None:
+        """Historiques d'abord, `SCOUT_HISTORY_WORKERS` à la fois (le LCU les sert un par un) ; le reste
+        du pool lit les parties des joueurs dont l'historique est revenu."""
         limit = cfg.SCOUT_IN_GAME_WORKERS if self.in_game else cfg.SCOUT_WORKERS
+        self.idle = False
         while len(self.in_flight) < limit and not self.throttled:
-            if self.to_ask:
+            histories = sum(kind == "history" for kind, _ in self.in_flight.values())
+            if self.to_ask and histories < cfg.SCOUT_HISTORY_WORKERS:
                 puuid = self.to_ask.pop(0)
                 self._send(("history", puuid), self.s._read_history, puuid)
                 continue
-            if self.queue is None and len(self.histories) == len(self.players):
-                self.queue = self._rank_queue()
-            if not self.queue:
+            found = self._next_game()
+            if found is None:
+                self.idle = True
                 return
-            game_id, puuids = self.queue.pop(0)
+            game_id, puuids = found
             row = (
                 self.s.crawler._db()
                 .execute(
@@ -174,21 +185,49 @@ class _Run:
     def _send(self, key: Tuple[str, Any], work: Callable[..., TaskResult], *args: Any) -> None:
         self.in_flight[self.executor.submit(work, *args)] = key
 
-    def _rank_queue(self) -> List[Tuple[int, List[str]]]:
-        """Rang 1 de chacun, puis rang 2... ; une partie commune à plusieurs joueurs n'est lue qu'une fois.
+    def _next_game(self) -> Optional[Tuple[int, List[str]]]:
+        """La prochaine partie à lire : le plus petit rang parmi les joueurs dont l'historique est revenu
+        (à rang égal, l'ordre des joueurs), sans attendre les autres historiques. Une partie déjà soumise,
+        lue ou illisible est sautée ; une partie en vol pour un autre joueur est attendue (elle sera
+        ensuite servie par le cache). La partie est soumise pour tous les joueurs connus qui l'ont jouée.
         Sans modèle de win chance, aucun impact à calculer : aucune partie à lire."""
         if self.s._model is None:
-            return []
-        queue: Dict[int, List[str]] = {}
-        for rank in range(max(cfg.SCOUT_WINDOWS)):
-            for puuid in self.players:
-                games = self.histories.get(puuid) or []
-                if rank < len(games):
-                    queue.setdefault(games[rank]["game_id"], []).append(puuid)
-        return list(queue.items())
+            return None
+        depth = max(cfg.SCOUT_WINDOWS)
+        flying = {key[0] for kind, key in self.in_flight.values() if kind == "game"}
+        best: Optional[Tuple[int, str]] = None
+        for puuid in self.players:
+            games = (self.histories.get(puuid) or [])[:depth]
+            while self.cursor[puuid] < len(games):
+                game_id = games[self.cursor[puuid]]["game_id"]
+                if game_id in self.unavailable:
+                    self.resolved[puuid].add(game_id)
+                if game_id not in self.resolved[puuid] and game_id not in self.claimed[puuid]:
+                    break
+                self.cursor[puuid] += 1
+            rank = self.cursor[puuid]
+            if rank < len(games) and games[rank]["game_id"] not in flying:
+                if best is None or rank < best[0]:
+                    best = (rank, puuid)
+        if best is None:
+            return None
+        rank, puuid = best
+        game_id = self.histories[puuid][rank]["game_id"]
+        players = [
+            p
+            for p in self.players
+            if game_id in {g["game_id"] for g in (self.histories.get(p) or [])[:depth]}
+            and game_id not in self.resolved[p]
+            and game_id not in self.claimed[p]
+        ]
+        for p in players:
+            self.claimed[p].add(game_id)
+        return game_id, players
 
     def _nothing_left(self) -> bool:
-        return self.throttled or (not self.to_ask and self.queue is not None and not self.queue)
+        return self.throttled or (
+            not self.to_ask and len(self.histories) == len(self.players) and self.idle
+        )
 
     def _throttle(self) -> None:
         self.stats["throttled"] += 1
@@ -262,6 +301,8 @@ class Scout:
         self._fetch = fetch
         self.lcu = LCUClient()
         self.lcu.session = self.lcu.pooled_session(cfg.SCOUT_WORKERS)
+        # Les historiques font la queue côté LCU : au-delà de 5 s, une file lente n'est pas une erreur.
+        self.lcu.request_timeout_s = cfg.SCOUT_REQUEST_TIMEOUT_S
         # Une requête en vol rend None dès qu'une draft commence (SPEC-28).
         self.lcu.yield_if = getattr(monitor, "draft_pending", None)
         self._model: Optional[WinModel] = None

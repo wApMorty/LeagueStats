@@ -120,6 +120,11 @@ class WinProbConfig:
     SCOUT_IN_GAME_WORKERS: int = 2
     SCOUT_TICK_S: float = 0.25
     SCOUT_LIVE_POLL_S: float = 1.0
+    # Banc du 2026-10-13 (SPEC-33 §7) : le LCU sert les historiques un par un (1,5 s chacun à 1 worker,
+    # 5 s au p95 à 4) : un seul en vol ; délai d'une requête de l'éclaireur au-delà des 5 s par défaut,
+    # qu'atteignaient les historiques en file (7 « erreurs » sur 82 requêtes à 4 workers).
+    SCOUT_HISTORY_WORKERS: int = 1
+    SCOUT_REQUEST_TIMEOUT_S: float = 15.0
     # Fenêtres de la forme (la plus grande borne les parties lues par joueur), celle de la pastille,
     # et le nombre de parties d'impact en dessous duquel la pastille montre le taux de victoire.
     SCOUT_WINDOWS: tuple = (5, 10, 20)

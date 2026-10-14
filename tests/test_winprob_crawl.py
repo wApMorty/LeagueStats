@@ -456,6 +456,14 @@ class TestLCUClientStatus:
         assert seen == {"a": 404, "b": 429}
         assert client.last_status_code is None  # le fil principal n'a rien demandé
 
+    def test_request_timeout_is_per_client(self):
+        client = self._client()
+        client.request_timeout_s = 15.0
+        with patch.object(client.session, "get", return_value=Mock(status_code=404)) as get:
+            client._make_request("/x")
+        assert get.call_args.kwargs["timeout"] == 15.0
+        assert LCUClient().request_timeout_s == 5.0  # défaut inchangé
+
     def test_pooled_session_sizes_the_https_pool(self):
         client = self._client()
         session = client.pooled_session(16)

@@ -45,6 +45,7 @@ class LCUClient(_MatchHistoryMixin):
         # SPEC-33 : statut par thread, les workers de l'éclaireur partagent ce client.
         self._status = threading.local()
         self.last_status_code: Optional[int] = None
+        self.request_timeout_s: float = 5.0  # SPEC-33 : l'éclaireur l'allonge pour ses historiques
         # SPEC-28 : posé par le monitor autour du travail d'arrière-plan ; vrai = la draft a commencé,
         # la requête est abandonnée (None, comme un client injoignable) pour rendre la main.
         self.yield_if: Optional[Callable[[], bool]] = None
@@ -233,7 +234,7 @@ class LCUClient(_MatchHistoryMixin):
             if method not in ("GET", "POST", "PATCH", "PUT", "DELETE"):
                 return None
             response = getattr(self.session, method.lower())(
-                url, headers=headers, json=data, timeout=5
+                url, headers=headers, json=data, timeout=self.request_timeout_s
             )
             self.last_status_code = response.status_code
 

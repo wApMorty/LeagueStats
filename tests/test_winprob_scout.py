@@ -186,7 +186,8 @@ def model():
         yield
 
 
-def test_games_go_by_rank_after_all_histories(monitor, crawler, lcu, clock):
+def test_games_start_as_soon_as_a_history_is_back(monitor, crawler, lcu, clock):
+    """Banc du 2026-10-13 : un historique à la fois, et les parties de chacun sans attendre les autres."""
     players = PUUIDS[:3]
     lcu.histories = {
         p: _history(*(100 * i + r for r in range(3))) for i, p in enumerate(players, 1)
@@ -195,13 +196,50 @@ def test_games_go_by_rank_after_all_histories(monitor, crawler, lcu, clock):
     scout.start(_players(players))
     _drain(scout, clock)
 
-    kinds = [kind for kind, _ in lcu.requests]
-    assert kinds[:3] == ["history"] * 3  # aucune partie avant les trois historiques
-    details = [key for kind, key in lcu.requests if kind == "detail"]
-    assert details == [100, 200, 300, 101, 201, 301, 102, 202, 302]
+    labels = [label for label in lcu.requests if label[0] != "timeline"]
+    assert labels == [
+        ("history", players[0]),
+        ("history", players[1]),
+        ("detail", 100),
+        ("detail", 101),
+        ("detail", 102),
+        ("history", players[2]),
+        ("detail", 200),
+        ("detail", 201),
+        ("detail", 202),
+        ("detail", 300),
+        ("detail", 301),
+        ("detail", 302),
+    ]
     window = scout.snapshot()[players[0]]["windows"][5]
     assert window["n"] == 3 and window["impact_n"] == 3
     assert not scout.active
+
+
+def test_among_known_histories_games_go_by_rank(monitor, crawler, lcu, clock):
+    players = PUUIDS[:2]
+    lcu.histories = {
+        p: _history(*(100 * i + r for r in range(3))) for i, p in enumerate(players, 1)
+    }
+    scout = _scout(monitor, crawler, lcu, clock)
+    with patch.object(cfg, "SCOUT_HISTORY_WORKERS", 2):
+        scout.start(_players(players))
+        _drain(scout, clock)
+    details = [key for kind, key in lcu.requests if kind == "detail"]
+    assert details == [100, 200, 101, 201, 102, 202]
+
+
+def test_history_requests_never_overlap(monitor, crawler, lcu, clock):
+    executor = PendingExecutor()
+    scout = _scout(monitor, crawler, lcu, clock, executor)
+    scout.start(_players(PUUIDS))
+    _drain(scout, clock, steps=5)
+    assert executor.submitted == [(PUUIDS[0],)] * cfg.SCOUT_HISTORY_WORKERS
+
+
+def test_the_scout_waits_longer_than_the_default_lcu_timeout():
+    scout = Scout(SimpleNamespace(), None, fetch=lambda: None)
+    assert scout.lcu.request_timeout_s == cfg.SCOUT_REQUEST_TIMEOUT_S > 5.0
 
 
 def test_a_game_shared_by_two_players_is_read_once(monitor, crawler, lcu, clock):
@@ -347,23 +385,45 @@ def test_the_crawl_is_paused_while_the_scout_is_active(monitor, crawler, lcu, cl
     assert not crawler._paused()
 
 
+class HistoryFirstExecutor(PendingExecutor):
+    """Historiques servis tout de suite, parties gardées en vol."""
+
+    def submit(self, fn, *args):
+        if fn.__name__ == "_read_history":
+            return SyncExecutor().submit(fn, *args)
+        return super().submit(fn, *args)
+
+
 def test_in_game_no_more_than_the_in_game_workers_are_in_flight(monitor, crawler, lcu, clock):
-    executor = PendingExecutor()
+    lcu.histories = {PUUIDS[0]: _history(*range(1, 21))}
+    executor = HistoryFirstExecutor()
     scout = _scout(
         monitor, crawler, lcu, clock, executor, fetch=lambda: {"gameData": {"gameTime": 3.0}}
     )
-    scout.start(_players(PUUIDS))
+    scout.start(_players(PUUIDS[:1]))
     _drain(scout, clock, steps=5)
     assert len(executor.submitted) == cfg.SCOUT_IN_GAME_WORKERS
     assert scout.stats()["loading_s"] == 0.0
 
 
-def test_loading_screen_uses_all_workers(monitor, crawler, lcu, clock):
-    executor = PendingExecutor()
+def test_loading_screen_uses_all_workers_for_games(monitor, crawler, lcu, clock):
+    lcu.histories = {PUUIDS[0]: _history(*range(1, 21))}
+    executor = HistoryFirstExecutor()
     scout = _scout(monitor, crawler, lcu, clock, executor)
-    scout.start(_players(PUUIDS))
+    scout.start(_players(PUUIDS[:1]))
     _drain(scout, clock, steps=5)
     assert len(executor.submitted) == cfg.SCOUT_WORKERS
+
+
+def test_an_unavailable_game_is_not_asked_again_for_another_player(monitor, crawler, lcu, clock):
+    lcu.histories = {PUUIDS[0]: _history(7), PUUIDS[1]: _history(7)}
+    lcu.status = {("detail", 7): 404}
+    scout = _scout(monitor, crawler, lcu, clock)
+    scout.start(_players(PUUIDS[:2]))
+    _drain(scout, clock)
+    assert lcu.requests.count(("detail", 7)) == 1
+    assert all(scout.snapshot()[p]["pending"] == 0 for p in PUUIDS[:2])
+    assert not scout.active
 
 
 def test_players_is_published_only_when_something_changed(monitor, crawler, lcu, clock):
