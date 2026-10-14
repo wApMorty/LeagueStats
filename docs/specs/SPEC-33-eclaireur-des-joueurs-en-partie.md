@@ -331,7 +331,22 @@ banc à relancer pour fixer `SCOUT_WORKERS`.
 Live Coach ouvert)** : 76 420 parties lues en 29 min, 21 177 joueurs à 10 parties ou plus ; impact moyen à
 10 parties : **Q1 −3,8, médiane +0,1, Q3 +4,0** points. `SCOUT_IMPACT_QUARTILES = (-3.8, 4.0)`.
 
-*Forme de la session gameflow (recette), second banc (`SCOUT_WORKERS`) et mesure du terme de forme (tâche 159) : à remplir.*
+**Second banc (2026-10-15, client sur l'accueil, Live Coach fermé, ordre amendé : un historique en vol, parties
+dès le retour de chaque historique)** :
+
+| Workers | Formes | 5 impacts | 10 impacts | 20 impacts | Requêtes | Erreurs | 429 | Cache | p95 historique | p95 détail | p95 timeline |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 3,6 s | 16,0 s | 33,6 s | 67,9 s | 314 | 0 % | 0 | 19 % | 0,1 s | 0,1 s | 0,2 s |
+| 4 | 17,6 s | 19,2 s | 21,6 s | 26,8 s | 130 | 0 % | 0 | 38 % | 2,0 s | 1,5 s | 0,6 s |
+| 8 | 22,8 s | 24,7 s | 25,8 s | 32,6 s | 216 | 0 % | 0 | 28 % | 2,7 s | 2,0 s | 1,2 s |
+| 12 | 25,2 s | 27,9 s | 30,8 s | 41,9 s | 296 | 0 % | 0 | 19 % | 3,4 s | 2,6 s | 2,7 s |
+
+Arrêt au palier 12 (p95 timeline > 2 × sa valeur à 4 workers) ; `[DATA] Workers retenus : 4`. Lecture : plus
+aucune erreur ni 429 ; 4 workers donnent les 10 impacts au plus tôt (21,6 s). Mais les parties lues en parallèle
+ralentissent les historiques (p95 0,1 s seuls, 2,0 s à 4 workers) : les formes brutes passent de 3,6 s à
+17,6 s. Une mesure par palier, sur des joueurs différents (requêtes et cache varient) : ordre de grandeur.
+
+*Forme de la session gameflow (recette) et mesure du terme de forme (tâche 159) : à remplir.*
 
 ## 8. Hors périmètre
 

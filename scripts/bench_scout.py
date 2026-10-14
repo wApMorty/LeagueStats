@@ -109,6 +109,8 @@ def _connect() -> Optional[LCUClient]:
         return None
     client.credentials = credentials
     session = client.get_gameflow_session()
+    if session is None and client.last_status_code == 404:
+        session = {"phase": "None"}  # accueil du client, hors lobby : pas de session gameflow
     if session is None:
         print("[ERREUR] Client sans réponse sur /lol-gameflow/v1/session.")
         return None
