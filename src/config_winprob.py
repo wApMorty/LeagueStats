@@ -130,6 +130,9 @@ class WinProbConfig:
     SCOUT_WINDOWS: tuple = (5, 10, 20)
     SCOUT_BADGE_WINDOW: int = 10
     SCOUT_MIN_IMPACT_GAMES: int = 3
+    # Seuils de couleur de la pastille (Q1, Q3 des impacts moyens à 10 parties, en points) : mesurés le
+    # 2026-10-14 par scripts/measure_scout_quartiles.py sur 76 420 parties, 21 177 joueurs (SPEC-33 §7).
+    SCOUT_IMPACT_QUARTILES: tuple = (-3.8, 4.0)
 
 
 winprob_config = WinProbConfig()

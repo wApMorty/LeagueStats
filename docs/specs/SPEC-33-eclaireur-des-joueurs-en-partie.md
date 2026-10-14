@@ -327,7 +327,11 @@ parallèle (le LCU les sert un par un) et dépassent le délai de 5 s du client 
 médiane −1,7, Q3 +1,0, trop peu pour fixer les seuils. D'où l'amendement du 2026-10-14 (§2, §3.2, §4.7) ;
 banc à relancer pour fixer `SCOUT_WORKERS`.
 
-*Forme de la session gameflow (recette), second banc et mesure du terme de forme (tâche 159) : à remplir.*
+**Seuils de couleur (2026-10-14, `python scripts/measure_scout_quartiles.py`, `crawl.db` en lecture seule,
+Live Coach ouvert)** : 76 420 parties lues en 29 min, 21 177 joueurs à 10 parties ou plus ; impact moyen à
+10 parties : **Q1 −3,8, médiane +0,1, Q3 +4,0** points. `SCOUT_IMPACT_QUARTILES = (-3.8, 4.0)`.
+
+*Forme de la session gameflow (recette), second banc (`SCOUT_WORKERS`) et mesure du terme de forme (tâche 159) : à remplir.*
 
 ## 8. Hors périmètre
 
