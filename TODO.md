@@ -348,7 +348,7 @@ Tous les arbitrages validés par @pj35 le 2026-10-13 (suite en partie à 2 threa
 | 152 | `src/winprob/form.py` (forme brute et impact par fenêtre) et tests | 2 | 151 | ✅ 2026-10-13 : 5 tests (dont `player_impact` sur la fixture 7998195590) |
 | 153 | `src/winprob/scout.py` : pool, coordinateur, ordre par rang, cache et rangement dans `crawl.db`, 429, publication | 5 | 151, 152 | ✅ 2026-10-13 : 13 tests (dont la garde SQLite sur un vrai pool) |
 | 154 | `scripts/bench_scout.py` (copie temporaire, paliers de workers, critères d'arrêt, quartiles) | 3 | 153 | ✅ 2026-10-13 : `--help` et refus en partie vérifiés ; `--dry-run` réel à faire avec la tâche 155 |
-| 155 | Banc réel par @pj35 (lobby, Live Coach fermé) : `SCOUT_WORKERS` et quartiles fixés | 1 | 154 | ⬜ |
+| 155 | Banc réel par @pj35 (lobby, Live Coach fermé) : `SCOUT_WORKERS` ; quartiles par `scripts/measure_scout_quartiles.py` (amendé le 2026-10-14) | 1 | 154 | ⬜ 1er banc le 2026-10-13 (§7) : historiques servis un par un, ordre et délai amendés ; second banc à faire |
 | 156 | Branchement : lancement en `InProgress`, arrêt, pause de la collecte, sujet `players` | 3 | 153 | ✅ 2026-10-13 : 5 tests ; forme de la session gameflow journalisée à la première partie réelle |
 | 157 | Écran « En partie » : pastilles et infobulle dans le face-à-face, remesure de la marge | 5 | 155, 156 | ⬜ |
 | 158 | `crawl_histories` : forme brute rangée à chaque visite d'historique (aucune requête de plus) | 3 | 152, 153 | ✅ 2026-10-13 : 2 tests (visite de la collecte, éclaireur) |

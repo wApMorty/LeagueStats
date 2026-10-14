@@ -80,11 +80,11 @@ l'intégrer au modèle que si elle le fait.
 | Win chance | **Validé (@pj35, 2026-10-13)** : mesurer d'abord. Un terme de forme n'entre dans le modèle que s'il bat le modèle en place sur le jeu de validation (§4.6). Les pastilles s'affichent dans tous les cas. |
 | Affichage | **Validé (@pj35, 2026-10-13)** : pastille dans le face-à-face, détail 5 / 10 / 20 en infobulle ; l'écran tient toujours sur un écran. |
 | Déclencheur | **Validé (@pj35, 2026-10-13)** : passage en partie (écran de chargement), les dix joueurs. Rien pendant la draft, que SPEC-28 a protégée. |
-| Concurrence | **Validé (@pj35, 2026-10-13)** : pool dédié « éclaireur » (`ThreadPoolExecutor`, stdlib), son propre `LCUClient` et une session à pool dimensionné, statut HTTP par thread (tâche 62 de SPEC-23 absorbée). La collecte se tait pendant l'éclaireur. Les parties lues sont rangées dans `crawl.db`, depuis le fil coordinateur seul. Nombre de workers fixé par un banc par paliers (§4.5). |
+| Concurrence | **Validé (@pj35, 2026-10-13)** : pool dédié « éclaireur » (`ThreadPoolExecutor`, stdlib), son propre `LCUClient` et une session à pool dimensionné, statut HTTP par thread (tâche 62 de SPEC-23 absorbée). La collecte se tait pendant l'éclaireur. Les parties lues sont rangées dans `crawl.db`, depuis le fil coordinateur seul. Nombre de workers fixé par un banc par paliers (§4.5). **Amendé (@pj35, 2026-10-14)** après le premier banc (§7) : un seul historique en vol (`SCOUT_HISTORY_WORKERS`), le LCU les sert un par un ; délai de requête de l'éclaireur porté à `SCOUT_REQUEST_TIMEOUT_S`. |
 | Fenêtre | **Validé (@pj35, 2026-10-13)** : la pastille porte 10 parties ; 5 et 20 dans l'infobulle. |
 | Files | **Validé (@pj35, 2026-10-13)** : Solo/Duo et Flex seules (`coaching_config.QUEUE_IDS`), comme la collecte ; pas de seconde page d'historique. Moins de N parties classées sur les 20 : la pastille le dit (« 6 parties »). |
 | Fin du chargement avant la fin de l'éclaireur | **Validé (@pj35, 2026-10-13)** : on continue en partie avec `SCOUT_IN_GAME_WORKERS` = 2 (l'ordre de grandeur du débit en partie accepté en SPEC-23 §2), jusqu'à la fin. Alternative : tout arrêter au premier `gameTime > 0`. |
-| Seuils de couleur de la pastille | **Validé (@pj35, 2026-10-13)** : quartiles des moyennes à 10 parties des joueurs de `crawl.db`, mesurés au banc (tâche 155) et consignés en §7 ; pas de valeur choisie à la main. |
+| Seuils de couleur de la pastille | **Validé (@pj35, 2026-10-13)** : quartiles des moyennes à 10 parties des joueurs de `crawl.db`, mesurés au banc (tâche 155) et consignés en §7 ; pas de valeur choisie à la main. **Amendé (@pj35, 2026-10-14)** : calculés hors client sur `crawl.db` en lecture seule (`scripts/measure_scout_quartiles.py`, Live Coach ouvert), le banc n'éclairant que 13 joueurs. |
 | Seuil d'adoption du terme de forme | **Validé (@pj35, 2026-10-13)**, figé avant la mesure : validation croisée poolée à 5 blocs (celle de SPEC-20 §4.3 bis), Brier sur les images ≤ 10 min amélioré d'au moins **0,002** (l'ordre de grandeur du coût de l'or, SPEC-20 §4.3 bis), et écart de calibration par décile ≤ 5 pts sur toutes les images. |
 
 ## 3. Approches considérées
@@ -97,9 +97,14 @@ l'intégrer au modèle que si elle le fait.
 | SPEC-23 d'abord, joueurs en tête de file | Un seul mécanisme, mais dépend d'une spec non démarrée, et son débit est pensé pour la croisière, pas pour une rafale de 400 requêtes en une minute. |
 | asyncio + aiohttp | Nouvelle dépendance pour rien : le débit est borné par le LCU, pas par les threads Python (`requests` libère le GIL en I/O). |
 
-**3.2 Ordre de lecture** : historiques des dix joueurs d'abord (10 requêtes en parallèle, forme brute
-complète en ~2 s), puis les parties **par rang** (la plus récente de chacun, puis la deuxième…) : les dix
-pastilles atteignent 5, puis 10, puis 20 parties ensemble, au lieu d'un joueur complet et neuf vides.
+**3.2 Ordre de lecture** (**amendé par @pj35 le 2026-10-14**, après le banc du §7) : les historiques des dix
+joueurs un par un (le LCU les sert l'un après l'autre : 1,5 s chacun, ~15 s pour les dix, sans gain en
+parallèle), et **dès qu'un historique revient**, les parties de ce joueur, sans attendre les autres. Entre
+joueurs dont l'historique est connu, les parties vont **par rang** (la plus récente de chacun, puis la
+deuxième…). Une partie commune à plusieurs joueurs connus est lue une fois ; un joueur dont la partie est en
+vol pour un autre l'attend, puis la reçoit du cache. *Avant l'amendement* : les dix historiques en parallèle,
+puis les parties par rang une fois les dix revenus ; le banc a montré que les historiques ne vont pas plus
+vite en parallèle et qu'ils dépassent alors le délai de 5 s du client.
 
 ## 4. Détail
 
@@ -160,7 +165,7 @@ class Scout:
   forme exacte de `Crawler._read_game` (même `pack`, `depth` = 1, `read_utc`) : extraire de `_read_game`
   une fonction `store_game(db, game, timeline, depth)` partagée plutôt que dupliquer. Les dix `puuid` sont
   marqués visités dans `crawl_frontier` (leurs historiques viennent d'être lus).
-- **Ordre** : §3.2. Parties hors `QUEUE_IDS` ignorées. Au plus 20 par joueur.
+- **Ordre** : §3.2. Au plus `SCOUT_HISTORY_WORKERS` historiques en vol, le reste du pool pour les parties. Parties hors `QUEUE_IDS` ignorées. Au plus 20 par joueur. Une partie illisible n'est pas redemandée pour un autre joueur.
 - **429** : plus aucune soumission pour cette partie, `[ALERTE]` une fois, les pastilles gardent ce
   qu'elles ont ; la collecte repart en pause `CRAWL_BACKOFF_S` comme aujourd'hui (même horloge).
 - **En partie** (§2) : dès que la Live Client API répond (`live.fetch()` non vide, `gameTime` >
@@ -240,11 +245,13 @@ consignée en §7 et le modèle ne change pas.
 | `SCOUT_WORKERS` | 8 puis banc (tâche 155) | ~10 historiques en vol au départ ; remplacée par la mesure |
 | `SCOUT_IN_GAME_WORKERS` | 2 | @pj35, 2026-10-13 (§2) ; ordre de grandeur du débit en partie de SPEC-23 |
 | `SCOUT_TICK_S` | 0,25 | le coordinateur range et publie 4 fois par seconde : pastilles fluides, coût négligeable |
+| `SCOUT_HISTORY_WORKERS` | 1 | banc du 2026-10-13 (§7) : historiques servis un par un par le LCU |
+| `SCOUT_REQUEST_TIMEOUT_S` | 15 | banc du 2026-10-13 : à 4 workers, les historiques en file dépassaient les 5 s du client (p95 5,1 s, 7 échecs sur 82 requêtes) |
 | `SCOUT_LIVE_POLL_S` | 1,0 | ajoutée à l'implémentation (2026-10-13) : lecture de la Live Client API par l'éclaireur, jusqu'au premier `gameTime` > 0 seulement (mode console compris) |
 | `SCOUT_WINDOWS` | `(5, 10, 20)` | @pj35, 2026-10-13 |
 | `SCOUT_BADGE_WINDOW` | 10 | @pj35, 2026-10-13 |
 | `SCOUT_MIN_IMPACT_GAMES` | 3 | en dessous, la moyenne est un tirage ; la pastille montre le taux de victoire |
-| `SCOUT_IMPACT_QUARTILES` | banc (tâche 155) | quartiles mesurés (§2, @pj35, 2026-10-13) |
+| `SCOUT_IMPACT_QUARTILES` | `scripts/measure_scout_quartiles.py` (tâche 155) | quartiles mesurés sur `crawl.db` (§2, amendé le 2026-10-14) |
 | `FORM_MIN_COVERED_GAMES` | 5 000 | `WINPROB_MIN_PATCH_GAMES` : la taille à laquelle la logistique de SPEC-20 est calibrée |
 
 ### 4.8 Tests (hermétiques : `FakeLCU`, exécuteur synchrone, `crawl.db` temporaire, fixtures)
@@ -254,7 +261,7 @@ consignée en §7 et le modèle ne change pas.
 1. `ranked_games` : files hors `QUEUE_IDS` écartées, entrée mal formée ignorée, ordre conservé.
 2. `form` : KDA sans mort, CS/min, `on_champion`, fenêtre plus grande que l'historique (`n` réel), impact
    `None` sans partie d'impact.
-3. Ordre §3.2 : après les historiques, les soumissions vont par rang (rang 1 des dix avant tout rang 2).
+3. Ordre §3.2 (amendé le 2026-10-14) : un historique en vol à la fois ; les parties d'un joueur partent dès son historique revenu ; entre joueurs connus, par rang.
 4. Une partie présente dans `crawl.db` ne déclenche aucune requête et a son impact.
 5. Une partie lue est rangée dans `crawl_games` sous la forme de `Crawler._read_game` (même `unpack`), et
    les dix `puuid` sont marqués visités.
@@ -279,7 +286,7 @@ Numéros globaux : suite du `TODO.md` (dernière tâche : 150).
 | 152 | `src/winprob/form.py` et tests 1-2 | 2 | 151 |
 | 153 | `src/winprob/scout.py` : pool, coordinateur, ordre par rang, cache et rangement dans `crawl.db` (`store_game` extrait de `_read_game`), 429, en partie, publication ; constantes ; tests 3-8 | 5 | 151, 152 |
 | 154 | `scripts/bench_scout.py` (copie temporaire, paliers, critères d'arrêt, quartiles, `--dry-run`) | 3 | 153 |
-| 155 | **Banc réel (par @pj35, client ouvert en lobby, Live Coach fermé)** : consigner le tableau en §7, fixer `SCOUT_WORKERS` et `SCOUT_IMPACT_QUARTILES` | 1 | 154 |
+| 155 | **Banc réel (par @pj35, client ouvert en lobby, Live Coach fermé)** : consigner le tableau en §7, fixer `SCOUT_WORKERS` ; `SCOUT_IMPACT_QUARTILES` par `scripts/measure_scout_quartiles.py` (amendé le 2026-10-14) | 1 | 154 |
 | 156 | Branchement : `lifecycle` (lancement en `InProgress` depuis la session gameflow, arrêt), pause de la collecte, sujet `players` ; test 11 | 3 | 153 |
 | 157 | Écran : `analysis_view` (`form`), `app.py`, gabarit, CSS ; test 10 ; `scripts/measure_en_partie.py` avec pastilles : marge ≥ 20 px à 1 920 × 986 | 5 | 155, 156 |
 | 158 | `crawl_histories` : table, remplissage à chaque visite de la collecte et par l'éclaireur ; test 12 | 3 | 152, 153 |
@@ -306,7 +313,21 @@ n'est pas ralentie (`logs/draft_monitor_ticks.log`).
 
 ## 7. Résultats
 
-*Forme de la session gameflow (recette), banc (tâche 155) et mesure du terme de forme (tâche 159) : à remplir.*
+**Premier banc (@pj35, 2026-10-13, client en lobby, Live Coach fermé, 10 joueurs jamais visités)** :
+
+| Workers | Formes | 5 impacts | 10 impacts | 20 impacts | Requêtes | Erreurs | 429 | Cache | p95 historique | p95 détail | p95 timeline |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 15,5 s | 26,4 s | 40,2 s | 64,4 s | 204 | 0 % | 0 | 34 % | 1,8 s | 0,1 s | 0,3 s |
+| 4 | 13,3 s | 16,9 s | 18,5 s | 22,7 s | 82 | 8,5 % | 0 | 33 % | 5,1 s | 1,0 s | 0,7 s |
+
+Arrêt au palier 4 (7 erreurs sur 82 requêtes). Lecture : les historiques ne gagnent presque rien en
+parallèle (le LCU les sert un par un) et dépassent le délai de 5 s du client ; les joueurs dont l'historique
+échoue n'ont aucune partie lue, d'où 82 requêtes au lieu de 204. Les parties, elles, sont rapides (détail
+0,1 s, timeline 0,3 s au p95 à 1 worker ; aucune timeline à 3-17 s). Quartiles sur 13 joueurs : Q1 −3,2,
+médiane −1,7, Q3 +1,0, trop peu pour fixer les seuils. D'où l'amendement du 2026-10-14 (§2, §3.2, §4.7) ;
+banc à relancer pour fixer `SCOUT_WORKERS`.
+
+*Forme de la session gameflow (recette), second banc et mesure du terme de forme (tâche 159) : à remplir.*
 
 ## 8. Hors périmètre
 
