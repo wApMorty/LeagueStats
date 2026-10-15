@@ -373,7 +373,7 @@ pile réelle sur faux LCU (§3). Découpage en SPEC-34 §5 (tâches 163 à 170, 
 | 165 | Partie simulée : trames générées, `LiveGame(fetch=…)`, revue et coaching ; 1 test | 3 | 164 | ✅ 2026-10-16 : 6 tests ; démo réelle : courbe de 24 points sur 25 min, 10 pastilles de l'éclaireur, build et face-à-face (les scènes de partie repassent par la draft verrouillée), revue avec MVP/ACE ; modèle de win chance copié avec la base |
 | 166 | `scripts/_firefox.py`, `scripts/capture_screens.py`, captures, `manifest.json`, images du README | 3 | 165 | ✅ 2026-10-16 : 13 captures en 1 920 × 1 080 relues à l'œil, courbe de 26 points, images du README de 181 à 357 Ko ; `db.db` inchangée ; `measure_en_partie.py` repasse (marge 30 px) |
 | 167 | `README.md` réécrit avec captures et avertissement Riot ; `.gitignore` de `docs/presentation/` | 2 | 166 | ✅ 2026-10-16 : 9 captures, chiffres du manifeste (173 champions, 57 612 matchups), section démo ; image de tête provisoire (`draft-pick.png`) jusqu'au GIF de la tâche 169 |
-| 168 | Projet Remotion : versions exactes, config, polices, scènes « Accroche », « Draft », « Verrouillage » et « Clôture » | 5 | 166 | ⬜ |
+| 168 | Projet Remotion : versions exactes, config, polices, scènes « Accroche », « Draft », « Verrouillage » et « Clôture » | 5 | 166 | ✅ 2026-10-16 : Remotion 4.0.531 (licence gratuite pour un particulier, vérifiée sur LICENSE.md), polices du client, chiffres de draft relevés dans le manifeste par `capture_screens.py` (n° 1 Dr. Mundo 55,96 %, fin de draft 54,6 %) |
 | 169 | Scènes « En partie » (courbe SVG), « Revue et coaching » et « Mosaïque » ; `hero.gif` dans le README | 5 | 167, 168 | ⬜ |
 | 170 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure ; recette à l'œil de @pj35 | 3 | 169 | ⬜ |
 

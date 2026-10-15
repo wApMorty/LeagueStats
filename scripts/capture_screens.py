@@ -30,7 +30,10 @@ from selenium.webdriver.support.ui import WebDriverWait  # noqa: E402
 
 from scripts import demo_client as demo  # noqa: E402
 from scripts._firefox import fenetre, headless_firefox  # noqa: E402
+from src.client.assets import Assets  # noqa: E402
 from src.client.bus import EventBus  # noqa: E402
+from src.client.draft_view import Champions  # noqa: E402
+from src.config_client import client_config  # noqa: E402
 from src.config import config  # noqa: E402
 from src.config_constants import demo_config  # noqa: E402
 
@@ -138,6 +141,28 @@ def readme_copy(source: Path, target: Path) -> int:
     return round(target.stat().st_size / 1024)
 
 
+def draft_facts(bus: EventBus, shot: str, facts: Dict[str, Any], champions: Champions) -> None:
+    """Ce que la vidéo affiche de la draft, relevé tel que le Live Coach l'a publié : le n° 1 du
+    classement (`draft-pick`) et la victoire prédite en fin de draft (`draft-lock`)."""
+    snapshot = bus.latest("draft") or {}
+
+    def label(name: Optional[str]) -> Optional[str]:
+        champion = champions.by_name(name) if name else None
+        return champion["name"] if champion else name
+
+    if shot == "draft-pick" and snapshot.get("recommendations"):
+        top = snapshot["recommendations"][0]
+        facts["top"] = {
+            "champion": label(top["champion"]),
+            "lane": top["lane"],
+            "versus": label(snapshot.get("versus")),
+            "win_probability": top["win_probability"],
+            "games": top["games"],
+        }
+    if shot == "draft-lock" and snapshot.get("base_probability") is not None:
+        facts["final_probability"] = snapshot["base_probability"]
+
+
 def capture(driver: Any, handle: "demo.DemoHandle", shot: Shot, path: Path) -> bool:
     """Met la démo sur la scène de `shot`, charge sa route, attend son rendu et la capture."""
     if handle.fake.scene["name"] != shot.scene:
@@ -167,6 +192,8 @@ def main() -> int:
     ok = True
     files: List[Dict[str, str]] = []
     series: List[List[float]] = []
+    draft: Dict[str, Any] = {}
+    champions = Champions(Assets(project_root / client_config.ASSETS_DIR))
     try:
         handle = demo.start_demo(SHOTS[0].scene, window=False, db_src=db_src)
         if handle is None:
@@ -180,6 +207,7 @@ def main() -> int:
                 continue
             if shot.name == "en-partie":
                 series = (handle.bus.latest("ingame") or {}).get("series") or []
+            draft_facts(handle.bus, shot.name, draft, champions)
             kb = readme_copy(path, README_DIR / f"{shot.name}.png")
             if kb > demo_config.README_IMAGE_MAX_KB:
                 print(
@@ -197,12 +225,16 @@ def main() -> int:
         "taille": list(demo_config.CAPTURE_SIZE),
         "captures": files,
         "win_chance": series,
+        "draft": draft,
         "chiffres": figures,
     }
     (CAPTURES_DIR / "manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     print(f"[DATA] {len(files)}/{len(SHOTS)} captures, courbe de {len(series)} points")
+    if set(draft) != {"top", "final_probability"}:
+        print(f"[ERREUR] Draft incomplète dans le manifeste : {sorted(draft)}")
+        ok = False
     return 0 if ok and len(series) >= 20 else 1
 
 
