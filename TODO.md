@@ -368,7 +368,7 @@ pile réelle sur faux LCU (§3). Découpage en SPEC-34 §5 (tâches 163 à 170, 
 
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
-| 163 | `DemoConfig`, `scripts/demo/lcu/`, `scripts/demo_client.py` (copie de la base, faux LCU des écrans Client, CLI) ; 2 tests | 3 | — | ⬜ |
+| 163 | `DemoConfig`, `scripts/demo/lcu/`, `scripts/demo_client.py` (copie de la base, faux LCU des écrans Client, CLI) ; 2 tests | 3 | — | ✅ 2026-10-15 : 4 tests ; faux LCU servi en HTTP local (spec §4.3 amendée) ; `db.db` et `crawl.db` inchangés après une démo réelle |
 | 164 | Scénario de draft : `scenario.json`, sessions construites, écritures acceptées, `DraftMonitor` réel ; 2 tests | 5 | 163 | ⬜ |
 | 165 | Partie simulée : trames générées, `LiveGame(fetch=…)`, revue et coaching ; 1 test | 3 | 164 | ⬜ |
 | 166 | `scripts/_firefox.py`, `scripts/capture_screens.py`, captures, `manifest.json`, images du README | 3 | 165 | ⬜ |

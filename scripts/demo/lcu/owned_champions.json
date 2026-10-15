@@ -1,0 +1,184 @@
+[
+  {
+    "id": 1,
+    "name": "Annie",
+    "alias": "Annie",
+    "roles": [
+      "mage",
+      "support"
+    ],
+    "freeToPlay": false,
+    "purchased": 1312897245000,
+    "squarePortraitPath": "/lol-game-data/assets/v1/champion-icons/1.png",
+    "ownership": {
+      "loyaltyReward": false,
+      "owned": true,
+      "rental": {
+        "endDate": 0,
+        "purchaseDate": 1312897245000,
+        "rented": false,
+        "winCountRemaining": 0
+      },
+      "xboxGPReward": false
+    }
+  },
+  {
+    "id": 14,
+    "name": "Sion",
+    "alias": "Sion",
+    "roles": [
+      "tank",
+      "fighter"
+    ],
+    "freeToPlay": false,
+    "purchased": 1330250462000,
+    "squarePortraitPath": "/lol-game-data/assets/v1/champion-icons/14.png",
+    "ownership": {
+      "loyaltyReward": false,
+      "owned": true,
+      "rental": {
+        "endDate": 0,
+        "purchaseDate": 1330250462000,
+        "rented": false,
+        "winCountRemaining": 0
+      },
+      "xboxGPReward": false
+    }
+  },
+  {
+    "id": 54,
+    "name": "Malphite",
+    "alias": "Malphite",
+    "roles": [
+      "tank",
+      "mage"
+    ],
+    "freeToPlay": false,
+    "purchased": 1343248176000,
+    "squarePortraitPath": "/lol-game-data/assets/v1/champion-icons/54.png",
+    "ownership": {
+      "loyaltyReward": false,
+      "owned": true,
+      "rental": {
+        "endDate": 0,
+        "purchaseDate": 1343248176000,
+        "rented": false,
+        "winCountRemaining": 0
+      },
+      "xboxGPReward": false
+    }
+  },
+  {
+    "id": 64,
+    "name": "Lee Sin",
+    "alias": "LeeSin",
+    "roles": [
+      "fighter",
+      "assassin"
+    ],
+    "freeToPlay": false,
+    "purchased": 1325327995000,
+    "squarePortraitPath": "/lol-game-data/assets/v1/champion-icons/64.png",
+    "ownership": {
+      "loyaltyReward": false,
+      "owned": true,
+      "rental": {
+        "endDate": 0,
+        "purchaseDate": 1325327995000,
+        "rented": false,
+        "winCountRemaining": 0
+      },
+      "xboxGPReward": false
+    }
+  },
+  {
+    "id": 103,
+    "name": "Ahri",
+    "alias": "Ahri",
+    "roles": [
+      "mage",
+      "assassin"
+    ],
+    "freeToPlay": false,
+    "purchased": 1342081928000,
+    "squarePortraitPath": "/lol-game-data/assets/v1/champion-icons/103.png",
+    "ownership": {
+      "loyaltyReward": false,
+      "owned": true,
+      "rental": {
+        "endDate": 0,
+        "purchaseDate": 1342081928000,
+        "rented": false,
+        "winCountRemaining": 0
+      },
+      "xboxGPReward": false
+    }
+  },
+  {
+    "id": 266,
+    "name": "Aatrox",
+    "alias": "Aatrox",
+    "roles": [
+      "fighter"
+    ],
+    "freeToPlay": false,
+    "purchased": 1372058215000,
+    "squarePortraitPath": "/lol-game-data/assets/v1/champion-icons/266.png",
+    "ownership": {
+      "loyaltyReward": false,
+      "owned": true,
+      "rental": {
+        "endDate": 0,
+        "purchaseDate": 1372058215000,
+        "rented": false,
+        "winCountRemaining": 0
+      },
+      "xboxGPReward": false
+    }
+  },
+  {
+    "id": 799,
+    "name": "Ambessa",
+    "alias": "Ambessa",
+    "roles": [
+      "fighter",
+      "assassin"
+    ],
+    "freeToPlay": false,
+    "purchased": 1737748099000,
+    "squarePortraitPath": "/lol-game-data/assets/v1/champion-icons/799.png",
+    "ownership": {
+      "loyaltyReward": false,
+      "owned": true,
+      "rental": {
+        "endDate": 0,
+        "purchaseDate": 1737748099000,
+        "rented": false,
+        "winCountRemaining": 0
+      },
+      "xboxGPReward": false
+    }
+  },
+  {
+    "id": 222,
+    "name": "Jinx",
+    "alias": "Jinx",
+    "roles": [
+      "marksman"
+    ],
+    "freeToPlay": false,
+    "purchased": 1416442166000,
+    "squarePortraitPath": "/lol-game-data/assets/v1/champion-icons/222.png",
+    "ownership": {
+      "loyaltyReward": false,
+      "owned": true,
+      "rental": {
+        "endDate": 0,
+        "purchaseDate": 1416442166000,
+        "rented": false,
+        "winCountRemaining": 0
+      },
+      "xboxGPReward": false
+    }
+  }
+]

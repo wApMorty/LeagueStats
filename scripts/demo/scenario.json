@@ -1,0 +1,7 @@
+{
+  "scenes": [
+    {"name": "accueil", "phase": "None", "route": "/"},
+    {"name": "profil", "phase": "None", "route": "/profil"},
+    {"name": "historique", "phase": "None", "route": "/historique"}
+  ]
+}

@@ -1,0 +1,24 @@
+[
+  {
+    "id": "ami-1@eu1.pvp.net",
+    "gameName": "Alpha",
+    "gameTag": "EUW",
+    "name": "Alpha",
+    "type": "chat",
+    "isMuted": false,
+    "lastMessage": "On se fait une flex ce soir ?",
+    "unreadMessageCount": 2,
+    "pid": "ami-1@eu1.pvp.net"
+  },
+  {
+    "id": "ami-2@eu1.pvp.net",
+    "gameName": "Bravo",
+    "gameTag": "EUW",
+    "name": "Bravo",
+    "type": "chat",
+    "isMuted": true,
+    "lastMessage": "",
+    "unreadMessageCount": 0,
+    "pid": "ami-2@eu1.pvp.net"
+  }
+]

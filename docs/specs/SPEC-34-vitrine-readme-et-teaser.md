@@ -148,7 +148,11 @@ class DemoHandle:
 - **Isolation** (garde-fous non négociables) :
   - `data/db.db`, `data/crawl.db` et `logs/` réels ne sont jamais écrits : copie dans `tempfile.mkdtemp()`, ce
     qui donne aussi un `crawl.db` vide ;
-  - aucun appel n'atteint le vrai client LoL, même s'il est ouvert (méthodes remplacées dans le processus) ;
+  - aucun appel n'atteint le vrai client LoL, même s'il est ouvert. **Amendé à l'implémentation
+    (2026-10-15)** : le faux LCU est servi en HTTP local (`ThreadingHTTPServer`), et seuls
+    `LCUClient.find_lcu_credentials` et `live.URL` sont remplacés, pas `_make_request`. `Scout` et
+    `LiveGame` figent en effet `live.fetch` comme valeur par défaut à l'import (`scout.py:296`,
+    `ingame.py:122`), alors que `live.fetch` relit `live.URL` à chaque appel ;
   - port libre (`client_config.PORT` = 0), donc aucun conflit avec un vrai client ouvert ;
   - `LcuEvents` (WebSocket) n'est pas lancé : la phase vient du `PhaseTracker`.
 - **Faux LCU** : la lecture renvoie la réponse de la scène courante, puis le fichier `lcu/`, sinon `None` (comme

@@ -1,0 +1,1093 @@
+{
+  "accountId": 1001,
+  "platformId": "EUW1",
+  "games": {
+    "gameBeginDate": "2026-10-05",
+    "gameCount": 20,
+    "gameEndDate": "2026-10-05",
+    "gameIndexBegin": 0,
+    "gameIndexEnd": 20,
+    "games": [
+      {
+        "gameId": 8004684141,
+        "gameCreation": 1791218180358,
+        "gameDuration": 1921,
+        "gameMode": "CLASSIC",
+        "gameType": "MATCHED_GAME",
+        "queueId": 440,
+        "mapId": 11,
+        "participants": [
+          {
+            "participantId": 6,
+            "teamId": 200,
+            "championId": 83,
+            "spell1Id": 4,
+            "spell2Id": 12,
+            "stats": {
+              "kills": 1,
+              "deaths": 4,
+              "assists": 2,
+              "champLevel": 17,
+              "totalMinionsKilled": 282,
+              "neutralMinionsKilled": 0,
+              "goldEarned": 11987,
+              "totalDamageDealtToChampions": 14115,
+              "totalDamageTaken": 37019,
+              "visionScore": 23,
+              "wardsPlaced": 10,
+              "win": true,
+              "item0": 3211,
+              "item1": 2502,
+              "item2": 3068,
+              "item3": 3047,
+              "item4": 0,
+              "item5": 0,
+              "item6": 3340,
+              "perkPrimaryStyle": 8200,
+              "perkSubStyle": 8400
+            },
+            "timeline": {
+              "lane": "TOP",
+              "role": "SOLO"
+            }
+          }
+        ],
+        "participantIdentities": [
+          {
+            "participantId": 6,
+            "player": {
+              "summonerName": "Démo",
+              "puuid": "puuid-test-0001"
+            }
+          }
+        ]
+      },
+      {
+        "gameId": 8004676222,
+        "gameCreation": 1791212780358,
+        "gameDuration": 1693,
+        "gameMode": "CLASSIC",
+        "gameType": "MATCHED_GAME",
+        "queueId": 420,
+        "mapId": 11,
+        "participants": [
+          {
+            "participantId": 6,
+            "teamId": 200,
+            "championId": 799,
+            "spell1Id": 4,
+            "spell2Id": 12,
+            "stats": {
+              "kills": 10,
+              "deaths": 3,
+              "assists": 3,
+              "champLevel": 16,
+              "totalMinionsKilled": 205,
+              "neutralMinionsKilled": 0,
+              "goldEarned": 14001,
+              "totalDamageDealtToChampions": 12048,
+              "totalDamageTaken": 37019,
+              "visionScore": 14,
+              "wardsPlaced": 10,
+              "win": true,
+              "item0": 3211,
+              "item1": 2502,
+              "item2": 3068,
+              "item3": 3047,
+              "item4": 0,
+              "item5": 0,
+              "item6": 3340,
+              "perkPrimaryStyle": 8200,
+              "perkSubStyle": 8400
+            },
+            "timeline": {
+              "lane": "TOP",
+              "role": "SOLO"
+            }
+          }
+        ],
+        "participantIdentities": [
+          {
+            "participantId": 6,
+            "player": {
+              "summonerName": "Démo",
+              "puuid": "puuid-test-0001"
+            }
+          }
+        ]
+      },
+      {
+        "gameId": 8004668303,
+        "gameCreation": 1791207380358,
+        "gameDuration": 2150,
+        "gameMode": "CLASSIC",
+        "gameType": "MATCHED_GAME",
+        "queueId": 420,
+        "mapId": 11,
+        "participants": [
+          {
+            "participantId": 6,
+            "teamId": 200,
+            "championId": 98,
+            "spell1Id": 4,
+            "spell2Id": 12,
+            "stats": {
+              "kills": 1,
+              "deaths": 6,
+              "assists": 6,
+              "champLevel": 18,
+              "totalMinionsKilled": 264,
+              "neutralMinionsKilled": 0,
+              "goldEarned": 14774,
+              "totalDamageDealtToChampions": 13957,
+              "totalDamageTaken": 37019,
+              "visionScore": 22,
+              "wardsPlaced": 10,
+              "win": true,
+              "item0": 3211,
+              "item1": 2502,
+              "item2": 3068,
+              "item3": 3047,
+              "item4": 0,
+              "item5": 0,
+              "item6": 3340,
+              "perkPrimaryStyle": 8200,
+              "perkSubStyle": 8400
+            },
+            "timeline": {
+              "lane": "TOP",
+              "role": "SOLO"
+            }
+          }
+        ],
+        "participantIdentities": [
+          {
+            "participantId": 6,
+            "player": {
+              "summonerName": "Démo",
+              "puuid": "puuid-test-0001"
+            }
+          }
+        ]
+      },
+      {
+        "gameId": 8004660384,
+        "gameCreation": 1791201980358,
+        "gameDuration": 1550,
+        "gameMode": "CLASSIC",
+        "gameType": "MATCHED_GAME",
+        "queueId": 420,
+        "mapId": 11,
+        "participants": [
+          {
+            "participantId": 6,
+            "teamId": 200,
+            "championId": 14,
+            "spell1Id": 4,
+            "spell2Id": 12,
+            "stats": {
+              "kills": 11,
+              "deaths": 5,
+              "assists": 6,
+              "champLevel": 16,
+              "totalMinionsKilled": 218,
+              "neutralMinionsKilled": 0,
+              "goldEarned": 10743,
+              "totalDamageDealtToChampions": 18750,
+              "totalDamageTaken": 37019,
+              "visionScore": 24,
+              "wardsPlaced": 10,
+              "win": false,
+              "item0": 3211,
+              "item1": 2502,
+              "item2": 3068,
+              "item3": 3047,
+              "item4": 0,
+              "item5": 0,
+              "item6": 3340,
+              "perkPrimaryStyle": 8200,
+              "perkSubStyle": 8400
+            },
+            "timeline": {
+              "lane": "TOP",
+              "role": "SOLO"
+            }
+          }
+        ],
+        "participantIdentities": [
+          {
+            "participantId": 6,
+            "player": {
+              "summonerName": "Démo",
+              "puuid": "puuid-test-0001"
+            }
+          }
+        ]
+      },
+      {
+        "gameId": 8004652465,
+        "gameCreation": 1791196580358,
+        "gameDuration": 1928,
+        "gameMode": "CLASSIC",
+        "gameType": "MATCHED_GAME",
+        "queueId": 440,
+        "mapId": 11,
+        "participants": [
+          {
+            "participantId": 6,
+            "teamId": 200,
+            "championId": 2,
+            "spell1Id": 4,
+            "spell2Id": 12,
+            "stats": {
+              "kills": 3,
+              "deaths": 7,
+              "assists": 10,
+              "champLevel": 15,
+              "totalMinionsKilled": 224,
+              "neutralMinionsKilled": 0,
+              "goldEarned": 11035,
+              "totalDamageDealtToChampions": 34415,
+              "totalDamageTaken": 37019,
+              "visionScore": 13,
+              "wardsPlaced": 10,
+              "win": true,
+              "item0": 3211,
+              "item1": 2502,
+              "item2": 3068,
+              "item3": 3047,
+              "item4": 0,
+              "item5": 0,
+              "item6": 3340,
+              "perkPrimaryStyle": 8200,
+              "perkSubStyle": 8400
+            },
+            "timeline": {
+              "lane": "TOP",
+              "role": "SOLO"
+            }
+          }
+        ],
+        "participantIdentities": [
+          {
+            "participantId": 6,
+            "player": {
+              "summonerName": "Démo",
+              "puuid": "puuid-test-0001"
+            }
+          }
+        ]
+      },
+      {
+        "gameId": 8004644546,
+        "gameCreation": 1791191180358,
+        "gameDuration": 1974,
+        "gameMode": "CLASSIC",
+        "gameType": "MATCHED_GAME",
+        "queueId": 420,
+        "mapId": 11,
+        "participants": [
+          {
+            "participantId": 6,
+            "teamId": 200,
+            "championId": 83,
+            "spell1Id": 4,
+            "spell2Id": 12,
+            "stats": {
+              "kills": 2,
+              "deaths": 8,
+              "assists": 6,
+              "champLevel": 14,
+              "totalMinionsKilled": 223,
+              "neutralMinionsKilled": 0,
+              "goldEarned": 13761,
+              "totalDamageDealtToChampions": 21269,
+              "totalDamageTaken": 37019,
+              "visionScore": 16,
+              "wardsPlaced": 10,
+              "win": false,
+              "item0": 3211,
+              "item1": 2502,
+              "item2": 3068,
+              "item3": 3047,
+              "item4": 0,
+              "item5": 0,
+              "item6": 3340,
+              "perkPrimaryStyle": 8200,
+              "perkSubStyle": 8400
+            },
+            "timeline": {
+              "lane": "TOP",
+              "role": "SOLO"
+            }
+          }
+        ],
+        "participantIdentities": [
+          {
+            "participantId": 6,
+            "player": {
+              "summonerName": "Démo",
+              "puuid": "puuid-test-0001"
+            }
+          }
+        ]
+      },
+      {
+        "gameId": 8004636627,
+        "gameCreation": 1791185780358,
+        "gameDuration": 2190,
+        "gameMode": "CLASSIC",
+        "gameType": "MATCHED_GAME",
+        "queueId": 420,
+        "mapId": 11,
+        "participants": [
+          {
+            "participantId": 6,
+            "teamId": 200,
+            "championId": 799,
+            "spell1Id": 4,
+            "spell2Id": 12,
+            "stats": {
+              "kills": 6,
+              "deaths": 8,
+              "assists": 3,
+              "champLevel": 17,
+              "totalMinionsKilled": 236,
+              "neutralMinionsKilled": 0,
+              "goldEarned": 12441,
+              "totalDamageDealtToChampions": 27135,
+              "totalDamageTaken": 37019,
+              "visionScore": 21,
+              "wardsPlaced": 10,
+              "win": true,
+              "item0": 3211,
+              "item1": 2502,
+              "item2": 3068,
+              "item3": 3047,
+              "item4": 0,
+              "item5": 0,
+              "item6": 3340,
+              "perkPrimaryStyle": 8200,
+              "perkSubStyle": 8400
+            },
+            "timeline": {
+              "lane": "TOP",
+              "role": "SOLO"
+            }
+          }
+        ],
+        "participantIdentities": [
+          {
+            "participantId": 6,
+            "player": {
+              "summonerName": "Démo",
+              "puuid": "puuid-test-0001"
+            }
+          }
+        ]
+      },
+      {
+        "gameId": 8004628708,
+        "gameCreation": 1791180380358,
+        "gameDuration": 1514,
+        "gameMode": "CLASSIC",
+        "gameType": "MATCHED_GAME",
+        "queueId": 420,
+        "mapId": 11,
+        "participants": [
+          {
+            "participantId": 6,
+            "teamId": 200,
+            "championId": 83,
+            "spell1Id": 4,
+            "spell2Id": 12,
+            "stats": {
+              "kills": 3,
+              "deaths": 4,
+              "assists": 4,
+              "champLevel": 16,
+              "totalMinionsKilled": 207,
+              "neutralMinionsKilled": 0,
+              "goldEarned": 9561,
+              "totalDamageDealtToChampions": 21811,
+              "totalDamageTaken": 37019,
+              "visionScore": 26,
+              "wardsPlaced": 10,
+              "win": true,
+              "item0": 3211,
+              "item1": 2502,
+              "item2": 3068,
+              "item3": 3047,
+              "item4": 0,
+              "item5": 0,
+              "item6": 3340,
+              "perkPrimaryStyle": 8200,
+              "perkSubStyle": 8400
+            },
+            "timeline": {
+              "lane": "TOP",
+              "role": "SOLO"
+            }
+          }
+        ],
+        "participantIdentities": [
+          {
+            "participantId": 6,
+            "player": {
+              "summonerName": "Démo",
+              "puuid": "puuid-test-0001"
+            }
+          }
+        ]
+      },
+      {
+        "gameId": 8004620789,
+        "gameCreation": 1791174980358,
+        "gameDuration": 1486,
+        "gameMode": "CLASSIC",
+        "gameType": "MATCHED_GAME",
+        "queueId": 440,
+        "mapId": 11,
+        "participants": [
+          {
+            "participantId": 6,
+            "teamId": 200,
+            "championId": 98,
+            "spell1Id": 4,
+            "spell2Id": 12,
+            "stats": {
+              "kills": 5,
+              "deaths": 7,
+              "assists": 5,
+              "champLevel": 16,
+              "totalMinionsKilled": 222,
+              "neutralMinionsKilled": 0,
+              "goldEarned": 15242,
+              "totalDamageDealtToChampions": 29415,
+              "totalDamageTaken": 37019,
+              "visionScore": 21,
+              "wardsPlaced": 10,
+              "win": false,
+              "item0": 3211,
+              "item1": 2502,
+              "item2": 3068,
+              "item3": 3047,
+              "item4": 0,
+              "item5": 0,
+              "item6": 3340,
+              "perkPrimaryStyle": 8200,
+              "perkSubStyle": 8400
+            },
+            "timeline": {
+              "lane": "TOP",
+              "role": "SOLO"
+            }
+          }
+        ],
+        "participantIdentities": [
+          {
+            "participantId": 6,
+            "player": {
+              "summonerName": "Démo",
+              "puuid": "puuid-test-0001"
+            }
+          }
+        ]
+      },
+      {
+        "gameId": 8004612870,
+        "gameCreation": 1791169580358,
+        "gameDuration": 2141,
+        "gameMode": "CLASSIC",
+        "gameType": "MATCHED_GAME",
+        "queueId": 420,
+        "mapId": 11,
+        "participants": [
+          {
+            "participantId": 6,
+            "teamId": 200,
+            "championId": 14,
+            "spell1Id": 4,
+            "spell2Id": 12,
+            "stats": {
+              "kills": 8,
+              "deaths": 2,
+              "assists": 3,
+              "champLevel": 14,
+              "totalMinionsKilled": 263,
+              "neutralMinionsKilled": 0,
+              "goldEarned": 11753,
+              "totalDamageDealtToChampions": 25420,
+              "totalDamageTaken": 37019,
+              "visionScore": 20,
+              "wardsPlaced": 10,
+              "win": false,
+              "item0": 3211,
+              "item1": 2502,
+              "item2": 3068,
+              "item3": 3047,
+              "item4": 0,
+              "item5": 0,
+              "item6": 3340,
+              "perkPrimaryStyle": 8200,
+              "perkSubStyle": 8400
+            },
+            "timeline": {
+              "lane": "TOP",
+              "role": "SOLO"
+            }
+          }
+        ],
+        "participantIdentities": [
+          {
+            "participantId": 6,
+            "player": {
+              "summonerName": "Démo",
+              "puuid": "puuid-test-0001"
+            }
+          }
+        ]
+      },
+      {
+        "gameId": 8004604951,
+        "gameCreation": 1791164180358,
+        "gameDuration": 1557,
+        "gameMode": "CLASSIC",
+        "gameType": "MATCHED_GAME",
+        "queueId": 420,
+        "mapId": 11,
+        "participants": [
+          {
+            "participantId": 6,
+            "teamId": 200,
+            "championId": 83,
+            "spell1Id": 4,
+            "spell2Id": 12,
+            "stats": {
+              "kills": 7,
+              "deaths": 6,
+              "assists": 9,
+              "champLevel": 16,
+              "totalMinionsKilled": 216,
+              "neutralMinionsKilled": 0,
+              "goldEarned": 9017,
+              "totalDamageDealtToChampions": 35408,
+              "totalDamageTaken": 37019,
+              "visionScore": 29,
+              "wardsPlaced": 10,
+              "win": false,
+              "item0": 3211,
+              "item1": 2502,
+              "item2": 3068,
+              "item3": 3047,
+              "item4": 0,
+              "item5": 0,
+              "item6": 3340,
+              "perkPrimaryStyle": 8200,
+              "perkSubStyle": 8400
+            },
+            "timeline": {
+              "lane": "TOP",
+              "role": "SOLO"
+            }
+          }
+        ],
+        "participantIdentities": [
+          {
+            "participantId": 6,
+            "player": {
+              "summonerName": "Démo",
+              "puuid": "puuid-test-0001"
+            }
+          }
+        ]
+      },
+      {
+        "gameId": 8004597032,
+        "gameCreation": 1791158780358,
+        "gameDuration": 2032,
+        "gameMode": "CLASSIC",
+        "gameType": "MATCHED_GAME",
+        "queueId": 420,
+        "mapId": 11,
+        "participants": [
+          {
+            "participantId": 6,
+            "teamId": 200,
+            "championId": 799,
+            "spell1Id": 4,
+            "spell2Id": 12,
+            "stats": {
+              "kills": 9,
+              "deaths": 1,
+              "assists": 4,
+              "champLevel": 14,
+              "totalMinionsKilled": 204,
+              "neutralMinionsKilled": 0,
+              "goldEarned": 13107,
+              "totalDamageDealtToChampions": 20612,
+              "totalDamageTaken": 37019,
+              "visionScore": 12,
+              "wardsPlaced": 10,
+              "win": true,
+              "item0": 3211,
+              "item1": 2502,
+              "item2": 3068,
+              "item3": 3047,
+              "item4": 0,
+              "item5": 0,
+              "item6": 3340,
+              "perkPrimaryStyle": 8200,
+              "perkSubStyle": 8400
+            },
+            "timeline": {
+              "lane": "TOP",
+              "role": "SOLO"
+            }
+          }
+        ],
+        "participantIdentities": [
+          {
+            "participantId": 6,
+            "player": {
+              "summonerName": "Démo",
+              "puuid": "puuid-test-0001"
+            }
+          }
+        ]
+      },
+      {
+        "gameId": 8004589113,
+        "gameCreation": 1791153380358,
+        "gameDuration": 2258,
+        "gameMode": "CLASSIC",
+        "gameType": "MATCHED_GAME",
+        "queueId": 440,
+        "mapId": 11,
+        "participants": [
+          {
+            "participantId": 6,
+            "teamId": 200,
+            "championId": 98,
+            "spell1Id": 4,
+            "spell2Id": 12,
+            "stats": {
+              "kills": 8,
+              "deaths": 3,
+              "assists": 6,
+              "champLevel": 15,
+              "totalMinionsKilled": 252,
+              "neutralMinionsKilled": 0,
+              "goldEarned": 12835,
+              "totalDamageDealtToChampions": 17890,
+              "totalDamageTaken": 37019,
+              "visionScore": 30,
+              "wardsPlaced": 10,
+              "win": false,
+              "item0": 3211,
+              "item1": 2502,
+              "item2": 3068,
+              "item3": 3047,
+              "item4": 0,
+              "item5": 0,
+              "item6": 3340,
+              "perkPrimaryStyle": 8200,
+              "perkSubStyle": 8400
+            },
+            "timeline": {
+              "lane": "TOP",
+              "role": "SOLO"
+            }
+          }
+        ],
+        "participantIdentities": [
+          {
+            "participantId": 6,
+            "player": {
+              "summonerName": "Démo",
+              "puuid": "puuid-test-0001"
+            }
+          }
+        ]
+      },
+      {
+        "gameId": 8004581194,
+        "gameCreation": 1791147980358,
+        "gameDuration": 1756,
+        "gameMode": "CLASSIC",
+        "gameType": "MATCHED_GAME",
+        "queueId": 420,
+        "mapId": 11,
+        "participants": [
+          {
+            "participantId": 6,
+            "teamId": 200,
+            "championId": 14,
+            "spell1Id": 4,
+            "spell2Id": 12,
+            "stats": {
+              "kills": 7,
+              "deaths": 3,
+              "assists": 3,
+              "champLevel": 16,
+              "totalMinionsKilled": 229,
+              "neutralMinionsKilled": 0,
+              "goldEarned": 13864,
+              "totalDamageDealtToChampions": 17648,
+              "totalDamageTaken": 37019,
+              "visionScore": 14,
+              "wardsPlaced": 10,
+              "win": false,
+              "item0": 3211,
+              "item1": 2502,
+              "item2": 3068,
+              "item3": 3047,
+              "item4": 0,
+              "item5": 0,
+              "item6": 3340,
+              "perkPrimaryStyle": 8200,
+              "perkSubStyle": 8400
+            },
+            "timeline": {
+              "lane": "TOP",
+              "role": "SOLO"
+            }
+          }
+        ],
+        "participantIdentities": [
+          {
+            "participantId": 6,
+            "player": {
+              "summonerName": "Démo",
+              "puuid": "puuid-test-0001"
+            }
+          }
+        ]
+      },
+      {
+        "gameId": 8004573275,
+        "gameCreation": 1791142580358,
+        "gameDuration": 1652,
+        "gameMode": "CLASSIC",
+        "gameType": "MATCHED_GAME",
+        "queueId": 420,
+        "mapId": 11,
+        "participants": [
+          {
+            "participantId": 6,
+            "teamId": 200,
+            "championId": 2,
+            "spell1Id": 4,
+            "spell2Id": 12,
+            "stats": {
+              "kills": 8,
+              "deaths": 8,
+              "assists": 2,
+              "champLevel": 17,
+              "totalMinionsKilled": 222,
+              "neutralMinionsKilled": 0,
+              "goldEarned": 14104,
+              "totalDamageDealtToChampions": 28166,
+              "totalDamageTaken": 37019,
+              "visionScore": 30,
+              "wardsPlaced": 10,
+              "win": false,
+              "item0": 3211,
+              "item1": 2502,
+              "item2": 3068,
+              "item3": 3047,
+              "item4": 0,
+              "item5": 0,
+              "item6": 3340,
+              "perkPrimaryStyle": 8200,
+              "perkSubStyle": 8400
+            },
+            "timeline": {
+              "lane": "TOP",
+              "role": "SOLO"
+            }
+          }
+        ],
+        "participantIdentities": [
+          {
+            "participantId": 6,
+            "player": {
+              "summonerName": "Démo",
+              "puuid": "puuid-test-0001"
+            }
+          }
+        ]
+      },
+      {
+        "gameId": 8004565356,
+        "gameCreation": 1791137180358,
+        "gameDuration": 1781,
+        "gameMode": "CLASSIC",
+        "gameType": "MATCHED_GAME",
+        "queueId": 420,
+        "mapId": 11,
+        "participants": [
+          {
+            "participantId": 6,
+            "teamId": 200,
+            "championId": 83,
+            "spell1Id": 4,
+            "spell2Id": 12,
+            "stats": {
+              "kills": 2,
+              "deaths": 7,
+              "assists": 8,
+              "champLevel": 18,
+              "totalMinionsKilled": 290,
+              "neutralMinionsKilled": 0,
+              "goldEarned": 11507,
+              "totalDamageDealtToChampions": 17415,
+              "totalDamageTaken": 37019,
+              "visionScore": 26,
+              "wardsPlaced": 10,
+              "win": true,
+              "item0": 3211,
+              "item1": 2502,
+              "item2": 3068,
+              "item3": 3047,
+              "item4": 0,
+              "item5": 0,
+              "item6": 3340,
+              "perkPrimaryStyle": 8200,
+              "perkSubStyle": 8400
+            },
+            "timeline": {
+              "lane": "TOP",
+              "role": "SOLO"
+            }
+          }
+        ],
+        "participantIdentities": [
+          {
+            "participantId": 6,
+            "player": {
+              "summonerName": "Démo",
+              "puuid": "puuid-test-0001"
+            }
+          }
+        ]
+      },
+      {
+        "gameId": 8004557437,
+        "gameCreation": 1791131780358,
+        "gameDuration": 1844,
+        "gameMode": "CLASSIC",
+        "gameType": "MATCHED_GAME",
+        "queueId": 440,
+        "mapId": 11,
+        "participants": [
+          {
+            "participantId": 6,
+            "teamId": 200,
+            "championId": 799,
+            "spell1Id": 4,
+            "spell2Id": 12,
+            "stats": {
+              "kills": 7,
+              "deaths": 5,
+              "assists": 9,
+              "champLevel": 16,
+              "totalMinionsKilled": 255,
+              "neutralMinionsKilled": 0,
+              "goldEarned": 15173,
+              "totalDamageDealtToChampions": 30167,
+              "totalDamageTaken": 37019,
+              "visionScore": 29,
+              "wardsPlaced": 10,
+              "win": true,
+              "item0": 3211,
+              "item1": 2502,
+              "item2": 3068,
+              "item3": 3047,
+              "item4": 0,
+              "item5": 0,
+              "item6": 3340,
+              "perkPrimaryStyle": 8200,
+              "perkSubStyle": 8400
+            },
+            "timeline": {
+              "lane": "TOP",
+              "role": "SOLO"
+            }
+          }
+        ],
+        "participantIdentities": [
+          {
+            "participantId": 6,
+            "player": {
+              "summonerName": "Démo",
+              "puuid": "puuid-test-0001"
+            }
+          }
+        ]
+      },
+      {
+        "gameId": 8004549518,
+        "gameCreation": 1791126380358,
+        "gameDuration": 2149,
+        "gameMode": "CLASSIC",
+        "gameType": "MATCHED_GAME",
+        "queueId": 420,
+        "mapId": 11,
+        "participants": [
+          {
+            "participantId": 6,
+            "teamId": 200,
+            "championId": 83,
+            "spell1Id": 4,
+            "spell2Id": 12,
+            "stats": {
+              "kills": 4,
+              "deaths": 3,
+              "assists": 10,
+              "champLevel": 16,
+              "totalMinionsKilled": 251,
+              "neutralMinionsKilled": 0,
+              "goldEarned": 14501,
+              "totalDamageDealtToChampions": 15586,
+              "totalDamageTaken": 37019,
+              "visionScore": 18,
+              "wardsPlaced": 10,
+              "win": true,
+              "item0": 3211,
+              "item1": 2502,
+              "item2": 3068,
+              "item3": 3047,
+              "item4": 0,
+              "item5": 0,
+              "item6": 3340,
+              "perkPrimaryStyle": 8200,
+              "perkSubStyle": 8400
+            },
+            "timeline": {
+              "lane": "TOP",
+              "role": "SOLO"
+            }
+          }
+        ],
+        "participantIdentities": [
+          {
+            "participantId": 6,
+            "player": {
+              "summonerName": "Démo",
+              "puuid": "puuid-test-0001"
+            }
+          }
+        ]
+      },
+      {
+        "gameId": 8004541599,
+        "gameCreation": 1791120980358,
+        "gameDuration": 1385,
+        "gameMode": "CLASSIC",
+        "gameType": "MATCHED_GAME",
+        "queueId": 420,
+        "mapId": 11,
+        "participants": [
+          {
+            "participantId": 6,
+            "teamId": 200,
+            "championId": 98,
+            "spell1Id": 4,
+            "spell2Id": 12,
+            "stats": {
+              "kills": 8,
+              "deaths": 8,
+              "assists": 9,
+              "champLevel": 18,
+              "totalMinionsKilled": 279,
+              "neutralMinionsKilled": 0,
+              "goldEarned": 11474,
+              "totalDamageDealtToChampions": 20060,
+              "totalDamageTaken": 37019,
+              "visionScore": 27,
+              "wardsPlaced": 10,
+              "win": false,
+              "item0": 3211,
+              "item1": 2502,
+              "item2": 3068,
+              "item3": 3047,
+              "item4": 0,
+              "item5": 0,
+              "item6": 3340,
+              "perkPrimaryStyle": 8200,
+              "perkSubStyle": 8400
+            },
+            "timeline": {
+              "lane": "TOP",
+              "role": "SOLO"
+            }
+          }
+        ],
+        "participantIdentities": [
+          {
+            "participantId": 6,
+            "player": {
+              "summonerName": "Démo",
+              "puuid": "puuid-test-0001"
+            }
+          }
+        ]
+      },
+      {
+        "gameId": 8004533680,
+        "gameCreation": 1791115580358,
+        "gameDuration": 1912,
+        "gameMode": "CLASSIC",
+        "gameType": "MATCHED_GAME",
+        "queueId": 420,
+        "mapId": 11,
+        "participants": [
+          {
+            "participantId": 6,
+            "teamId": 200,
+            "championId": 14,
+            "spell1Id": 4,
+            "spell2Id": 12,
+            "stats": {
+              "kills": 2,
+              "deaths": 6,
+              "assists": 7,
+              "champLevel": 16,
+              "totalMinionsKilled": 278,
+              "neutralMinionsKilled": 0,
+              "goldEarned": 15199,
+              "totalDamageDealtToChampions": 23569,
+              "totalDamageTaken": 37019,
+              "visionScore": 30,
+              "wardsPlaced": 10,
+              "win": true,
+              "item0": 3211,
+              "item1": 2502,
+              "item2": 3068,
+              "item3": 3047,
+              "item4": 0,
+              "item5": 0,
+              "item6": 3340,
+              "perkPrimaryStyle": 8200,
+              "perkSubStyle": 8400
+            },
+            "timeline": {
+              "lane": "TOP",
+              "role": "SOLO"
+            }
+          }
+        ],
+        "participantIdentities": [
+          {
+            "participantId": 6,
+            "player": {
+              "summonerName": "Démo",
+              "puuid": "puuid-test-0001"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

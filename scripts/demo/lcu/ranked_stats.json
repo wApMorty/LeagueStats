@@ -1,0 +1,113 @@
+{
+  "queues": [
+    {
+      "queueType": "RANKED_SOLO_5x5",
+      "tier": "DIAMOND",
+      "division": "II",
+      "leaguePoints": 49,
+      "wins": 369,
+      "losses": 370,
+      "isProvisional": false,
+      "provisionalGamesRemaining": 0,
+      "miniSeriesProgress": "",
+      "highestTier": "MASTER",
+      "highestDivision": "NA",
+      "previousSeasonEndTier": "MASTER",
+      "previousSeasonEndDivision": "NA"
+    },
+    {
+      "queueType": "RANKED_FLEX_SR",
+      "tier": "EMERALD",
+      "division": "I",
+      "leaguePoints": 75,
+      "wins": 9,
+      "losses": 12,
+      "isProvisional": false,
+      "provisionalGamesRemaining": 0,
+      "miniSeriesProgress": "",
+      "highestTier": "DIAMOND",
+      "highestDivision": "III",
+      "previousSeasonEndTier": "DIAMOND",
+      "previousSeasonEndDivision": "IV"
+    },
+    {
+      "queueType": "RANKED_TFT",
+      "tier": "",
+      "division": "NA",
+      "leaguePoints": 0,
+      "wins": 0,
+      "losses": 0,
+      "isProvisional": true,
+      "provisionalGamesRemaining": 5,
+      "miniSeriesProgress": "",
+      "highestTier": "",
+      "highestDivision": "NA",
+      "previousSeasonEndTier": "PLATINUM",
+      "previousSeasonEndDivision": "IV"
+    }
+  ],
+  "queueMap": {
+    "RANKED_SOLO_5x5": {
+      "queueType": "RANKED_SOLO_5x5",
+      "tier": "DIAMOND",
+      "division": "II",
+      "leaguePoints": 49,
+      "wins": 369,
+      "losses": 370,
+      "isProvisional": false,
+      "provisionalGamesRemaining": 0,
+      "miniSeriesProgress": "",
+      "highestTier": "MASTER",
+      "highestDivision": "NA",
+      "previousSeasonEndTier": "MASTER",
+      "previousSeasonEndDivision": "NA"
+    },
+    "RANKED_FLEX_SR": {
+      "queueType": "RANKED_FLEX_SR",
+      "tier": "EMERALD",
+      "division": "I",
+      "leaguePoints": 75,
+      "wins": 9,
+      "losses": 12,
+      "isProvisional": false,
+      "provisionalGamesRemaining": 0,
+      "miniSeriesProgress": "",
+      "highestTier": "DIAMOND",
+      "highestDivision": "III",
+      "previousSeasonEndTier": "DIAMOND",
+      "previousSeasonEndDivision": "IV"
+    },
+    "RANKED_TFT": {
+      "queueType": "RANKED_TFT",
+      "tier": "",
+      "division": "NA",
+      "leaguePoints": 0,
+      "wins": 0,
+      "losses": 0,
+      "isProvisional": true,
+      "provisionalGamesRemaining": 5,
+      "miniSeriesProgress": "",
+      "highestTier": "",
+      "highestDivision": "NA",
+      "previousSeasonEndTier": "PLATINUM",
+      "previousSeasonEndDivision": "IV"
+    }
+  },
+  "highestRankedEntry": {
+    "queueType": "RANKED_SOLO_5x5",
+    "tier": "DIAMOND",
+    "division": "II",
+    "leaguePoints": 49,
+    "wins": 369,
+    "losses": 370,
+    "isProvisional": false,
+    "provisionalGamesRemaining": 0,
+    "miniSeriesProgress": "",
+    "highestTier": "MASTER",
+    "highestDivision": "NA",
+    "previousSeasonEndTier": "MASTER",
+    "previousSeasonEndDivision": "NA"
+  },
+  "highestPreviousSeasonEndTier": "MASTER",
+  "highestPreviousSeasonEndDivision": "NA"
+}

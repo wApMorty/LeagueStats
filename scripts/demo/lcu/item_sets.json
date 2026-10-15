@@ -1,0 +1,244 @@
+{
+  "accountId": 1001,
+  "timestamp": 1657382974517,
+  "itemSets": [
+    {
+      "uid": "a5edfe90-b4ee-11f1-8f57-43514ba1b634",
+      "title": "[Coachless] Sion Top",
+      "type": "custom",
+      "associatedChampions": [
+        14
+      ],
+      "map": "",
+      "mode": "any",
+      "blocks": [
+        {
+          "type": "Starters + Boots",
+          "items": [
+            {
+              "count": 1,
+              "id": "1054"
+            },
+            {
+              "count": 1,
+              "id": "1120"
+            },
+            {
+              "count": 1,
+              "id": "1001"
+            },
+            {
+              "count": 1,
+              "id": "3047"
+            },
+            {
+              "count": 1,
+              "id": "3111"
+            }
+          ]
+        },
+        {
+          "type": "1st Items (by WPA)",
+          "items": [
+            {
+              "count": 1,
+              "id": "3068"
+            },
+            {
+              "count": 1,
+              "id": "6664"
+            },
+            {
+              "count": 1,
+              "id": "3084"
+            }
+          ]
+        },
+        {
+          "type": "Components (by Cost)",
+          "items": [
+            {
+              "count": 1,
+              "id": "2022"
+            },
+            {
+              "count": 1,
+              "id": "1029"
+            },
+            {
+              "count": 1,
+              "id": "1033"
+            },
+            {
+              "count": 1,
+              "id": "1028"
+            },
+            {
+              "count": 1,
+              "id": "1083"
+            },
+            {
+              "count": 1,
+              "id": "3076"
+            },
+            {
+              "count": 1,
+              "id": "3067"
+            },
+            {
+              "count": 1,
+              "id": "1031"
+            },
+            {
+              "count": 1,
+              "id": "1057"
+            },
+            {
+              "count": 1,
+              "id": "6660"
+            },
+            {
+              "count": 1,
+              "id": "3082"
+            },
+            {
+              "count": 1,
+              "id": "3211"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "uid": "63248d60-b55a-11f1-9898-ed1503e34e93",
+      "title": "[Coachless] Ambessa Top",
+      "type": "custom",
+      "associatedChampions": [
+        799
+      ],
+      "map": "",
+      "mode": "any",
+      "blocks": [
+        {
+          "type": "Starters + Boots",
+          "items": [
+            {
+              "count": 1,
+              "id": "1055"
+            },
+            {
+              "count": 1,
+              "id": "1120"
+            },
+            {
+              "count": 1,
+              "id": "1001"
+            },
+            {
+              "count": 1,
+              "id": "3158"
+            },
+            {
+              "count": 1,
+              "id": "3008"
+            },
+            {
+              "count": 1,
+              "id": "3047"
+            },
+            {
+              "count": 1,
+              "id": "3111"
+            }
+          ]
+        },
+        {
+          "type": "1st Items (by WPA)",
+          "items": [
+            {
+              "count": 1,
+              "id": "6698"
+            },
+            {
+              "count": 1,
+              "id": "6699"
+            },
+            {
+              "count": 1,
+              "id": "6692"
+            }
+          ]
+        },
+        {
+          "type": "Components (by Cost)",
+          "items": [
+            {
+              "count": 1,
+              "id": "2022"
+            },
+            {
+              "count": 1,
+              "id": "1029"
+            },
+            {
+              "count": 1,
+              "id": "1036"
+            },
+            {
+              "count": 1,
+              "id": "1033"
+            },
+            {
+              "count": 1,
+              "id": "1083"
+            },
+            {
+              "count": 1,
+              "id": "3067"
+            },
+            {
+              "count": 1,
+              "id": "3123"
+            },
+            {
+              "count": 1,
+              "id": "1037"
+            },
+            {
+              "count": 1,
+              "id": "3134"
+            },
+            {
+              "count": 1,
+              "id": "3044"
+            },
+            {
+              "count": 1,
+              "id": "2019"
+            },
+            {
+              "count": 1,
+              "id": "3077"
+            },
+            {
+              "count": 1,
+              "id": "1038"
+            },
+            {
+              "count": 1,
+              "id": "3155"
+            },
+            {
+              "count": 1,
+              "id": "2020"
+            },
+            {
+              "count": 1,
+              "id": "3035"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

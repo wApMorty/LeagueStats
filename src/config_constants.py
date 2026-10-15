@@ -4,7 +4,7 @@ Centralized configuration for all hardcoded values across the application.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict
+from typing import Dict, Tuple
 
 # SPEC-19 : constantes du coach de gameplay dans leur propre module (limite de
 # 500 lignes), réexportées ici.
@@ -586,6 +586,26 @@ class DataQualityConfig:
     BACKUP_RETENTION: int = 3
 
 
+@dataclass
+class DemoConfig:
+    """Mode démo, captures et vitrine (SPEC-34). Valeurs de mise en scène, choisies sans mesure."""
+
+    SCENE_DELAY_S: float = 2.5  # pause entre deux étapes du scénario en lecture continue
+    INGAME_FRAME_STEP_S: float = 30.0  # temps de jeu simulé entre deux trames de la Live Client API
+    INGAME_FRAME_PERIOD_S: float = (
+        0.5  # temps réel entre deux trames (une partie de 30 min en ~30 s)
+    )
+    CAPTURE_SIZE: Tuple[int, int] = (
+        1920,
+        1080,
+    )  # taille intérieure des captures (rendu de la vidéo)
+    CAPTURE_RENDER_TIMEOUT_S: float = 15.0
+    CAPTURE_SETTLE_S: float = 1.0  # fin des animations CSS avant la capture
+    README_IMAGE_WIDTH: int = 1280
+    README_IMAGE_MAX_KB: int = 400
+    HERO_GIF_MAX_KB: int = 5000
+
+
 # Global configuration instances
 scraping_config = ScrapingConfig()
 analysis_config = AnalysisConfig()
@@ -596,6 +616,7 @@ xpath_config = XPathConfig()
 pool_stats_config = PoolStatisticsConfig()
 synergy_config = SynergyConfig()
 data_quality_config = DataQualityConfig()
+demo_config = DemoConfig()
 
 # Calibration appliquée par l'utilisateur (« Appliquer ? o/n » du Live Coach) :
 # K_MATCHUP, K_SYNERGY et MODEL_VERSION viennent de calibration.json s'il existe.

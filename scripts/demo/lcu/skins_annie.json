@@ -1,0 +1,101 @@
+[
+  {
+    "championId": 1,
+    "chromaPath": null,
+    "chromas": [],
+    "collectionSplashVideoPath": null,
+    "disabled": false,
+    "featuresText": null,
+    "id": 1000,
+    "isBase": true,
+    "lastSelected": false,
+    "loadScreenPath": "/lol-game-data/assets/ASSETS/Characters/Annie/Skins/Base/AnnieLoadScreen.jpg",
+    "name": "Annie",
+    "ownership": {
+      "loyaltyReward": false,
+      "owned": true,
+      "rental": {
+        "endDate": 0,
+        "purchaseDate": 0,
+        "rented": false,
+        "winCountRemaining": 0
+      },
+      "xboxGPReward": false
+    },
+    "rarityGemPath": "",
+    "relatedPrimeContentId": "",
+    "relatedPrimeItemId": 0,
+    "skinType": "",
+    "splashPath": "/lol-game-data/assets/ASSETS/Characters/Annie/Skins/Base/Images/annie_splash_centered_0.jpg",
+    "splashVideoPath": null,
+    "stillObtainable": false,
+    "tilePath": "/lol-game-data/assets/ASSETS/Characters/Annie/Skins/Base/Images/annie_splash_tile_0.jpg",
+    "uncenteredSplashPath": "/lol-game-data/assets/ASSETS/Characters/Annie/Skins/Base/Images/annie_splash_uncentered_0.jpg"
+  },
+  {
+    "championId": 1,
+    "chromaPath": null,
+    "chromas": [],
+    "collectionSplashVideoPath": null,
+    "disabled": false,
+    "featuresText": null,
+    "id": 1001,
+    "isBase": false,
+    "lastSelected": false,
+    "loadScreenPath": "/lol-game-data/assets/ASSETS/Characters/Annie/Skins/Skin01/AnnieLoadscreen_1.jpg",
+    "name": "Goth Annie",
+    "ownership": {
+      "loyaltyReward": false,
+      "owned": false,
+      "rental": {
+        "endDate": 0,
+        "purchaseDate": 0,
+        "rented": false,
+        "winCountRemaining": 0
+      },
+      "xboxGPReward": false
+    },
+    "rarityGemPath": "",
+    "relatedPrimeContentId": "",
+    "relatedPrimeItemId": 0,
+    "skinType": "",
+    "splashPath": "/lol-game-data/assets/ASSETS/Characters/Annie/Skins/Skin01/Images/annie_splash_centered_1.jpg",
+    "splashVideoPath": null,
+    "stillObtainable": false,
+    "tilePath": "/lol-game-data/assets/ASSETS/Characters/Annie/Skins/Skin01/Images/annie_splash_tile_1.jpg",
+    "uncenteredSplashPath": "/lol-game-data/assets/ASSETS/Characters/Annie/Skins/Skin01/Images/annie_splash_uncentered_1.jpg"
+  },
+  {
+    "championId": 1,
+    "chromaPath": null,
+    "chromas": [],
+    "collectionSplashVideoPath": null,
+    "disabled": false,
+    "featuresText": null,
+    "id": 1002,
+    "isBase": false,
+    "lastSelected": false,
+    "loadScreenPath": "/lol-game-data/assets/ASSETS/Characters/Annie/Skins/Skin02/AnnieLoadScreen_2.jpg",
+    "name": "Red Riding Annie",
+    "ownership": {
+      "loyaltyReward": false,
+      "owned": false,
+      "rental": {
+        "endDate": 0,
+        "purchaseDate": 0,
+        "rented": false,
+        "winCountRemaining": 0
+      },
+      "xboxGPReward": false
+    },
+    "rarityGemPath": "",
+    "relatedPrimeContentId": "",
+    "relatedPrimeItemId": 0,
+    "skinType": "",
+    "splashPath": "/lol-game-data/assets/ASSETS/Characters/Annie/Skins/Skin02/Images/annie_splash_centered_2.jpg",
+    "splashVideoPath": null,
+    "stillObtainable": false,
+    "tilePath": "/lol-game-data/assets/ASSETS/Characters/Annie/Skins/Skin02/Images/annie_splash_tile_2.jpg",
+    "uncenteredSplashPath": "/lol-game-data/assets/ASSETS/Characters/Annie/Skins/Skin02/Images/annie_splash_uncentered_2.jpg"
+  }
+]

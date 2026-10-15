@@ -1,0 +1,90 @@
+{
+  "overallChallengeLevel": "DIAMOND",
+  "totalChallengeScore": 19265,
+  "pointsUntilNextRank": 29680,
+  "positionPercentile": 3.4000000000000004,
+  "isApex": false,
+  "apexLeaderboardPosition": 0,
+  "selectedChallengesString": "203302,302301,202101",
+  "categoryProgress": [
+    {
+      "category": "COLLECTION",
+      "current": 3535,
+      "level": "MASTER",
+      "max": 4200,
+      "positionPercentile": 0.2
+    },
+    {
+      "category": "TEAMWORK",
+      "current": 4235,
+      "level": "DIAMOND",
+      "max": 7735,
+      "positionPercentile": 1.2
+    },
+    {
+      "category": "EXPERTISE",
+      "current": 4870,
+      "level": "DIAMOND",
+      "max": 6715,
+      "positionPercentile": 4.7
+    },
+    {
+      "category": "VETERANCY",
+      "current": 3775,
+      "level": "DIAMOND",
+      "max": 6300,
+      "positionPercentile": 4.9
+    },
+    {
+      "category": "IMAGINATION",
+      "current": 2850,
+      "level": "DIAMOND",
+      "max": 4730,
+      "positionPercentile": 3.9
+    }
+  ],
+  "title": {
+    "name": "Masterful"
+  },
+  "topChallenges": [
+    {
+      "id": 203302,
+      "name": "Never Tell Me the Odds",
+      "description": "Get kills while more enemy champions than friendly ones are nearby",
+      "descriptionShort": "Get kills while outnumbered",
+      "category": "EXPERTISE",
+      "currentLevel": "MASTER",
+      "currentValue": 3674.0,
+      "nextLevel": "GRANDMASTER",
+      "nextThreshold": 3740.0,
+      "percentile": 3.3000000000000003,
+      "pointsAwarded": 100
+    },
+    {
+      "id": 302301,
+      "name": "Brush Fanatic",
+      "description": "Take down champions after waiting in a brush with at least one ally for at least 3 seconds",
+      "descriptionShort": "Get takedowns with an ally after hiding in brush for 3+s",
+      "category": "TEAMWORK",
+      "currentLevel": "MASTER",
+      "currentValue": 3869.0,
+      "nextLevel": "GRANDMASTER",
+      "nextThreshold": 4015.0,
+      "percentile": 4.1000000000000005,
+      "pointsAwarded": 100
+    },
+    {
+      "id": 202101,
+      "name": "Flame Horizon",
+      "description": "Win games where you were at least 100CS ahead of your role opponent at any point in the game",
+      "descriptionShort": "Win games with 100+ more CS than role opponent",
+      "category": "EXPERTISE",
+      "currentLevel": "MASTER",
+      "currentValue": 106.0,
+      "nextLevel": "GRANDMASTER",
+      "nextThreshold": 115.0,
+      "percentile": 1.4000000000000001,
+      "pointsAwarded": 100
+    }
+  ]
+}
