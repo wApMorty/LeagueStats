@@ -662,6 +662,24 @@ class DemoHandle:
         shutil.rmtree(self._workdir, ignore_errors=True)
 
 
+class _Patcher:
+    """`setattr` qui retient l'ancienne valeur, pour `restore()` à l'arrêt de la démo."""
+
+    def __init__(self) -> None:
+        self._saved: List[Tuple[Any, str, Any]] = []
+
+    def set(self, target: Any, name: str, value: Any) -> None:
+        """Remplace `target.name` par `value` en retenant l'ancienne valeur."""
+        self._saved.append((target, name, getattr(target, name)))
+        setattr(target, name, value)
+
+    def restore(self) -> None:
+        """Remet les valeurs d'origine, dans l'ordre inverse des remplacements."""
+        while self._saved:
+            target, name, value = self._saved.pop()
+            setattr(target, name, value)
+
+
 def start_demo(
     scene: Optional[str] = None, window: bool = True, db_src: Optional[Path] = None
 ) -> Optional[DemoHandle]:
@@ -669,16 +687,22 @@ def start_demo(
 
     `window` vrai : ouvre la fenêtre du client et ne rend la main qu'à sa fermeture (démo arrêtée) ;
     faux : rend tout de suite la démo en cours (captures). Sans `scene`, le scénario tourne en boucle.
-    Ne lève pas : un échec s'annonce en `[ERREUR]` et renvoie None.
+    Ne lève pas : un échec s'annonce en `[ERREUR]` et renvoie None. `stop()` défait les remplacements
+    (base, journaux, LCU, Live Client API) : une seconde démo peut suivre dans le même processus.
     """
+    scenario = load_scenario()
+    if scene and scene not in [s["name"] for s in scenario["scenes"]]:
+        print(f"[ERREUR] Scène inconnue : {scene} (voir --liste)")
+        return None
     workdir = Path(tempfile.mkdtemp(prefix="leaguestats-demo-"))
-    stoppers: List[Callable[[], None]] = []
+    patcher = _Patcher()
+    stoppers: List[Callable[[], None]] = [patcher.restore]
     try:
-        isolate(Path(db_src or config.DATABASE_PATH), workdir)
-        fake = FakeLcu(load_scenario(), champion_ids(Path(config.DATABASE_PATH)))
+        isolate(Path(db_src or config.DATABASE_PATH), workdir, patcher.set)
+        fake = FakeLcu(scenario, champion_ids(Path(config.DATABASE_PATH)))
         httpd, lcu_url = serve(fake)
         stoppers.append(httpd.shutdown)
-        point_to(lcu_url)
+        point_to(lcu_url, patcher.set)
         bus = EventBus()
         coach = LiveCoachThread(bus)
         url = server.start(config.DATABASE_PATH, bus, LCUClient(), coach.send)

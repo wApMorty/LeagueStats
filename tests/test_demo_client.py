@@ -237,3 +237,44 @@ def test_la_revue_sans_base_ne_publie_rien_et_ne_leve_pas(fake, tmp_path, monkey
     handle = demo.DemoHandle("http://127.0.0.1:1", bus, fake, tmp_path / "demo", [])
     handle.goto("revue")
     assert fake.scene["name"] == "revue" and bus.latest("game_captured") is None
+
+
+class _Idle:
+    """Live Coach et `LiveGame` inertes : le test ne vérifie que le câblage de `start_demo`."""
+
+    def __init__(self, *_args, **_kwargs):
+        self.send = lambda line: False
+
+    def start(self):
+        pass
+
+    def stop(self):
+        pass
+
+
+def test_start_demo_isole_la_base_puis_defait_tout_a_l_arret(temp_db, monkeypatch):
+    monkeypatch.setattr(demo, "LiveCoachThread", _Idle)
+    monkeypatch.setattr(demo, "LiveGame", _Idle)
+    monkeypatch.setattr(demo.server, "start", lambda *args, **kwargs: "http://127.0.0.1:1")
+    monkeypatch.setattr(demo.server, "stop", lambda: None)
+    source = Path(temp_db)
+    before = (_sha(source), source.stat().st_mtime_ns)
+    original = (config.DATABASE_PATH, live.URL, LCUClient.find_lcu_credentials)
+
+    assert demo.start_demo("inconnue", window=False, db_src=source) is None
+    handle = demo.start_demo("accueil", window=False, db_src=source)
+    assert handle is not None
+    copy = Path(config.DATABASE_PATH)
+    assert copy != source and copy.exists()
+    connection = sqlite3.connect(copy)
+    connection.execute("CREATE TABLE demo_write (x INTEGER)")
+    connection.close()  # sous Windows, un fichier ouvert empêcherait la suppression du dossier
+    assert LCUClient().find_lcu_credentials().password == "demo"
+    handle.stop()
+
+    assert (_sha(source), source.stat().st_mtime_ns) == before
+    assert (config.DATABASE_PATH, live.URL, LCUClient.find_lcu_credentials) == original
+    assert not copy.parent.exists()
+    second = demo.start_demo("accueil", window=False, db_src=source)  # même processus
+    assert second is not None
+    second.stop()
