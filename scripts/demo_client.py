@@ -89,6 +89,7 @@ ROUTES: Tuple[Tuple[Pattern[str], str], ...] = tuple(
 )
 GAME_DETAIL = re.compile(r"/lol-match-history/v1/games/(\d+)")
 ACTION = re.compile(r"/lol-champ-select/v1/session/actions/(\d+)")
+SKINS = re.compile(r"/lol-champions/v1/inventories/\d+/champions/(\d+)/skins")
 PAGE = re.compile(r"/lol-perks/v1/pages/(\d+)")
 FREE_CHAMPIONS = (
     "/lol-champ-select/v1/pickable-champion-ids",
@@ -436,6 +437,12 @@ class FakeLcu:
                     if detail:
                         data["gameId"] = int(detail.group(1))
                     return data
+            skins = SKINS.fullmatch(path)
+            if skins:  # le skin de base, possédé : le carrousel montre le champion verrouillé
+                champion_id = int(skins.group(1))
+                names = {v: k for k, v in self._ids.items()}
+                base = {"id": champion_id * 1000, "isBase": True, "isChromaVariant": False}
+                return [{**base, "name": names.get(champion_id, ""), "ownership": {"owned": True}}]
             history = HISTORY.fullmatch(path)
             if history:
                 return history_for(history.group(1), self._file("match_history.json"))

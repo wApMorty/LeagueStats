@@ -30,9 +30,9 @@ import sqlite3  # noqa: E402
 
 import uvicorn  # noqa: E402
 from selenium import webdriver  # noqa: E402
-from selenium.webdriver.firefox.options import Options  # noqa: E402
 from selenium.webdriver.support.ui import WebDriverWait  # noqa: E402
 
+from scripts._firefox import fenetre, headless_firefox  # noqa: E402
 from src.client.app import create_app  # noqa: E402
 from src.client.assets import Assets  # noqa: E402
 from src.client.bus import EventBus  # noqa: E402
@@ -277,16 +277,6 @@ return {
 """
 
 
-def fenetre(driver: webdriver.Firefox, taille: Tuple[int, int]) -> None:
-    """Fixe la taille intérieure de la fenêtre (la taille demandée est celle de la fenêtre externe)."""
-    largeur, hauteur = taille
-    driver.set_window_size(largeur, hauteur)
-    interieur = driver.execute_script("return [window.innerWidth, window.innerHeight];")
-    if interieur != [largeur, hauteur]:
-        driver.set_window_size(2 * largeur - interieur[0], 2 * hauteur - interieur[1])
-    time.sleep(REFLUX_S)
-
-
 def mesure(driver: webdriver.Firefox) -> Dict[str, Any]:
     return driver.execute_script(MESURE_JS)
 
@@ -339,12 +329,8 @@ def main() -> int:
             server, thread, url = demarrer(db_path, bus, Path(tmp) / "assets")
             print(f"[INFO] Serveur du client sur {url} (base et cache temporaires)")
 
-            options = Options()
-            options.add_argument("-headless")
-            options.add_argument(f"--width={GRAND[0]}")
-            options.add_argument(f"--height={GRAND[1]}")
-            driver = webdriver.Firefox(options=options)
-            fenetre(driver, GRAND)
+            driver = headless_firefox(GRAND)
+            fenetre(driver, GRAND, REFLUX_S)
 
             pire: Optional[Dict[str, Any]] = None
             for avec_modele in (False, True):
@@ -394,7 +380,7 @@ def main() -> int:
             elif ok:
                 print(f"[OK] {GRAND[0]}x{GRAND[1]} : aucun défilement, marge de {pire['marge']} px")
 
-            fenetre(driver, PETIT)
+            fenetre(driver, PETIT, REFLUX_S)
             colonnes = mesure(driver)["grille"]
             if colonnes is None:
                 print(

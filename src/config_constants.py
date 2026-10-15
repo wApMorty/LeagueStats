@@ -600,6 +600,8 @@ class DemoConfig:
     CAPTURE_SIZE: Tuple[int, int] = (1920, 1080)
     CAPTURE_RENDER_TIMEOUT_S: float = 15.0
     CAPTURE_SETTLE_S: float = 1.0  # fin des animations CSS avant la capture
+    CAPTURE_INTRO_SETTLE_S: float = 3.0  # intro animée (« Partie trouvée » : impact à 1,4 s)
+    CAPTURE_LONG_SETTLE_S: float = 6.0  # draft et revue : titres en runes, portraits, courbe tracée
     README_IMAGE_WIDTH: int = 1280
     README_IMAGE_MAX_KB: int = 400
     HERO_GIF_MAX_KB: int = 5000

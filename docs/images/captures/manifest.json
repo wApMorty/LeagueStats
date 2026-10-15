@@ -1,0 +1,192 @@
+{
+  "capture_utc": "2026-10-15T22:38:22+00:00",
+  "taille": [
+    1920,
+    1080
+  ],
+  "captures": [
+    {
+      "file": "01-accueil.png",
+      "scene": "accueil",
+      "route": "/"
+    },
+    {
+      "file": "02-profil.png",
+      "scene": "profil",
+      "route": "/profil"
+    },
+    {
+      "file": "03-historique.png",
+      "scene": "historique",
+      "route": "/historique"
+    },
+    {
+      "file": "04-collection.png",
+      "scene": "historique",
+      "route": "/collection"
+    },
+    {
+      "file": "05-trouvee.png",
+      "scene": "trouvee",
+      "route": "/"
+    },
+    {
+      "file": "06-draft-bans.png",
+      "scene": "draft-bans",
+      "route": "/draft"
+    },
+    {
+      "file": "07-draft-pick.png",
+      "scene": "draft-pick",
+      "route": "/draft"
+    },
+    {
+      "file": "08-draft-lock.png",
+      "scene": "draft-lock",
+      "route": "/draft"
+    },
+    {
+      "file": "09-chargement.png",
+      "scene": "chargement",
+      "route": "/en-partie"
+    },
+    {
+      "file": "10-en-partie.png",
+      "scene": "en-partie",
+      "route": "/en-partie"
+    },
+    {
+      "file": "11-revue.png",
+      "scene": "revue",
+      "route": "/postgame"
+    },
+    {
+      "file": "12-progression.png",
+      "scene": "coaching",
+      "route": "/progression"
+    },
+    {
+      "file": "13-parties.png",
+      "scene": "coaching",
+      "route": "/parties"
+    }
+  ],
+  "win_chance": [
+    [
+      0.0,
+      0.49977412183487685
+    ],
+    [
+      30.0,
+      0.49977412183487685
+    ],
+    [
+      90.0,
+      0.49977412183487685
+    ],
+    [
+      150.0,
+      0.539083357827025
+    ],
+    [
+      210.0,
+      0.5753817259261889
+    ],
+    [
+      270.0,
+      0.5395502537587449
+    ],
+    [
+      330.0,
+      0.5422799260523683
+    ],
+    [
+      390.0,
+      0.4645674293360795
+    ],
+    [
+      450.0,
+      0.5102085271266635
+    ],
+    [
+      510.0,
+      0.5509603261173112
+    ],
+    [
+      570.0,
+      0.5382550634284392
+    ],
+    [
+      630.0,
+      0.46993044733556055
+    ],
+    [
+      690.0,
+      0.42551877672260957
+    ],
+    [
+      750.0,
+      0.42671274349167443
+    ],
+    [
+      810.0,
+      0.42053876816574276
+    ],
+    [
+      870.0,
+      0.38195406527254666
+    ],
+    [
+      930.0,
+      0.3648695554387706
+    ],
+    [
+      990.0,
+      0.349880239816048
+    ],
+    [
+      1050.0,
+      0.44843526962863733
+    ],
+    [
+      1110.0,
+      0.4697549550387394
+    ],
+    [
+      1170.0,
+      0.4452436385173279
+    ],
+    [
+      1230.0,
+      0.5229670362338558
+    ],
+    [
+      1290.0,
+      0.5249511886876471
+    ],
+    [
+      1350.0,
+      0.5150708885556557
+    ],
+    [
+      1440.0,
+      0.49010421193749487
+    ],
+    [
+      1500.0,
+      0.5318104153139201
+    ]
+  ],
+  "chiffres": {
+    "champions": 173,
+    "matchups_par_role": {
+      "bottom": 8141,
+      "jungle": 11414,
+      "middle": 12825,
+      "support": 10000,
+      "top": 15232
+    },
+    "matchups": 57612,
+    "mise_a_jour_utc": "2026-10-06T23:29:07.616639+00:00"
+  }
+}
