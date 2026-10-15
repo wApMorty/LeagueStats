@@ -544,7 +544,8 @@ class TestProgress:
         crawler.seed()
         lcu.histories = {"a": [_entry(10), _entry(11)], "b": []}
         lcu.games = {10: _game(10, ["a", "x"])}  # 11 : détail indisponible
-        _drain(crawler, clock, steps=4)  # a, b, 10, 11 : x (profondeur 2) reste en attente
+        # a, 10, couverture de x (tâche 162), 11, b : x (profondeur 2) reste en attente
+        _drain(crawler, clock, steps=5)
         crawler.report()
         assert (
             "[DATA] Collecte : 1 parties lues (+1 en 24 h), 0 à lire, 1 joueurs en attente"
@@ -586,3 +587,48 @@ class TestSchemaMigration:
         lcu.games = {2: _game(2, ["a"])}
         crawler.step()
         assert "2 parties lues (+2 en 24 h), 0 à lire" in crawler.progress()
+
+
+class TestCoverVisits:
+    """SPEC-33 tâche 162 : après une partie lue, l'historique de ses joueurs qui ne l'ont pas encore."""
+
+    def _read_one(self, crawler, lcu, clock, histories):
+        crawler._add_player("a", 2, NOW_MS)
+        crawler._db().commit()
+        lcu.histories = {"a": [_entry(10)], **histories}
+        lcu.games = {10: _game(10, ["a", "x", "z"])}
+        for _ in range(2):  # visite de a, puis détail + timeline de 10
+            crawler.step()
+            clock.t += 10
+        assert ("timeline", 10) in lcu.requests
+        lcu.requests.clear()
+
+    def test_players_of_a_read_game_get_their_history_before_anything_else(
+        self, crawler, lcu, clock
+    ):
+        self._read_one(crawler, lcu, clock, {"x": [_entry(10), _entry(5)], "z": [_entry(10)]})
+        crawler._add_player("w", 2, NOW_MS)  # un autre joueur en file : passe après
+        crawler._db().commit()
+        _drain(crawler, clock, steps=2)
+
+        assert lcu.requests == [("history", "x"), ("history", "z")]  # a l'a déjà : sauté
+        assert sorted(_rows(crawler, "SELECT puuid, game_id FROM crawl_histories")) == [
+            ("a", 10),
+            ("x", 5),
+            ("x", 10),
+            ("z", 10),
+        ]
+        # Ni partie ajoutée à lire, ni joueur marqué visité : la file de la collecte est inchangée.
+        assert _rows(crawler, "SELECT game_id FROM crawl_games") == [(10,)]
+        assert _rows(crawler, "SELECT puuid FROM crawl_frontier WHERE visited_utc IS NOT NULL") == [
+            ("a",)
+        ]
+
+    def test_unreachable_client_keeps_the_cover_visit_for_later(self, crawler, lcu, clock):
+        self._read_one(crawler, lcu, clock, {"x": [_entry(10)], "z": [_entry(10)]})
+        lcu.status = None  # client injoignable
+        crawler.step()
+        clock.t += 10
+        lcu.status = 200
+        _drain(crawler, clock, steps=2)
+        assert lcu.requests == [("history", "x"), ("history", "x"), ("history", "z")]

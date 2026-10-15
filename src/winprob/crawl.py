@@ -17,6 +17,7 @@ import sqlite3
 import threading
 import time
 import zlib
+from collections import deque
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Optional
@@ -196,6 +197,10 @@ class Crawler:
         self._floor = ""
         self._reads = 0
         self._warned = False
+        # Visites de couverture (SPEC-33 tâche 162) : (puuid, partie) dont lire l'historique, avant tout
+        # autre travail, pour que la mesure du terme de forme connaisse les dix joueurs des parties lues.
+        # ponytail: en mémoire, un redémarrage perd au plus les joueurs d'une partie.
+        self._cover: deque = deque()
 
     # ---------- API pour la boucle du Live Coach ----------
 
@@ -276,6 +281,13 @@ class Crawler:
 
     def _step(self) -> None:
         db = self._db()
+        while self._cover:
+            puuid, game_id = self._cover.popleft()
+            known = db.execute(
+                "SELECT 1 FROM crawl_histories WHERE puuid = ? AND game_id = ?", (puuid, game_id)
+            ).fetchone()
+            if not known:
+                return self._cover_visit(puuid, game_id)
         game = db.execute(
             "SELECT game_id, depth FROM crawl_games WHERE raw IS NULL "
             "ORDER BY depth, game_creation_utc DESC LIMIT 1"
@@ -310,6 +322,20 @@ class Crawler:
         db.execute("UPDATE crawl_frontier SET visited_utc = ? WHERE puuid = ?", (_now(), puuid))
         db.commit()
 
+    def _cover_visit(self, puuid: str, game_id: int) -> None:
+        """Historique seul d'un joueur d'une partie lue : rangé dans `crawl_histories`, sans partie
+        ajoutée à lire ni joueur marqué visité (SPEC-33 tâche 162)."""
+        payload = self.lcu.get_player_history(puuid)
+        if self._throttled(1) or (payload is None and self.lcu.last_status_code is None):
+            self._cover.appendleft((puuid, game_id))  # 429, ou client injoignable : plus tard
+            return
+        games = ranked_games(
+            ((payload or {}).get("games") or {}).get("games"), coaching_config.QUEUE_IDS
+        )
+        db = self._db()
+        store_history(db, puuid, games)
+        db.commit()
+
     def _read_game(self, game_id: int, depth: int) -> None:
         lcu = self.lcu
         game = lcu.get_game_detail(game_id)
@@ -324,6 +350,10 @@ class Crawler:
         if self._throttled(1) or (not timeline and lcu.last_status_code is None):
             return  # limite de débit, ou requête abandonnée (draft en cours, SPEC-28) : plus tard
         store_game(db, {**game, "gameId": game_id}, timeline, depth)
+        for identity in game.get("participantIdentities") or []:
+            puuid = (identity.get("player") or {}).get("puuid")
+            if puuid:
+                self._cover.append((puuid, game_id))
         if depth + 1 <= cfg.CRAWL_MAX_DEPTH:
             priority = game.get("gameCreation") or 0
             for identity in game.get("participantIdentities") or []:

@@ -355,7 +355,7 @@ Tous les arbitrages validés par @pj35 le 2026-10-13 (suite en partie à 2 threa
 | 159 | `scripts/measure_form_term.py` : seuil figé, mesure du terme de forme une fois `crawl_histories` fournie | 5 | 158 | ✅ 2026-10-15 : script livré, 6 tests, essai `--force --limit 3000` en 113 s ; **mesure en attente** (couverture 3 / 5 000 parties à dix joueurs connus) |
 | 160 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure, exe, recette @pj35 | 2 | 157, 159 | ⬜ |
 | 161 | *Conditionnelle* : terme de forme dans le modèle si la tâche 159 l'adopte | 3 | 159 | ⬜ |
-| 162 | Visites de couverture : après chaque partie lue, historique de ses joueurs non couverts (amendement du 2026-10-15) | 2 | 158 | ⬜ |
+| 162 | Visites de couverture : après chaque partie lue, historique de ses joueurs non couverts (amendement du 2026-10-15) | 2 | 158 | ✅ 2026-10-15 : 2 tests ; couverture à suivre par `scripts/monitor_crawl.py` |
 
 ### Lot suivant — SPEC-22, attribution complète de l'impact (🟡 rédigée le 2026-10-04)
 
