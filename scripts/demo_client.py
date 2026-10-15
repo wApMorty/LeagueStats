@@ -20,9 +20,11 @@ import argparse
 import json
 import re
 import shutil
+import sqlite3
 import sys
 import tempfile
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Pattern, Tuple
@@ -47,6 +49,7 @@ DEMO_DIR = project_root / "scripts" / "demo"
 LCU_DIR = DEMO_DIR / "lcu"
 SCENARIO_PATH = DEMO_DIR / "scenario.json"
 LIVE_PATH = "/liveclientdata/allgamedata"
+CHAMPIONS_SQL = "SELECT id, name FROM champions"
 
 # Lectures servies telles quelles par un fichier de `scripts/demo/lcu/` : (motif complet, fichier).
 ROUTES: Tuple[Tuple[Pattern[str], str], ...] = tuple(
@@ -62,7 +65,6 @@ ROUTES: Tuple[Tuple[Pattern[str], str], ...] = tuple(
         ),
         (r"/lol-match-history/v1/games/\d+", "game_detail.json"),
         (r"/lol-champions/v1/owned-champions-minimal", "owned_champions.json"),
-        (r"/lol-champions/v1/inventories/\d+/champions/\d+/skins", "skins_annie.json"),
         (r"/lol-item-sets/v1/item-sets/\d+/sets", "item_sets.json"),
         (r"/lol-chat/v1/me", "chat_me.json"),
         (r"/lol-chat/v1/friends", "chat_friends.json"),
@@ -78,6 +80,21 @@ ROUTES: Tuple[Tuple[Pattern[str], str], ...] = tuple(
     )
 )
 GAME_DETAIL = re.compile(r"/lol-match-history/v1/games/(\d+)")
+ACTION = re.compile(r"/lol-champ-select/v1/session/actions/(\d+)")
+PAGE = re.compile(r"/lol-perks/v1/pages/(\d+)")
+FREE_CHAMPIONS = (
+    "/lol-champ-select/v1/pickable-champion-ids",
+    "/lol-champ-select/v1/bannable-champion-ids",
+)
+MY_SELECTION = ("spell1Id", "spell2Id", "selectedSkinId")
+READY_CHECK = {
+    "declinerIds": [],
+    "dodgeWarning": "None",
+    "playerResponse": "None",
+    "state": "InProgress",
+    "suppressUx": False,
+    "timer": 4.0,
+}
 
 
 def load_scenario(path: Path = SCENARIO_PATH) -> Dict[str, Any]:
@@ -89,22 +106,34 @@ class FakeLcu:
     """Le faux client LoL : réponses de la scène courante, puis fichiers de `scripts/demo/lcu/`.
 
     Sans réseau : `read` et `write` se testent seuls, le serveur HTTP (`serve`) ne fait que les relayer.
+    La session de champ select se construit depuis la draft du scénario (`draft`, `action_sets`) et la
+    scène (`done` actions terminées, `hovers` survols) ; les écritures du Live Coach la modifient, et
+    changer de scène la reconstruit.
     """
 
-    def __init__(self, scenario: Dict[str, Any], lcu_dir: Path = LCU_DIR) -> None:
+    def __init__(
+        self,
+        scenario: Dict[str, Any],
+        champion_ids: Optional[Dict[str, int]] = None,
+        lcu_dir: Path = LCU_DIR,
+    ) -> None:
         self.scenario = scenario
         self.scenes: List[Dict[str, Any]] = scenario["scenes"]
+        self._ids = champion_ids or {}
         self._lcu_dir = lcu_dir
         self._files: Dict[str, Any] = {}
         self._lock = threading.Lock()
         self.scene: Dict[str, Any] = self.scenes[0]
+        self._session: Optional[Dict[str, Any]] = None
+        self._pages: List[Dict[str, Any]] = []  # pages de runes écrites par le Live Coach
+        self._next_page_id = 9000
 
     def names(self) -> List[str]:
         """Les noms des scènes, dans l'ordre du scénario."""
         return [scene["name"] for scene in self.scenes]
 
     def set_scene(self, name: str) -> None:
-        """Passe à la scène `name`.
+        """Passe à la scène `name` (sa session de champ select repart du scénario).
 
         Raises:
             KeyError: scène inconnue.
@@ -114,6 +143,7 @@ class FakeLcu:
             raise KeyError(name)
         with self._lock:
             self.scene = scene
+            self._session = None
 
     def phase(self) -> str:
         """Phase gameflow de la scène courante (`"None"` hors de toute file, comme le LCU)."""
@@ -124,13 +154,170 @@ class FakeLcu:
             self._files[name] = json.loads((self._lcu_dir / name).read_text(encoding="utf-8"))
         return json.loads(json.dumps(self._files[name]))  # copie : l'appelant peut la modifier
 
+    def _id(self, champion: Optional[str]) -> int:
+        return self._ids.get(champion, 0) if champion else 0
+
+    # ---------- draft ----------
+
+    def _picks(self) -> Dict[int, str]:
+        """Le champion que chaque cellule verrouille dans la draft complète du scénario."""
+        return {cell: name for cell, kind, name in self.scenario["draft"] if kind == "pick"}
+
+    @staticmethod
+    def _member(template: Dict[str, Any], cell: int, champion_id: int) -> Dict[str, Any]:
+        member = json.loads(json.dumps(template))
+        member.update(cellId=cell, championId=champion_id, championPickIntent=0)
+        member["selectedSkinId"] = champion_id * 1000 if champion_id else 0
+        return member
+
+    def _actions(
+        self,
+    ) -> Tuple[List[List[Dict[str, Any]]], Dict[int, int], Dict[int, int]]:
+        """Les lots d'actions de la scène, les picks verrouillés et les survols hors tour, par cellule."""
+        scenario, scene = self.scenario, self.scene
+        allies = {member["cell"] for member in scenario["my_team"]}
+        done = scene.get("done", 0)
+        hovers = {int(cell): name for cell, name in scene.get("hovers", {}).items()}
+        draft = scenario["draft"]
+        locked: Dict[int, int] = {}
+        intents: Dict[int, int] = {}
+        actions: List[List[Dict[str, Any]]] = []
+        start = 0
+        for size in scenario["action_sets"]:
+            in_progress = start <= done < start + size
+            group = []
+            for index in range(start, start + size):
+                cell, kind, name = draft[index]
+                completed = index < done
+                champion_id = self._id(name) if completed else 0
+                if not completed and cell in hovers:
+                    if in_progress:
+                        champion_id = self._id(hovers[cell])
+                    elif kind == "pick":
+                        intents[cell] = self._id(hovers[cell])  # survol avant son tour
+                if completed and kind == "pick":
+                    locked[cell] = champion_id
+                group.append(
+                    {
+                        "actorCellId": cell,
+                        "championId": champion_id,
+                        "completed": completed,
+                        "duration": 0,
+                        "id": index,
+                        "isAllyAction": cell in allies,
+                        "isInProgress": in_progress and not completed,
+                        "pickTurn": 0,
+                        "type": kind,
+                    }
+                )
+            actions.append(group)
+            if start == 0:  # le LCU glisse la révélation des bans entre bans et picks
+                reveal = {"actorCellId": -1, "championId": 0, "completed": done >= size}
+                reveal.update(duration=0, id=100, isAllyAction=False, isInProgress=False)
+                actions.append([{**reveal, "pickTurn": 0, "type": "ten_bans_reveal"}])
+            start += size
+        return actions, locked, intents
+
+    def _build_session(self) -> Dict[str, Any]:
+        scenario = self.scenario
+        session = self._file("session_pick.json")
+        local = scenario["local_cell"]
+        actions, locked, intents = self._actions()
+        my_template, their_template = session["myTeam"][0], session["theirTeam"][0]
+        my_team = []
+        for player in scenario["my_team"]:
+            cell = player["cell"]
+            member = self._member(my_template, cell, locked.get(cell, 0))
+            member.update(
+                assignedPosition=player["position"],
+                championPickIntent=intents.get(cell, 0),
+                gameName=player["name"],
+                tagLine="EUW",
+                nameVisibilityType="VISIBLE",
+                puuid=f"demo-puuid-{cell}",
+            )
+            if cell == local:
+                member.update(spell1Id=4, spell2Id=12)  # Flash, Téléportation
+            my_team.append(member)
+        their_team = [
+            self._member(their_template, cell, locked.get(cell, 0))
+            for cell in scenario["their_team"]
+        ]
+        others = sorted({member["cell"] for member in scenario["my_team"]} - {local})
+        session.update(
+            actions=actions,
+            myTeam=my_team,
+            theirTeam=their_team,
+            localPlayerCellId=local,
+            pickOrderSwaps=[{"cellId": c, "id": 50 + c, "state": "AVAILABLE"} for c in others],
+            positionSwaps=[{"cellId": c, "id": 40 + c, "state": "AVAILABLE"} for c in others],
+            trades=[],
+        )
+        session["timer"].update(
+            phase=self.scene.get("timer", "BAN_PICK"),
+            adjustedTimeLeftInPhase=24000,
+            totalTimeInPhase=30000,
+            isInfinite=False,
+        )
+        return session
+
+    def _champ_select(self) -> Dict[str, Any]:
+        if self._session is None:
+            self._session = self._build_session()
+        return self._session
+
+    def _free_champions(self) -> List[int]:
+        """Champions ni bannis ni verrouillés (`pickable` et `bannable` de la démo)."""
+        taken = {
+            action["championId"]
+            for group in self._champ_select()["actions"]
+            for action in group
+            if action["completed"] and action["championId"]
+        }
+        return sorted(set(self._ids.values()) - taken)
+
+    def _gameflow_session(self) -> Dict[str, Any]:
+        """La session gameflow ; en partie, les dix joueurs (`gameData`) que lit l'éclaireur."""
+        session: Dict[str, Any] = {"phase": self.phase()}
+        if self.phase() == "InProgress":
+            picks = self._picks()
+
+            def team(cells: List[int]) -> List[Dict[str, Any]]:
+                return [
+                    {"puuid": f"demo-puuid-{c}", "championId": self._id(picks.get(c))}
+                    for c in cells
+                ]
+
+            session["gameData"] = {
+                "teamOne": team([m["cell"] for m in self.scenario["my_team"]]),
+                "teamTwo": team(self.scenario["their_team"]),
+            }
+        return session
+
+    # ---------- lecture et écriture ----------
+
     def read(self, path: str) -> Optional[Any]:
         """Réponse à `GET path` ; None (404) pour un endpoint que la démo ne sert pas."""
         with self._lock:
+            phase = self.phase()
             if path == "/lol-gameflow/v1/gameflow-phase":
-                return self.phase()
+                return phase
             if path == "/lol-gameflow/v1/session":
-                return {"phase": self.phase()}
+                return self._gameflow_session()
+            if phase == "ReadyCheck" and path == "/lol-matchmaking/v1/ready-check":
+                return dict(READY_CHECK)
+            if phase == "ChampSelect":
+                if path == "/lol-champ-select/v1/session":
+                    return self._champ_select()
+                if path in FREE_CHAMPIONS:
+                    return self._free_champions()
+            override = self.scene.get("files", {}).get(path)
+            if override:
+                return self._file(override)
+            if path == "/lol-perks/v1/pages":
+                return self._file("pages.json") + json.loads(json.dumps(self._pages))
+            if path == "/lol-perks/v1/currentpage" and self._pages:
+                return json.loads(json.dumps(self._pages[-1]))
             for pattern, name in ROUTES:
                 if pattern.fullmatch(path):
                     data = self._file(name)
@@ -141,8 +328,59 @@ class FakeLcu:
         return None
 
     def write(self, method: str, path: str, body: Optional[Any]) -> Optional[Any]:
-        """Réponse à une écriture : acceptée sans effet (`{}`), comme un client qui l'aurait prise en compte."""
+        """Réponse à une écriture. Survol, verrouillage, sorts et pages de runes s'appliquent à l'état
+        de la démo ; le reste est accepté sans effet (`{}`), comme un client qui l'aurait pris en compte.
+        """
+        body = body if isinstance(body, dict) else {}
+        with self._lock:
+            action = ACTION.fullmatch(path)
+            if method == "PATCH" and action and self.phase() == "ChampSelect":
+                return self._patch_action(int(action.group(1)), body)
+            if method == "PATCH" and path == "/lol-champ-select/v1/session/my-selection":
+                if self.phase() == "ChampSelect":
+                    me = self._local_member()
+                    me.update({k: v for k, v in body.items() if k in MY_SELECTION})
+                return {}
+            if method == "POST" and path == "/lol-perks/v1/pages":
+                page = {
+                    **body,
+                    "id": self._next_page_id,
+                    "isDeletable": True,
+                    "isEditable": True,
+                }
+                self._next_page_id += 1
+                self._pages.append(page)
+                return page
+            page_id = PAGE.fullmatch(path)
+            if method == "DELETE" and page_id:
+                self._pages = [p for p in self._pages if p["id"] != int(page_id.group(1))]
         return {}
+
+    def _local_member(self) -> Dict[str, Any]:
+        session = self._champ_select()
+        local = session["localPlayerCellId"]
+        return next(m for m in session["myTeam"] if m["cellId"] == local)
+
+    def _patch_action(self, action_id: int, body: Dict[str, Any]) -> Optional[Any]:
+        """Survol (`championId`) ou verrouillage (`completed`) d'une action ; None si elle n'existe pas."""
+        session = self._champ_select()
+        for group in session["actions"]:
+            for action in group:
+                if action["id"] != action_id:
+                    continue
+                if "championId" in body:
+                    action["championId"] = body["championId"]
+                if body.get("completed"):
+                    action.update(completed=True, isInProgress=False)
+                    if action["type"] == "pick":
+                        team = session["myTeam"] + session["theirTeam"]
+                        member = next(m for m in team if m["cellId"] == action["actorCellId"])
+                        member.update(
+                            championId=action["championId"],
+                            selectedSkinId=action["championId"] * 1000,
+                        )
+                return {}
+        return None
 
 
 class _Handler(BaseHTTPRequestHandler):
@@ -221,6 +459,15 @@ def isolate(db_src: Path, workdir: Path, setattr_: Setter = setattr) -> List[Tup
     return patches
 
 
+def champion_ids(db_path: Path) -> Dict[str, int]:
+    """Nom → id des champions de la base (lecture seule), pour écrire le scénario par noms."""
+    connection = sqlite3.connect(f"{db_path.resolve().as_uri()}?mode=ro", uri=True)
+    try:
+        return {name: champion_id for champion_id, name in connection.execute(CHAMPIONS_SQL)}
+    finally:
+        connection.close()
+
+
 def point_to(url: str, setattr_: Setter = setattr) -> None:
     """Fait parler au faux LCU de `url` tous les `LCUClient` et tous les lecteurs de la Live Client API."""
     port = int(url.rsplit(":", 1)[1])
@@ -294,7 +541,7 @@ def start_demo(
     stoppers: List[Callable[[], None]] = []
     try:
         isolate(Path(db_src or config.DATABASE_PATH), workdir)
-        fake = FakeLcu(load_scenario())
+        fake = FakeLcu(load_scenario(), champion_ids(Path(config.DATABASE_PATH)))
         httpd, lcu_url = serve(fake)
         stoppers.append(httpd.shutdown)
         point_to(lcu_url)
@@ -318,6 +565,8 @@ def start_demo(
     handle = DemoHandle(url, bus, fake, workdir, stoppers)
     if scene:
         handle.goto(scene)
+        if fake.phase() == "ChampSelect" and not _wait_for(lambda: bus.latest("draft")):
+            print("[ALERTE] Aucune draft publiée par le Live Coach dans le délai imparti")
     else:
         handle.play()
     print(f"[OK] Démo sur {url} (scène : {scene or 'lecture en boucle'})")
@@ -329,6 +578,14 @@ def start_demo(
         finally:
             handle.stop()
     return handle
+
+
+def _wait_for(ready: Callable[[], Any]) -> bool:
+    """Attend que `ready()` soit vrai, au plus `READY_TIMEOUT_S` ; renvoie son état final."""
+    deadline = time.monotonic() + demo_config.READY_TIMEOUT_S
+    while not ready() and time.monotonic() < deadline:
+        time.sleep(demo_config.READY_POLL_S)
+    return bool(ready())
 
 
 def window_run(url: str) -> bool:

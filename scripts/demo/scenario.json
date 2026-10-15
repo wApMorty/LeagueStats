@@ -1,7 +1,40 @@
 {
+  "local_cell": 3,
+  "my_team": [
+    {"cell": 0, "position": "jungle", "name": "Alpha"},
+    {"cell": 1, "position": "middle", "name": "Bravo"},
+    {"cell": 2, "position": "bottom", "name": "Charlie"},
+    {"cell": 3, "position": "top", "name": "Démo"},
+    {"cell": 4, "position": "utility", "name": "Delta"}
+  ],
+  "their_team": [5, 6, 7, 8, 9],
+  "action_sets": [10, 1, 2, 2, 2, 2, 1],
+  "draft": [
+    [0, "ban", "Yasuo"], [1, "ban", "Zed"], [2, "ban", "MasterYi"], [3, "ban", "Teemo"], [4, "ban", "Kayle"],
+    [5, "ban", "Garen"], [6, "ban", "Fiora"], [7, "ban", "Camille"], [8, "ban", "Vayne"], [9, "ban", "Morgana"],
+    [0, "pick", "Vi"],
+    [5, "pick", "LeeSin"], [6, "pick", "Ahri"],
+    [1, "pick", "Orianna"], [2, "pick", "Caitlyn"],
+    [7, "pick", "Darius"], [8, "pick", "Jinx"],
+    [3, "pick", "DrMundo"], [4, "pick", "Nautilus"],
+    [9, "pick", "Thresh"]
+  ],
   "scenes": [
     {"name": "accueil", "phase": "None", "route": "/"},
     {"name": "profil", "phase": "None", "route": "/profil"},
-    {"name": "historique", "phase": "None", "route": "/historique"}
+    {"name": "historique", "phase": "None", "route": "/historique"},
+    {"name": "file", "phase": "Matchmaking", "route": "/lobby",
+     "files": {"/lol-lobby/v2/lobby/matchmaking/search-state": "search_state_searching.json"}},
+    {"name": "trouvee", "phase": "ReadyCheck", "route": "/"},
+    {"name": "draft-bans", "phase": "ChampSelect", "route": "/draft", "timer": "BAN_PICK", "done": 0,
+     "hovers": {"0": "Yasuo", "2": "MasterYi"}},
+    {"name": "draft-pick", "phase": "ChampSelect", "route": "/draft", "timer": "BAN_PICK", "done": 17,
+     "hovers": {"4": "Nautilus"}},
+    {"name": "draft-lock", "phase": "ChampSelect", "route": "/draft", "timer": "FINALIZATION", "done": 20},
+    {"name": "chargement", "phase": "InProgress", "route": "/en-partie"},
+    {"name": "en-partie", "phase": "InProgress", "route": "/en-partie"},
+    {"name": "fin", "phase": "EndOfGame", "route": "/en-partie"},
+    {"name": "revue", "phase": "None", "route": "/postgame"},
+    {"name": "coaching", "phase": "None", "route": "/progression"}
   ]
 }

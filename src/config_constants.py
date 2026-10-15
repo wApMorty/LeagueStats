@@ -592,13 +592,12 @@ class DemoConfig:
 
     SCENE_DELAY_S: float = 2.5  # pause entre deux étapes du scénario en lecture continue
     INGAME_FRAME_STEP_S: float = 30.0  # temps de jeu simulé entre deux trames de la Live Client API
-    INGAME_FRAME_PERIOD_S: float = (
-        0.5  # temps réel entre deux trames (une partie de 30 min en ~30 s)
-    )
-    CAPTURE_SIZE: Tuple[int, int] = (
-        1920,
-        1080,
-    )  # taille intérieure des captures (rendu de la vidéo)
+    # temps réel entre deux trames (une partie de 30 min en ~30 s)
+    INGAME_FRAME_PERIOD_S: float = 0.5
+    READY_TIMEOUT_S: float = 60.0  # `--scene` : attente de la première draft du Live Coach
+    READY_POLL_S: float = 0.2
+    # taille intérieure des captures (rendu de la vidéo)
+    CAPTURE_SIZE: Tuple[int, int] = (1920, 1080)
     CAPTURE_RENDER_TIMEOUT_S: float = 15.0
     CAPTURE_SETTLE_S: float = 1.0  # fin des animations CSS avant la capture
     README_IMAGE_WIDTH: int = 1280
