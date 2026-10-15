@@ -70,7 +70,8 @@ def _parse_args() -> argparse.Namespace:
 
 def covered_games(db: sqlite3.Connection, players: int, min_games: int) -> int:
     """Parties lues où au moins `players` joueurs ont la partie dans `crawl_histories` et au moins
-    `min_games` parties antérieures. Borne basse, sans décompression."""
+    `min_games` parties antérieures. Sans décompression : approximation, qui compte aussi les parties
+    lues sans timeline ou trop courtes, écartées ensuite par la mesure."""
     (count,) = db.execute(
         """
         SELECT COUNT(*) FROM (
@@ -297,7 +298,7 @@ def decide(base: dict, cand: dict) -> bool:
 def _line(label: str, m: dict, games: int) -> str:
     auc = "n/a" if m["auc"] is None else f"{m['auc']:.3f}"
     return (
-        f"[DATA] {label} : Brier {m['brier']:.4f}, Brier ≤ {cfg.FORM_EARLY_MIN:g} min "
+        f"[DATA] {label} : Brier {m['brier']:.4f}, Brier <= {cfg.FORM_EARLY_MIN:g} min "
         f"{m['brier_early']:.4f}, écart max {m['max_gap'] * 100:.1f} pts, AUC {auc}, "
         f"{games} parties, {m['images']} images"
     )
@@ -308,7 +309,7 @@ def _decision(name: str, base: dict, cand: dict) -> None:
     gain = base["brier_early"] - cand["brier_early"]
     print(
         f"[DATA] Décision {name} : {'ADOPTÉ' if adopted else 'REFUSÉ'} "
-        f"(gain ≤ {cfg.FORM_EARLY_MIN:g} min {gain:+.4f}, seuil {cfg.FORM_BRIER_GAIN_MIN}, "
+        f"(gain <= {cfg.FORM_EARLY_MIN:g} min {gain:+.4f}, seuil {cfg.FORM_BRIER_GAIN_MIN}, "
         f"écart max {cand['max_gap'] * 100:.1f} pts, seuil {cfg.WINPROB_GAP_MAX * 100:.0f})"
     )
 

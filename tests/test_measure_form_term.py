@@ -3,13 +3,16 @@
 Hermétique : `crawl.db` temporaire au schéma de `src.winprob.crawl.SCHEMA`, aucune partie décompressée.
 """
 
+import json
 import sqlite3
+from pathlib import Path
 
 import pytest
 
 from scripts import measure_form_term as mft
 from src.config_winprob import winprob_config as cfg
-from src.winprob.crawl import SCHEMA
+from src.winprob.crawl import SCHEMA, _utc, pack
+from tests.test_winprob_scout import _model
 
 
 def _history(day: int, game_id: int, win: int, kills: int, deaths: int, assists: int) -> tuple:
@@ -96,3 +99,54 @@ def test_script_sans_modele_sort_en_erreur(tmp_path, monkeypatch, capsys) -> Non
         mft.main()
     assert exc.value.code == 1
     assert "[ERREUR] Pas de modèle de win chance" in capsys.readouterr().out
+
+
+def test_team_value_centre_sur_les_joueurs_connus_inconnu_neutre() -> None:
+    teams = {1: 100, 2: 100, 6: 200, 7: 200}
+    # Centre 0,5 : bleu (+0,5 + 0) / 5, rouge (−0,5 + 0) / 5 ; les inconnus ne pèsent rien.
+    assert mft.team_value({1: 1.0, 2: None, 6: 0.0, 7: None}, teams) == pytest.approx(0.2)
+    assert mft.team_value({1: None, 2: None, 6: None, 7: None}, teams) == 0.0
+
+
+def test_la_forme_d_une_partie_ignore_la_partie_et_les_suivantes(tmp_path) -> None:
+    """Bleus : 3 victoires avant, défaites pendant et après ; rouges : l'inverse. Seules les parties
+    antérieures comptent : taux de victoire 1 contre 0, soit +1 après centrage."""
+    fixtures = Path(__file__).parent / "fixtures" / "spike_gameplay"
+    game = json.loads((fixtures / "7998195590_game.json").read_text(encoding="utf-8"))
+    timeline = json.loads((fixtures / "7998195590_timeline.json").read_text(encoding="utf-8"))
+    created = game["gameCreation"]
+    day = 86_400_000
+    db = _crawl_db(tmp_path / "crawl.db")
+    db.execute(
+        "INSERT INTO crawl_games (game_id, game_creation_utc, depth, read_utc, raw) "
+        "VALUES (?, ?, 1, '2026-10-01 00:00:00', ?)",
+        (game["gameId"], _utc(created), pack(game, timeline)),
+    )
+    teams = {p["participantId"]: p["teamId"] for p in game["participants"]}
+    for identity in game["participantIdentities"]:
+        before = 1 if teams[identity["participantId"]] == 100 else 0
+        rows = [
+            (created + k * day, 900 + k, before if k < 0 else 1 - before)
+            for k in (-3, -2, -1, 1, 2)
+        ]
+        rows.append((created, game["gameId"], 1 - before))
+        db.executemany(
+            "INSERT INTO crawl_histories VALUES (?, ?, ?, 420, 1, ?, 1, 1, 1, 100, 1800)",
+            [(identity["player"]["puuid"], gid, _utc(ms), win) for ms, gid, win in rows],
+        )
+    db.commit()
+
+    games, _ = mft.load_game_points(db, _model(), mft.load_histories(db), None)
+
+    assert len(games) == 1 and games[0].states
+    assert all(s["form_wr"] == pytest.approx(1.0) for s in games[0].states)
+    assert all(s["form_impact"] == 0.0 for s in games[0].states)  # aucun impact antérieur
+    db.close()
+
+
+def test_lignes_de_resultat_imprimables_en_cp1252(capsys) -> None:
+    """Sortie redirigée sous Windows : la console est en cp1252 (CLAUDE.md)."""
+    m = {"brier": 0.18, "brier_early": 0.23, "max_gap": 0.02, "auc": 0.8, "images": 10}
+    print(mft._line("Modèle en place", m, 3))
+    mft._decision("form_wr", m, m)
+    capsys.readouterr().out.encode("cp1252")
