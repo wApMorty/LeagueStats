@@ -16,6 +16,7 @@ from src.client.assets import Assets
 from src.client.bus import EventBus
 from src.client.draft_view import Champions
 from src.config_client import client_config
+from src.config_winprob import winprob_config
 from src.draft.final_analysis import build_final_analysis
 from tests import test_final_analysis_face_off as fo
 from tests.test_client_draft import BASE, CHAMPIONS, LOCAL, assets, bus  # noqa: F401  (fixtures)
@@ -474,3 +475,116 @@ def test_etat_corrected_sans_build_recalculee_le_dit():
     assert text == (
         "Postes corrigés en partie : Ahri (bas, prédit milieu). Face-à-face recalculé, build conservée"
     )
+
+
+# ---------- pastille de forme de l'éclaireur (SPEC-33 tâche 157, §4.4) ----------
+
+WINDOWS = winprob_config.SCOUT_WINDOWS
+Q1, Q3 = winprob_config.SCOUT_IMPACT_QUARTILES
+MIN_IMPACT = winprob_config.SCOUT_MIN_IMPACT_GAMES
+
+
+def forme(n, impact=None, impact_n=0):
+    """Une fenêtre du snapshot de l'éclaireur (forme de `form.form`)."""
+    return {
+        "n": n,
+        "win_rate": 0.6 if n else None,
+        "kda": 3.2 if n else None,
+        "cs_min": 7.1 if n else None,
+        "on_champion": min(n, 4),
+        "impact": impact,
+        "impact_n": impact_n,
+    }
+
+
+def joueur(champion_id=122, parties=10, impact=None, impact_n=0, **etat):
+    """Une entrée du snapshot de l'éclaireur ; Darius (122) par défaut, connu du `champion.json` factice."""
+    windows = {w: forme(min(parties, w), impact, min(impact_n, min(parties, w))) for w in WINDOWS}
+    return {
+        "champion_id": champion_id,
+        "team": "CHAOS",
+        "ready": etat.get("ready", True),
+        "windows": windows,
+        "pending": etat.get("pending", 0),
+        "failed": etat.get("failed", False),
+    }
+
+
+def enemy_form(players, champions=None):
+    """La pastille de l'ennemi de la ligne 0 (Darius) du face-à-face."""
+    return en_partie.analysis_view(analysis(), champions, players)["rows"][0]["enemy"]["form"]
+
+
+@pytest.mark.parametrize(
+    "impact, tone",
+    [(Q3 + 0.5, "high"), (Q3, "high"), (2.3, "mid"), (Q1, "low"), (Q1 - 1.0, "low")],
+)
+def test_pastille_delta_p_signee_et_ton_aux_bornes_des_quartiles(champions, impact, tone):
+    form = enemy_form({"p": joueur(impact=impact, impact_n=MIN_IMPACT)}, champions)
+    assert form["label"] == f"{impact:+.1f}" and form["tone"] == tone
+    assert form["n"] == 10 and form["short"] is False
+
+
+def test_repli_sur_le_taux_de_victoire_sous_le_minimum_d_impacts(champions):
+    form = enemy_form({"p": joueur(impact=4.5, impact_n=MIN_IMPACT - 1)}, champions)
+    assert form["label"] == "60 % V" and form["tone"] == "neutral"
+
+
+@pytest.mark.parametrize(
+    "etat, label, detail",
+    [
+        ({"ready": False}, "…", []),
+        ({"failed": True}, "—", ["Historique indisponible"]),
+        ({"parties": 0}, "—", ["Aucune partie classée récente"]),
+    ],
+)
+def test_attente_echec_et_historique_vide(champions, etat, label, detail):
+    entree = joueur(parties=etat.pop("parties", 10), impact=4.5, impact_n=8, **etat)
+    form = enemy_form({"p": entree}, champions)
+    assert form["label"] == label and form["tone"] == "neutral" and form["detail"] == detail
+
+
+def test_detail_une_ligne_par_fenetre_avec_n_reel_et_short(champions):
+    form = enemy_form({"p": joueur(parties=8, impact=2.3, impact_n=4)}, champions)
+    lines = form["detail"]
+    assert len(lines) == 3
+    assert lines[0] == (
+        "5 parties : 60 % V · KDA 3.2 · 7.1 CS/min · 4 sur ce champion · ΔP +2.3 (4 parties)"
+    )
+    assert lines[1].startswith("8 parties : 60 % V") and lines[2].startswith("8 parties : 60 % V")
+    assert form["n"] == 8 and form["short"] is True
+
+
+def test_detail_sans_delta_p_quand_l_impact_manque_et_impacts_en_cours(champions):
+    form = enemy_form({"p": joueur(parties=10, pending=2)}, champions)
+    assert all("ΔP" not in line for line in form["detail"][:3])
+    assert form["detail"][-1] == "impacts en cours : 2 parties"
+    assert form["pending"] == 2
+
+
+def test_sans_players_ou_sans_champions_aucune_pastille(champions):
+    for players, champs in ((None, champions), ({}, champions), ({"p": joueur()}, None)):
+        rows = en_partie.analysis_view(analysis(), champs, players)["rows"]
+        assert all(
+            side["form"] is None for row in rows for side in (row["ally"], row["enemy"]) if side
+        )
+
+
+def test_rendu_pastille_haute_avec_infobulle_sur_plusieurs_lignes(client, bus):  # noqa: F811
+    bus.publish("ingame", LIVE)
+    bus.publish("game", analysis())
+    bus.publish("players", {"p": joueur(impact=4.5, impact_n=8)})
+    html = stage(client)
+    match = re.search(r'<span class="ig-form ig-form-high" title="([^"]*)">', html)
+    assert match and re.search(
+        r'<td class="ig-tot" title="[^"]*"><span class="ig-form ig-form-high"', html
+    )
+    lines = match.group(1).split("\n")
+    assert len(lines) == 3 and lines[0].startswith("5 parties : ")
+
+
+def test_sans_players_aucune_pastille_rendue(client, bus):  # noqa: F811
+    bus.publish("ingame", LIVE)
+    bus.publish("game", analysis())
+    html = stage(client)
+    assert "ig-form" not in html

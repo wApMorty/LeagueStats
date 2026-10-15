@@ -1146,6 +1146,14 @@ a.chip-btn { display: inline-flex; align-items: center; text-decoration: none; }
 .ig-reality { margin: 0 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ig-table tr.is-corrected td { background: oklch(0.74 0.11 55 / 0.07); }
 .is-corrected .fine { font-size: 11px; white-space: nowrap; }
+/* Pastille de forme de l'éclaireur (SPEC-33 tâche 157) : ne doit pas grandir la ligne (portrait 32 px). */
+.ig-form { display: inline-block; font-size: 12px; line-height: 18px; padding: 1px 6px; border-radius: 999px;
+  white-space: nowrap; margin: 0 8px; vertical-align: middle; font-variant-numeric: tabular-nums;
+  color: var(--muted-2); background: oklch(1 0 0 / 0.06); }
+.ig-form small { font-size: 10px; opacity: 0.8; }
+.ig-table .ig-tot { white-space: nowrap; }
+.ig-form-high { color: oklch(0.8 0.1 165); background: oklch(0.82 0.15 165 / 0.12); }
+.ig-form-low { color: oklch(0.74 0.12 355); background: oklch(0.72 0.21 345 / 0.12); }
 
 /* Échanges de la draft (SPEC-24 tâche 104) : boutons sur la légende d'un allié, bandeau d'une demande reçue. */
 .d-swaps { display: flex; justify-content: center; gap: 6px; margin-top: 4px; }

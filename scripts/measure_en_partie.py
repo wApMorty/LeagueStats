@@ -170,6 +170,58 @@ def analyse() -> Dict[str, Any]:
     }
 
 
+def joueur(
+    champion_id: int,
+    team: str,
+    parties: int,
+    impact: Optional[float],
+    impacts: int,
+    *,
+    ready: bool = True,
+    failed: bool = False,
+    pending: int = 0,
+) -> Dict[str, Any]:
+    """Une entrée du snapshot de l'éclaireur (formes 5 / 10 / 20 construites comme `form`)."""
+    fenetres = {}
+    for w in (5, 10, 20):
+        n = min(parties, w)
+        fenetres[w] = {
+            "n": n,
+            "win_rate": 0.6 if n else None,
+            "kda": 3.2 if n else None,
+            "cs_min": 7.1 if n else None,
+            "on_champion": min(n, 4),
+            "impact": impact if impacts and n else None,
+            "impact_n": min(impacts, n),
+        }
+    return {
+        "champion_id": champion_id,
+        "team": team,
+        "ready": ready,
+        "windows": fenetres,
+        "pending": pending,
+        "failed": failed,
+    }
+
+
+def joueurs() -> Dict[str, Dict[str, Any]]:
+    """Charge du sujet `players` : dix joueurs, pastilles ΔP (dont « N p. » sur historique court), taux de
+    victoire, « … » en attente, « — » en échec, un historique vide et des impacts en cours."""
+    entrees = [
+        joueur(1, "ORDER", 20, 2.3, 8),
+        joueur(2, "ORDER", 6, 4.5, 3, pending=2),
+        joueur(3, "ORDER", 10, -5.0, 9),
+        joueur(4, "ORDER", 10, None, 0),
+        joueur(5, "ORDER", 0, None, 0, ready=False),
+        joueur(6, "CHAOS", 0, None, 0, failed=True),
+        joueur(7, "CHAOS", 10, 0.8, 2),
+        joueur(8, "CHAOS", 3, 1.0, 3),
+        joueur(9, "CHAOS", 10, -1.2, 5, pending=4),
+        joueur(10, "CHAOS", 0, None, 0),
+    ]
+    return {f"puuid-{n}": entree for n, entree in enumerate(entrees, start=1)}
+
+
 def partie(avec_modele: bool) -> Dict[str, Any]:
     """Charge du sujet `ingame` : partie à 30 min, série à 5 s, objectifs, moi (objets, or, compétences).
 
@@ -220,6 +272,7 @@ return {
   innerWidth: window.innerWidth, innerHeight: window.innerHeight,
   ligne: document.querySelectorAll(".ig-reality").length,
   corrigees: document.querySelectorAll(".ig-table tr.is-corrected").length,
+  pastilles: document.querySelectorAll(".ig-form").length,
 };
 """
 
@@ -297,6 +350,7 @@ def main() -> int:
             for avec_modele in (False, True):
                 bus.publish("game", analyse())
                 bus.publish("ingame", partie(avec_modele))
+                bus.publish("players", joueurs())
                 charger(driver, url)
                 m = mesure(driver)
                 marge = m["clientHeight"] - m["contenu"]
@@ -311,6 +365,9 @@ def main() -> int:
                         f"[ERREUR] {nom} : .ig-reality x{m['ligne']} (attendu 1), "
                         f"lignes corrigées x{m['corrigees']} (attendu 2)"
                     )
+                    ok = False
+                if m["pastilles"] != 10:
+                    print(f"[ERREUR] {nom} : pastilles .ig-form x{m['pastilles']} (attendu 10)")
                     ok = False
                 if pire is None or marge < pire["marge"]:
                     pire = {**m, "marge": marge, "nom": nom}

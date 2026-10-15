@@ -12,6 +12,7 @@ from markupsafe import Markup
 
 from ..config_client import client_config
 from ..config_constants import draft_config
+from ..config_winprob import winprob_config
 from .charts import Band, Mark, Series, Tick, line_chart
 from .draft_view import Champions
 from .review import COST_COLOR, CURVE_STOPS, KIND_COLORS
@@ -29,22 +30,97 @@ def _points(value: Optional[float]) -> Optional[str]:
     return None if value is None else f"{value:+.1f}"
 
 
+def _window_label(n: int) -> str:
+    return f"{n} partie" if n == 1 else f"{n} parties"
+
+
+def _form_line(form: Dict[str, Any]) -> str:
+    """Une ligne de l'infobulle : parties, V %, KDA, CS/min, sur ce champion, ΔP (une fenêtre, n > 0)."""
+    parts = [
+        f"{_window_label(form['n'])} : {round(form['win_rate'] * 100)} % V",
+        f"KDA {form['kda']:.1f}",
+    ]
+    if form["cs_min"] is not None:
+        parts.append(f"{form['cs_min']:.1f} CS/min")
+    parts.append(f"{form['on_champion']} sur ce champion")
+    if form["impact"] is not None:
+        parts.append(f"ΔP {_points(form['impact'])} ({_window_label(form['impact_n'])})")
+    return " · ".join(parts)
+
+
+def _form(player: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """Une entrée du snapshot de l'éclaireur -> la pastille de forme d'un champion (None sans joueur).
+
+    `label` : ΔP moyen à la fenêtre `SCOUT_BADGE_WINDOW` quand il y a assez d'impacts, sinon le taux de
+    victoire ; `tone` situe ce ΔP par rapport aux quartiles mesurés. `detail` : une ligne par fenêtre.
+    """
+    if player is None:
+        return None
+    pending = player.get("pending", 0)
+    if not player.get("ready"):
+        return {
+            "label": "…",
+            "tone": "neutral",
+            "n": 0,
+            "short": False,
+            "detail": [],
+            "pending": pending,
+        }
+    if player.get("failed"):
+        return {
+            "label": "—",
+            "tone": "neutral",
+            "n": 0,
+            "short": False,
+            "detail": ["Historique indisponible"],
+            "pending": pending,
+        }
+    windows = player["windows"]
+    badge = windows[winprob_config.SCOUT_BADGE_WINDOW]
+    n = badge["n"]
+    detail = [_form_line(windows[w]) for w in winprob_config.SCOUT_WINDOWS if windows[w]["n"] > 0]
+    tone, label = "neutral", "—"
+    if n == 0:
+        detail = ["Aucune partie classée récente"]
+    elif badge["impact_n"] >= winprob_config.SCOUT_MIN_IMPACT_GAMES:
+        low, high = winprob_config.SCOUT_IMPACT_QUARTILES
+        label = _points(badge["impact"])
+        tone = "low" if badge["impact"] <= low else "high" if badge["impact"] >= high else "mid"
+    else:
+        label = f"{round(badge['win_rate'] * 100)} % V"
+    if pending > 0:
+        detail.append(f"impacts en cours : {_window_label(pending)}")
+    return {
+        "label": label,
+        "tone": tone,
+        "n": n,
+        "short": n < winprob_config.SCOUT_BADGE_WINDOW,
+        "detail": detail,
+        "pending": pending,
+    }
+
+
 def _score(
     line: Optional[Dict[str, Any]],
     champions: Optional[Champions] = None,
     corrected: Collection[str] = (),
+    players_by_name: Optional[Dict[str, Dict[str, Any]]] = None,
 ) -> Optional[Dict[str, Any]]:
     """Un champion du face-à-face ; `thin` quand ses données sont trop minces pour être chiffrées.
 
     Portrait (`img`) et nom Data Dragon quand `champions` reconnaît le champion ; sinon ni portrait ni
     changement de nom. `detail` (infobulle du Total) porte matchups et synergies, None si `thin`.
     `corrected` : `True` si le nom d'affichage du champion figure parmi les postes corrigés en partie.
+    `form` : la pastille de l'éclaireur (None sans `players_by_name`, ou champion non retrouvé).
     """
     if line is None:
         return None
     thin = line["matchup"] is None
     known = champions.by_name(line["name"]) if champions is not None else None
     matchup, synergy = _points(line["matchup"]), _points(line["synergy"])
+    form = None
+    if known is not None and players_by_name is not None:
+        form = _form(players_by_name.get(known["name"]))
     return {
         "name": known["name"] if known else line["name"],
         "img": known["img"] if known else None,
@@ -54,6 +130,7 @@ def _score(
         "total": None if thin else _points(line["total"]),
         "detail": None if thin else f"Matchups {matchup} · Synergies {synergy}",
         "corrected": line["name"] in corrected,
+        "form": form,
     }
 
 
@@ -97,21 +174,27 @@ def _reality_line(reality: Optional[Dict[str, Any]]) -> Optional[Dict[str, str]]
 
 
 def analysis_view(
-    analysis: Optional[Dict[str, Any]], champions: Optional[Champions] = None
+    analysis: Optional[Dict[str, Any]],
+    champions: Optional[Champions] = None,
+    players: Optional[Dict[str, Dict[str, Any]]] = None,
 ) -> Optional[Dict[str, Any]]:
     """Le face-à-face de la draft tel que `FinalAnalysis` le porte, None sans analyse.
 
     `champions` fournit portraits et noms Data Dragon ; None : aucun portrait. `reality` : la ligne d'état
     des postes (None sans charge `reality`) ; les champions de ses `mismatches` sont marqués `corrected`.
+    `players` : la charge du sujet `players` (puuid -> entrée de l'éclaireur) ; sans elle, `form` est None.
     """
     if not analysis:
         return None
     reality = analysis.get("reality")
     corrected = {m["champion"] for m in (reality or {}).get("mismatches") or []}
+    players_by_name = None
+    if champions is not None and players:
+        players_by_name = {champions.name(p.get("champion_id")): p for p in players.values()}
     rows: List[Dict[str, Any]] = [
         {
-            "ally": _score(line["ally"], champions, corrected),
-            "enemy": _score(line["enemy"], champions, corrected),
+            "ally": _score(line["ally"], champions, corrected, players_by_name),
+            "enemy": _score(line["enemy"], champions, corrected, players_by_name),
             "duel": _duel(line["duel"]),
         }
         for line in analysis["lines"]
@@ -326,8 +409,12 @@ def en_partie_view(
     analysis: Optional[Dict[str, Any]],
     items: Optional[Dict[int, Dict[str, Any]]] = None,
     champions: Optional[Champions] = None,
+    players: Optional[Dict[str, Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
-    """L'écran : état (`idle`, `live`, `ended`), horloge, win chance, analyse de la draft."""
+    """L'écran : état (`idle`, `live`, `ended`), horloge, win chance, analyse de la draft.
+
+    `players` : la charge du sujet `players` (formes de l'éclaireur), None hors partie ou sans éclairage.
+    """
     state = (ingame or {}).get("state", "idle")
     view: Dict[str, Any] = {"state": state, "train_command": TRAIN_COMMAND}
     if state != "idle":
@@ -342,5 +429,5 @@ def en_partie_view(
             curve=curve_view(data),
             build=build_view(analysis, data, items),
         )
-    view["analysis"] = analysis_view(analysis, champions)
+    view["analysis"] = analysis_view(analysis, champions, players)
     return view

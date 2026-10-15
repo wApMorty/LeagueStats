@@ -40,6 +40,7 @@
 
   window.addEventListener("load", () => {
     Sse.open("ingame", () => refresh());
+    Sse.open("players", () => refresh());
     Sse.open("phase", (name, payload) => pill(payload));
   });
 

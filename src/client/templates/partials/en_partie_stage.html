@@ -1,5 +1,7 @@
 {#- Corps de l'écran « En partie » : rechargé par `en_partie.js` à chaque événement du sujet `ingame`.
     Sans attribut `data-*` : un rechargement ne rejoue aucune animation. Lecture seule. -#}
+{% macro form_badge(f) -%}<span class="ig-form ig-form-{{ f.tone }}"{% if f.detail %} title="{{ f.detail|join('
+') }}"{% endif %}>{{ f.label }}{% if f.short %}<small> {{ f.n }} p.</small>{% endif %}</span>{%- endmacro %}
 {% if v.state == "idle" %}
 <p class="empty">Pas de partie en cours. L'écran se remplit dès que la partie démarre, Live Coach lancé.</p>
 {% else %}
@@ -73,13 +75,13 @@
       <tr{% if fixed %} class="is-corrected"{% endif %}>
         {% if row.ally %}
         <td class="ig-side ig-ally-ink">{% if row.ally.img %}<img class="ig-champ" src="{{ row.ally.img }}" alt="">{% endif %}{{ row.ally.name }}{% if row.ally.corrected %} <span class="fine">poste corrigé</span>{% endif %}</td>
-        {% if row.ally.thin %}<td class="muted">peu de données</td>
-        {% else %}<td title="{{ row.ally.detail }}">{{ row.ally.total }}</td>{% endif %}
+        {% if row.ally.thin %}<td class="ig-tot muted">peu de données{% if row.ally.form %}{{ form_badge(row.ally.form) }}{% endif %}</td>
+        {% else %}<td class="ig-tot" title="{{ row.ally.detail }}">{{ row.ally.total }}{% if row.ally.form %}{{ form_badge(row.ally.form) }}{% endif %}</td>{% endif %}
         {% else %}<td class="ig-side"></td><td></td>{% endif %}
         <td class="ig-duel ig-duel-{{ row.duel.side }}" title="Duel direct, en points de victoire : + = avantage pour vous">{% if row.duel.side == "ally" %}{{ "‹" * row.duel.chevrons }}{% elif row.duel.side == "enemy" %}{{ "›" * row.duel.chevrons }}{% endif %} {{ row.duel.text }}</td>
         {% if row.enemy %}
-        {% if row.enemy.thin %}<td class="muted">peu de données</td>
-        {% else %}<td title="{{ row.enemy.detail }}">{{ row.enemy.total }}</td>{% endif %}
+        {% if row.enemy.thin %}<td class="ig-tot muted">{% if row.enemy.form %}{{ form_badge(row.enemy.form) }}{% endif %}peu de données</td>
+        {% else %}<td class="ig-tot" title="{{ row.enemy.detail }}">{% if row.enemy.form %}{{ form_badge(row.enemy.form) }}{% endif %}{{ row.enemy.total }}</td>{% endif %}
         <td class="ig-side ig-foe-ink">{% if row.enemy.corrected %}<span class="fine">poste corrigé</span> {% endif %}{{ row.enemy.name }}{% if row.enemy.img %}<img class="ig-champ" src="{{ row.enemy.img }}" alt="">{% endif %}</td>
         {% else %}<td></td><td class="ig-side"></td>{% endif %}
       </tr>

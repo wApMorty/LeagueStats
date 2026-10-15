@@ -477,7 +477,7 @@ def create_app(
         analysis = latest("game")
         items = app.state.assets.items() if (analysis or {}).get("loadout") else {}
         champions = Champions(app.state.assets) if analysis else None
-        return en_partie_view(latest("ingame"), analysis, items, champions)
+        return en_partie_view(latest("ingame"), analysis, items, champions, latest("players"))
 
     @app.get("/en-partie", response_class=HTMLResponse)
     def en_partie(request: Request):
