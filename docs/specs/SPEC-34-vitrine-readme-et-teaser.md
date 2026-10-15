@@ -1,6 +1,6 @@
 # SPEC-34 — Vitrine : mode démo, captures, README et teaser
 
-**Statut** : 🟡 Rédigée le 2026-10-15, un arbitrage « à valider » en §2 (moteur du mode démo).
+**Statut** : 🟢 Validée par @pj35 le 2026-10-15 (moteur du mode démo : approche A, pile réelle sur faux LCU).
 
 **Origine** : @pj35, 2026-10-15 : « Je vais bientôt commencer à présenter le projet dans mon environnement
 professionnel. […] consolider la vitrine de ce projet en retravaillant le README, notamment en y intégrant des
@@ -57,7 +57,7 @@ mode démo rejouable, sans client League of Legends et sans vraie identité.
 | Source des captures | **Validé (@pj35, 2026-10-15)** : mode démo, aucun client LoL et aucune capture de vraie partie. |
 | Données personnelles | **Validé (@pj35, 2026-10-15)** : pseudos fictifs. Champions et stats restent réalistes. Les écrans de coaching montrent les vraies stats de la copie de `db.db`, qui n'affichent aucun pseudo (§1). |
 | Forme du mode démo | **Validé (@pj35, 2026-10-15)** : script séparé `scripts/demo_client.py`. Rien n'est ajouté au code de prod ni à l'exe. |
-| Moteur du mode démo | **À valider** : pile réelle sur faux LCU (§3, approche A, recommandée) ou payloads factices publiés sur le bus (approche B). |
+| Moteur du mode démo | **Validé (@pj35, 2026-10-15)** : pile réelle sur faux LCU (§3, approche A). |
 | Écrans | **Validé (@pj35, 2026-10-15)** : draft interactive, En partie, revue et coaching, profil et historique. |
 | Vidéo | **Validé (@pj35, 2026-10-15)** : Remotion (React), 30 s en 16:9, 1 920 × 1 080, muette, plus une boucle GIF pour le README. |
 | Emplacement de la vidéo | **Validé (@pj35, 2026-10-15)** : `docs/presentation/video/`. Les sources sont versionnées ; `node_modules` et les rendus ne le sont pas. |
@@ -66,11 +66,11 @@ mode démo rejouable, sans client League of Legends et sans vraie identité.
 
 ## 3. Approches considérées
 
-**3.1 Moteur du mode démo** (à valider)
+**3.1 Moteur du mode démo** (arbitré ci-dessus)
 
 | Approche | Compromis |
 |---|---|
-| **A. Pile réelle sur faux LCU (recommandée)** | `scripts/demo_client.py` remplace, dans son seul processus, `LCUClient.find_lcu_credentials` et `LCUClient._make_request` par un faux LCU piloté par un scénario. Il donne à `LiveGame` un `fetch` qui sert des trames générées et pointe `config.DATABASE_PATH` sur une copie temporaire de `db.db`. Le `DraftMonitor`, le recommandeur, le modèle de win chance et les transitions d'écran sont les vrais : les chiffres affichés sont réels et l'UI s'anime comme en partie, ce qui est utile pour la vidéo et pour une démo en direct. Coûts : les écritures du Live Coach (survol auto, import du loadout) arrivent au faux LCU, qui les accepte et les applique à sa session ; l'import du loadout interroge OneTricks.gg (réseau, best-effort). |
+| **A. Pile réelle sur faux LCU (retenue)** | `scripts/demo_client.py` remplace, dans son seul processus, `LCUClient.find_lcu_credentials` et `LCUClient._make_request` par un faux LCU piloté par un scénario. Il donne à `LiveGame` un `fetch` qui sert des trames générées et pointe `config.DATABASE_PATH` sur une copie temporaire de `db.db`. Le `DraftMonitor`, le recommandeur, le modèle de win chance et les transitions d'écran sont les vrais : les chiffres affichés sont réels et l'UI s'anime comme en partie, ce qui est utile pour la vidéo et pour une démo en direct. Coûts : les écritures du Live Coach (survol auto, import du loadout) arrivent au faux LCU, qui les accepte et les applique à sa session ; l'import du loadout interroge OneTricks.gg (réseau, best-effort). |
 | B. Payloads factices sur le bus | Comme `scripts/measure_en_partie.py` : le script construit et publie à la main les payloads `draft`, `game`, `ingame` et `players`. C'est déterministe et sans `DraftMonitor`, mais il faut écrire et maintenir une centaine de champs par snapshot. Les chiffres sont inventés et dérivent dès qu'un payload change de forme. |
 | C. Maquettes HTML figées | Écartée par @pj35 le 2026-10-15 : elles dérivent dès que l'UI évolue. |
 

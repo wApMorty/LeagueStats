@@ -357,14 +357,14 @@ Tous les arbitrages validés par @pj35 le 2026-10-13 (suite en partie à 2 threa
 | 161 | *Conditionnelle* : terme de forme dans le modèle si la tâche 159 l'adopte | 3 | 159 | ⬜ |
 | 162 | Visites de couverture : après chaque partie lue, historique de ses joueurs non couverts (amendement du 2026-10-15) | 2 | 158 | ✅ 2026-10-15 : 2 tests ; couverture à suivre par `scripts/monitor_crawl.py` |
 
-### Lot suivant — SPEC-34, vitrine : mode démo, captures, README et teaser (🟡 rédigée le 2026-10-15)
+### Lot suivant — SPEC-34, vitrine : mode démo, captures, README et teaser (🟢 validée le 2026-10-15)
 
 [SPEC-34](docs/specs/SPEC-34-vitrine-readme-et-teaser.md) prépare la présentation pro. Un mode démo,
 `scripts/demo_client.py`, rejoue un scénario (profil, file, draft, partie, revue) sans client LoL, avec des pseudos
 fictifs et sur une copie de `db.db`. Des captures Firefox headless en 1 920 × 1 080 en sont tirées. Le README est
 réécrit, centré sur le produit et illustré (boucle GIF, captures). Un teaser Remotion muet de 30 s est rangé dans
-`docs/presentation/video/`. Arbitrages validés par @pj35 le 2026-10-15, sauf le moteur du mode démo (pile réelle sur
-faux LCU, recommandée, ou payloads factices sur le bus, §2 et §3). Découpage en SPEC-34 §5 (tâches 163 à 170, 29 pts) :
+`docs/presentation/video/`. Tous les arbitrages ont été validés par @pj35 le 2026-10-15, dont le moteur du mode démo :
+pile réelle sur faux LCU (§3). Découpage en SPEC-34 §5 (tâches 163 à 170, 29 pts) :
 
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
