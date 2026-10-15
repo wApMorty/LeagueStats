@@ -357,7 +357,7 @@ Tous les arbitrages validés par @pj35 le 2026-10-13 (suite en partie à 2 threa
 | 161 | *Conditionnelle* : terme de forme dans le modèle si la tâche 159 l'adopte | 3 | 159 | ⬜ |
 | 162 | Visites de couverture : après chaque partie lue, historique de ses joueurs non couverts (amendement du 2026-10-15) | 2 | 158 | ✅ 2026-10-15 : 2 tests ; couverture à suivre par `scripts/monitor_crawl.py` |
 
-### Lot suivant — SPEC-34, vitrine : mode démo, captures, README et teaser (🟢 validée le 2026-10-15)
+### Lot SPEC-34, vitrine : mode démo, captures, README et teaser (✅ livrée le 2026-10-16, recette @pj35 à faire)
 
 [SPEC-34](docs/specs/SPEC-34-vitrine-readme-et-teaser.md) prépare la présentation pro. Un mode démo,
 `scripts/demo_client.py`, rejoue un scénario (profil, file, draft, partie, revue) sans client LoL, avec des pseudos
@@ -375,7 +375,7 @@ pile réelle sur faux LCU (§3). Découpage en SPEC-34 §5 (tâches 163 à 170, 
 | 167 | `README.md` réécrit avec captures et avertissement Riot ; `.gitignore` de `docs/presentation/` | 2 | 166 | ✅ 2026-10-16 : 9 captures, chiffres du manifeste (173 champions, 57 612 matchups), section démo ; image de tête provisoire (`draft-pick.png`) jusqu'au GIF de la tâche 169 |
 | 168 | Projet Remotion : versions exactes, config, polices, scènes « Accroche », « Draft », « Verrouillage » et « Clôture » | 5 | 166 | ✅ 2026-10-16 : Remotion 4.0.531 (licence gratuite pour un particulier, vérifiée sur LICENSE.md), polices du client, chiffres de draft relevés dans le manifeste par `capture_screens.py` (n° 1 Dr. Mundo 55,96 %, fin de draft 54,6 %) |
 | 169 | Scènes « En partie » (courbe SVG), « Revue et coaching » et « Mosaïque » ; `hero.gif` dans le README | 5 | 167, 168 | ✅ 2026-10-16 : teaser de 30,0 s en 1 920 × 1 080 sans audio (12,2 Mo) ; `hero.gif` 960 × 540 à 10 i/s, 4,1 Mo, encodé par ffmpeg (palette optimisée ; l'encodeur GIF de Remotion donnait 10,3 Mo), fond figé dans la boucle |
-| 170 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure ; recette à l'œil de @pj35 | 3 | 169 | ⬜ |
+| 170 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure ; recette à l'œil de @pj35 | 3 | 169 | ✅ 2026-10-16 ; recette à l'œil (captures, GIF, `docs/presentation/video/out/teaser.mp4`) laissée à @pj35 |
 
 ### Lot suivant — SPEC-22, attribution complète de l'impact (🟡 rédigée le 2026-10-04)
 

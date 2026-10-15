@@ -124,6 +124,9 @@ scripts/
 ├── bench_scout.py, measure_scout_quartiles.py  # Banc de l'éclaireur, seuils de la pastille (SPEC-33)
 ├── measure_form_term.py           # Mesure du terme de forme dans la win chance (SPEC-33, en attente de couverture)
 ├── measure_en_partie.py            # Mesure de l'écran « En partie » en Firefox headless (SPEC-30, SPEC-33)
+├── demo_client.py, demo/           # Client en mode démo sur faux LCU local, sans League of Legends (SPEC-34)
+├── capture_screens.py              # Captures de la vitrine depuis le mode démo, en Firefox headless (SPEC-34)
+├── _firefox.py                     # Firefox headless à taille intérieure exacte (mesure et captures)
 ├── setup_auto_update.ps1, test_auto_update.py  # Config Task Scheduler (automatisation suspendue par choix)
 ├── rotate_logs.ps1, setup_log_rotation.ps1       # Rotation de logs/update_all.log
 └── cleanup_claude_temp.py         # Nettoyage de fichiers temporaires Claude Code
@@ -139,13 +142,15 @@ principe qu'un recalcul de cache).
 ## `data/`, `logs/`, `tests/`, `docs/`
 
 ```
-data/db.db                  # Base SQLite (173 champions, ~25 000 matchups/rôle)
+data/db.db                  # Base SQLite (173 champions, 57 612 matchups : de 8 141 en bot à 15 232 en top)
 logs/update_all.log          # Log actif du pipeline (voir aussi runbook_scraping.md)
-tests/                        # Suite pytest (couverture sur tout src/, seuil 45 %)
+tests/                        # Suite pytest (couverture sur tout src/, seuil dans pyproject.toml)
 tests/regression/              # Tests de régression par bug corrigé
 docs/specs/                     # Spécifications d'implémentation par chantier
 docs/design/client_alchimie/     # Handoff de design du client (prototypes .dc.html, motion.js, jetons)
 docs/archive/                    # Documents de travail entièrement exécutés
+docs/images/                     # Captures du client (captures/, manifest.json), images du README, hero.gif
+docs/presentation/video/         # Teaser Remotion (npm run render / npm run gif) ; .pptx, .mp4 et out/ hors git
 ```
 
 ## Artefacts de build (générés, non trackés par git sauf indication contraire)
