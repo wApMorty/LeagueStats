@@ -278,3 +278,17 @@ def test_start_demo_isole_la_base_puis_defait_tout_a_l_arret(temp_db, monkeypatc
     second = demo.start_demo("accueil", window=False, db_src=source)  # même processus
     assert second is not None
     second.stop()
+
+
+def test_le_champion_verrouille_a_son_skin_de_base(fake):
+    champion = IDS["DrMundo"]
+    skins = fake.read(f"/lol-champions/v1/inventories/2001/champions/{champion}/skins")
+    assert skins == [
+        {
+            "id": champion * 1000,
+            "isBase": True,
+            "isChromaVariant": False,
+            "name": "DrMundo",
+            "ownership": {"owned": True},
+        }
+    ]
