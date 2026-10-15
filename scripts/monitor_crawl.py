@@ -31,7 +31,7 @@ from src.winprob.train import crawl_path  # noqa: E402
 DEFAULT_INTERVAL_S = 60
 DB_TIMEOUT_S = 2.0  # au-delà, la base est tenue par un écrivain : signalé, pas attendu
 JOURNAL_STUCK_S = 60  # un journal plus vieux que ça : transaction bloquée (bug du 2026-10-15)
-COVERAGE_PLAYERS = (10, 8, 5)
+COVERAGE_PLAYERS = tuple(sorted({10, cfg.FORM_COVERED_PLAYERS, 5}, reverse=True))
 UTC_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
@@ -120,12 +120,14 @@ def main() -> int:
             else:
                 first = first or s
                 cov = s["coverage"]
-                gained = cov[10] - first["coverage"][10]
+                k = cfg.FORM_COVERED_PLAYERS
+                gained = cov[k] - first["coverage"][k]
                 rows, players = s["histories"]
                 print(
                     f"[DATA] {now}  1 h : {s['read_1h']} parties lues, {s['visited_1h']} joueurs "
                     f"visités | historiques {rows} lignes, {players} joueurs | couverture "
-                    f"{cov[10]} / {goal} (+{gained} depuis le lancement), 8 j. {cov[8]}, 5 j. {cov[5]}",
+                    f"{cov[k]} / {goal} à {k} joueurs (+{gained} depuis le lancement), "
+                    f"10 j. {cov[10]}, 5 j. {cov[5]}",
                     flush=True,
                 )
             if args.once:

@@ -9,8 +9,14 @@ class WinProbConfig:
 
     CRAWL_DB_FILENAME: str = "crawl.db"
 
-    # Débit : ~1 requête/s (SPEC-20 §2, à valider par la semaine de mesure).
-    CRAWL_REQUEST_INTERVAL_S: float = 1.0
+    # Débit : ~2 requêtes/s (@pj35, 2026-10-15 ; 1 requête/s en SPEC-20 §2). Le banc de l'éclaireur du
+    # 2026-10-15 a tenu 4,6 requêtes/s à un worker sans 429 ni erreur (SPEC-33 §7).
+    CRAWL_REQUEST_INTERVAL_S: float = 0.5
+
+    # Visites de couverture (SPEC-33 tâche 162) : seulement pour les parties plus récentes que ça. Mesuré
+    # le 2026-10-15 : au-delà de 2 jours, aucune partie lue n'avait ses dix joueurs couverts (les joueurs
+    # en ont rejoué plus de 20 depuis), contre 25 sur 48 en deçà.
+    CRAWL_COVER_MAX_AGE_DAYS: int = 2
 
     # Reprise après un 429 (SPEC-20 §11.1).
     CRAWL_BACKOFF_S: float = 900.0
@@ -133,11 +139,13 @@ class WinProbConfig:
     # Seuils de couleur de la pastille (Q1, Q3 des impacts moyens à 10 parties, en points) : mesurés le
     # 2026-10-14 par scripts/measure_scout_quartiles.py sur 76 420 parties, 21 177 joueurs (SPEC-33 §7).
     SCOUT_IMPACT_QUARTILES: tuple = (-3.8, 4.0)
-    # Mesure du terme de forme (SPEC-33 §2, §4.6), seuil figé avant la mesure : parties à dix joueurs
-    # connus à atteindre avant de mesurer ; gain de Brier sur les images ≤ FORM_EARLY_MIN minutes ;
+    # Mesure du terme de forme (SPEC-33 §2, §4.6), seuil figé avant la mesure : parties à au moins
+    # FORM_COVERED_PLAYERS joueurs connus à atteindre avant de mesurer (8 : @pj35, 2026-10-15, les deux
+    # autres comptent pour 0, comme tout joueur sans forme) ; gain de Brier sur les images ≤ FORM_EARLY_MIN minutes ;
     # écart de décile = WINPROB_GAP_MAX ; joueurs et parties d'impact du sous-ensemble couvert ;
     # blocs de la validation croisée (comme SPEC-20 §4.3 bis).
     FORM_MIN_COVERED_GAMES: int = 5000
+    FORM_COVERED_PLAYERS: int = 8
     FORM_BRIER_GAIN_MIN: float = 0.002
     FORM_EARLY_MIN: float = 10.0
     FORM_IMPACT_MIN_PLAYERS: int = 8

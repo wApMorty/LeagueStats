@@ -350,10 +350,12 @@ class Crawler:
         if self._throttled(1) or (not timeline and lcu.last_status_code is None):
             return  # limite de débit, ou requête abandonnée (draft en cours, SPEC-28) : plus tard
         store_game(db, {**game, "gameId": game_id}, timeline, depth)
-        for identity in game.get("participantIdentities") or []:
-            puuid = (identity.get("player") or {}).get("puuid")
-            if puuid:
-                self._cover.append((puuid, game_id))
+        age_days = (time.time() * 1000 - (game.get("gameCreation") or 0)) / 86_400_000
+        if age_days <= cfg.CRAWL_COVER_MAX_AGE_DAYS:
+            for identity in game.get("participantIdentities") or []:
+                puuid = (identity.get("player") or {}).get("puuid")
+                if puuid:
+                    self._cover.append((puuid, game_id))
         if depth + 1 <= cfg.CRAWL_MAX_DEPTH:
             priority = game.get("gameCreation") or 0
             for identity in game.get("participantIdentities") or []:

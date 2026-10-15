@@ -322,14 +322,18 @@ def main() -> None:
         print(f"[ERREUR] Pas de base de collecte : {path}")
         raise SystemExit(1)
     db = sqlite3.connect(f"file:{path.as_posix()}?mode=ro", uri=True, timeout=cfg.FORM_DB_TIMEOUT_S)
-    covered = {p: covered_games(db, p, cfg.SCOUT_MIN_IMPACT_GAMES) for p in (10, 8, 5)}
+    covered = {
+        p: covered_games(db, p, cfg.SCOUT_MIN_IMPACT_GAMES)
+        for p in sorted({10, cfg.FORM_COVERED_PLAYERS, 5}, reverse=True)
+    }
     print(
         "[DATA] Couverture (parties lues, joueurs ayant la partie et des parties antérieures) : "
         + ", ".join(f"{p} joueurs {n}" for p, n in covered.items())
     )
-    if covered[10] < cfg.FORM_MIN_COVERED_GAMES and not args.force:
+    done = covered[cfg.FORM_COVERED_PLAYERS]
+    if done < cfg.FORM_MIN_COVERED_GAMES and not args.force:
         db.close()
-        print(f"[INFO] Mesure en attente : couverture {covered[10]} / {cfg.FORM_MIN_COVERED_GAMES}")
+        print(f"[INFO] Mesure en attente : couverture {done} / {cfg.FORM_MIN_COVERED_GAMES}")
         return
 
     model = load_model()

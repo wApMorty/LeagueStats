@@ -242,6 +242,13 @@ estimé : ~9 requêtes par partie lue, la lecture des parties ralentit d'autant.
 mesurer sur la couverture partielle (51 parties à cinq joueurs, échantillon qui ne grossit pas) ; abandonner
 la mesure et la tâche 161.
 
+**Amendé (@pj35, 2026-10-15, après une heure de visites de couverture : 25 parties couvertes par heure).**
+Au-delà de 2 jours, aucune partie lue n'a ses dix joueurs couverts (ils en ont rejoué plus de 20 depuis) :
+couverture réservée aux parties de moins de `CRAWL_COVER_MAX_AGE_DAYS` jours. Débit de la collecte porté à
+2 requêtes/s (`CRAWL_REQUEST_INTERVAL_S` = 0,5 ; le banc du §7 a tenu 4,6 requêtes/s sans 429). Une partie
+compte comme couverte à `FORM_COVERED_PLAYERS` = 8 joueurs connus sur 10 (les deux autres valent 0, comme
+tout joueur sans forme) ; @pj35 accepte la légère dilution de l'effet mesuré.
+
 **Si le terme est adopté** (tâche 161, conditionnelle) : `INPUTS` gagne `form`, `state_from_live` reçoit la
 forme d'équipe de l'éclaireur (0 tant qu'inconnue), la timeline la reçoit de la même façon pour les impacts
 d'après-partie (0 : pas de forme connue pour les parties passées), et l'écran affiche la win chance au
@@ -263,6 +270,9 @@ consignée en §7 et le modèle ne change pas.
 | `SCOUT_MIN_IMPACT_GAMES` | 3 | en dessous, la moyenne est un tirage ; la pastille montre le taux de victoire |
 | `SCOUT_IMPACT_QUARTILES` | `scripts/measure_scout_quartiles.py` (tâche 155) | quartiles mesurés sur `crawl.db` (§2, amendé le 2026-10-14) |
 | `FORM_MIN_COVERED_GAMES` | 5 000 | `WINPROB_MIN_PATCH_GAMES` : la taille à laquelle la logistique de SPEC-20 est calibrée |
+| `FORM_COVERED_PLAYERS` | 8 | @pj35, 2026-10-15 (§4.6 amendé) |
+| `CRAWL_COVER_MAX_AGE_DAYS` | 2 | relevé du 2026-10-15 (§4.6 amendé) |
+| `CRAWL_REQUEST_INTERVAL_S` | 0,5 (était 1,0) | @pj35, 2026-10-15, banc du §7 |
 
 ### 4.8 Tests (hermétiques : `FakeLCU`, exécuteur synchrone, `crawl.db` temporaire, fixtures)
 

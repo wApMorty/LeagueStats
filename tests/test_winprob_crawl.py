@@ -632,3 +632,15 @@ class TestCoverVisits:
         lcu.status = 200
         _drain(crawler, clock, steps=2)
         assert lcu.requests == [("history", "x"), ("history", "x"), ("history", "z")]
+
+    def test_an_old_game_is_not_covered(self, crawler, lcu, clock):
+        """Au-delà de CRAWL_COVER_MAX_AGE_DAYS, les joueurs en ont rejoué plus de 20 : visite inutile."""
+        from src.config_winprob import winprob_config as cfg
+
+        old = NOW_MS - (cfg.CRAWL_COVER_MAX_AGE_DAYS + 1) * 24 * HOUR
+        crawler._add_player("a", 2, old)
+        crawler._db().commit()
+        lcu.histories = {"a": [_entry(10, created=old)], "x": [_entry(10, created=old)]}
+        lcu.games = {10: _game(10, ["a", "x"], created=old)}
+        _drain(crawler, clock, steps=4)
+        assert ("history", "x") not in lcu.requests
