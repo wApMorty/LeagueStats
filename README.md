@@ -4,104 +4,177 @@
 [![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-Outil personnel d'analyse et de coaching de draft pour League of Legends : recommandations de picks/bans en direct pendant la sélection des champions, et recherche de compositions d'équipe optimales à partir de statistiques de matchups scrapées sur LoLalytics.
+**Un coach de draft et de partie pour League of Legends.** Il lit ton champion select en direct, te dit
+quoi prendre contre qui, importe ta build au verrouillage, suit ta win chance pendant la partie et te
+débriefe à la fin.
+
+![Draft en direct : recommandations chiffrées contre l'adversaire de lane](docs/images/readme/draft-pick.png)
+
+## Ce que ça fait
+
+### La draft, en direct
+
+Pendant le champion select, le coach lit la draft dans le client LoL et classe les champions de ta pool
+selon la victoire prédite face à la composition adverse. Il anticipe aussi les picks qui restent à
+jouer. En phase de bans, il chiffre les menaces qui pèsent sur ta pool. Un clic suffit pour survoler ou
+verrouiller. Au verrouillage, il écrit dans le client les runes, sorts et objets les plus joués par les
+one-tricks de ton champion, affinés contre ton adversaire direct.
+
+| Bans | Verrouillage, runes et build |
+|---|---|
+| ![Phase de bans](docs/images/readme/draft-bans.png) | ![Draft verrouillée](docs/images/readme/draft-lock.png) |
+
+### La partie, en direct
+
+La win chance se met à jour toutes les quelques secondes, avec les objectifs (tours, dragons, Nashor)
+sur la courbe. La build indique le prochain objet à acheter et l'or qu'il manque pour l'avoir. Le face-à-face rappelle
+les duels de la draft. Dès l'écran de chargement, une pastille donne la forme récente de chacun des dix
+joueurs.
+
+![Écran « En partie » : win chance, build, face-à-face](docs/images/readme/en-partie.png)
+
+### Après la partie
+
+Chaque partie classée est revue : courbe de win chance, impact de chaque événement, classement des dix
+joueurs (MVP et ACE), écarts à ta norme et aux one-tricks Master+. Le coach te propose ensuite des axes
+de travail et les suit partie après partie.
+
+| Revue de partie | Accueil du coaching |
+|---|---|
+| ![Revue de partie](docs/images/readme/revue.png) | ![Axes de travail et derniers constats](docs/images/readme/accueil.png) |
+
+### Le client LeagueStats
+
+Une fenêtre native qui parle au client LoL. Elle donne accès au profil, à l'historique, à la collection,
+au lobby et à la file, et au social en lecture seule. Une pastille indique en permanence la phase de jeu,
+et la partie trouvée s'annonce en grand.
+
+| Partie trouvée | Profil |
+|---|---|
+| ![Partie trouvée](docs/images/readme/trouvee.png) | ![Profil](docs/images/readme/profil.png) |
+
+## En chiffres
+
+Base du 6 octobre 2026, statistiques LoLalytics au tier Master+ :
+
+- **173** champions ;
+- **57 612** matchups : top 15 232, mid 12 825, jungle 11 414, support 10 000, bot 8 141 ;
+- builds des one-tricks lues sur OneTricks.gg ;
+- images et données de jeu tirées de Data Dragon.
+
+Le décompte vient de `docs/images/captures/manifest.json`, régénéré à chaque passe de captures.
+
+## Essayer sans League of Legends
+
+```bash
+python scripts/demo_client.py
+```
+
+Le client s'ouvre sur un faux client LoL, avec des pseudos fictifs. Il enchaîne seul le profil, la file,
+la partie trouvée, la draft, une partie simulée de 25 minutes, puis la revue, en boucle. Les
+recommandations, la build et la win chance sont celles du vrai coach, calculées sur une copie
+temporaire de la base. `--scene draft-pick` fige une scène (`--liste` pour toutes les voir). Les
+captures de ce README se régénèrent avec `python scripts/capture_screens.py`.
 
 ## Démarrage
 
 ```bash
 pip install -r requirements.txt
-python lol_coach.py
+python lol_coach.py             # menus
+python lol_coach.py --client    # directement le client LeagueStats
 ```
 
 Menu principal :
 
-1. **Draft Coach en temps réel** — suit le champion select via le client League of Legends (LCU) et recommande picks/bans ; au lock-in, importe dans le client les runes, items et sorts les plus joués par les one-tricks (OneTricks.gg), affinés contre l'adversaire direct (désactivable : `draft_config.AUTO_IMPORT_LOADOUT`) ; après chaque partie SoloQ/Flex, le coach de gameplay compare tes stats à ta norme et aux one-tricks Master+, et suit tes axes de travail (commandes `bilan` et `axe <métrique>`)
-2. **Mettre à jour les données** — récupère la liste des champions depuis l'API Riot
-3. **Analyser des statistiques** — scrape les matchups (pool SoloQ ou tous les champions)
-4. **Analyse & Tournoi** — analyse statistique, coaching manuel de tournoi et bilan du coach de gameplay
-5. **Constructeur d'équipe** — recherche des meilleures combinaisons de champions (duos/trios)
-6. **Gérer les pools** — création et gestion de pools de champions personnalisées
-7. **Client LeagueStats** — fenêtre native (aussi `python lol_coach.py --client`) qui parle au client League of Legends : **draft interactive** (bans, picks avec leur numéro d'ordre, échanges d'ordre et de rôle, grimoire des champions, skins, runes et sorts, clic pour survoler et verrouiller), **partie trouvée**, **En partie** (win chance et courbe en direct, face-à-face de la draft, plan de build avec suivi des achats, lecture seule), section **Coaching** (accueil avec axes de travail, rang, progression, parties, calibration) et **revue de partie** à la fin de chaque partie classée ; une pastille de la barre de titre indique à tout moment la phase de jeu (hors partie, en file, champion select, en partie, fin de partie). Les écrans **Client** lisent le client LoL : **profil** (rangs, régalia, défis), **historique** des 20 dernières parties (détail et lien vers l'analyse du Live Coach), **collection** (champions, runes, sets d'objets), **lobby** (ouvrir une file, choisir ses postes, quitter), **file d'attente** (lancer, annuler depuis la barre de titre) et **social** en lecture seule ; `python build_app.py` embarque le tout dans l'exécutable.
-8. Quitter
+1. **Draft Coach en temps réel** : suit le champion select dans la console. Il recommande picks et bans,
+   importe la build au verrouillage (désactivable : `draft_config.AUTO_IMPORT_LOADOUT`) et lance le coach
+   de gameplay après chaque partie classée (commandes `bilan` et `axe <métrique>`).
+2. **Mettre à jour les données** : liste des champions depuis l'API Riot.
+3. **Analyser des statistiques** : scrape les matchups (pool SoloQ ou tous les champions).
+4. **Analyse & Tournoi** : analyse statistique, coaching manuel de tournoi, bilan du coach de gameplay.
+5. **Constructeur d'équipe** : meilleures combinaisons de champions (duos, trios).
+6. **Gérer les pools** : pools de champions personnalisées.
+7. **Client LeagueStats** : la fenêtre native décrite plus haut.
+8. Quitter.
 
 ## Mise à jour des données
 
-Les statistiques de matchups sont scrapées sur LoLalytics avec Selenium/Firefox, en parallèle sur les 5 rôles (top/jungle/mid/bottom/support). Un scrape complet prend environ **45 minutes** avec 5 workers.
+Les matchups sont scrapés sur LoLalytics avec Selenium et Firefox, en parallèle sur les cinq rôles. Un
+scrape complet prend environ **45 minutes**.
 
 ```bash
 python scripts/update_all.py
 ```
 
-C'est l'implémentation de référence (contrôle de complétude, sauvegarde avant réécriture, log dans `logs/update_all.log`). Le menu 3 de `lol_coach.py` s'appuie sur le même pipeline.
-
-Il n'y a pas de mise à jour automatique planifiée : l'automatisation nocturne a été désactivée par choix, la mise à jour reste manuelle.
+C'est l'implémentation de référence : contrôle de complétude, sauvegarde avant réécriture, journal
+dans `logs/update_all.log`. Le menu 3 s'appuie sur le même pipeline. La mise à jour reste manuelle, par
+choix.
 
 ## Distribution
 
-Créer un exécutable Windows portable (aucun Python requis sur le PC cible) :
+Exécutable Windows portable, sans Python sur le PC cible :
 
 ```bash
-python build_app.py           # Génère l'exécutable
-python create_package.py      # Génère le ZIP de distribution
+python build_app.py           # exécutable
+python create_package.py      # ZIP de distribution
 ```
 
 ## Structure du projet
 
 ```
 LeagueStats/
-├── lol_coach.py          # Point d'entrée de l'application
-├── build_app.py           # Build de l'exécutable
-├── create_package.py      # Empaquetage de la distribution
+├── lol_coach.py           # point d'entrée
+├── build_app.py           # build de l'exécutable
+├── create_package.py      # empaquetage
 ├── scripts/
-│   └── update_all.py      # Pipeline de mise à jour des données (référence)
+│   ├── update_all.py      # pipeline de mise à jour des données (référence)
+│   ├── demo_client.py     # client en mode démo, sans League of Legends
+│   └── capture_screens.py # captures de ce README
 ├── src/
-│   ├── analysis/          # Algorithmes de scoring, agrégation, tier lists
-│   ├── ui/                # Menus et affichage
-│   ├── db.py, config.py, config_constants.py, ...
+│   ├── analysis/          # scoring, agrégation, tier lists
+│   ├── draft/             # Live Coach : draft, recherche, build
+│   ├── coaching/          # coach de gameplay
+│   ├── winprob/           # win chance, éclaireur
+│   ├── client/            # client LeagueStats (FastAPI + fenêtre native)
 │   └── ...
-├── data/db.db              # Base SQLite (champions, matchups, synergies)
-├── tests/                  # Suite pytest
-└── docs/                   # Documentation (specs, audits, guides)
+├── data/db.db             # base SQLite (champions, matchups, synergies, coaching)
+├── tests/                 # suite pytest
+└── docs/                  # specs, ADR, guides, images
 ```
 
 ## Prérequis
 
-- Python 3.13+
-- Firefox (scraping des matchups)
-- Client League of Legends en cours d'exécution (pour le Draft Coach en temps réel, via l'API LCU locale)
+- Python 3.13+.
+- Firefox, pour le scraping des matchups.
+- Le client League of Legends ouvert, pour le Live Coach et le client LeagueStats (API LCU locale).
 
-Pour la version distribuée (exécutable) : Windows 10/11, League of Legends installé, Firefox pour les mises à jour de données. Aucun Python requis.
+Pour l'exécutable : Windows 10/11, League of Legends installé, Firefox pour les mises à jour de données.
+Aucun Python n'est requis.
 
-## Base de données
-
-SQLite uniquement (`data/db.db`), en local. Contenu à titre indicatif — évolue à chaque scrape, voir `data/db.db` (table `db_meta`) pour l'état courant :
-
-- ~173 champions
-- ~25 000 matchups par rôle
-- pools de champions personnalisées
-
-Migrations de schéma : Alembic (voir `docs/alembic_guide.md`).
+La base est un fichier SQLite local (`data/db.db`), dont les migrations passent par Alembic (voir
+`docs/alembic_guide.md`).
 
 ## Tests
 
 ```bash
-pytest tests/ -v
+python -m pytest tests/ -v
 ```
 
-La CI mesure la couverture sur tout `src/` avec un seuil minimum de 45 % (`pyproject.toml`), destiné à monter au fil des chantiers.
+La CI mesure la couverture sur tout `src/` ; le seuil vit dans `pyproject.toml`.
 
 ## Documentation
 
-- `CLAUDE.md` — instructions de développement et conventions du projet
-- `TODO.md` — backlog priorisé
-- `docs/specs/` — spécifications d'implémentation par chantier
-- `docs/DATABASE_STRUCTURE.md` — schéma de la base
-- `docs/alembic_guide.md` — commandes de migration
-
-## Historique des versions
-
-Voir `CHANGELOG.md`.
+- `TODO.md` : backlog et sprints.
+- `docs/specs/` : spécifications par chantier.
+- `docs/adr/` : décisions d'architecture.
+- `docs/DATABASE_STRUCTURE.md` : schéma de la base.
+- `docs/alembic_guide.md` : migrations.
+- `CHANGELOG.md` : historique des versions.
 
 ---
+
+LeagueStats Coach n'est ni approuvé ni sponsorisé par Riot Games et ne reflète pas les opinions de Riot
+Games ni de quiconque ayant participé à la production ou à la gestion de League of Legends. League of
+Legends et Riot Games sont des marques ou des marques déposées de Riot Games, Inc.
 
 **Version** : 5.3.0

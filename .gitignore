@@ -37,3 +37,8 @@ outputs/
 
 NUL
 winprob_model.json
+
+# Présentation pro (SPEC-34) : fichiers lourds hors git, rendus de la vidéo régénérables
+docs/presentation/*.pptx
+docs/presentation/*.mp4
+docs/presentation/video/out/
