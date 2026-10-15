@@ -228,8 +228,19 @@ réponse est déjà lue, aucune requête de plus), et l'éclaireur y range aussi
 mesure porte alors sur la **forme brute** (taux de victoire et KDA à 10 parties antérieures) ; la forme par
 l'impact est mesurée en second, sur le sous-ensemble couvert (parties à ≥ 8 joueurs sur 10 avec ≥ 5 parties
 d'impact), et signalée comme telle. La mesure attend que `crawl_histories` couvre au moins
-`FORM_MIN_COVERED_GAMES` parties à dix joueurs connus (à quelques jours de collecte : chaque partie lue de
-profondeur 1 fait visiter ses dix joueurs).
+`FORM_MIN_COVERED_GAMES` parties à dix joueurs connus.
+
+**Amendé (@pj35, 2026-10-15) : visites de couverture (tâche 162).** L'hypothèse « chaque partie lue de
+profondeur 1 fait visiter ses dix joueurs » ne tenait pas : la collecte visite des joueurs de profondeur 2
+(39 701 en file), lit leurs parties, et les joueurs de ces parties ne sont jamais mis en file
+(`CRAWL_MAX_DEPTH`). Relevé du 2026-10-15 : sur les parties lues, 5 031 n'ont qu'un joueur dans
+`crawl_histories` (celui qu'on a visité), 8 en ont dix. Désormais, après chaque partie lue, la collecte
+lit l'historique de ses joueurs qui ne l'ont pas encore dans `crawl_histories`, avant toute autre unité de
+travail : une requête par joueur, historique rangé dans `crawl_histories`, sans partie ajoutée à lire ni
+joueur marqué visité (la file de la collecte est inchangée). File en mémoire, perdue au redémarrage. Coût
+estimé : ~9 requêtes par partie lue, la lecture des parties ralentit d'autant. Alternatives écartées :
+mesurer sur la couverture partielle (51 parties à cinq joueurs, échantillon qui ne grossit pas) ; abandonner
+la mesure et la tâche 161.
 
 **Si le terme est adopté** (tâche 161, conditionnelle) : `INPUTS` gagne `form`, `state_from_live` reçoit la
 forme d'équipe de l'éclaireur (0 tant qu'inconnue), la timeline la reçoit de la même façon pour les impacts
@@ -292,6 +303,7 @@ Numéros globaux : suite du `TODO.md` (dernière tâche : 150).
 | 159 | `scripts/measure_form_term.py` : seuil du §2 figé, attente de `FORM_MIN_COVERED_GAMES`, forme brute puis forme par l'impact sur le sous-ensemble couvert, résultat en §7 | 5 | 158 |
 | 160 | Clôture : `CHANGELOG.md`, statut, README des specs, `PROJECT_STRUCTURE.md`, modules ajoutés à `check_exe_assets.py`, recette @pj35 | 2 | 157, 159 |
 | 161 | *Conditionnelle* : terme de forme dans le modèle (§4.6), si la tâche 159 l'adopte ; amendement de la spec d'abord | 3 | 159 |
+| 162 | Visites de couverture (§4.6, amendé le 2026-10-15) : après chaque partie lue, historique de ses joueurs non couverts ; tests | 2 | 158 |
 
 ## 6. Critères d'acceptation
 
