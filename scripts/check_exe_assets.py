@@ -24,6 +24,8 @@ MODULES = (
     "src.client.en_partie",
     "src.client.draft_swaps",
     "src.client.classement",
+    "src.winprob.scout",
+    "src.winprob.form",
     "src.draft.phase_tracker",
     "src.coaching.post_game_watcher",
     "fastapi",

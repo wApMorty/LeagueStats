@@ -1,6 +1,6 @@
 # SPEC-33 — Éclaireur des joueurs en partie
 
-**Statut** : 🟢 Validée par @pj35 le 2026-10-13 ; tâches 151 à 154, 156 et 158 implémentées le même jour (reste le banc réel 155, puis 157, 159 à 161). Spike retiré le même jour (relevés de SPEC-25 et SPEC-27 suffisants, §1). Indicateur, win chance, affichage, déclencheur, concurrence,
+**Statut** : 🟢 Validée par @pj35 le 2026-10-13 ; tâches 151 à 154, 156 et 158 implémentées le même jour, banc réel 155 le 2026-10-15, pastilles (157) et script de mesure (159) le 2026-10-15. Reste : la mesure du terme de forme, en attente de couverture (§7), la clôture 160, la conditionnelle 161 et la recette @pj35. Spike retiré le même jour (relevés de SPEC-25 et SPEC-27 suffisants, §1). Indicateur, win chance, affichage, déclencheur, concurrence,
 fenêtre, files, suite en partie, seuils de couleur et seuil d'adoption validés par @pj35 (§2).
 
 **Origine** : @pj35, 2026-10-13 : « ajouter une analyse des joueurs dans l'analyse in-game. Si on arrive
@@ -345,7 +345,12 @@ aucune erreur ni 429 ; 4 workers donnent les 10 impacts au plus tôt (21,6 s). M
 ralentissent les historiques (p95 0,1 s seuls, 2,0 s à 4 workers) : les formes brutes passent de 3,6 s à
 17,6 s. Une mesure par palier, sur des joueurs différents (requêtes et cache varient) : ordre de grandeur.
 
-*Forme de la session gameflow (recette) et mesure du terme de forme (tâche 159) : à remplir.*
+**Mesure du terme de forme (tâche 159, 2026-10-15)** : `python scripts/measure_form_term.py`, Live Coach fermé :
+couverture **3** parties lues à dix joueurs connus (12 à huit, 51 à cinq), pour `FORM_MIN_COVERED_GAMES` = 5 000 ;
+`crawl_histories` compte 7 256 parties de 454 joueurs. Mesure en attente. Essai `--force --limit 3000` (113 s,
+2 936 parties) : script vérifié de bout en bout, chiffres sans valeur (forme connue pour trop peu de joueurs).
+
+*Forme de la session gameflow (recette) et résultat de la mesure du terme de forme : à remplir.*
 
 ## 8. Hors périmètre
 

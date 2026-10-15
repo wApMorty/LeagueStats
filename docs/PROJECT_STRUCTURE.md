@@ -72,6 +72,13 @@ src/
 │   ├── findings.py, report.py             # Constats de fin de partie, sorties console
 │   └── progression.py, goals.py            # Schémas, tendances, LP, axes de travail
 │
+├── winprob/                 # Win chance en partie (SPEC-20) et éclaireur des joueurs (SPEC-33)
+│   ├── crawl.py                 # Collecte des parties dans data/crawl.db (crawl_games, crawl_frontier, crawl_histories)
+│   ├── state.py, model.py, train.py, retrain.py  # Variables d'état, logistique, entraînement et validation
+│   ├── impact.py, report.py, pending.py           # Impact ΔP par joueur, rapport d'après-partie
+│   ├── live.py, overlay.py                         # Live Client API, overlay en jeu
+│   └── scout.py, form.py                            # Éclaireur : pool de threads, forme et impact des dix joueurs (SPEC-33)
+│
 ├── client/                  # Client LeagueStats : fenêtre pywebview sur un serveur FastAPI local (SPEC-21)
 │   ├── launch.py, server.py, window.py   # Lancement (--client, menu 7), serveur en fil daemon, fenêtre sans bordure
 │   ├── app.py                             # Fabrique FastAPI : routes, garde Host/Origin et jeton de session, SSE
@@ -114,6 +121,9 @@ scripts/
 ├── auto_update_db.py          # Ancien orchestrateur, superseded par update_all.py — pas utilisé
 ├── repair_data.py               # Réparation ciblée de données incomplètes
 ├── calibrate_model.py            # Calibration des coefficients du modèle log-odds (SPEC-05 B7)
+├── bench_scout.py, measure_scout_quartiles.py  # Banc de l'éclaireur, seuils de la pastille (SPEC-33)
+├── measure_form_term.py           # Mesure du terme de forme dans la win chance (SPEC-33, en attente de couverture)
+├── measure_en_partie.py            # Mesure de l'écran « En partie » en Firefox headless (SPEC-30, SPEC-33)
 ├── setup_auto_update.ps1, test_auto_update.py  # Config Task Scheduler (automatisation suspendue par choix)
 ├── rotate_logs.ps1, setup_log_rotation.ps1       # Rotation de logs/update_all.log
 └── cleanup_claude_temp.py         # Nettoyage de fichiers temporaires Claude Code
