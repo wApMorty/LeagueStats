@@ -133,6 +133,18 @@ class WinProbConfig:
     # Seuils de couleur de la pastille (Q1, Q3 des impacts moyens à 10 parties, en points) : mesurés le
     # 2026-10-14 par scripts/measure_scout_quartiles.py sur 76 420 parties, 21 177 joueurs (SPEC-33 §7).
     SCOUT_IMPACT_QUARTILES: tuple = (-3.8, 4.0)
+    # Mesure du terme de forme (SPEC-33 §2, §4.6), seuil figé avant la mesure : parties à dix joueurs
+    # connus à atteindre avant de mesurer ; gain de Brier sur les images ≤ FORM_EARLY_MIN minutes ;
+    # écart de décile = WINPROB_GAP_MAX ; joueurs et parties d'impact du sous-ensemble couvert ;
+    # blocs de la validation croisée (comme SPEC-20 §4.3 bis).
+    FORM_MIN_COVERED_GAMES: int = 5000
+    FORM_BRIER_GAIN_MIN: float = 0.002
+    FORM_EARLY_MIN: float = 10.0
+    FORM_IMPACT_MIN_PLAYERS: int = 8
+    FORM_IMPACT_MIN_GAMES: int = 5
+    FORM_CV_FOLDS: int = 5
+    # Attente d'un commit de la collecte (écrivain du Live Coach) avant « database is locked ».
+    FORM_DB_TIMEOUT_S: float = 60.0
 
 
 winprob_config = WinProbConfig()
