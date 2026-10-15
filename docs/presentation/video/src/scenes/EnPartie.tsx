@@ -1,8 +1,8 @@
 // 13–20 s : la courbe de win chance de la partie simulée, redessinée en SVG, chiffre en tête de tracé.
 import React from "react";
-import { AbsoluteFill, useCurrentFrame } from "remotion";
+import { AbsoluteFill, interpolate, useCurrentFrame } from "remotion";
 import { C, capture, F, fr, manifest, NUM } from "../theme";
-import { Backdrop, Calm, Caption, ramp, Shot } from "../ui";
+import { Backdrop, Calm, Caption, clamp, ramp, Shot } from "../ui";
 
 const W = 1500;
 const H = 560;
@@ -17,7 +17,8 @@ export const EnPartie: React.FC<{ dur: number }> = ({ dur }) => {
   const y = (p: number) => PAD.top + (1 - p) * (H - PAD.top - PAD.bottom);
 
   // Tracé progressif : les points déjà passés, puis le point courant interpolé entre deux mesures.
-  const now = ramp(frame, dur * 0.08, dur * 0.82) * end;
+  // Linéaire : la partie défile à vitesse constante, comme en vrai.
+  const now = interpolate(frame, [dur * 0.08, dur * 0.85], [0, end], clamp);
   const shown = series.filter(([t]) => t <= now);
   const next = series.find(([t]) => t > now);
   const last = shown[shown.length - 1] ?? series[0];

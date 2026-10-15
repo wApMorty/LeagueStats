@@ -10,7 +10,7 @@ const AXES: [number, number, number, number][] = [
   [841, 208, 526, 248],
 ];
 
-export const RevueCoaching: React.FC<{ dur: number }> = () => {
+export const RevueCoaching: React.FC<{ dur: number }> = ({ dur }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const enter = spring({ frame, fps, config: { damping: 16 } });
@@ -23,7 +23,7 @@ export const RevueCoaching: React.FC<{ dur: number }> = () => {
             position: "absolute",
             left: 90,
             top: 110,
-            transform: `translateX(${(1 - enter) * -1100}px) rotateY(${14 + (1 - enter) * 30}deg)`,
+            transform: `translateX(${(1 - enter) * -1100}px) rotateY(${14 + (1 - enter) * 30 - (frame / dur) * 8}deg) scale(${1 + (frame / dur) * 0.06})`,
             transformOrigin: "left center",
           }}
         >
