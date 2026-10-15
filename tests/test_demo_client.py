@@ -1,21 +1,29 @@
 """Mode démo du client (SPEC-34 §4.3) : faux LCU, isolation de la base et des journaux."""
 
 import hashlib
+import json
 import sqlite3
 from pathlib import Path
+from types import SimpleNamespace
 
 import psutil
 import pytest
 
 from scripts import demo_client as demo
+from src.client.bus import EventBus
+from src.client.ingame import TOPIC, LiveGame
 from src.config import config
+from src.config_constants import demo_config
 from src.draft import tick_timer
 from src.draft.phases import is_draft_complete
 from src.draft.state_parser import DraftStateParser
 from src.lcu_client import LCUClient
 from src.winprob import live
+from src.winprob.model import INPUTS, WinModel
 
 SCENARIO = demo.load_scenario()
+GAME = SCENARIO["game"]
+TEMPLATE = json.loads(demo.ALLGAMEDATA_PATH.read_text(encoding="utf-8"))
 # Ids factices : le test ne lit jamais la vraie base, seuls les noms du scénario comptent.
 IDS = {
     name: index + 1
@@ -81,6 +89,7 @@ def test_un_lcu_client_ne_parle_qu_au_faux_lcu(lcu_url, monkeypatch):
 
 def test_isolate_ne_touche_jamais_la_base_source(temp_db, tmp_path, monkeypatch):
     source = Path(temp_db)
+    source.with_name("winprob_model.json").write_text("{}", encoding="utf-8")
     before = (_sha(source), source.stat().st_mtime_ns)
     workdir = tmp_path / "demo"
     patches = demo.isolate(source, workdir, monkeypatch.setattr)
@@ -91,6 +100,7 @@ def test_isolate_ne_touche_jamais_la_base_source(temp_db, tmp_path, monkeypatch)
         connection.execute("CREATE TABLE demo_write (x INTEGER)")
     assert (_sha(source), source.stat().st_mtime_ns) == before
     assert workdir in Path(tick_timer._LOG_PATH).parents
+    assert (workdir / "winprob_model.json").exists()  # la win chance se lit à côté de la copie
     for _target, _name, value in patches:
         if isinstance(value, (str, Path)):
             assert workdir in Path(value).parents
@@ -144,3 +154,86 @@ def test_en_partie_la_session_gameflow_porte_les_dix_joueurs(fake):
     assert len(players) == 10 and all(p["puuid"] and p["championId"] for p in players)
     fake.set_scene("trouvee")
     assert fake.read("/lol-matchmaking/v1/ready-check")["state"] == "InProgress"
+
+
+def _model():
+    """Modèle jouet (même forme que `tests/test_winprob_scout.py::_model`) : les kills et tours pèsent."""
+    d = 2 * len(INPUTS)
+    weights = [0.0] * (d + 1)
+    weights[INPUTS.index("kills")] = 0.5
+    weights[INPUTS.index("towers")] = 0.5
+    return WinModel(INPUTS, [0.0] * d, [1.0] * d, weights)
+
+
+def test_la_partie_simulee_donne_une_courbe_qui_monte_et_une_win_chance_qui_bouge():
+    bus = EventBus()
+    live_game = LiveGame(bus, lambda: "InProgress", fetch=lambda: None, model=_model())
+    step, duration = int(demo_config.INGAME_FRAME_STEP_S), int(GAME["duration_s"])
+    levels = {i: [] for i in range(10)}
+    for t in range(0, duration + 1, step):
+        image = demo.frame(float(t), GAME, TEMPLATE)
+        live_game._read(image)
+        for i, player in enumerate(image["allPlayers"]):
+            levels[i].append((player["level"], player["scores"]["creepScore"]))
+    times = [point[0] for point in live_game.series]
+    assert len(times) > 20 and all(a < b for a, b in zip(times, times[1:]))
+    for values in levels.values():
+        assert all(a <= b for a, b in zip(values, values[1:]))
+
+    # win chance avant et après le premier kill (95 s) : elle doit bouger
+    first_kill = min(e[0] for e in GAME["events"] if e[1] == "ChampionKill")
+    live_game = LiveGame(bus, lambda: "InProgress", fetch=lambda: None, model=_model())
+    live_game._read(demo.frame(first_kill - 1.0, GAME, TEMPLATE))
+    p_before = bus.latest(TOPIC)["p"]
+    live_game._read(demo.frame(float(first_kill), GAME, TEMPLATE))
+    assert bus.latest(TOPIC)["p"] != p_before
+
+
+def test_hors_partie_404_et_gametime_zero_en_chargement(fake):
+    for scene in ("accueil", "fin", "draft-pick"):
+        fake.set_scene(scene)
+        assert fake.read(demo.LIVE_PATH) is None
+    fake.set_scene("chargement")
+    assert fake.read(demo.LIVE_PATH)["gameData"]["gameTime"] == 0.0
+
+
+def test_horloge_de_la_partie_avance_puis_se_fige(fake, monkeypatch):
+    clock = {"now": 100.0}
+    monkeypatch.setattr(demo, "time", SimpleNamespace(monotonic=lambda: clock["now"]))
+    fake.set_scene("en-partie")
+    assert fake.read(demo.LIVE_PATH)["gameData"]["gameTime"] == 0.0
+    clock["now"] += demo_config.INGAME_FRAME_PERIOD_S
+    assert fake.read(demo.LIVE_PATH)["gameData"]["gameTime"] == demo_config.INGAME_FRAME_STEP_S
+    clock["now"] += 10_000
+    assert fake.read(demo.LIVE_PATH)["gameData"]["gameTime"] == GAME["duration_s"]
+
+
+def test_historique_stable_par_puuid_et_different_d_un_autre(fake):
+    path = "/lol-match-history/v1/products/lol/{}/matches?begIndex=0&endIndex=19"
+    first = fake.read(path.format("demo-puuid-0"))
+    assert first == fake.read(path.format("demo-puuid-0"))
+    assert first != fake.read(path.format("demo-puuid-1"))
+    assert len(first["games"]["games"]) == 20
+
+
+def test_la_revue_annonce_la_derniere_partie_de_la_copie(temp_db, tmp_path, monkeypatch, fake):
+    with sqlite3.connect(temp_db) as connection:
+        for game_id in (111, 222):
+            connection.execute(
+                "INSERT INTO game_records (game_id, queue_id, game_creation_utc, captured_utc, "
+                "raw_game) VALUES (?, ?, ?, ?, ?)",
+                (game_id, 420, "2026-10-01T00:00:00", "2026-10-01T00:30:00", "{}"),
+            )
+    monkeypatch.setattr(config, "DATABASE_PATH", str(temp_db))
+    bus = EventBus()
+    handle = demo.DemoHandle("http://127.0.0.1:1", bus, fake, tmp_path / "demo", [])
+    handle.goto("revue")
+    assert bus.latest("game_captured") == {"game_id": 222}
+
+
+def test_la_revue_sans_base_ne_publie_rien_et_ne_leve_pas(fake, tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "DATABASE_PATH", str(tmp_path / "absente.db"))
+    bus = EventBus()
+    handle = demo.DemoHandle("http://127.0.0.1:1", bus, fake, tmp_path / "demo", [])
+    handle.goto("revue")
+    assert fake.scene["name"] == "revue" and bus.latest("game_captured") is None

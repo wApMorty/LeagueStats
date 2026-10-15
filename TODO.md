@@ -370,7 +370,7 @@ pile réelle sur faux LCU (§3). Découpage en SPEC-34 §5 (tâches 163 à 170, 
 |---|---|---|---|---|
 | 163 | `DemoConfig`, `scripts/demo/lcu/`, `scripts/demo_client.py` (copie de la base, faux LCU des écrans Client, CLI) ; 2 tests | 3 | — | ✅ 2026-10-15 : 4 tests ; faux LCU servi en HTTP local (spec §4.3 amendée) ; `db.db` et `crawl.db` inchangés après une démo réelle |
 | 164 | Scénario de draft : `scenario.json`, sessions construites, écritures acceptées, `DraftMonitor` réel ; 2 tests | 5 | 163 | ✅ 2026-10-16 : 3 tests ; démo réelle : recommandations Dr. Mundo 55,96 %, Ornn, Shen contre Darius, build OneTricks importée, analyse finale à 54,62 % ; `db.db` inchangée |
-| 165 | Partie simulée : trames générées, `LiveGame(fetch=…)`, revue et coaching ; 1 test | 3 | 164 | ⬜ |
+| 165 | Partie simulée : trames générées, `LiveGame(fetch=…)`, revue et coaching ; 1 test | 3 | 164 | ✅ 2026-10-16 : 6 tests ; démo réelle : courbe de 24 points sur 25 min, 10 pastilles de l'éclaireur, build et face-à-face (les scènes de partie repassent par la draft verrouillée), revue avec MVP/ACE ; modèle de win chance copié avec la base |
 | 166 | `scripts/_firefox.py`, `scripts/capture_screens.py`, captures, `manifest.json`, images du README | 3 | 165 | ⬜ |
 | 167 | `README.md` réécrit avec captures et avertissement Riot ; `.gitignore` de `docs/presentation/` | 2 | 166 | ⬜ |
 | 168 | Projet Remotion : versions exactes, config, polices, scènes « Accroche », « Draft », « Verrouillage » et « Clôture » | 5 | 166 | ⬜ |

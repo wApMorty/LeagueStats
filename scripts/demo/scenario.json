@@ -36,5 +36,33 @@
     {"name": "fin", "phase": "EndOfGame", "route": "/en-partie"},
     {"name": "revue", "phase": "None", "route": "/postgame"},
     {"name": "coaching", "phase": "None", "route": "/progression"}
-  ]
+  ],
+  "game": {
+    "duration_s": 1500,
+    "events": [
+      [95, "ChampionKill", "Alpha#EUW", "Joueur8", ["Démo#EUW"]],
+      [180, "ChampionKill", "Démo#EUW", "Joueur6", []],
+      [240, "HordeKill", "Bravo#EUW"],
+      [330, "ChampionKill", "Joueur9", "Charlie#EUW", ["Joueur10"]],
+      [390, "ChampionKill", "Joueur7", "Bravo#EUW", ["Joueur8"]],
+      [450, "TurretKilled", "Alpha#EUW", "Turret_TChaos_L2_C1_A"],
+      [540, "ChampionKill", "Démo#EUW", "Joueur7", ["Alpha#EUW"]],
+      [620, "DragonKill", "Joueur7", "Infernal"],
+      [690, "HeraldKill", "Joueur6"],
+      [760, "ChampionKill", "Joueur6", "Démo#EUW", ["Joueur7"]],
+      [800, "ChampionKill", "Joueur8", "Bravo#EUW", ["Joueur7"]],
+      [860, "TurretKilled", "Joueur8", "Turret_TOrder_L2_C1_A"],
+      [930, "ChampionKill", "Joueur9", "Démo#EUW", ["Joueur10"]],
+      [980, "ChampionKill", "Delta#EUW", "Joueur9", ["Charlie#EUW"]],
+      [1020, "DragonKill", "Charlie#EUW", "Ocean"],
+      [1080, "ChampionKill", "Alpha#EUW", "Joueur9", ["Delta#EUW"]],
+      [1140, "ChampionKill", "Démo#EUW", "Joueur8", []],
+      [1200, "BaronKill", "Alpha#EUW"],
+      [1260, "TurretKilled", "Bravo#EUW", "Turret_TChaos_L1_C2_A"],
+      [1320, "ChampionKill", "Joueur10", "Bravo#EUW", []],
+      [1380, "ChampionKill", "Delta#EUW", "Joueur10", ["Démo#EUW"]],
+      [1440, "InhibKilled", "Démo#EUW", "Inhibitor_TChaos_L1_R1_A"],
+      [1500, "GameEnd", "Win"]
+    ]
+  }
 }

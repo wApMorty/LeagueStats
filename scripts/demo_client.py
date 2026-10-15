@@ -18,6 +18,7 @@ USAGE:
 
 import argparse
 import json
+import random
 import re
 import shutil
 import sqlite3
@@ -25,6 +26,7 @@ import sys
 import tempfile
 import threading
 import time
+import zlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Pattern, Tuple
@@ -39,6 +41,7 @@ from src.client.launch import LiveCoachThread, _phase_source  # noqa: E402
 from src.coaching.capture import GameCapture  # noqa: E402
 from src.config import config  # noqa: E402
 from src.config_constants import demo_config  # noqa: E402
+from src.config_winprob import winprob_config  # noqa: E402
 from src.draft import tick_timer  # noqa: E402
 from src.draft_monitor import DraftMonitor  # noqa: E402
 from src.lcu_client import LCUClient, LCUCredentials  # noqa: E402
@@ -48,8 +51,13 @@ from src.winprob.crawl import Crawler  # noqa: E402
 DEMO_DIR = project_root / "scripts" / "demo"
 LCU_DIR = DEMO_DIR / "lcu"
 SCENARIO_PATH = DEMO_DIR / "scenario.json"
+ALLGAMEDATA_PATH = DEMO_DIR / "allgamedata.json"
 LIVE_PATH = "/liveclientdata/allgamedata"
 CHAMPIONS_SQL = "SELECT id, name FROM champions"
+GAME_SCENES = ("chargement", "en-partie", "fin")  # précédées de la draft verrouillée
+# Historique d'un autre joueur (éclaireur) : 20 parties, comme la requête de `lcu_match_history.py`.
+HISTORY = re.compile(r"/lol-match-history/v1/products/lol/([^/?]+)/matches\?begIndex=0&endIndex=19")
+LAST_GAME_SQL = "SELECT MAX(game_id) FROM game_records"
 
 # Lectures servies telles quelles par un fichier de `scripts/demo/lcu/` : (motif complet, fichier).
 ROUTES: Tuple[Tuple[Pattern[str], str], ...] = tuple(
@@ -102,6 +110,91 @@ def load_scenario(path: Path = SCENARIO_PATH) -> Dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _event(index: int, entry: List[Any]) -> Dict[str, Any]:
+    """Un événement du bloc `game` (`[t, nom, ...]`) au format de la Live Client API.
+
+    Formes : ChampionKill `[t, nom, tueur, victime, [passes]?]`, DragonKill `[t, nom, tueur, type]`,
+    TurretKilled et InhibKilled `[t, nom, tueur, structure]`, GameEnd `[t, nom, résultat]`, les autres
+    (HeraldKill, HordeKill, BaronKill) `[t, nom, tueur]`.
+    """
+    time_s, name, *args = entry
+    event: Dict[str, Any] = {"EventID": index, "EventName": name, "EventTime": float(time_s)}
+    if name == "ChampionKill":
+        event.update(
+            KillerName=args[0], VictimName=args[1], Assisters=list(args[2]) if len(args) > 2 else []
+        )
+    elif name in ("TurretKilled", "InhibKilled"):
+        event.update(KillerName=args[0], **{name: args[1]})
+    elif name == "DragonKill":
+        event.update(KillerName=args[0], DragonType=args[1])
+    elif name == "GameEnd":
+        event["Result"] = args[0]
+    else:
+        event["KillerName"] = args[0]
+    return event
+
+
+def frame(t: float, game: Dict[str, Any], template: Dict[str, Any]) -> Dict[str, Any]:
+    """L'image `allgamedata` à `t` secondes de jeu : gabarit, `gameTime`, événements passés et scores.
+
+    Fonction pure : `template` (`allgamedata.json`) n'est pas modifié. Les kills, morts et passes
+    viennent des événements de `game` avec `EventTime <= t` ; niveaux et farm montent avec `t` et
+    atteignent les valeurs du gabarit à `duration_s`.
+    """
+    data = json.loads(json.dumps(template))
+    duration = float(game["duration_s"])
+    ratio = min(1.0, t / duration) if duration else 1.0
+    shown = [e for e in (_event(i, x) for i, x in enumerate(game["events"])) if e["EventTime"] <= t]
+    data["gameData"]["gameTime"] = float(t)
+    data["events"] = {"Events": shown}
+    tally: Dict[str, Dict[str, int]] = {}
+
+    def count(name: str, key: str) -> None:
+        tally.setdefault(name, {"kills": 0, "deaths": 0, "assists": 0})[key] += 1
+
+    for event in shown:
+        if event["EventName"] == "ChampionKill":
+            count(event["KillerName"], "kills")
+            count(event["VictimName"], "deaths")
+            for assister in event.get("Assisters", []):
+                count(assister, "assists")
+    for player in data["allPlayers"]:
+        scores = player["scores"]
+        scores["creepScore"] = round(scores["creepScore"] * ratio)
+        player["level"] = max(1, round(player["level"] * ratio))
+        player["isDead"], player["respawnTimer"] = False, 0.0
+        scores.update(tally.get(player["riotId"], {"kills": 0, "deaths": 0, "assists": 0}))
+    return data
+
+
+def history_for(puuid: str, template: Dict[str, Any]) -> Dict[str, Any]:
+    """L'historique du gabarit, varié par `puuid` (victoires, KDA) ; même `puuid`, même réponse."""
+    rng = random.Random(zlib.crc32(puuid.encode("utf-8")))
+    rate = rng.random()  # taux de victoires propre à ce joueur : pastilles contrastées
+    for game in template["games"]["games"]:
+        for participant in game["participants"]:
+            participant["stats"].update(
+                win=rng.random() < rate,
+                kills=rng.randint(0, 12),
+                deaths=rng.randint(0, 9),
+                assists=rng.randint(0, 15),
+            )
+    return template
+
+
+def latest_game_id(db_path: Path) -> Optional[int]:
+    """Le plus grand `game_id` de `game_records` (lecture seule) ; None sans partie ni table. Best-effort."""
+    try:
+        connection = sqlite3.connect(f"{db_path.resolve().as_uri()}?mode=ro", uri=True)
+        try:
+            row = connection.execute(LAST_GAME_SQL).fetchone()
+        finally:
+            connection.close()
+    except Exception:  # pylint: disable=broad-exception-caught
+        return None
+    return int(row[0]) if row and row[0] is not None else None
+
+
 class FakeLcu:
     """Le faux client LoL : réponses de la scène courante, puis fichiers de `scripts/demo/lcu/`.
 
@@ -127,6 +220,9 @@ class FakeLcu:
         self._session: Optional[Dict[str, Any]] = None
         self._pages: List[Dict[str, Any]] = []  # pages de runes écrites par le Live Coach
         self._next_page_id = 9000
+        self._template = json.loads(ALLGAMEDATA_PATH.read_text(encoding="utf-8"))
+        # `time.monotonic()` à l'entrée dans « en-partie »
+        self._ingame_start: Optional[float] = None
 
     def names(self) -> List[str]:
         """Les noms des scènes, dans l'ordre du scénario."""
@@ -144,6 +240,17 @@ class FakeLcu:
         with self._lock:
             self.scene = scene
             self._session = None
+            self._ingame_start = time.monotonic() if scene["name"] == "en-partie" else None
+
+    def _game_time(self) -> float:
+        """Temps de jeu simulé : 0 hors de « en-partie » ; là, `INGAME_FRAME_STEP_S` toutes les
+        `INGAME_FRAME_PERIOD_S` secondes réelles, plafonné à `duration_s` (puis figé)."""
+        if self._ingame_start is None:
+            return 0.0
+        ticks = int((time.monotonic() - self._ingame_start) // demo_config.INGAME_FRAME_PERIOD_S)
+        return min(
+            float(self.scenario["game"]["duration_s"]), ticks * demo_config.INGAME_FRAME_STEP_S
+        )
 
     def phase(self) -> str:
         """Phase gameflow de la scène courante (`"None"` hors de toute file, comme le LCU)."""
@@ -304,6 +411,10 @@ class FakeLcu:
                 return phase
             if path == "/lol-gameflow/v1/session":
                 return self._gameflow_session()
+            if path == LIVE_PATH:  # hors partie, la Live Client API ne répond pas (404)
+                if phase != "InProgress":
+                    return None
+                return frame(self._game_time(), self.scenario["game"], self._template)
             if phase == "ReadyCheck" and path == "/lol-matchmaking/v1/ready-check":
                 return dict(READY_CHECK)
             if phase == "ChampSelect":
@@ -325,6 +436,9 @@ class FakeLcu:
                     if detail:
                         data["gameId"] = int(detail.group(1))
                     return data
+            history = HISTORY.fullmatch(path)
+            if history:
+                return history_for(history.group(1), self._file("match_history.json"))
         return None
 
     def write(self, method: str, path: str, body: Optional[Any]) -> Optional[Any]:
@@ -444,6 +558,9 @@ def isolate(db_src: Path, workdir: Path, setattr_: Setter = setattr) -> List[Tup
     workdir.mkdir(parents=True, exist_ok=True)
     db = workdir / "db.db"
     shutil.copyfile(db_src, db)
+    model = Path(db_src).with_name(winprob_config.WINPROB_MODEL_FILENAME)
+    if model.exists():  # le modèle de win chance se lit à côté de la base (src/winprob/train.py:27)
+        shutil.copyfile(model, workdir / model.name)
     (workdir / "logs").mkdir(exist_ok=True)
     patches: List[Tuple[Any, str, Any]] = [
         (config, "DATABASE_PATH", str(db)),  # crawl.db en dérive (src/winprob/crawl.py:185)
@@ -498,7 +615,24 @@ class DemoHandle:
     def goto(self, scene: str) -> None:
         """Saute à la scène et l'y fige (arrête la lecture continue)."""
         self._playing.clear()
+        self._enter(scene)
+
+    def _enter(self, scene: str) -> None:
+        """Entre dans `scene` ; à l'entrée de « revue », annonce la dernière partie de la copie."""
         self.fake.set_scene(scene)
+        if scene == "revue":
+            game_id = latest_game_id(Path(config.DATABASE_PATH))
+            if game_id is not None:
+                self.bus.publish("game_captured", {"game_id": game_id})
+
+    def _hold(self, scene: str) -> float:
+        """Durée d'une scène en lecture continue : `SCENE_DELAY_S`, et la partie entière pour
+        « en-partie » (la courbe de win chance va jusqu'au bout)."""
+        if scene != "en-partie":
+            return demo_config.SCENE_DELAY_S
+        duration = float(self.fake.scenario["game"]["duration_s"])
+        steps = duration / demo_config.INGAME_FRAME_STEP_S
+        return steps * demo_config.INGAME_FRAME_PERIOD_S + demo_config.SCENE_DELAY_S
 
     def play(self) -> None:
         """Lit le scénario en boucle, `SCENE_DELAY_S` par scène, dans un fil daemon."""
@@ -511,8 +645,8 @@ class DemoHandle:
                 for name in self.fake.names():
                     if not self._playing.is_set() or self._halt.is_set():
                         return
-                    self.fake.set_scene(name)
-                    self._halt.wait(demo_config.SCENE_DELAY_S)
+                    self._enter(name)
+                    self._halt.wait(self._hold(name))
 
         threading.Thread(target=run, name="demo-play", daemon=True).start()
 
@@ -564,6 +698,11 @@ def start_demo(
         return None
     handle = DemoHandle(url, bus, fake, workdir, stoppers)
     if scene:
+        if scene in GAME_SCENES:
+            # Build et face-à-face exigent que le Live Coach ait vu la draft de cette partie.
+            handle.goto("draft-lock")
+            if not _wait_for(lambda: bus.latest("game")):
+                print("[ALERTE] Aucune analyse de draft publiée dans le délai imparti")
         handle.goto(scene)
         if fake.phase() == "ChampSelect" and not _wait_for(lambda: bus.latest("draft")):
             print("[ALERTE] Aucune draft publiée par le Live Coach dans le délai imparti")
