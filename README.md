@@ -8,7 +8,7 @@
 quoi prendre contre qui, importe ta build au verrouillage, suit ta win chance pendant la partie et te
 débriefe à la fin.
 
-![Draft en direct : recommandations chiffrées contre l'adversaire de lane](docs/images/readme/draft-pick.png)
+![Draft en direct puis win chance en partie](docs/images/hero.gif)
 
 ## Ce que ça fait
 

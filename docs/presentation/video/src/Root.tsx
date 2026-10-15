@@ -4,6 +4,9 @@ import { AbsoluteFill, Composition, Sequence } from "remotion";
 import { Accroche } from "./scenes/Accroche";
 import { Cloture } from "./scenes/Cloture";
 import { Draft } from "./scenes/Draft";
+import { EnPartie } from "./scenes/EnPartie";
+import { Mosaique } from "./scenes/Mosaique";
+import { RevueCoaching } from "./scenes/RevueCoaching";
 import { Verrouillage } from "./scenes/Verrouillage";
 import { C, FPS, HEIGHT, WIDTH } from "./theme";
 import { Calm, SceneFade } from "./ui";
@@ -15,13 +18,16 @@ const TEASER: Scene[] = [
   { dur: 90, render: (dur) => <Accroche dur={dur} /> },
   { dur: 180, render: (dur) => <Draft dur={dur} /> },
   { dur: 120, render: (dur) => <Verrouillage dur={dur} /> },
-  { dur: 420, render: () => null }, // En partie, revue et mosaïque : tâche 169
+  { dur: 210, render: (dur) => <EnPartie dur={dur} /> },
+  { dur: 150, render: (dur) => <RevueCoaching dur={dur} /> },
+  { dur: 60, render: (dur) => <Mosaique dur={dur} /> },
   { dur: 90, render: (dur) => <Cloture dur={dur} /> },
 ];
 
-// La boucle du README : draft (la courbe arrive avec la tâche 169).
+// La boucle du README : draft puis courbe, ~8 s.
 const HERO: Scene[] = [
   { dur: 120, render: (dur) => <Draft dur={dur} /> },
+  { dur: 120, render: (dur) => <EnPartie dur={dur} /> },
 ];
 
 const total = (scenes: Scene[]) => scenes.reduce((sum, s) => sum + s.dur, 0);
