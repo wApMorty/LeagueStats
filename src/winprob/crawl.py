@@ -471,10 +471,22 @@ class Crawler:
             conn.executescript(INDEXES)
         return conn
 
+    def rollback(self) -> None:
+        """Annule la transaction en cours de la connexion de ce fil. Après un commit en échec
+        (« database is locked »), la connexion garde son verrou et plus aucun lecteur ne lit la base.
+        """
+        conn = getattr(self._local, "conn", None)
+        try:
+            if conn is not None and conn.in_transaction:
+                conn.rollback()
+        except sqlite3.Error:
+            pass  # best-effort : la prochaine écriture réessaiera
+
     def _safely(self, work: Callable[[], None]) -> None:
         try:
             work()
         except Exception as e:
+            self.rollback()
             if getattr(self.m, "verbose", False) or not self._warned:
                 self._warned = True
                 print(f"[WARNING] Collecte SPEC-20 : {e}")
