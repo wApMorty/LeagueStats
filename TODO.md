@@ -357,6 +357,26 @@ Tous les arbitrages validés par @pj35 le 2026-10-13 (suite en partie à 2 threa
 | 161 | *Conditionnelle* : terme de forme dans le modèle si la tâche 159 l'adopte | 3 | 159 | ⬜ |
 | 162 | Visites de couverture : après chaque partie lue, historique de ses joueurs non couverts (amendement du 2026-10-15) | 2 | 158 | ✅ 2026-10-15 : 2 tests ; couverture à suivre par `scripts/monitor_crawl.py` |
 
+### Lot suivant — SPEC-34, vitrine : mode démo, captures, README et teaser (🟡 rédigée le 2026-10-15)
+
+[SPEC-34](docs/specs/SPEC-34-vitrine-readme-et-teaser.md) prépare la présentation pro. Un mode démo,
+`scripts/demo_client.py`, rejoue un scénario (profil, file, draft, partie, revue) sans client LoL, avec des pseudos
+fictifs et sur une copie de `db.db`. Des captures Firefox headless en 1 920 × 1 080 en sont tirées. Le README est
+réécrit, centré sur le produit et illustré (boucle GIF, captures). Un teaser Remotion muet de 30 s est rangé dans
+`docs/presentation/video/`. Arbitrages validés par @pj35 le 2026-10-15, sauf le moteur du mode démo (pile réelle sur
+faux LCU, recommandée, ou payloads factices sur le bus, §2 et §3). Découpage en SPEC-34 §5 (tâches 163 à 170, 29 pts) :
+
+| # | Tâche | Pts | Dépend de | État |
+|---|---|---|---|---|
+| 163 | `DemoConfig`, `scripts/demo/lcu/`, `scripts/demo_client.py` (copie de la base, faux LCU des écrans Client, CLI) ; 2 tests | 3 | — | ⬜ |
+| 164 | Scénario de draft : `scenario.json`, sessions construites, écritures acceptées, `DraftMonitor` réel ; 2 tests | 5 | 163 | ⬜ |
+| 165 | Partie simulée : trames générées, `LiveGame(fetch=…)`, revue et coaching ; 1 test | 3 | 164 | ⬜ |
+| 166 | `scripts/_firefox.py`, `scripts/capture_screens.py`, captures, `manifest.json`, images du README | 3 | 165 | ⬜ |
+| 167 | `README.md` réécrit avec captures et avertissement Riot ; `.gitignore` de `docs/presentation/` | 2 | 166 | ⬜ |
+| 168 | Projet Remotion : versions exactes, config, polices, scènes « Accroche », « Draft », « Verrouillage » et « Clôture » | 5 | 166 | ⬜ |
+| 169 | Scènes « En partie » (courbe SVG), « Revue et coaching » et « Mosaïque » ; `hero.gif` dans le README | 5 | 167, 168 | ⬜ |
+| 170 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure ; recette à l'œil de @pj35 | 3 | 169 | ⬜ |
+
 ### Lot suivant — SPEC-22, attribution complète de l'impact (🟡 rédigée le 2026-10-04)
 
 [SPEC-22](docs/specs/SPEC-22-attribution-complete-impact.md) : le « −20 pts non attribué » du rapport
