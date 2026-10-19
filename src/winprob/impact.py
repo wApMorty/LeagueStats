@@ -50,7 +50,7 @@ def scoring_team(e: dict, teams: Dict[int, int]) -> Optional[int]:
     return teams.get(e["killerId"])
 
 
-def _present(timeline: dict, e: dict, team_players: List[int]) -> List[int]:
+def present(timeline: dict, e: dict, team_players: List[int]) -> List[int]:
     """Coéquipiers à moins de `WINPROB_PRESENCE_RADIUS` de l'événement, à l'image la plus proche."""
     position = e.get("position")
     if not position:
@@ -169,7 +169,7 @@ def impacts(model: WinModel, game: dict, timeline: dict, roles: Optional[dict] =
             if team is None:
                 continue
             mates = [p for p, t in teams.items() if t == team]
-            gainers = sorted(set(killer + assists + _present(timeline, e, mates)) & set(mates))
+            gainers = sorted(set(killer + assists + present(timeline, e, mates)) & set(mates))
         for pid in gainers:
             give(
                 pid,
@@ -180,7 +180,7 @@ def impacts(model: WinModel, game: dict, timeline: dict, roles: Optional[dict] =
         if kind != "kill":
             loser = _other(team)
             foes = [p for p, t in teams.items() if t == loser]
-            absent = sorted(set(foes) - set(_present(timeline, e, foes)))
+            absent = sorted(set(foes) - set(present(timeline, e, foes)))
             losers = absent or foes
             for pid in losers:
                 give(pid, loser, 1 / len(losers), "lost_" + kind)

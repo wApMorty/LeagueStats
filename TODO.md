@@ -389,7 +389,7 @@ seuil figé avant la mesure (arbitrages validés par @pj35 le 2026-10-20). Déco
 
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
-| 171 | `src/coaching/moneyball.py` : actions à 14 min par joueur, lignes par rôle, écarts de @pj35 ; `impact.present` public | 3 | — | ⬜ |
+| 171 | `src/coaching/moneyball.py` : actions à 14 min par joueur, lignes par rôle, écarts de @pj35 ; `impact.present` public | 3 | — | ✅ 2026-10-20 : 12 tests (CS, morts, mort solo, sans contrepartie à 15 / 25 s, présence, exclusions) |
 | 172 | `value_actions` : trois variantes, effet marginal, IC95 de Wald, signes sur 5 blocs, Brier contre la constante | 5 | 171 | ⬜ |
 | 173 | `player_gap` (bootstrap à graine fixe) et `decide` (seuil du §2) | 3 | 172 | ⬜ |
 | 174 | `scripts/measure_moneyball.py` : tableau par rôle, tableau Moneyball, recoupement SPEC-20, vision hors classement | 3 | 173 | ⬜ |

@@ -75,5 +75,13 @@ class CoachingConfig:
     GOAL_HOLD: int = 4
     REVIEW_EVERY: int = 10
 
+    # ---------- SPEC-35, étude Moneyball (tâche 171) ----------
+
+    # Mort « sans contrepartie » : aucun kill ni objectif de son équipe à ± cette durée.
+    # Validé par @pj35 le 2026-10-20.
+    MONEYBALL_TRADE_WINDOW_S: float = 20.0
+    # Il faut l'image de 14 min (LANE_MINUTE) et une partie jouée au-delà.
+    MONEYBALL_MIN_DURATION_MIN: int = 15
+
 
 coaching_config = CoachingConfig()
