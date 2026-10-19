@@ -82,6 +82,19 @@ class CoachingConfig:
     MONEYBALL_TRADE_WINDOW_S: float = 20.0
     # Il faut l'image de 14 min (LANE_MINUTE) et une partie jouée au-delà.
     MONEYBALL_MIN_DURATION_MIN: int = 15
+    # Gain minimal d'une action adoptée, en points de win chance (SPEC-35 §4.5, validé 2026-10-20).
+    MONEYBALL_GAIN_MIN_PTS: float = 1.0
+    # Parties minimales par rôle pour la décision : plus petit échantillon où un IC95 bootstrap
+    # de moyenne reste lisible (SPEC-35 §4.5).
+    MONEYBALL_MIN_PLAYER_GAMES: int = 30
+    # Blocs contigus de la validation croisée, comme SPEC-20 §4.3 bis et SPEC-33 (SPEC-35 §4.5).
+    MONEYBALL_CV_FOLDS: int = 5
+    # Rééchantillonnages bootstrap de l'écart du joueur (SPEC-35 §4.5).
+    MONEYBALL_BOOTSTRAP: int = 10_000
+    # Graine du bootstrap, pour la reproductibilité (SPEC-35 §4.5).
+    MONEYBALL_SEED: int = 35
+    # Parties du recoupement SPEC-20 (SPEC-35 §4.5, ~1 min pour 5 000 parties mesuré le 2026-10-20).
+    MONEYBALL_IMPACT_SAMPLE: int = 5_000
 
 
 coaching_config = CoachingConfig()

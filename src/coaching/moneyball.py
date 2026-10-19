@@ -9,10 +9,13 @@ lisent le format LCU commun à `crawl.db` et `game_records`.
 partent de ces lignes.
 """
 
-from typing import Dict, List, Optional, Tuple
+import math
+from typing import Dict, List, NamedTuple, Optional, Sequence, Tuple
 
+from ..analysis.calibration import brier_score
 from ..config_constants import coaching_config
 from ..winprob import impact
+from ..winprob.model import WinModel, _solve, expand, fit
 from ..winprob.state import BLUE, _other
 from . import metrics
 
@@ -163,3 +166,130 @@ def player_gaps(
         return None
     values = player_actions(game, timeline, minute)
     return role, {k: values[player_pid][k] - values[opponent][k] for k in _VALUES}
+
+
+# Quantile de la loi normale à 97,5 % : constante mathématique, pas un réglage.
+Z95 = 1.96
+# Variantes du modèle (SPEC-35 §4.2) : variables du modèle, puis actions qu'il valorise. Les parts de
+# morts (`other_deaths`, `traded_deaths`) sont calculées dans `value_actions`.
+_VARIANTS = (
+    (("cs", "deaths", "presence"), ("cs", "deaths", "presence")),
+    (("cs", "solo_deaths", "other_deaths", "presence"), ("solo_deaths",)),
+    (("cs", "untraded_deaths", "traded_deaths", "presence"), ("untraded_deaths",)),
+    (("cs", "deaths", "presence", "vision"), ("vision",)),
+)
+
+
+class Effect(NamedTuple):
+    """Effet d'une action sur la win chance : points par unité, IC95 de Wald, blocs de même signe."""
+
+    action: str
+    pts_per_unit: float
+    ci_low: float
+    ci_high: float
+    same_sign_folds: int
+
+
+def _fit(rows: Sequence[Dict[str, float]], wins: Sequence[int], inputs: Sequence[str]) -> WinModel:
+    """Ajuste la logistique sur des lignes à `time_min` 0 : les produits avec le temps sont nuls, leurs
+    poids restent à 0 (pénalité L2) et leur `scale` vaut 1."""
+    return fit([{"time_min": 0.0, **row} for row in rows], wins, inputs)
+
+
+def _cross_validate(
+    rows: Sequence[Dict[str, float]], wins: Sequence[int], inputs: Sequence[str], folds: int
+) -> Tuple[WinModel, List[Tuple[int, int, WinModel]]]:
+    """Modèle global et, pour chaque bloc contigu `[lo, hi[`, le modèle ajusté sur le reste."""
+    n = len(rows)
+    blocks = []
+    for k in range(folds):
+        lo, hi = k * n // folds, (k + 1) * n // folds
+        sub = _fit(list(rows[:lo]) + list(rows[hi:]), list(wins[:lo]) + list(wins[hi:]), inputs)
+        blocks.append((lo, hi, sub))
+    return _fit(rows, wins, inputs), blocks
+
+
+def _wald_var(
+    model: WinModel, rows: Sequence[Dict[str, float]], probs: List[float], j: int
+) -> float:
+    """Variance de `w_j` : élément (j, j) de l'inverse de la hessienne des variables de base et du biais.
+
+    Les colonnes produit sont exclues : elles valent 0 à `time_min` 0, donc n'apportent rien à la
+    hessienne du modèle ajusté.
+    """
+    k = len(model.inputs)
+    h = [[0.0] * (k + 1) for _ in range(k + 1)]
+    for row, p in zip(rows, probs):
+        x = expand({"time_min": 0.0, **row}, model.inputs)
+        z = [(x[i] - model.mean[i]) / model.scale[i] for i in range(k)] + [1.0]
+        weight = p * (1 - p)
+        for a in range(k + 1):
+            for b in range(k + 1):
+                h[a][b] += weight * z[a] * z[b]
+    e_j = [1.0 if i == j else 0.0 for i in range(k + 1)]
+    return _solve(h, e_j)[j]
+
+
+def _effect(
+    model: WinModel,
+    rows: Sequence[Dict[str, float]],
+    probs: List[float],
+    action: str,
+    blocks: List[Tuple[int, int, WinModel]],
+) -> Effect:
+    """Effet marginal moyen de `action`, IC95 de Wald et nombre de blocs de même signe que le global."""
+    j = model.inputs.index(action)
+    w, scale = model.weights[j], model.scale[j]
+    mean_var = sum(p * (1 - p) for p in probs) / len(probs)
+    se = math.sqrt(_wald_var(model, rows, probs, j))
+    same = sum(1 for _, _, sub in blocks if sub.weights[j] * w > 0)
+    return Effect(
+        action,
+        100 * w / scale * mean_var,
+        100 * (w - Z95 * se) / scale * mean_var,
+        100 * (w + Z95 * se) / scale * mean_var,
+        same,
+    )
+
+
+def _brier(
+    rows: Sequence[Dict[str, float]], wins: Sequence[int], blocks: List[Tuple[int, int, WinModel]]
+) -> Dict[str, float]:
+    """Brier poolé des prédictions hors bloc du modèle, et de la constante (taux bleu du reste)."""
+    model_pairs, constant_pairs = [], []
+    for lo, hi, sub in blocks:
+        rest = list(wins[:lo]) + list(wins[hi:])
+        rate = sum(rest) / len(rest)
+        for row, y in zip(rows[lo:hi], wins[lo:hi]):
+            model_pairs.append((sub.predict({"time_min": 0.0, **row}), y))
+            constant_pairs.append((rate, y))
+    return {"model": brier_score(model_pairs), "constant": brier_score(constant_pairs)}
+
+
+def value_actions(rows: List[Dict[str, float]], wins: List[int], folds: int) -> dict:
+    """Valorise les actions par régression logistique (SPEC-35 §4.2, tâche 172).
+
+    `rows` : une ligne par adversaire de lane (écarts bleu − rouge, comme `lane_rows`), `wins` : victoires
+    bleues (0 ou 1), `folds` : blocs contigus de la validation croisée (au moins 2). Rend `n`, `effects`
+    (cs, deaths, presence, solo_deaths, untraded_deaths), `vision` (hors classement) et `brier` (modèle et
+    constante, variante V1, validation croisée poolée).
+    """
+    derived = [
+        {
+            **row,
+            "other_deaths": row["deaths"] - row["solo_deaths"],
+            "traded_deaths": row["deaths"] - row["untraded_deaths"],
+        }
+        for row in rows
+    ]
+    effects: Dict[str, Effect] = {}
+    brier: Dict[str, float] = {}
+    for index, (inputs, actions) in enumerate(_VARIANTS):
+        model, blocks = _cross_validate(derived, wins, inputs, folds)
+        probs = [model.predict({"time_min": 0.0, **row}) for row in derived]
+        for action in actions:
+            effects[action] = _effect(model, derived, probs, action, blocks)
+        if index == 0:
+            brier = _brier(derived, wins, blocks)
+    vision = effects.pop("vision")
+    return {"n": len(rows), "effects": effects, "vision": vision, "brier": brier}

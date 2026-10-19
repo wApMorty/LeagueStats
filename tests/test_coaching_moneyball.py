@@ -6,11 +6,13 @@ connus) et sur des copies modifiées par `copy.deepcopy`. Aucune base, aucun ré
 
 import copy
 import json
+import math
+import random
 from pathlib import Path
 
 import pytest
 
-from src.coaching.moneyball import lane_rows, player_actions, player_gaps
+from src.coaching.moneyball import lane_rows, player_actions, player_gaps, value_actions
 
 FIXTURES = Path(__file__).parent / "fixtures" / "spike_gameplay"
 GAME = json.loads((FIXTURES / "7998195590_game.json").read_text(encoding="utf-8"))
@@ -186,3 +188,41 @@ def test_player_gap_of_a_red_player_is_the_opposite_of_the_blue_minus_red_gap():
     assert role == "top"
     assert gaps["cs"] == pytest.approx(-rows["top"]["cs"])
     assert player_gaps(GAME, TIMELINE, None, 1, 14)[1]["cs"] == pytest.approx(rows["top"]["cs"])
+
+
+# ---------- 4. value_actions (données synthétiques) ----------
+
+
+def _synthetic_lines(n: int = 3000) -> tuple:
+    """Lignes à la manière de `lane_rows` et issues bleues : seul le CS influence la victoire (logit 0,08 × cs)."""
+    rng = random.Random(0)
+    rows, wins = [], []
+    for _ in range(n):
+        cs = rng.gauss(0, 10)
+        deaths = rng.randint(0, 3)
+        rows.append(
+            {
+                "cs": cs,
+                "deaths": float(deaths),
+                "solo_deaths": float(rng.randint(0, deaths)),
+                "untraded_deaths": float(rng.randint(0, deaths)),
+                "presence": rng.random(),
+                "vision": rng.uniform(0, 3),
+            }
+        )
+        wins.append(1 if rng.random() < 1 / (1 + math.exp(-0.08 * cs)) else 0)
+    return rows, wins
+
+
+def test_value_actions_finds_the_cs_effect_and_no_effect_for_presence():
+    rows, wins = _synthetic_lines()
+
+    result = value_actions(rows, wins, folds=5)
+
+    cs = result["effects"]["cs"]
+    assert cs.pts_per_unit > 0
+    assert cs.ci_low > 0
+    assert cs.same_sign_folds == 5
+    presence = result["effects"]["presence"]
+    assert presence.ci_low < 0 < presence.ci_high
+    assert result["brier"]["model"] < result["brier"]["constant"]
