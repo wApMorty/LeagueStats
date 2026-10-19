@@ -1,7 +1,8 @@
 # SPEC-35 — Étude « Moneyball » du début de partie
 
-**Statut** : 🟡 Rédigée le 2026-10-20. Valorisation, vision, référence, mort évitable, seuil, livrable, rôles et
-fenêtre validés par @pj35 le 2026-10-20 (§2). Reste à valider la spec dans son ensemble avant `/implement`.
+**Statut** : ✅ Livrée le 2026-10-20 (tâches 171 à 175). Mesure faite (§8) : aucune action adoptée, @pj35 n'est en
+retard sur aucune action ; la tâche conditionnelle 176 est abandonnée. Arbitrages de §2 validés par @pj35 le
+2026-10-20.
 
 **Origine** : @pj35, 2026-10-20 : étude « Moneyball » pour savoir quelles actions des 10 à 15 premières minutes
 (CS, vision, morts évitables, présence aux objectifs) font le plus monter la win chance, et sur lesquelles il est le
@@ -284,4 +285,46 @@ ce tableau seul.
 
 ## 8. Résultat de la mesure
 
-*À remplir par la tâche 175.*
+Mesure du 2026-10-20 (`python scripts/measure_moneyball.py` sur une copie figée de `crawl.db` par l'API de
+sauvegarde SQLite, le Live Coach écrivant dans la base pendant une partie de @pj35 ; 336 s). 81 620 parties lues en
+solo/duo, 77 exclues (@pj35 y joue), 3 196 hors filtre, **78 347 retenues**, soit 78 347 lignes par rôle.
+
+**Valeur des actions à 14 min** (points de win chance pour +1 unité d'écart à l'adversaire de lane, IC95 de Wald,
+même signe sur les 5 blocs sauf mention) :
+
+| Rôle | CS | Mort | Mort solo | Mort sans contrepartie | Présence (0 à 1) | Brier modèle / constante |
+|---|---|---|---|---|---|---|
+| Top | +0,117 [+0,103 ; +0,132] | −3,30 [−3,46 ; −3,13] | −3,41 [−3,61 ; −3,20] | −6,64 [−6,86 ; −6,41] | +0,38 [−0,47 ; +1,24], 4/5 | 0,2381 / 0,2500 |
+| Jungle | +0,216 | −5,83 | −5,14 | −8,59 | +14,28 | 0,2133 / 0,2500 |
+| Mid | +0,186 | −5,03 | −4,42 | −7,96 | +5,71 | 0,2282 / 0,2500 |
+| Bot | +0,273 | −4,43 | −4,38 | −7,65 | +5,89 | 0,2257 / 0,2500 |
+| Support | −0,296 | −5,35 | −5,15 | −8,99 | +8,20 | 0,2291 / 0,2500 |
+
+Hors du top, tous les IC excluent 0 avec 5 signes sur 5. Lecture : une mort sans contrepartie coûte environ deux
+fois une mort (6,6 à 9,0 pts contre 3,3 à 5,8) ; au top, 10 CS d'avance à 14 min valent ~1,2 pt ; la présence aux
+objectifs ne pèse rien au top et le plus en jungle ; un support qui prend des CS perd des points.
+
+**Recoupement SPEC-20** (5 000 parties les plus récentes, modèle en place entraîné sur ces parties) : une mort avant
+14 min vaut −2,5 à −2,9 pts selon le rôle (−2,48 au top), un dragon perdu en étant absent −1,2 à −1,5 pt, des larves
+perdues −0,1 pt. L'ordre de grandeur des morts concorde avec la logistique (−3,3 au top).
+
+**Écart de @pj35 au top** (135 parties, contre ses adversaires de lane, IC95 bootstrap) :
+
+| Action | Écart | Effet (pts / unité) | Gain attendu (pts / partie) | Effet | Écart | Gain | Verdict |
+|---|---|---|---|---|---|---|---|
+| Présence | −0,011 [−0,071 ; +0,047] | +0,38 | +0,004 | non | non | non | rejetée |
+| Mort sans contrepartie | −0,096 [−0,385 ; +0,185] | −6,64 | −0,64 | oui | non | non | rejetée |
+| Mort solo | −0,289 [−0,630 ; +0,052] | −3,41 | −0,98 | oui | non | non | rejetée |
+| Mort | −0,311 [−0,733 ; +0,104] | −3,30 | −1,03 | oui | non | non | rejetée |
+| CS | +10,0 [+5,3 ; +14,7] | +0,117 | −1,17 | oui | oui | non | rejetée |
+
+**Verdict : aucune action adoptée** (seuil du §2 inchangé). @pj35 n'est en retard sur aucune action : il a 10 CS
+d'avance à 14 min sur son adversaire (significatif, ~1,2 pt de win chance gagné par partie) et meurt un peu moins
+que lui avant 14 min (non significatif). Il ne laisse donc aucun point sur la table au début de partie. La tâche 176
+est abandonnée.
+
+**Vision, hors classement** : +15,5 pts par point de `visionScore` / min au top (IC [+14,4 ; +16,6]), +10,8 à +16,2
+ailleurs ; écart de @pj35 +0,04. Score de fin de partie, confondu avec la durée et l'issue : ne décide rien.
+
+**Reproductibilité** : deux exécutions `--limit 5000` sur la même copie impriment des tableaux identiques (hors
+durées). L'essai `--limit 5000` sur la base vivante (104 s) donnait le même verdict.

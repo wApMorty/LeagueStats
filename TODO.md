@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-10-20 (SPEC-35 rédigée : étude « Moneyball » du début de partie ; SPEC-33 : tâches 151 à 159 faites, mesure du terme de forme en attente de couverture (3 / 5 000), recette @pj35 à faire ; SPEC-32 livrée : classement MVP / ACE en post-game, recette @pj35 à faire ; SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette @pj35 à faire)
+**Mis à jour** : 2026-10-20 (SPEC-35 livrée : étude « Moneyball » du début de partie, aucune action adoptée ; SPEC-33 : tâches 151 à 159 faites, mesure du terme de forme en attente de couverture (3 / 5 000), recette @pj35 à faire ; SPEC-32 livrée : classement MVP / ACE en post-game, recette @pj35 à faire ; SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette @pj35 à faire)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -377,7 +377,7 @@ pile réelle sur faux LCU (§3). Découpage en SPEC-34 §5 (tâches 163 à 170, 
 | 169 | Scènes « En partie » (courbe SVG), « Revue et coaching » et « Mosaïque » ; `hero.gif` dans le README | 5 | 167, 168 | ✅ 2026-10-16 : teaser de 30,0 s en 1 920 × 1 080 sans audio (12,2 Mo) ; `hero.gif` 960 × 540 à 10 i/s, 4,1 Mo, encodé par ffmpeg (palette optimisée ; l'encodeur GIF de Remotion donnait 10,3 Mo), fond figé dans la boucle |
 | 170 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure ; recette à l'œil de @pj35 | 3 | 169 | ✅ 2026-10-16 ; recette à l'œil (captures, GIF, `docs/presentation/video/out/teaser.mp4`) laissée à @pj35 |
 
-### Lot suivant — SPEC-35, étude « Moneyball » du début de partie (🟡 rédigée le 2026-10-20)
+### Lot SPEC-35, étude « Moneyball » du début de partie (✅ livrée le 2026-10-20, rien d'adopté)
 
 [SPEC-35](docs/specs/SPEC-35-etude-moneyball-du-debut-de-partie.md) classe les actions des 14 premières minutes (CS,
 morts, morts solo, morts sans contrepartie, présence aux objectifs) par les points de win chance que @pj35 y laisse par
@@ -393,8 +393,8 @@ seuil figé avant la mesure (arbitrages validés par @pj35 le 2026-10-20). Déco
 | 172 | `value_actions` : trois variantes, effet marginal, IC95 de Wald, signes sur 5 blocs, Brier contre la constante | 5 | 171 | ✅ 2026-10-20 : 1 test (synthétique : CS retrouvé à 1,92 pt / unité, IC [1,73 ; 2,11], présence nulle, Brier sous la constante) |
 | 173 | `player_gap` (bootstrap à graine fixe) et `decide` (seuil du §2) | 3 | 172 | ✅ 2026-10-20 : 6 tests (moyenne et IC, graine, IC d'effet qui contient 0, gain 0,99, premier au gain seul adopté, Brier à la constante) |
 | 174 | `scripts/measure_moneyball.py` : tableau par rôle, tableau Moneyball, recoupement SPEC-20, vision hors classement | 3 | 173 | ✅ 2026-10-20 : 2 tests (sorties et lecture seule, exclusion des parties de @pj35) ; essai `--limit 5000` en 104 s, 4 815 parties retenues |
-| 175 | Mesure réelle, résultat en §8, `TODO.md`, `CHANGELOG.md`, statuts | 2 | 174 | ⬜ |
-| 176 | *Conditionnelle* : axe Moneyball proposé dans l'accueil du coaching | 5 | 175 | ⬜ |
+| 175 | Mesure réelle, résultat en §8, `TODO.md`, `CHANGELOG.md`, statuts | 2 | 174 | ✅ 2026-10-20 : 78 347 parties ; aucune action adoptée (@pj35 : +10 CS à 14 min, morts non significatives) |
+| 176 | *Conditionnelle* : axe Moneyball proposé dans l'accueil du coaching | 5 | 175 | ❌ Abandonnée : rien d'adopté |
 
 ### Lot suivant — SPEC-22, attribution complète de l'impact (🟡 rédigée le 2026-10-04)
 
@@ -586,6 +586,11 @@ encore mesurer la qualité.*
   synergies) 0,2493 (−0,00003, IC95 −0,0001 à +0,00004). Poids ajustés : même lane 1,6 à 2,2, bot-support 1,1,
   jungle contre top/mid/bot/support 0,5 à 0,8, paires éloignées 0,2 à 0,4 (± ~0,5 chacun). Le jungle ne ressort
   donc pas, et couper les paires éloignées retire du signal. Couverture des paires inter-rôles : 93 à 97 %.
+- ❌ Axe de travail « Moneyball » du début de partie — **mesuré le 2026-10-20** ([SPEC-35](docs/specs/SPEC-35-etude-moneyball-du-debut-de-partie.md)
+  §8), rien d'adopté. Logistique par rôle sur 78 347 parties de `crawl.db` (écarts à l'adversaire de lane à 14 min) :
+  au top, une mort vaut −3,3 pts de win chance, une mort sans contrepartie −6,6, 10 CS +1,2, la présence aux
+  objectifs rien. @pj35 (135 parties au top) n'est en retard sur aucune action : +10 CS à 14 min (IC95 +5 à +15),
+  morts non significatives. Seuil figé d'avance : effet et écart significatifs, gain ≥ 1 pt par partie.
 
 ---
 
