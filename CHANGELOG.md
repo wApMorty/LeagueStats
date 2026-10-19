@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+## [5.5.0] - 2026-10-20
+
+Une étude « Moneyball » chiffre ce que valent en win chance les actions des 14 premières minutes (CS, morts, morts sans contrepartie, présence aux objectifs) et ton écart à tes adversaires de lane : aucune action à travailler n'en ressort, tu es en avance de 10 CS à 14 min. Aucune action requise : pas de migration Alembic, pas de scrape.
+
 ### ✨ Feature
 
 - **Étude « Moneyball » du début de partie (SPEC-35)** — `python scripts/measure_moneyball.py` (lecture seule de `crawl.db` et `db.db`, ~6 min) chiffre en points de win chance ce que valent les actions des 14 premières minutes, par rôle et en écart à l'adversaire de lane : CS, morts, morts solo, morts sans contrepartie (aucun kill ni objectif de son équipe à ± 20 s) et présence aux objectifs (logistique par rôle, IC95, validation croisée à 5 blocs, recoupement avec l'impact de SPEC-20). Il mesure ensuite ton écart à tes adversaires de lane et décide, au seuil figé d'avance (effet et écart significatifs, gain ≥ 1 pt par partie), quelle action devient un axe de travail. Mesure du 2026-10-20 sur 78 347 parties : au top, une mort avant 14 min vaut −3,3 pts, une mort sans contrepartie −6,6, 10 CS +1,2, la présence aux objectifs rien ; **aucune action adoptée**, car tu n'es en retard sur aucune (+10 CS à 14 min, morts non significatives). La vision n'est mesurable qu'en fin de partie : imprimée à part, elle ne décide rien. `--limit N` mesure sur les N parties les plus récentes.

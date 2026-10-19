@@ -70,7 +70,8 @@ src/
 │   ├── post_game_watcher.py              # Fil de lecture de l'écran de fin et des LP, cadencé par la phase (SPEC-25)
 │   ├── metrics.py, grid.py               # Métriques des 10 joueurs, grille par rôle, norme, objectif
 │   ├── findings.py, report.py             # Constats de fin de partie, sorties console
-│   └── progression.py, goals.py            # Schémas, tendances, LP, axes de travail
+│   ├── progression.py, goals.py            # Schémas, tendances, LP, axes de travail
+│   └── moneyball.py                        # Valeur des actions du début de partie, écart du joueur (SPEC-35)
 │
 ├── winprob/                 # Win chance en partie (SPEC-20) et éclaireur des joueurs (SPEC-33)
 │   ├── crawl.py                 # Collecte des parties dans data/crawl.db (crawl_games, crawl_frontier, crawl_histories)
@@ -123,6 +124,7 @@ scripts/
 ├── calibrate_model.py            # Calibration des coefficients du modèle log-odds (SPEC-05 B7)
 ├── bench_scout.py, measure_scout_quartiles.py  # Banc de l'éclaireur, seuils de la pastille (SPEC-33)
 ├── measure_form_term.py           # Mesure du terme de forme dans la win chance (SPEC-33, en attente de couverture)
+├── measure_moneyball.py            # Étude « Moneyball » du début de partie (SPEC-35, rien d'adopté le 2026-10-20)
 ├── measure_en_partie.py            # Mesure de l'écran « En partie » en Firefox headless (SPEC-30, SPEC-33)
 ├── demo_client.py, demo/           # Client en mode démo sur faux LCU local, sans League of Legends (SPEC-34)
 ├── capture_screens.py              # Captures de la vitrine depuis le mode démo, en Firefox headless (SPEC-34)
