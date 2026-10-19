@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-10-15 (SPEC-33 : tâches 151 à 159 faites, mesure du terme de forme en attente de couverture (3 / 5 000), recette @pj35 à faire ; SPEC-32 livrée : classement MVP / ACE en post-game, recette @pj35 à faire ; SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette @pj35 à faire)
+**Mis à jour** : 2026-10-20 (SPEC-35 rédigée : étude « Moneyball » du début de partie ; SPEC-33 : tâches 151 à 159 faites, mesure du terme de forme en attente de couverture (3 / 5 000), recette @pj35 à faire ; SPEC-32 livrée : classement MVP / ACE en post-game, recette @pj35 à faire ; SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette @pj35 à faire)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -376,6 +376,25 @@ pile réelle sur faux LCU (§3). Découpage en SPEC-34 §5 (tâches 163 à 170, 
 | 168 | Projet Remotion : versions exactes, config, polices, scènes « Accroche », « Draft », « Verrouillage » et « Clôture » | 5 | 166 | ✅ 2026-10-16 : Remotion 4.0.531 (licence gratuite pour un particulier, vérifiée sur LICENSE.md), polices du client, chiffres de draft relevés dans le manifeste par `capture_screens.py` (n° 1 Dr. Mundo 55,96 %, fin de draft 54,6 %) |
 | 169 | Scènes « En partie » (courbe SVG), « Revue et coaching » et « Mosaïque » ; `hero.gif` dans le README | 5 | 167, 168 | ✅ 2026-10-16 : teaser de 30,0 s en 1 920 × 1 080 sans audio (12,2 Mo) ; `hero.gif` 960 × 540 à 10 i/s, 4,1 Mo, encodé par ffmpeg (palette optimisée ; l'encodeur GIF de Remotion donnait 10,3 Mo), fond figé dans la boucle |
 | 170 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure ; recette à l'œil de @pj35 | 3 | 169 | ✅ 2026-10-16 ; recette à l'œil (captures, GIF, `docs/presentation/video/out/teaser.mp4`) laissée à @pj35 |
+
+### Lot suivant — SPEC-35, étude « Moneyball » du début de partie (🟡 rédigée le 2026-10-20)
+
+[SPEC-35](docs/specs/SPEC-35-etude-moneyball-du-debut-de-partie.md) classe les actions des 14 premières minutes (CS,
+morts, morts solo, morts sans contrepartie, présence aux objectifs) par les points de win chance que @pj35 y laisse par
+partie. Chaque action est valorisée par une logistique par rôle sur `crawl.db`, en écart à l'adversaire de lane. L'écart
+de @pj35 se lit contre ses adversaires de lane de `game_records`. Le ΔP de SPEC-20 sert de recoupement ; la vision reste
+hors classement, faute de ward dans la timeline. Adoption à ≥ 1 pt de win chance par partie, effet et écart significatifs,
+seuil figé avant la mesure (arbitrages validés par @pj35 le 2026-10-20). Découpage en SPEC-35 §5 (tâches 171 à 176,
+21 pts) :
+
+| # | Tâche | Pts | Dépend de | État |
+|---|---|---|---|---|
+| 171 | `src/coaching/moneyball.py` : actions à 14 min par joueur, lignes par rôle, écarts de @pj35 ; `impact.present` public | 3 | — | ⬜ |
+| 172 | `value_actions` : trois variantes, effet marginal, IC95 de Wald, signes sur 5 blocs, Brier contre la constante | 5 | 171 | ⬜ |
+| 173 | `player_gap` (bootstrap à graine fixe) et `decide` (seuil du §2) | 3 | 172 | ⬜ |
+| 174 | `scripts/measure_moneyball.py` : tableau par rôle, tableau Moneyball, recoupement SPEC-20, vision hors classement | 3 | 173 | ⬜ |
+| 175 | Mesure réelle, résultat en §8, `TODO.md`, `CHANGELOG.md`, statuts | 2 | 174 | ⬜ |
+| 176 | *Conditionnelle* : axe Moneyball proposé dans l'accueil du coaching | 5 | 175 | ⬜ |
 
 ### Lot suivant — SPEC-22, attribution complète de l'impact (🟡 rédigée le 2026-10-04)
 
