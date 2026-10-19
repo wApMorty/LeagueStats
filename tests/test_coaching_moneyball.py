@@ -116,6 +116,28 @@ def test_presence_is_one_inside_the_radius_of_an_allied_dragon_and_zero_outside(
     assert actions[4]["presence"] == 0.0
 
 
+def test_presence_counts_an_assistant_out_of_the_radius():
+    timeline = copy.deepcopy(TIMELINE)
+    dragon = next(
+        e
+        for frame in timeline["frames"]
+        for e in frame["events"]
+        if e["type"] == "ELITE_MONSTER_KILL" and e["timestamp"] == 664_279
+    )
+    dragon["assistingParticipantIds"] = [4]
+    for frame in timeline["frames"]:
+        frame["events"] = [
+            e for e in frame["events"] if e["type"] != "ELITE_MONSTER_KILL" or e is dragon
+        ]
+        for pf in frame["participantFrames"].values():
+            pf["position"] = {"x": -100_000, "y": -100_000}  # personne dans le rayon
+
+    actions = player_actions(GAME, timeline, 14)
+
+    assert actions[4]["presence"] == 1.0  # assistant, hors rayon
+    assert actions[1]["presence"] == 0.0
+
+
 # ---------- 2. mort sans contrepartie ----------
 
 
@@ -128,6 +150,18 @@ def test_kill_by_the_other_team_15_s_after_the_death_trades_it():
     timeline = _death_at_5_min(_kill(315_000, 1, 6))
 
     assert player_actions(GAME, timeline, 14)[1]["untraded_deaths"] == 0.0
+
+
+def test_kill_by_the_other_team_15_s_before_the_death_trades_it():
+    timeline = _death_at_5_min(_kill(285_000, 1, 6))
+
+    assert player_actions(GAME, timeline, 14)[1]["untraded_deaths"] == 0.0
+
+
+def test_kill_by_the_other_team_25_s_before_the_death_does_not_trade_it():
+    timeline = _death_at_5_min(_kill(275_000, 1, 6))
+
+    assert player_actions(GAME, timeline, 14)[1]["untraded_deaths"] == 1.0
 
 
 def test_kill_by_the_other_team_25_s_after_the_death_does_not_trade_it():
