@@ -553,6 +553,12 @@ encore mesurer la qualité.*
 - ❌ i18n, multi-plateforme
 - ✅ GUI lourde : **rouverte par @pj35 le 2026-10-04**, devenue le client de SPEC-21 (fenêtre `pywebview`, pas de Qt ni d'Electron)
 - ⏸️ Automatisation nocturne — **suspendue par choix**, mise à jour manuelle assumée
+- ❌ A priori de la draft dans la win chance en partie — **mesuré et écarté par @pj35 le 2026-10-19**. Logit de draft
+  (`GameEvaluator.team_logit`, postes par `participant_roles`) en variable du modèle de partie, avec son produit par le
+  temps, sur les 9 821 parties les plus récentes de `crawl.db` (validation croisée poolée à 5 blocs) : Brier ≤ 10 min
+  0,2336 → 0,2331 (**gain 0,0005**, seuil de SPEC-33 : 0,002), AUC 0,801 → 0,802. La draft seule : Brier 0,2494 contre
+  0,2500 pour une constante ; bien calibrée (quintile extrême : 55,4 % prédits, 54,0 % observés) mais faible (p10-p90
+  de 45 à 55 %). La courbe qui part de ~50 % est donc juste à ±5 pts près.
 
 ---
 
