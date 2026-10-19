@@ -559,6 +559,14 @@ encore mesurer la qualité.*
   0,2336 → 0,2331 (**gain 0,0005**, seuil de SPEC-33 : 0,002), AUC 0,801 → 0,802. La draft seule : Brier 0,2494 contre
   0,2500 pour une constante ; bien calibrée (quintile extrême : 55,4 % prédits, 54,0 % observés) mais faible (p10-p90
   de 45 à 55 %). La courbe qui part de ~50 % est donc juste à ±5 pts près.
+- ❌ Draft au seul matchup 2v2 (Top/Mid contre leur lane et le jungle adverse, bot contre bot) — **mesuré le
+  2026-10-20**, le poids actuel 2/1 reste. Spike hors `src/` sur 78 163 parties de `crawl.db` (solo/duo, 10 rôles
+  connus), validation croisée poolée à 5 blocs, régression logistique sur le logit de `GameEvaluator` (paires sans
+  poids de lane). Brier : constante 0,2500, actuel 2/1 + synergies 0,2492, masque 2v2 0,2494 (**−0,0002 contre
+  l'actuel, IC95 bootstrap −0,0003 à −0,0001**, synergies ou non), matrice 5×5 symétrique ajustée (15 paires +
+  synergies) 0,2493 (−0,00003, IC95 −0,0001 à +0,00004). Poids ajustés : même lane 1,6 à 2,2, bot-support 1,1,
+  jungle contre top/mid/bot/support 0,5 à 0,8, paires éloignées 0,2 à 0,4 (± ~0,5 chacun). Le jungle ne ressort
+  donc pas, et couper les paires éloignées retire du signal. Couverture des paires inter-rôles : 93 à 97 %.
 
 ---
 
