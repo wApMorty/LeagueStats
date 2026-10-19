@@ -10,6 +10,7 @@ partent de ces lignes.
 """
 
 import math
+import random
 from typing import Dict, List, NamedTuple, Optional, Sequence, Tuple
 
 from ..analysis.calibration import brier_score
@@ -293,3 +294,87 @@ def value_actions(rows: List[Dict[str, float]], wins: List[int], folds: int) -> 
             brier = _brier(derived, wins, blocks)
     vision = effects.pop("vision")
     return {"n": len(rows), "effects": effects, "vision": vision, "brier": brier}
+
+
+# Quantiles du bootstrap à 2,5 % et 97,5 % : constantes statistiques, pas des réglages.
+_Q_LOW = 0.025
+_Q_HIGH = 0.975
+
+
+def player_gap(
+    gaps: List[Dict[str, float]], resamples: int, seed: int
+) -> Dict[str, Tuple[float, float, float]]:
+    """Écart moyen du joueur par action, avec IC95 percentile du bootstrap (SPEC-35 §4.3).
+
+    `gaps` : une ligne par partie du joueur (écarts joueur − adversaire, comme `player_gaps`).
+    Seules les actions présentes dans toutes les lignes sont gardées. À chaque rééchantillonnage,
+    un même tirage d'indices (avec remise) sert à toutes les actions. Rend
+    `{action: (moyenne, bas, haut)}`, `{}` si `gaps` est vide.
+    """
+    if not gaps:
+        return {}
+    n = len(gaps)
+    actions = [a for a in gaps[0] if all(a in row for row in gaps)]
+    rng = random.Random(seed)
+    means: Dict[str, List[float]] = {a: [] for a in actions}
+    for _ in range(resamples):
+        draw = [rng.randrange(n) for _ in range(n)]
+        for a in actions:
+            means[a].append(sum(gaps[i][a] for i in draw) / n)
+    low_rank, high_rank = int(_Q_LOW * resamples), int(_Q_HIGH * resamples) - 1
+    out: Dict[str, Tuple[float, float, float]] = {}
+    for a in actions:
+        ranked = sorted(means[a])
+        mean = sum(row[a] for row in gaps) / n
+        out[a] = (mean, ranked[low_rank], ranked[high_rank])
+    return out
+
+
+def decide(
+    effects: Dict[str, Effect],
+    gap: Dict[str, Tuple[float, float, float]],
+    brier: Dict[str, float],
+    gain_min: float,
+    folds: int,
+) -> List[dict]:
+    """Décision par action (SPEC-35 §4.3, tâche 173).
+
+    Une ligne par action valorisée et présente dans `gap`, triée par gain décroissant
+    (gain = −écart × points par unité). `effect_ok` : IC de l'effet hors de 0 et même signe sur les
+    `folds` blocs ; `gap_ok` : IC de l'écart hors de 0 ; `gain_ok` : gain ≥ `gain_min` ; `passes` :
+    les trois, et Brier du modèle < constante. `adopted` n'est vrai que pour la première ligne qui
+    `passes`.
+    """
+    rows = []
+    for action, effect in effects.items():
+        if action not in gap:
+            continue
+        mean, low, high = gap[action]
+        gain = -mean * effect.pts_per_unit
+        effect_ok = (effect.ci_low > 0 or effect.ci_high < 0) and effect.same_sign_folds == folds
+        gap_ok = low > 0 or high < 0
+        gain_ok = gain >= gain_min
+        passes = effect_ok and gap_ok and gain_ok and brier["model"] < brier["constant"]
+        rows.append(
+            {
+                "action": action,
+                "pts_per_unit": effect.pts_per_unit,
+                "ci_low": effect.ci_low,
+                "ci_high": effect.ci_high,
+                "same_sign_folds": effect.same_sign_folds,
+                "gap": mean,
+                "gap_low": low,
+                "gap_high": high,
+                "gain": gain,
+                "effect_ok": effect_ok,
+                "gap_ok": gap_ok,
+                "gain_ok": gain_ok,
+                "passes": passes,
+                "adopted": False,
+            }
+        )
+    rows.sort(key=lambda row: row["gain"], reverse=True)
+    first = next((row for row in rows if row["passes"]), None)
+    if first is not None:
+        first["adopted"] = True
+    return rows

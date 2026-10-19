@@ -12,7 +12,15 @@ from pathlib import Path
 
 import pytest
 
-from src.coaching.moneyball import lane_rows, player_actions, player_gaps, value_actions
+from src.coaching.moneyball import (
+    Effect,
+    decide,
+    lane_rows,
+    player_actions,
+    player_gap,
+    player_gaps,
+    value_actions,
+)
 
 FIXTURES = Path(__file__).parent / "fixtures" / "spike_gameplay"
 GAME = json.loads((FIXTURES / "7998195590_game.json").read_text(encoding="utf-8"))
@@ -226,3 +234,102 @@ def test_value_actions_finds_the_cs_effect_and_no_effect_for_presence():
     presence = result["effects"]["presence"]
     assert presence.ci_low < 0 < presence.ci_high
     assert result["brier"]["model"] < result["brier"]["constant"]
+
+
+# ---------- 5. player_gap ----------
+
+
+def _gaps_of_40_games() -> list:
+    return [{"cs": float(v), "deaths": float(v % 3)} for v in range(1, 41)]
+
+
+def test_player_gap_mean_is_exact_and_interval_contains_it():
+    gaps = _gaps_of_40_games()
+
+    result = player_gap(gaps, resamples=2000, seed=1)
+
+    assert set(result) == {"cs", "deaths"}
+    mean, low, high = result["cs"]
+    assert mean == pytest.approx(sum(range(1, 41)) / 40)
+    assert low < mean < high
+    assert result["deaths"][0] == pytest.approx(sum(g["deaths"] for g in gaps) / 40)
+
+
+def test_player_gap_is_empty_for_no_games_and_reproducible_with_a_seed():
+    gaps = _gaps_of_40_games()
+
+    assert player_gap([], resamples=100, seed=1) == {}
+    assert player_gap(gaps, 2000, 1) == player_gap(gaps, 2000, 1)
+    other = player_gap(gaps, 2000, 2)
+    assert other["cs"][1:] != player_gap(gaps, 2000, 1)["cs"][1:]
+
+
+# ---------- 6. decide ----------
+
+
+def _eff(action: str, pts: float, low: float, high: float, same: int = 5) -> Effect:
+    return Effect(action, pts, low, high, same)
+
+
+OK_BRIER = {"model": 0.20, "constant": 0.25}
+
+
+def test_decide_adopts_a_passing_action_and_not_one_whose_effect_interval_holds_zero():
+    effects = {
+        "cs": _eff("cs", 2.0, 0.5, 3.0),
+        "presence": _eff("presence", 1.5, -0.2, 0.3),  # IC contient 0
+    }
+    gap = {"cs": (-2.0, -3.0, -1.0), "presence": (-2.0, -3.0, -1.0)}
+
+    rows = {r["action"]: r for r in decide(effects, gap, OK_BRIER, 1.0, 5)}
+
+    assert rows["cs"]["passes"] and rows["cs"]["adopted"]
+    assert not rows["presence"]["effect_ok"]
+    assert not rows["presence"]["passes"] and not rows["presence"]["adopted"]
+
+
+def test_decide_rejects_a_gain_just_below_the_threshold():
+    effects = {"cs": _eff("cs", 0.99, 0.5, 1.5)}
+    gap = {"cs": (-1.0, -1.5, -0.5)}
+
+    row = decide(effects, gap, OK_BRIER, 1.0, 5)[0]
+
+    assert row["gain"] == pytest.approx(0.99)
+    assert not row["gain_ok"] and not row["passes"] and not row["adopted"]
+
+
+def test_decide_adopts_only_the_first_passing_action_by_gain():
+    effects = {"cs": _eff("cs", 2.0, 0.5, 3.0), "deaths": _eff("deaths", 1.0, 0.5, 3.0)}
+    gap = {"cs": (-2.0, -3.0, -1.0), "deaths": (-3.0, -4.0, -2.0)}
+
+    rows = decide(effects, gap, OK_BRIER, 1.0, 5)
+
+    assert [r["action"] for r in rows] == ["cs", "deaths"]  # gains 4,0 et 3,0 : cs d'abord
+    assert [r["passes"] for r in rows] == [True, True]
+    assert [r["adopted"] for r in rows] == [True, False]
+    assert set(rows[0]) == {
+        "action",
+        "pts_per_unit",
+        "ci_low",
+        "ci_high",
+        "same_sign_folds",
+        "gap",
+        "gap_low",
+        "gap_high",
+        "gain",
+        "effect_ok",
+        "gap_ok",
+        "gain_ok",
+        "passes",
+        "adopted",
+    }
+
+
+def test_decide_adopts_nothing_when_the_model_does_not_beat_the_constant():
+    effects = {"cs": _eff("cs", 2.0, 0.5, 3.0)}
+    gap = {"cs": (-2.0, -3.0, -1.0)}
+    brier = {"model": 0.25, "constant": 0.25}
+
+    rows = decide(effects, gap, brier, 1.0, 5)
+
+    assert not rows[0]["passes"] and not rows[0]["adopted"]
