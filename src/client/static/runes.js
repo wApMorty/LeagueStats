@@ -151,17 +151,17 @@
 
   // ---------- rendu ----------
 
-  function runeDisc(rune, size, color, glow) {
+  function runeDisc(rune, size, color, glow, diff = false) {
     return el(
       "div",
-      { class: "lo-rune", style: `--s:${size}px;--c:${color};${glow ? `box-shadow:0 0 20px ${color}` : ""}` },
+      { class: `lo-rune${diff ? " is-diff" : ""}`, style: `--s:${size}px;--c:${color};${glow ? `box-shadow:0 0 20px ${color}` : ""}` },
       rune ? initials(rune.name) : "",
       rune ? el("img", { src: perk(rune.icon), alt: "" }) : null,
     );
   }
 
-  function pageCard() {
-    const page = lo.page;
+  /** Carte d'une page. `editable` faux (pages OneTricks) : pas de clic vers l'éditeur. `same` : ids de la page 1, les runes absentes sont marquées. */
+  function pageCard(page, { editable = true, same = null } = {}) {
     const primary = styleOf(page.primary);
     const secondary = styleOf(page.sub);
     const color = primary.color;
@@ -169,25 +169,25 @@
     const rows = page.rows.map((id) => runeOf(primary, id));
     const subs = page.subs.map((id) => runeOf(secondary, id));
     const shards = page.shards.map(shardOf);
+    const diff = (rune) => Boolean(same && rune && !same.has(rune.id));
+    const props = {
+      class: "lo-page",
+      style: `--tc:${color};background:linear-gradient(155deg, ${tint(color, 0.16)} 0%, oklch(0.205 0.02 170) 45%, ${tint(secondary.color, 0.12)} 100%);border-color:${color}`,
+    };
+    if (editable) Object.assign(props, { role: "button", tabindex: "0", "data-open-editor": true });
     return el(
       "div",
-      {
-        class: "lo-page",
-        style: `--tc:${color};background:linear-gradient(155deg, ${tint(color, 0.16)} 0%, oklch(0.205 0.02 170) 45%, ${tint(secondary.color, 0.12)} 100%);border-color:${color}`,
-        role: "button",
-        tabindex: "0",
-        "data-open-editor": true,
-      },
-      el("div", { class: "lo-tree" }, el("img", { src: perk(primary.icon), alt: "" }), primary.name, el("span", { class: "lo-edit" }, "Modifier ›")),
+      props,
+      el("div", { class: "lo-tree" }, el("img", { src: perk(primary.icon), alt: "" }), primary.name, editable ? el("span", { class: "lo-edit" }, "Modifier ›") : null),
       el(
         "div",
         { class: "lo-key" },
-        el("div", { "data-keystone": true }, runeDisc(keystone, 72, color, true)),
+        el("div", { "data-keystone": true }, runeDisc(keystone, 72, color, true, diff(keystone))),
         el("div", { class: "lo-key-name" }, keystone?.name ?? "—"),
       ),
-      el("div", { class: "lo-rows" }, rows.map((rune) => el("div", { class: "lo-row" }, runeDisc(rune, 44, color), el("div", { class: "lo-rune-name" }, rune?.name ?? "—")))),
+      el("div", { class: "lo-rows" }, rows.map((rune) => el("div", { class: "lo-row" }, runeDisc(rune, 44, color, false, diff(rune)), el("div", { class: "lo-rune-name" }, rune?.name ?? "—")))),
       el("div", { class: "lo-tree lo-tree-sub", style: `color:${secondary.color}` }, el("img", { src: perk(secondary.icon), alt: "" }), secondary.name),
-      el("div", { class: "lo-subs" }, subs.map((rune) => el("div", { class: "lo-sub" }, runeDisc(rune, 36, secondary.color), el("span", {}, rune?.name ?? "—")))),
+      el("div", { class: "lo-subs" }, subs.map((rune) => el("div", { class: "lo-sub" }, runeDisc(rune, 36, secondary.color, false, diff(rune)), el("span", {}, rune?.name ?? "—")))),
       el(
         "div",
         { class: "lo-shards" },
@@ -289,7 +289,7 @@
     if (!lo) body = el("div", { class: "lo-empty" }, "Survole ou verrouille un champion : sa page de runes apparaît ici.");
     else if (lo.status === "loading") body = el("div", { class: "lo-empty" }, "Lecture du grimoire de runes…");
     else if (lo.status === "unavailable") body = el("div", { class: "lo-empty" }, lo.reason);
-    else body = el("div", { class: "lo-body" }, pageCard(), spellsBlock(), itemsBlock(), footer());
+    else body = el("div", { class: "lo-body" }, el("button", { type: "button", class: "g-secondary lo-pages", onclick: openPages }, "3 pages OneTricks ›"), pageCard(lo.page), spellsBlock(), itemsBlock(), footer());
     root.replaceChildren(head, body);
     if (lo?.status === "ready" && !Motion.opts().reduced && root.dataset.painted !== String(lo.championId)) {
       root.dataset.painted = String(lo.championId);
@@ -435,6 +435,78 @@
     paintEditor(true);
   }
 
+  // ---------- pages OneTricks au choix (SPEC-38) ----------
+
+  let pagesView = null; // { element, championId, onKey }
+
+  function closePages() {
+    if (!pagesView) return;
+    pagesView.element.remove();
+    removeEventListener("keydown", pagesView.onKey);
+    pagesView = null;
+  }
+
+  const pct = (share) => `${(share * 100).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} %`;
+
+  /** Choisir une page la applique (« Modifiée à la main ») et l'envoie dans le client avec les sorts de la colonne. */
+  function choose(page) {
+    closePages();
+    applyPage(clone(page));
+    push();
+  }
+
+  function paintPages(view, data) {
+    const name = Draft.state?.names?.[String(view.championId)] ?? "";
+    const role = host()?.dataset.role ?? "";
+    const ready = Boolean(data?.available && data.pages?.length);
+    const duel = ready && data.opponent && data.duel_games != null ? ` · contre ${data.opponent} · ${data.duel_games} parties` : "";
+    const head = el(
+      "div",
+      { class: "ed-head" },
+      el("div", { class: "ed-titles" }, el("span", { class: "ed-kicker" }, `Pages OneTricks · ${name}${role ? ` ${role}` : ""}`), el("span", { class: "ed-title" }, ready ? `${data.games} parties${duel}` : "Pages indisponibles")),
+      el("div", { class: "ed-buttons" }, el("button", { type: "button", class: "g-secondary", onclick: closePages }, "Annuler")),
+    );
+    let body;
+    if (!ready) {
+      body = el("div", { class: "lo-empty" }, data?.reason || "Pages indisponibles");
+    } else {
+      const first = data.pages[0].page;
+      const same = new Set([first.keystone, ...first.rows, ...first.subs]);
+      body = el(
+        "div",
+        { class: "pg-grid" },
+        data.pages.map((entry, i) =>
+          el(
+            "div",
+            { class: "pg-col" },
+            el("div", { class: "pg-rank" }, `Page ${i + 1}`),
+            el("div", { class: "pg-share" }, entry.share == null ? "Adaptée au duel" : `${pct(entry.share)} · ${entry.games} parties`),
+            data.opponent ? el("div", { class: "pg-duel" }, entry.duel_share == null ? `non publiée contre ${data.opponent}` : `${pct(entry.duel_share)} contre ${data.opponent} · ${entry.duel_games} parties`) : null,
+            pageCard(entry.page, { editable: false, same: i ? same : null }),
+            el("button", { type: "button", class: "lo-push", onclick: () => choose(entry.page) }, "Choisir"),
+          ),
+        ),
+      );
+    }
+    view.element.replaceChildren(head, body);
+    Draft.animate(view.element);
+  }
+
+  async function openPages() {
+    if (pagesView || !lo || lo.status !== "ready" || !tree) return;
+    const view = { championId: lo.championId, element: el("div", { class: "ed-overlay pg-overlay", role: "dialog", "aria-label": "Pages OneTricks" }) };
+    view.onKey = (event) => event.key === "Escape" && closePages();
+    pagesView = view;
+    addEventListener("keydown", view.onKey);
+    document.getElementById("d-overlays").appendChild(view.element);
+    view.element.replaceChildren(el("div", { class: "lo-empty" }, "Lecture des pages OneTricks…"));
+    const data = await fetch(`/draft/loadout/pages?champion_id=${view.championId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null);
+    if (pagesView !== view || lo?.championId !== view.championId) return; // fermé ou champion changé entre-temps
+    paintPages(view, data);
+  }
+
   document.addEventListener("click", (event) => {
     if (!lo || lo.status !== "ready") return;
     if (event.target.closest("[data-open-editor]")) openEditor();
@@ -448,6 +520,7 @@
   Draft.onSync((state) => {
     if (editor && (!lo || state?.locked_id)) closeEditor();
     follow(state);
+    if (pagesView && (!lo || lo.championId !== pagesView.championId)) closePages(); // après follow : lo est déjà le nouveau champion
   });
 
   window.Loadout = { get model() { return lo; }, get tree() { return tree; }, applyPage, ensureTree };

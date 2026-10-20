@@ -1367,6 +1367,10 @@ def test_runes_js_sans_erreur_de_syntaxe():
     assert subprocess.run([node, "--check", str(path)], capture_output=True).returncode == 0
 
 
+def test_le_script_ouvre_les_pages_onetricks(client):
+    assert "/draft/loadout/pages" in client.get("/static/runes.js").text
+
+
 def test_la_colonne_est_vide_cote_serveur_et_appartient_au_script(client, bus):
     bus.publish("draft", pick_snapshot())
     html = client.get("/draft/stage").text

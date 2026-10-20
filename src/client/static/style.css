@@ -622,6 +622,17 @@ h1 { margin: 0 0 12px; font: 600 46px/1 var(--font-title); }
 .ed-rune-name { font-size: 12px; line-height: 1.2; }
 .ed-keys .ed-rune-name { font-size: 13px; }
 
+/* Pages OneTricks au choix (SPEC-38) */
+.lo-pages { margin-top: 18px; align-self: flex-start; }
+.lo-rune.is-diff { outline: 2px solid var(--c); outline-offset: 3px; }
+.pg-grid { margin-top: 22px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; flex: 1; min-height: 0; overflow-y: auto; }
+.pg-col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.pg-rank { font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--copper); }
+.pg-share { font-size: 13px; color: var(--ink-2); }
+.pg-duel { font-size: 12px; color: var(--muted); }
+.pg-col .lo-page, .pg-col .lo-page:hover { margin-top: 0; cursor: default; border-color: var(--tc); }
+.pg-col .lo-push { flex: none; }
+
 /* Partie trouvée (tâche 93) */
 .tb-pill[hidden] { display: none; }
 .tb-pill { margin-left: auto; cursor: pointer; font: inherit; font-size: 12px; background: transparent; }
