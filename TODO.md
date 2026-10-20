@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-10-20 (SPEC-35 livrée : étude « Moneyball » du début de partie, aucune action adoptée ; SPEC-33 : tâches 151 à 159 faites, mesure du terme de forme en attente de couverture (3 / 5 000), recette @pj35 à faire ; SPEC-32 livrée : classement MVP / ACE en post-game, recette @pj35 à faire ; SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette @pj35 à faire)
+**Mis à jour** : 2026-10-20 (SPEC-36 rédigée : morts sans contrepartie, axe et revue ; SPEC-35 livrée : étude « Moneyball » du début de partie, aucune action adoptée ; SPEC-33 : tâches 151 à 159 faites, mesure du terme de forme en attente de couverture (3 / 5 000), recette @pj35 à faire ; SPEC-32 livrée : classement MVP / ACE en post-game, recette @pj35 à faire ; SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette @pj35 à faire)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -376,6 +376,22 @@ pile réelle sur faux LCU (§3). Découpage en SPEC-34 §5 (tâches 163 à 170, 
 | 168 | Projet Remotion : versions exactes, config, polices, scènes « Accroche », « Draft », « Verrouillage » et « Clôture » | 5 | 166 | ✅ 2026-10-16 : Remotion 4.0.531 (licence gratuite pour un particulier, vérifiée sur LICENSE.md), polices du client, chiffres de draft relevés dans le manifeste par `capture_screens.py` (n° 1 Dr. Mundo 55,96 %, fin de draft 54,6 %) |
 | 169 | Scènes « En partie » (courbe SVG), « Revue et coaching » et « Mosaïque » ; `hero.gif` dans le README | 5 | 167, 168 | ✅ 2026-10-16 : teaser de 30,0 s en 1 920 × 1 080 sans audio (12,2 Mo) ; `hero.gif` 960 × 540 à 10 i/s, 4,1 Mo, encodé par ffmpeg (palette optimisée ; l'encodeur GIF de Remotion donnait 10,3 Mo), fond figé dans la boucle |
 | 170 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure ; recette à l'œil de @pj35 | 3 | 169 | ✅ 2026-10-16 ; recette à l'œil (captures, GIF, `docs/presentation/video/out/teaser.mp4`) laissée à @pj35 |
+
+### Lot suivant — SPEC-36, morts sans contrepartie : axe et revue (🟡 rédigée le 2026-10-20)
+
+[SPEC-36](docs/specs/SPEC-36-morts-sans-contrepartie.md) traduit SPEC-35 en jeu : au top, une mort sans contrepartie
+avant 14 min coûte −6,6 pts de win chance, et tes parties à 2 ou plus se gagnent à 27 % (64 % à 0). La règle passe
+dans `metrics.death_trades` et devient la métrique « Morts sans contrepartie avant 14 min » (grille des cinq rôles,
+poids 2). Un axe à cible fixe ≤ 1 (référence `fixed`) se fixe d'un clic dans l'accueil, à la place de « Morts / 10 min ».
+La revue de partie liste tes morts avant 14 min, échangées ou non, avec leur ΔP. @pj35 lève le seuil de SPEC-35 à sa
+décision ; arbitrages validés le 2026-10-20. Découpage en SPEC-36 §5 (tâches 177 à 180, 9 pts) :
+
+| # | Tâche | Pts | Dépend de | État |
+|---|---|---|---|---|
+| 177 | `metrics.death_trades` (règle déplacée de `moneyball.py`), métrique `untraded_deaths_14`, grille des cinq rôles, `GRID_VERSION` 2 | 3 | — | ⬜ |
+| 178 | Référence `fixed` : `GOAL_FIXED_TARGETS`, `set_goal` | 2 | 177 | ⬜ |
+| 179 | Revue : panneau « Tes morts avant 14 min », `MONEYBALL_DEATH_PTS` | 3 | 177 | ⬜ |
+| 180 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure, recette @pj35 | 1 | 178, 179 | ⬜ |
 
 ### Lot SPEC-35, étude « Moneyball » du début de partie (✅ livrée le 2026-10-20, rien d'adopté)
 
