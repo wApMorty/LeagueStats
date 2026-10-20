@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+## [5.8.2] - 2026-10-20
+
+LeagueStats a sa propre icône, sur la fenêtre comme sur l'exe, à la place du logo Python. Aucune action requise : pas de migration Alembic, pas de scrape.
+
 ### 🎨 Style
 
 - **Icône LeagueStats** — la fenêtre et l'exe ont leur propre icône (sceau or, gemme menthe, charte Alchimie) au lieu du logo Python ou de celle de PyInstaller.
