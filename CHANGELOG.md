@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### 🐛 Fix
+
+- **Icône dans la barre des tâches en mode Python** — lancé par `python lol_coach.py`, le client montrait encore le logo Python dans la barre des tâches : Windows y range le processus sous `python.exe`. Le client pose son propre identifiant d'application avant d'ouvrir la fenêtre, et la barre des tâches affiche l'icône LeagueStats.
+
 ## [5.8.2] - 2026-10-20
 
 LeagueStats a sa propre icône, sur la fenêtre comme sur l'exe, à la place du logo Python. Aucune action requise : pas de migration Alembic, pas de scrape.

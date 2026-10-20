@@ -27,6 +27,8 @@ class ClientConfig:
     WINDOW_ICON: str = (
         "src/client/static/icon.ico"  # aussi l'icône de l'exe (LeagueStatsCoach.spec)
     )
+    # Identifiant propre dans la barre des tâches : sans lui, `python.exe` y impose son logo.
+    APP_USER_MODEL_ID: str = "LeagueStats.Coach"
 
     # Réglage Motion (SPEC-21 §4.3) : « systeme » suit `prefers-reduced-motion`, « reduit » coupe
     # tout, « complet » anime quel que soit le système (Windows annonce `reduce` chez @pj35).

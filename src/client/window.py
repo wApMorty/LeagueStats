@@ -144,6 +144,12 @@ def _open(url: str, frameless: bool, should_close: Optional[ShouldClose] = None)
     import webview  # pylint: disable=import-outside-toplevel
 
     api = WindowApi(frameless)
+    try:  # sans identifiant propre, la barre des tâches montre le logo de `python.exe`
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+            client_config.APP_USER_MODEL_ID
+        )
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        print(f"[ALERTE] Identifiant d'application non posé, logo Python possible : {exc}")
     api._window = webview.create_window(
         client_config.WINDOW_TITLE,
         url,
