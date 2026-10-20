@@ -24,7 +24,8 @@ src/
 ├── assistant.py             # Coordinateur : délègue à analysis/*, draft/scoring.py
 ├── db.py                    # Couche base de données SQLite (requêtes paramétrées)
 ├── db_backup.py             # Sauvegarde/restauration avant les étapes destructives du pipeline
-├── pipeline.py               # Orchestrateur unique : scrape → contrôle complétude → recalcul → notif
+├── pipeline.py               # Orchestrateur unique : scrape → contrôle complétude → recalcul → notif ; verrou data/update.lock
+├── progress.py               # Rappel de progression et arrêt du pipeline (écran Données, SPEC-37)
 ├── draft_monitor.py          # Façade du Live Coach (intégration LCU), délègue à draft/
 ├── lcu_client.py              # Client API League Client Update (127.0.0.1:2999)
 ├── parser.py, parallel_parser.py, multilane.py, lane_discovery.py  # Scraping LoLalytics
@@ -88,6 +89,7 @@ src/
 │   ├── lcu_proxy.py, lcu_status.py           # Liste blanche des appels au LCU, sonde « client ouvert »
 │   ├── charts.py                              # Graphiques SVG purs (courbes, sparklines, histogramme, fiabilité)
 │   ├── data.py, home.py, review.py             # Données des écrans du coaching : rang, progression, calibration ; accueil ; parties et post-game
+│   ├── donnees.py                # Écran Données : mise à jour de la base dans un fil, avancement par lane (SPEC-37)
 │   ├── classement.py                           # Classement des dix joueurs d'une partie par ΔP, MVP et ACE (SPEC-32)
 │   ├── draft_*.py, found.py, assets.py          # Draft interactive, partie trouvée, Data Dragon local
 │   ├── profil.py, historique.py, collection.py   # Écrans du groupe Client lus dans le LCU : profil, historique, collection

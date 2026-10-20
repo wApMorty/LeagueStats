@@ -1,6 +1,6 @@
 # SPEC-37 — Écran « Données » : actualiser la base depuis le client
 
-**Statut** : 🟡 Rédigée le 2026-10-20, arbitrages de §2 validés le même jour.
+**Statut** : ✅ Livrée le 2026-10-20 (tâches 181 à 186) ; recette réelle de @pj35 à faire (§6, vérification de bout en bout).
 
 **Origine** : @pj35, 2026-10-20 — « Il manque un bouton/écran pour gérer le parsing des données depuis le GUI. Une
 page avec bouton "Actualiser" et état d'avancement (lane par lane, jauge 43/67 et champion en cours) semblerait
@@ -74,6 +74,8 @@ base vidée par une fermeture, un double lancement ou une draft en cours.
 ### 4.1 Progression et arrêt dans le pipeline (`src/parallel_parser_roles.py`, `src/multilane.py`, `src/pipeline.py`)
 
 Un seul type de rappel, `Progress = Callable[[dict], None]`, défini dans `src/pipeline.py` et transmis vers le bas.
+*Livré dans `src/progress.py` avec `PipelineCancelled` et `emit` : les placer dans `pipeline.py` ou `multilane.py`
+fermait un cycle d'imports avec `parallel_parser_roles.py`.*
 Chaque appel est enveloppé par `_emit(progress, event)` (dans `src/multilane.py`, importé par le parser) qui avale
 toute exception : la progression ne doit jamais faire échouer un scrape.
 

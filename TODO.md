@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-10-20 (SPEC-37 rédigée : écran « Données » pour actualiser la base depuis le client ; SPEC-36 livrée : morts sans contrepartie, axe et revue, recette @pj35 à faire ; SPEC-35 livrée : étude « Moneyball » du début de partie, aucune action adoptée ; SPEC-33 : tâches 151 à 159 faites, mesure du terme de forme en attente de couverture (3 / 5 000), recette @pj35 à faire ; SPEC-32 livrée : classement MVP / ACE en post-game, recette @pj35 à faire ; SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette @pj35 à faire)
+**Mis à jour** : 2026-10-20 (SPEC-37 livrée : écran « Données » pour actualiser la base depuis le client, recette @pj35 à faire ; SPEC-36 livrée : morts sans contrepartie, axe et revue, recette @pj35 à faire ; SPEC-35 livrée : étude « Moneyball » du début de partie, aucune action adoptée ; SPEC-33 : tâches 151 à 159 faites, mesure du terme de forme en attente de couverture (3 / 5 000), recette @pj35 à faire ; SPEC-32 livrée : classement MVP / ACE en post-game, recette @pj35 à faire ; SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette @pj35 à faire)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -377,7 +377,7 @@ pile réelle sur faux LCU (§3). Découpage en SPEC-34 §5 (tâches 163 à 170, 
 | 169 | Scènes « En partie » (courbe SVG), « Revue et coaching » et « Mosaïque » ; `hero.gif` dans le README | 5 | 167, 168 | ✅ 2026-10-16 : teaser de 30,0 s en 1 920 × 1 080 sans audio (12,2 Mo) ; `hero.gif` 960 × 540 à 10 i/s, 4,1 Mo, encodé par ffmpeg (palette optimisée ; l'encodeur GIF de Remotion donnait 10,3 Mo), fond figé dans la boucle |
 | 170 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure ; recette à l'œil de @pj35 | 3 | 169 | ✅ 2026-10-16 ; recette à l'œil (captures, GIF, `docs/presentation/video/out/teaser.mp4`) laissée à @pj35 |
 
-### Lot suivant — SPEC-37, écran « Données » : actualiser la base depuis le client (🟡 rédigée le 2026-10-20)
+### Lot SPEC-37, écran « Données » : actualiser la base depuis le client (✅ livrée le 2026-10-20, recette @pj35 à faire)
 
 [SPEC-37](docs/specs/SPEC-37-ecran-donnees-et-actualisation.md) ajoute au groupe Coaching un écran « Données » : un
 bouton « Actualiser » lance `run_pipeline` dans un fil du client, et la page (relue toutes les 2 s par htmx) suit
@@ -394,7 +394,7 @@ SPEC-37 §5 (tâches 181 à 186, 18 pts) :
 | 183 | `src/client/donnees.py` : `UpdateJob` (fil, état, ETA, logging restauré, `cancel`) et `donnees_view` ; constantes `DONNEES_*` | 3 | 181 | ✅ 2026-10-20 : 9 tests (lanes et champions en cours, échecs, ETA à 5 pages, double lancement, logging restauré, run qui lève, arrêt, `db_meta` tolérant, vue) |
 | 184 | Écran Données : routes, `NAV`, gabarits, CSS, refus en `draft`/`game`, bandeau de l'écran Draft | 5 | 182, 183 | ✅ 2026-10-20 : 7 tests (page et lien actif, sondage seulement pendant un run, 409 en draft et en partie, 403 sans jeton, bandeau du Draft) ; bandeau à clé `updating` pour la synchro par clé de `draft.js` |
 | 185 | Fermeture gardée : `window.run(should_close)`, dialogue de confirmation, `cancel` dans `launch.py` | 2 | 183 | ✅ 2026-10-20 : 4 tests (fermeture libre à l'arrêt, « non » garde la fenêtre, « oui » arrête avec le délai, câblage sur faux `webview` et garde en échec) ; dialogue réel à voir à la recette |
-| 186 | Clôture : `CHANGELOG.md`, statuts, README des specs, `docs/PROJECT_STRUCTURE.md`, recette @pj35 | 1 | 184, 185 | ⬜ |
+| 186 | Clôture : `CHANGELOG.md`, statuts, README des specs, `docs/PROJECT_STRUCTURE.md`, recette @pj35 | 1 | 184, 185 | ✅ 2026-10-20 (docs) ; recette @pj35 à faire |
 
 ### Lot SPEC-36, morts sans contrepartie : axe et revue (✅ livrée le 2026-10-20, recette @pj35 à faire)
 
