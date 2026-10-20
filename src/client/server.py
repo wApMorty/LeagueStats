@@ -32,8 +32,12 @@ def start(
     bus: Any = None,
     lcu: Any = None,
     commands: Optional[Callable[[str], bool]] = None,
+    update_job: Any = None,
 ) -> Optional[str]:
-    """Démarre le serveur (une seule fois) et renvoie son URL, ou `None` en cas d'échec."""
+    """Démarre le serveur (une seule fois) et renvoie son URL, ou `None` en cas d'échec.
+
+    `update_job` est le job de mise à jour de l'écran Données (None : l'application en crée un).
+    """
     global _server, _thread, _url  # pylint: disable=global-statement
     with _lock:
         if _url is not None:
@@ -42,7 +46,7 @@ def start(
             # log_config=None : sans console (exe fenêtré), sys.stdout vaut None et le
             # logging d'uvicorn plante (SPEC-21 §8).
             config = uvicorn.Config(
-                create_app(db_path, bus, lcu, commands=commands),
+                create_app(db_path, bus, lcu, commands=commands, update_job=update_job),
                 host=client_config.HOST,
                 port=client_config.PORT,
                 log_level="warning",

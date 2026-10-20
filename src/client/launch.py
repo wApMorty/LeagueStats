@@ -17,6 +17,7 @@ from ..ui.checks import check_database, check_dependencies
 from ..user_prefs import UserPrefs, load_user_prefs
 from . import server, window
 from .bus import EventBus
+from .donnees import UpdateJob
 from .ingame import LiveGame
 from .lcu_events import LcuEvents
 from .lcu_proxy import LcuProxy
@@ -89,6 +90,27 @@ class LiveCoachThread:
             print(f"[ALERTE] Live Coach arrêté : {exc}")
 
 
+def close_guard(job: UpdateJob, timeout: float) -> Callable[[Callable[[str, str], bool]], bool]:
+    """Garde de fermeture de la fenêtre : demande confirmation si une mise à jour tourne.
+
+    Job à l'arrêt : ferme sans demander. Job en cours : `confirm` ; « non » annule la fermeture,
+    « oui » arrête le run (au plus `timeout` secondes) puis ferme.
+    """
+
+    def should_close(confirm: Callable[[str, str], bool]) -> bool:
+        if not job.running:
+            return True
+        if not confirm(
+            "Mise à jour en cours",
+            "Fermer arrête la mise à jour et restaure la base d'avant. Fermer ?",
+        ):
+            return False
+        job.cancel(timeout)
+        return True
+
+    return should_close
+
+
 def _wait_for_interrupt() -> None:
     try:
         threading.Event().wait()
@@ -123,7 +145,10 @@ def run_client(verbose: bool = False) -> bool:
         return False
     bus = EventBus()
     coach = LiveCoachThread(bus, verbose)
-    url = server.start(config.DATABASE_PATH, bus, LCUClient(verbose=verbose), coach.send)
+    job = UpdateJob()
+    url = server.start(
+        config.DATABASE_PATH, bus, LCUClient(verbose=verbose), coach.send, update_job=job
+    )
     if url is None:
         return False
     print(f"[INFO] Client LeagueStats sur {url}")
@@ -133,10 +158,12 @@ def run_client(verbose: bool = False) -> bool:
         events.start()
         game.start()
         coach.start()
-        if not window.run(url):
+        if not window.run(url, close_guard(job, client_config.DONNEES_CLOSE_TIMEOUT_S)):
             print("[INFO] Ctrl+C pour arrêter le client")
             _wait_for_interrupt()
     finally:
+        if job.running:
+            job.cancel(client_config.DONNEES_CLOSE_TIMEOUT_S)
         coach.stop()
         game.stop()
         events.stop()

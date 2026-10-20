@@ -11,11 +11,13 @@ import os
 import sys
 import webbrowser
 from ctypes import wintypes
-from typing import Optional, Tuple
+from typing import Any, Callable, Optional, Tuple
 
 from ..config_client import client_config
 
 Rect = Tuple[int, int, int, int]  # x, y, largeur, hauteur
+Confirm = Callable[[str, str], bool]  # (titre, message) -> oui ?
+ShouldClose = Callable[[Confirm], bool]  # garde : True ferme la fenêtre
 
 _MONITOR_DEFAULTTONEAREST = 2
 _BASE_DPI = 96
@@ -124,7 +126,20 @@ class WindowApi:
         self._window.resize(max(min_width, int(width)), max(min_height, int(height)), fix_point)
 
 
-def _open(url: str, frameless: bool) -> None:
+def _closing_handler(window_obj: Any, should_close: ShouldClose) -> Callable[[], bool]:
+    """Gestionnaire de `events.closing` : la garde décide ; une exception ferme (best-effort)."""
+
+    def on_closing() -> bool:
+        try:
+            return bool(should_close(window_obj.create_confirmation_dialog))
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            print(f"[ALERTE] Garde de fermeture en échec, fermeture sans garde : {exc}")
+            return True
+
+    return on_closing
+
+
+def _open(url: str, frameless: bool, should_close: Optional[ShouldClose] = None) -> None:
     import webview  # pylint: disable=import-outside-toplevel
 
     api = WindowApi(frameless)
@@ -139,18 +154,26 @@ def _open(url: str, frameless: bool) -> None:
         easy_drag=False,
         background_color=client_config.WINDOW_BACKGROUND,
     )
+    if should_close is not None:
+        try:
+            api._window.events.closing += _closing_handler(api._window, should_close)
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            print(f"[ALERTE] Garde de fermeture non branchée, fermeture sans garde : {exc}")
     webview.start()
 
 
-def run(url: str) -> bool:
+def run(url: str, should_close: Optional[ShouldClose] = None) -> bool:
     """Ouvre la fenêtre sur `url` et rend la main à sa fermeture (fil principal, bloquant).
+
+    `should_close` (garde de fermeture) reçoit `confirm(titre, message)` et renvoie True pour
+    fermer ; False annule la fermeture.
 
     Repli : fenêtre standard, puis navigateur par défaut (la page masque alors son cadre). Renvoie
     False si la fenêtre n'a pas pu s'ouvrir ; ne lève jamais d'exception.
     """
     for frameless in (True, False):
         try:
-            _open(url, frameless)
+            _open(url, frameless, should_close)
             return True
         except Exception as exc:  # pylint: disable=broad-exception-caught
             kind = "sans bordure" if frameless else "standard"

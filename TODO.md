@@ -393,7 +393,7 @@ SPEC-37 §5 (tâches 181 à 186, 18 pts) :
 | 182 | Verrou `data/update.lock` (PID, `psutil`) dans `run_pipeline`, `UPDATE_LOCK_FILE` | 2 | — | ✅ 2026-10-20 : 4 tests (PID vivant refusé sans sauvegarde ni scrape, PID mort et fichier illisible repris, verrou levé après succès et échec) |
 | 183 | `src/client/donnees.py` : `UpdateJob` (fil, état, ETA, logging restauré, `cancel`) et `donnees_view` ; constantes `DONNEES_*` | 3 | 181 | ✅ 2026-10-20 : 9 tests (lanes et champions en cours, échecs, ETA à 5 pages, double lancement, logging restauré, run qui lève, arrêt, `db_meta` tolérant, vue) |
 | 184 | Écran Données : routes, `NAV`, gabarits, CSS, refus en `draft`/`game`, bandeau de l'écran Draft | 5 | 182, 183 | ✅ 2026-10-20 : 7 tests (page et lien actif, sondage seulement pendant un run, 409 en draft et en partie, 403 sans jeton, bandeau du Draft) ; bandeau à clé `updating` pour la synchro par clé de `draft.js` |
-| 185 | Fermeture gardée : `window.run(should_close)`, dialogue de confirmation, `cancel` dans `launch.py` | 2 | 183 | ⬜ |
+| 185 | Fermeture gardée : `window.run(should_close)`, dialogue de confirmation, `cancel` dans `launch.py` | 2 | 183 | ✅ 2026-10-20 : 4 tests (fermeture libre à l'arrêt, « non » garde la fenêtre, « oui » arrête avec le délai, câblage sur faux `webview` et garde en échec) ; dialogue réel à voir à la recette |
 | 186 | Clôture : `CHANGELOG.md`, statuts, README des specs, `docs/PROJECT_STRUCTURE.md`, recette @pj35 | 1 | 184, 185 | ⬜ |
 
 ### Lot SPEC-36, morts sans contrepartie : axe et revue (✅ livrée le 2026-10-20, recette @pj35 à faire)
