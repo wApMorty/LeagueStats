@@ -1,6 +1,6 @@
 # SPEC-38 — Trois pages de runes OneTricks au choix pendant la draft
 
-**Statut** : 🟡 Rédigée le 2026-10-20, arbitrages de §2 validés par @pj35 le jour même, spec à valider avant `/implement`.
+**Statut** : ✅ Livrée le 2026-10-20 (tâches 187 à 190), recette @pj35 en draft réelle à faire. Rédigée et validée le même jour.
 
 **Origine** : @pj35, 2026-10-20 — « J'aimerais pouvoir choisir mes runes avec un peu plus de précision pendant la
 préparation de la draft. Possible de me faire un écran avec les 3 pages de runes les plus recommandées selon notre
