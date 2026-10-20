@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-10-20 (SPEC-39 livrée : diagnostic complet et « Appliquer » sur l'écran Calibration, recette @pj35 à faire ; SPEC-38 livrée : trois pages de runes OneTricks au choix pendant la draft, recette @pj35 à faire ; SPEC-37 livrée : écran « Données » pour actualiser la base depuis le client, recette @pj35 à faire ; SPEC-36 livrée : morts sans contrepartie, axe et revue, recette @pj35 à faire ; SPEC-35 livrée : étude « Moneyball » du début de partie, aucune action adoptée ; SPEC-33 : tâches 151 à 159 faites, mesure du terme de forme en attente de couverture (3 / 5 000), recette @pj35 à faire ; SPEC-32 livrée : classement MVP / ACE en post-game, recette @pj35 à faire ; SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette @pj35 à faire)
+**Mis à jour** : 2026-10-20 (SPEC-40 rédigée : victoire immédiate sur les cartes de draft, comme le grimoire ; SPEC-39 livrée : diagnostic complet et « Appliquer » sur l'écran Calibration, recette @pj35 à faire ; SPEC-38 livrée : trois pages de runes OneTricks au choix pendant la draft, recette @pj35 à faire ; SPEC-37 livrée : écran « Données » pour actualiser la base depuis le client, recette @pj35 à faire ; SPEC-36 livrée : morts sans contrepartie, axe et revue, recette @pj35 à faire ; SPEC-35 livrée : étude « Moneyball » du début de partie, aucune action adoptée ; SPEC-33 : tâches 151 à 159 faites, mesure du terme de forme en attente de couverture (3 / 5 000), recette @pj35 à faire ; SPEC-32 livrée : classement MVP / ACE en post-game, recette @pj35 à faire ; SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette @pj35 à faire)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -376,6 +376,20 @@ pile réelle sur faux LCU (§3). Découpage en SPEC-34 §5 (tâches 163 à 170, 
 | 168 | Projet Remotion : versions exactes, config, polices, scènes « Accroche », « Draft », « Verrouillage » et « Clôture » | 5 | 166 | ✅ 2026-10-16 : Remotion 4.0.531 (licence gratuite pour un particulier, vérifiée sur LICENSE.md), polices du client, chiffres de draft relevés dans le manifeste par `capture_screens.py` (n° 1 Dr. Mundo 55,96 %, fin de draft 54,6 %) |
 | 169 | Scènes « En partie » (courbe SVG), « Revue et coaching » et « Mosaïque » ; `hero.gif` dans le README | 5 | 167, 168 | ✅ 2026-10-16 : teaser de 30,0 s en 1 920 × 1 080 sans audio (12,2 Mo) ; `hero.gif` 960 × 540 à 10 i/s, 4,1 Mo, encodé par ffmpeg (palette optimisée ; l'encodeur GIF de Remotion donnait 10,3 Mo), fond figé dans la boucle |
 | 170 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure ; recette à l'œil de @pj35 | 3 | 169 | ✅ 2026-10-16 ; recette à l'œil (captures, GIF, `docs/presentation/video/out/teaser.mp4`) laissée à @pj35 |
+
+### Lot SPEC-40, victoire immédiate sur les cartes de draft (🟡 rédigée le 2026-10-20)
+
+[SPEC-40](docs/specs/SPEC-40-victoire-immediate-sur-les-cartes-de-draft.md) aligne les cartes de recommandation et la
+jauge sur le grimoire. Aujourd'hui la carte montre la fin de draft attendue de la recherche (adversaires qui contrent
+au mieux), toujours sous la position actuelle, et le grimoire la victoire si je verrouille maintenant : en B2, cartes
+48,22 / 48,16 / 48,10 % (−1,2 pt) contre 49,48 / 50,27 / 49,95 % au grimoire. Le gros chiffre devient l'immédiat,
+la fin de draft passe en sous-ligne et garde l'ordre, l'écart vaut immédiat − position, la jauge suit tout champion
+survolé. Arbitrages validés le 2026-10-20. Découpage en SPEC-40 §5 (tâches 194 et 195, 4 pts) :
+
+| # | Tâche | Pts | Dépend de | État |
+|---|---|---|---|---|
+| 194 | `_immediate`, cartes (gros chiffre, écart, sous-ligne) et `state.win` / `state.names` dans `draft_view.py` ; test de régression rouge puis vert ; tests de la jauge et du repli | 3 | — | ⬜ |
+| 195 | Barre du grimoire (`_info`) avec les deux chiffres et son test ; `CHANGELOG.md`, statuts, README des specs ; recette @pj35 | 1 | 194 | ⬜ |
 
 ### Lot SPEC-39, écran Calibration : diagnostic complet et « Appliquer » (✅ livrée le 2026-10-20, recette @pj35 à faire)
 
