@@ -388,7 +388,7 @@ survolé. Arbitrages validés le 2026-10-20. Découpage en SPEC-40 §5 (tâches 
 
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
-| 194 | `_immediate`, cartes (gros chiffre, écart, sous-ligne) et `state.win` / `state.names` dans `draft_view.py` ; test de régression rouge puis vert ; tests de la jauge et du repli | 3 | — | ⬜ |
+| 194 | `_immediate`, cartes (gros chiffre, écart, sous-ligne) et `state.win` / `state.names` dans `draft_view.py` ; test de régression rouge puis vert ; tests de la jauge et du repli | 3 | — | ✅ 2026-10-20 : régression rouge puis verte (carte Aatrox 54,82 % → 50,27 %, comme sa tuile) ; `state.win` couvre tout champion libre |
 | 195 | Barre du grimoire (`_info`) avec les deux chiffres et son test ; `CHANGELOG.md`, statuts, README des specs ; recette @pj35 | 1 | 194 | ⬜ |
 
 ### Lot SPEC-39, écran Calibration : diagnostic complet et « Appliquer » (✅ livrée le 2026-10-20, recette @pj35 à faire)

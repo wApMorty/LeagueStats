@@ -313,6 +313,18 @@ def test_état_chrono_balance_et_probabilités(client, bus):
     assert state["names"]["266"] == "Aatrox"
 
 
+def test_jauge_lit_la_victoire_immediate_des_champions_libres(client, bus):
+    champions = [
+        asdict(SnapshotChampion(266, "Aatrox", ["top"], 0.5027, None)),
+        asdict(SnapshotChampion(122, "Darius", ["top"], 0.5390, None)),
+        asdict(SnapshotChampion(103, "Ahri", ["middle"], 0.4950, None)),
+    ]
+    bus.publish("draft", pick_snapshot(champions=champions))
+    state = state_of(client.get("/draft/stage").text)
+    assert state["win"] == {"266": 0.5027, "122": 0.539, "103": 0.495}
+    assert state["names"]["103"] == "Ahri"
+
+
 def test_phases(client, bus):
     cases = [
         (ban_snapshot(), "ban"),

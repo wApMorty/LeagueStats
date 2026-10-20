@@ -374,11 +374,26 @@ def ban_strips(snapshot: Dict[str, Any], champions: Champions) -> Dict[str, Any]
     return {"me": me_slot, "allies": ally_slots[:4], "foes": foe_slots}
 
 
+def _immediate(snapshot: Dict[str, Any]) -> Dict[int, float]:
+    """La victoire immédiate (0 à 1) de chaque champion de la table, quand le Live Coach l'a calculée."""
+    return {
+        row["champion_id"]: row["win_probability"]
+        for row in snapshot.get("champions") or []
+        if row["win_probability"] is not None
+    }
+
+
 def recommendations(snapshot: Dict[str, Any], champions: Champions) -> List[Dict[str, Any]]:
-    """Les cartes de pick : portrait, win %, écart, suite attendue (README : « Draft, phase de picks »)."""
+    """Les cartes de pick : victoire immédiate, écart à la base, fin de draft attendue et suite.
+
+    Le gros chiffre et l'écart sont la victoire immédiate (ce que je gagne si je le prends maintenant),
+    comme la tuile du grimoire ; la sous-ligne garde la fin de draft attendue (la recherche). Sans victoire
+    immédiate pour le champion, la carte garde la valeur de la recherche et son écart d'origine.
+    """
+    immediate = _immediate(snapshot)
+    base = snapshot.get("base_probability")
     cards = []
     for index, rec in enumerate(snapshot["recommendations"][: client_config.DRAFT_REC_COUNT]):
-        delta = rec["delta"]
         variation = ", ".join(
             (
                 f"{step['champion']} ({ROLE_LABELS.get(step['lane'], step['lane'])})"
@@ -387,6 +402,18 @@ def recommendations(snapshot: Dict[str, Any], champions: Champions) -> List[Dict
             )
             for step in rec["variation"]
         )
+        now = immediate.get(rec["champion_id"])
+        if now is None:
+            win = fr(rec["win_probability"] * 100, 2) + " %"
+            delta = rec["delta"]
+            line = f"Suite attendue : {variation}" if variation else "Suite attendue : —"
+        else:
+            win = fr(now * 100, 2) + " %"
+            delta = None if base is None else (now - base) * 100.0
+            line = (
+                f"Fin de draft attendue {fr(rec['win_probability'] * 100, 2)} % · "
+                f"suite : {variation or '—'}"
+            )
         cards.append(
             {
                 "champion_id": rec["champion_id"],
@@ -394,10 +421,10 @@ def recommendations(snapshot: Dict[str, Any], champions: Champions) -> List[Dict
                 "img": champions.image(rec["champion_id"]),
                 "hue": REC_HUES[index % len(REC_HUES)],
                 "games": f"{games_short(rec['games'])} games",
-                "win": fr(rec["win_probability"] * 100, 2) + " %",
+                "win": win,
                 "delta": (None if delta is None else signed(delta) + " pts"),
                 "up": delta is None or delta >= 0,
-                "line": f"Suite attendue : {variation}" if variation else "Suite attendue : —",
+                "line": line,
                 "delay": 500 + index * 90,
             }
         )
@@ -477,6 +504,15 @@ def stage_view(
     skin = skin_row(snapshot, champions, skins if phase in ("locked", "final") else None)
     base, projected = snapshot.get("base_probability"), snapshot.get("projected_probability")
     shown = projected if projected is not None else base
+    win = {
+        str(r["champion_id"]): r["win_probability"]
+        for r in snapshot["recommendations"]
+        if r["champion_id"]
+    }
+    # La jauge lit l'immédiat de tout champion libre, repli sur la recherche.
+    win.update({str(cid): p for cid, p in _immediate(snapshot).items()})
+    names = {cid: champions.name(int(cid)) for cid in win}
+    names.update({str(r["champion_id"]): r["name"] for r in recs + bans if r["champion_id"]})
     # Ce que le script de l'écran lit à chaque rafraîchissement : le chrono, la balance, la sélection.
     state = {
         "phase": phase,
@@ -487,11 +523,7 @@ def stage_view(
         "base": base,
         "projected": projected,
         "shown": shown,
-        "win": {
-            str(r["champion_id"]): r["win_probability"]
-            for r in snapshot["recommendations"]
-            if r["champion_id"]
-        },
+        "win": win,
         "hover_id": (sealed["me"] or {}).get("champion_id") or snapshot_hover(snapshot),
         "locked_id": (sealed["me"] or {}).get("champion_id") or 0,
         "skin_id": skin["chosen_id"],
@@ -500,7 +532,7 @@ def stage_view(
         "ban_hover_id": (snapshot.get("my_ban_hover") or {}).get("champion_id") or 0,
         "recs": [r["champion_id"] for r in recs],
         "bans": [b["champion_id"] for b in bans],
-        "names": {str(r["champion_id"]): r["name"] for r in recs + bans if r["champion_id"]},
+        "names": names,
     }
     role = ROLE_LABELS.get(snapshot.get("local_role"), "")
     versus = snapshot.get("versus")
