@@ -14,8 +14,9 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from markupsafe import Markup
 
-from ..coaching.metrics import METRICS, format_value
+from ..coaching.metrics import METRICS, death_trades, format_value
 from ..config_client import client_config
+from ..config_constants import coaching_config
 from ..repositories.coaching import CoachingRepository
 from ..winprob.impact import KILL_TYPES, event_kind, impacts, scoring_team
 from ..winprob.model import WinModel
@@ -86,6 +87,60 @@ def _pts(delta: float) -> str:
     """Points de win chance signés, à la française, sans « −0,0 »."""
     points = round(delta * 100, 1)
     return fr(0, 1) if points == 0 else signed(points, 1)
+
+
+def _traded(trade: dict, players: Dict[int, dict], champions: Champions) -> str:
+    """Libellé court de l'événement qui échange une mort, suivi de son heure. Un objectif non suivi
+    par `event_kind` (Atakhan) se dit « Objectif »."""
+    try:
+        kind = event_kind(trade)
+    except KeyError:
+        label = "Objectif"
+    else:
+        if kind == "kill":
+            label = f"Kill sur {champions.name(players[trade['victimId']]['championId'])}"
+        else:
+            label = SHORT.get(kind, LABELS[kind].capitalize())
+    return f"{label} {clock(trade['timestamp'] / 1000)}"
+
+
+def _deaths(
+    game: dict,
+    timeline: dict,
+    pid: int,
+    role: Optional[str],
+    rows: List[dict],
+    champions: Champions,
+) -> dict:
+    """Les morts de `pid` avant LANE_MINUTE : tueur, échange, ΔP et taux mesurés de son rôle (SPEC-36 §4.3)."""
+    players = {p["participantId"]: p for p in game["participants"]}
+    impact_at: Dict[int, float] = {}
+    for r in rows:
+        if r["participant_id"] == pid and r["event_type"] in DEATHS:
+            impact_at[r["event_time_ms"]] = impact_at.get(r["event_time_ms"], 0.0) + r["delta_p"]
+    out = []
+    for dt in death_trades(game, timeline, pid, coaching_config.LANE_MINUTE):
+        death = dt.death
+        killer = players.get(death.get("killerId", 0))
+        at = death["timestamp"]
+        out.append(
+            {
+                "time": clock(at / 1000),
+                "killer": champions.name(killer["championId"]) if killer else "Tourelle / sbires",
+                "solo": killer is not None and not death.get("assistingParticipantIds"),
+                "traded": _traded(dt.trade, players, champions) if dt.trade else None,
+                "delta_text": f"{_pts(impact_at[at])} pts" if at in impact_at else "—",
+                "untraded": dt.trade is None,
+            }
+        )
+    rates = None
+    if role in coaching_config.MONEYBALL_DEATH_PTS:
+        death_pts, untraded_pts = coaching_config.MONEYBALL_DEATH_PTS[role]
+        rates = (
+            f"Taux mesurés en {ROLE_LABELS[role]} : une mort ≈ {signed(death_pts, 1)} pts, "
+            f"une mort sans contrepartie ≈ {signed(untraded_pts, 1)} pts (SPEC-35)"
+        )
+    return {"rows": out, "untraded": sum(r["untraded"] for r in out), "rates": rates}
 
 
 # ---------- liste ----------
@@ -346,6 +401,7 @@ def game_page(
         "curve_note": None,
         "impact_note": None,
         "impact": {"available": False, "costly": [], "profitable": [], "events": []},
+        "deaths": None,
         "ranking": None,
         "lp": None,
         "axes": [],
@@ -365,6 +421,8 @@ def game_page(
         if not points:
             page["curve_note"] = "Courbe indisponible pour cette partie."
     rows = repo.impact_rows(game_id)
+    if timeline is not None:
+        page["deaths"] = _deaths(game, timeline, pid, roles.get(pid), rows, champions)
     events = _events(rows, timeline, game, pid, champions) if rows and timeline else []
     if events:
         mine = [e for e in events if e["mine"]]

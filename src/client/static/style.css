@@ -824,6 +824,12 @@ h2 { margin: 0; font: 600 24px/1 var(--font-title); }
 .top-row b { display: block; font: 600 22px/1.05 var(--font-title); }
 .top-row i { display: block; font-style: normal; font-size: 13px; color: var(--muted); }
 .top-delta { font: 600 30px/1 var(--font-title); }
+/* Tes morts avant 14 min (SPEC-36 §4.3) : grille des tops, une colonne d'échange en plus */
+.deaths { display: flex; flex-direction: column; gap: 12px; }
+.death-row { grid-template-columns: 62px minmax(0, 1fr) minmax(0, 1fr) auto; }
+.death-row .top-delta { font-size: 22px; }
+.death-traded { color: var(--mint); font-size: 14px; }
+.death-untraded { color: var(--rose); font-size: 14px; }
 
 /* Classement de la partie (SPEC-32) : deux listes de cinq, portraits, barres, couronnes MVP et ACE */
 .ranking { display: flex; flex-direction: column; gap: 14px; }

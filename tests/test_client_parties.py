@@ -1,6 +1,7 @@
 """Écrans Parties et page d'une partie du client (SPEC-21 tâche 53), sur la partie réelle
 7998195590 relevée par le spike du 2026-10-02 (équipe bleue victorieuse, 26 images)."""
 
+import copy
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -12,6 +13,7 @@ from src.client.app import create_app
 from src.client.assets import Assets
 from src.client.review import clock, game_page, games_view, load_model
 from src.client.draft_view import Champions
+from src.coaching.metrics import death_trades
 from src.config_client import client_config
 from src.repositories.coaching import CoachingRepository
 from src.winprob.impact import impacts
@@ -64,7 +66,9 @@ def capture(db, game_id=7998195590, pid=1, created="2026-10-05 16:00:00", timeli
         duration_s=GAME["gameDuration"],
         player_participant_id=pid,
         raw_game=raw or json.dumps(GAME),
-        raw_timeline=json.dumps(TIMELINE) if timeline else None,
+        raw_timeline=(
+            json.dumps(timeline if isinstance(timeline, dict) else TIMELINE) if timeline else None
+        ),
         raw_eog=None,
     )
 
@@ -250,6 +254,56 @@ def test_prediction_de_draft_rattachee_a_la_partie(db, assets, modele):
     db.update_prediction_outcome(prediction_id, 1, game_id=7998195590)
     page = game_page(CoachingRepository(db), 7998195590, Champions(assets), modele, NOW)
     assert page["predicted"] == "54,8 % · modèle b7-v1"
+
+
+def _deaths_page(db, assets, modele, **kwargs):
+    capture(db, pid=1, **kwargs)
+    roles(db, 7998195590)
+    return game_page(CoachingRepository(db), 7998195590, Champions(assets), modele, NOW)["deaths"]
+
+
+def test_les_morts_avant_14_min_avec_echange_et_impact(db, assets, modele):
+    impact(db)
+    deaths = _deaths_page(db, assets, modele)
+    expected = death_trades(GAME, TIMELINE, 1, 14)
+    assert expected and len(deaths["rows"]) == len(expected)
+    assert deaths["untraded"] == sum(t.trade is None for t in expected)
+    assert [r["time"] for r in deaths["rows"]] == [
+        clock(t.death["timestamp"] / 1000) for t in expected
+    ]
+    stored = {
+        r["event_time_ms"]: r["delta_p"]
+        for r in CoachingRepository(db).impact_rows(7998195590)
+        if r["participant_id"] == 1 and r["event_type"] in ("death", "death_solo")
+    }
+    first = expected[0].death["timestamp"]
+    assert first in stored and deaths["rows"][0]["delta_text"].endswith(" pts")
+    assert deaths["rows"][0]["delta_text"] != "—"
+    assert deaths["rows"][0]["traded"]  # les deux morts de la fixture sont échangées
+    assert deaths["rows"][0]["traded"].endswith(clock(expected[0].trade["timestamp"] / 1000))
+    assert deaths["rates"].startswith("Taux mesurés en Top")
+
+
+def test_une_mort_sans_contrepartie_est_dite(db, temp_db, assets, modele):
+    scoring = {"CHAMPION_KILL", "ELITE_MONSTER_KILL", "BUILDING_KILL"}
+    timeline = copy.deepcopy(TIMELINE)
+    for frame in timeline["frames"]:
+        frame["events"] = [
+            e
+            for e in frame["events"]
+            if e["type"] not in scoring or (e["type"] == "CHAMPION_KILL" and e.get("victimId") == 1)
+        ]
+    deaths = _deaths_page(db, assets, modele, timeline=timeline)
+    assert deaths["rows"] and all(r["traded"] is None for r in deaths["rows"])
+    assert deaths["untraded"] == len(deaths["rows"])
+    assert all(r["delta_text"] == "—" for r in deaths["rows"])  # aucun impact écrit
+    page = client(temp_db, assets).get("/parties/7998195590").text
+    assert "Tes morts avant 14 min" in page and "Sans contrepartie" in page
+
+
+def test_sans_timeline_pas_de_panneau_des_morts(db, temp_db, assets, modele):
+    assert _deaths_page(db, assets, modele, timeline=False) is None
+    assert "Tes morts avant 14 min" not in client(temp_db, assets).get("/parties/7998195590").text
 
 
 def test_route_page_d_une_partie(db, temp_db, assets, modele):

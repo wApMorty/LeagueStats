@@ -5,7 +5,7 @@ Sorties de config_constants.py, qui dépassait 500 lignes ; il les réexporte
 """
 
 from dataclasses import dataclass, field
-from typing import Dict
+from typing import Dict, Tuple
 
 
 @dataclass
@@ -101,6 +101,17 @@ class CoachingConfig:
     MONEYBALL_SEED: int = 35
     # Parties du recoupement SPEC-20 (SPEC-35 §4.5, ~1 min pour 5 000 parties mesuré le 2026-10-20).
     MONEYBALL_IMPACT_SAMPLE: int = 5_000
+    # Taux mesurés par rôle (mort, mort sans contrepartie) en points de win chance : SPEC-35 §8, mesurés le
+    # 2026-10-20. Pied du panneau « Tes morts avant 14 min » (SPEC-36 §4.3).
+    MONEYBALL_DEATH_PTS: Dict[str, Tuple[float, float]] = field(
+        default_factory=lambda: {
+            "top": (-3.30, -6.64),
+            "jungle": (-5.83, -8.59),
+            "middle": (-5.03, -7.96),
+            "bottom": (-4.43, -7.65),
+            "support": (-5.35, -8.99),
+        }
+    )
 
 
 coaching_config = CoachingConfig()

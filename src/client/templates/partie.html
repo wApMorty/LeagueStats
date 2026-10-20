@@ -82,6 +82,22 @@
       {% endfor %}
     </div>
     {% endif %}
+    {% if g.deaths %}
+    <section class="panel deaths" data-fade="1" data-delay="1100">
+      <div class="ranking-head"><h2>Tes morts avant 14 min</h2><span class="muted-2">{{ g.deaths.untraded }} sans contrepartie</span></div>
+      {% for d in g.deaths.rows %}
+      <div class="top-row death-row">
+        <span class="tab muted">{{ d.time }}</span>
+        <span><b>{{ d.killer }}{% if d.solo %}<em>solo</em>{% endif %}</b></span>
+        {% if d.traded %}<span class="death-traded">Échangée : {{ d.traded }}</span>{% else %}<span class="death-untraded">Sans contrepartie</span>{% endif %}
+        <span class="top-delta tab">{{ d.delta_text }}</span>
+      </div>
+      {% else %}
+      <p class="muted">Aucune mort avant 14 min.</p>
+      {% endfor %}
+      {% if g.deaths.rates %}<p class="fine">{{ g.deaths.rates }}</p>{% endif %}
+    </section>
+    {% endif %}
   </div>
 
   <aside class="side">
