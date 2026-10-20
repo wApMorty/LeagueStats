@@ -1,6 +1,6 @@
 # SPEC-39 — Écran Calibration : diagnostic complet et « Appliquer »
 
-**Statut** : 🟡 Rédigée le 2026-10-20, arbitrages validés par @pj35 le 2026-10-20 (§2).
+**Statut** : ✅ Livrée le 2026-10-20 (tâches 191 à 193) ; recette réelle de @pj35 à faire (§6, vérification de bout en bout).
 
 **Origine** : @pj35, 2026-10-20 — « Il faudrait que l'écran calibration me propose un bouton pour exécuter
 calibrate_model. »
@@ -44,7 +44,7 @@ avec le même garde-fou que le Live Coach.
 
 | Sujet | Décision |
 |---|---|
-| Rôle du bouton | **Validé (@pj35, 2026-10-20)** : facteur, intervalle à 90 % et K suggérés affichés d'office (pas de bouton de calcul). Un bouton « Appliquer » reprend la règle de `build_proposal` (≥ 100 issues, intervalle qui exclut 1,0 sans atteindre 0) ; il écrit `calibration.json`, passe `MODEL_VERSION` à `+calN` et vaut tout de suite pour le Live Coach du client. Grisé avec la raison sinon (aujourd'hui : « l'intervalle contient 1,0 »). |
+| Rôle du bouton | **Validé (@pj35, 2026-10-20)** : facteur, intervalle à 90 % et K suggérés affichés d'office (pas de bouton de calcul). Un bouton « Appliquer » reprend la règle de `build_proposal` (≥ 100 issues, intervalle qui exclut 1,0 sans atteindre 0) ; il écrit `calibration.json`, passe `MODEL_VERSION` à `+calN` et vaut tout de suite pour le Live Coach du client. Grisé avec la raison sinon (aujourd'hui : « l'intervalle atteint 0 », la borne basse −1,17 passant avant le test de 1,0 ; corrigé à l'implémentation, la rédaction disait « contient 1,0 »). |
 | Draft ou partie en cours | **Validé (@pj35, 2026-10-20)** : « Appliquer » grisé en phase `draft` et `game`, avec la raison ; 409 côté serveur. Même règle que l'écran Données. |
 | Retour aux K du code | **Validé (@pj35, 2026-10-20)** : pas de bouton « Rétablir » ; supprimer `calibration.json` à la main suffit. |
 | Version affichée ≠ version courante | Décidé à la rédaction (découle du code) : « Appliquer » et les K suggérés seulement pour la version courante. Les K suggérés multiplient les K *en vigueur* ; sur une ancienne version ils ne voudraient rien dire. Une ancienne version garde facteur et intervalle. |
@@ -99,8 +99,9 @@ refuse déjà, `src/client/data.py:513`).
 - `can_apply` (bool) et `apply_reason` (str ou None) : la première raison parmi version non courante (« Seule la
   version courante {current} se règle »), `phase_reason(phase_kind)`, `Diagnostic.refusal`.
 
-Dans `src/client/donnees.py`, la partie phase de `_reason` devient une fonction publique
-`phase_reason(phase_kind: str) -> Optional[str]` réutilisée par les deux écrans (`_reason` l'appelle).
+La partie phase de `_reason` devient une fonction publique `phase_reason(phase_kind: str) -> Optional[str]`,
+réutilisée par les deux écrans (`_reason` l'appelle). Définie dans `src/client/data.py` et non `donnees.py` :
+`donnees.py` importe déjà `data.py`, l'inverse ferait un cycle (décision d'implémentation, 2026-10-20).
 
 ### 4.3 Route et gabarit (`src/client/app.py`, `src/client/templates/calibration.html`)
 
@@ -135,7 +136,7 @@ restauré après chaque test (K et `MODEL_VERSION`), base de `conftest.py`, bus 
 
 | # | Tâche | Pts | Dépend de |
 |---|---|---|---|
-| 191 | `Diagnostic` et `diagnose()` dans `calibration_notice.py`, `build_proposal` qui s'appuie dessus ; `phase_reason` dans `donnees.py` ; champs de `calibration_view` ; tests | 3 | — |
+| 191 | `Diagnostic` et `diagnose()` dans `calibration_notice.py`, `build_proposal` qui s'appuie dessus ; `phase_reason` dans `data.py` ; champs de `calibration_view` ; tests | 3 | — |
 | 192 | Route `POST /calibration/appliquer`, phase dans `GET /calibration`, gabarit et CSS ; tests de route | 3 | 191 |
 | 193 | Clôture : `CHANGELOG.md`, statuts, README des specs, recette @pj35 | 1 | 192 |
 
@@ -145,7 +146,7 @@ restauré après chaque test (K et `MODEL_VERSION`), base de `conftest.py`, bus 
 2. `python -m pytest tests/test_calibration_apply.py -v` vert sans modification des tests existants (comportement de
    `build_proposal` inchangé).
 3. Sur `data/db.db` du 2026-10-20 (copie), `calibration_view` de `spec13-v1` rend un facteur `0,613`, un intervalle
-   `[−1,17 ; 2,25]`, `can_apply` faux avec la raison « L'intervalle contient 1,0 ».
+   `[−1,17 ; 2,25]`, `can_apply` faux avec la raison « L'intervalle atteint 0 » (vérifié sur une copie le 2026-10-20).
 4. `POST /calibration/appliquer` rend 409 en phase `draft` et `game`, et quand `can_apply` est faux ; aucun
    `calibration.json` n'est écrit dans ces cas (test).
 5. Un succès écrit `calibration.json` (`K_MATCHUP`, `K_SYNERGY` = K × facteur, `MODEL_VERSION` = `+cal1`) et
@@ -156,7 +157,7 @@ restauré après chaque test (K et `MODEL_VERSION`), base de `conftest.py`, bus 
 8. `CHANGELOG.md` (`[Unreleased]`), statut de cette spec et `docs/specs/README.md` à jour.
 
 **Vérification de bout en bout** : `python lol_coach.py` → client → Calibration : facteur 0,613, intervalle de −1,17
-à 2,25, bouton « Appliquer » grisé avec « L'intervalle contient 1,0 ». Le chemin d'application (écriture de
+à 2,25, bouton « Appliquer » grisé avec « L'intervalle atteint 0 ». Le chemin d'application (écriture de
 `calibration.json`, à la racine du dépôt ou à côté de l'exe, `src/pool_manager.py:37`) n'est prouvé que par le
 critère 5 tant que les vraies données ne justifient pas de réglage : le provoquer sur `data/db.db` changerait le
 modèle réel.

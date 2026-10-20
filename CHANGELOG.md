@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### ✨ Feature
+
+- **Écran Calibration : diagnostic complet et « Appliquer » (SPEC-39)** — l'écran montre maintenant ce que seul `scripts/calibrate_model.py` donnait : facteur d'échelle, intervalle de confiance à 90 %, sens de la correction et K suggérés pour la version courante. Un bouton « Appliquer » reprend la règle du Live Coach (au moins 100 issues, intervalle qui exclut 1,0 sans atteindre 0) : il écrit `calibration.json`, passe `MODEL_VERSION` à `+calN` et vaut tout de suite pour le Live Coach du client, qui ne pouvait pas répondre au « o/n » de la console. Il est grisé avec sa raison en draft, en partie, sur une ancienne version ou quand le diagnostic refuse (aujourd'hui sur `spec13-v1` : facteur 0,613, intervalle de −1,17 à 2,25, « l'intervalle atteint 0 »).
+
 ## [5.7.0] - 2026-10-20
 
 Pendant la draft, la colonne « Runes & sorts » ouvre un écran avec les trois pages de runes OneTricks les plus recommandées, leur popularité et leur part contre l'adversaire de lane ; un clic écrit la page choisie dans le client. Aucune action requise : pas de migration Alembic, pas de scrape.
