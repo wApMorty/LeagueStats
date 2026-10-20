@@ -585,6 +585,10 @@ class DataQualityConfig:
     # purged so backups don't accumulate indefinitely.
     BACKUP_RETENTION: int = 3
 
+    # SPEC-37 §2 : un seul run de mise à jour à la fois, console ou client.
+    # Fichier relatif à la racine du projet ; contient le PID du run en cours.
+    UPDATE_LOCK_FILE: str = "data/update.lock"
+
 
 @dataclass
 class DemoConfig:

@@ -17,6 +17,7 @@ USAGE:
 
 import json
 import logging
+import os
 import sys
 import threading
 import traceback
@@ -24,6 +25,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
+
+import psutil
 
 from .analysis.shrink import refresh_shrink_k
 from .config import config
@@ -47,6 +50,32 @@ logger = logging.getLogger("update_all")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_LOG_DIR = PROJECT_ROOT / "logs"
+LOCK_FILE = PROJECT_ROOT / data_quality_config.UPDATE_LOCK_FILE
+
+
+def _acquire_lock(path: Path) -> Optional[int]:
+    """Take the update lock, or report the PID of the run holding it.
+
+    Returns the PID of a live holder (nothing is written). Otherwise (no
+    file, unreadable file, or a dead PID) writes our own PID and returns None.
+    """
+    try:
+        holder = int(path.read_text().strip())
+    except (OSError, ValueError):
+        holder = None
+    if holder is not None and psutil.pid_exists(holder):
+        return holder
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(str(os.getpid()))
+    return None
+
+
+def _release_lock(path: Path) -> None:
+    """Remove the update lock; a failure is logged, never raised."""
+    try:
+        path.unlink(missing_ok=True)
+    except OSError as e:
+        logger.warning("Could not remove update lock %s: %s", path, e)
 
 
 def _setup_logging(log_dir: Optional[Path] = None) -> Path:
@@ -262,8 +291,18 @@ def run_pipeline(
     )
     start_time = datetime.now()
 
-    db = Database(config.DATABASE_PATH)
-    db.connect()
+    # SPEC-37 §2 : un seul run à la fois (console ou client). Le verrou est
+    # levé en dernier dans le finally ; un échec avant le try le lève ici.
+    holder = _acquire_lock(LOCK_FILE)
+    if holder is not None:
+        logger.error("Mise à jour déjà en cours (PID %d), verrou %s", holder, LOCK_FILE)
+        return PipelineResult(status="failed", error=f"Mise à jour déjà en cours (PID {holder})")
+    try:
+        db = Database(config.DATABASE_PATH)
+        db.connect()
+    except BaseException:
+        _release_lock(LOCK_FILE)
+        raise
     parser = None
     assistant = None
     stats = None
@@ -508,3 +547,4 @@ def run_pipeline(
                     resource.close()
                 except Exception as e:
                     logger.warning("Cleanup of %s failed: %s", label, e)
+        _release_lock(LOCK_FILE)

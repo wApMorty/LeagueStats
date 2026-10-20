@@ -371,6 +371,57 @@ class TestRunPipeline:
         assert [e["step"] for e in events] == ["preparation", "recalcul"]
         assert events[0]["detail"] == "Sauvegarde"
 
+    def test_live_lock_holder_refuses_run_without_touching_db(self, monkeypatch):
+        """SPEC-37 §2 : un run dont le PID est vivant bloque le suivant, sans
+        sauvegarde, sans scrape, sans notification, et sans lever le verrou."""
+        import os
+
+        import src.pipeline as module
+
+        lock = module.LOCK_FILE
+        lock.write_text(str(os.getpid()))
+
+        result, mocks = self._run(monkeypatch)
+
+        assert result.status == "failed"
+        assert "déjà en cours" in result.error
+        mocks["backup_database"].assert_not_called()
+        mocks["scrape"].assert_not_called()
+        mocks["notifier"].notify_success.assert_not_called()
+        mocks["notifier"].notify_failure.assert_not_called()
+        assert lock.exists()
+
+    def test_dead_pid_lock_is_taken_over(self, monkeypatch):
+        import src.pipeline as module
+
+        lock = module.LOCK_FILE
+        lock.write_text("4242")
+        monkeypatch.setattr(module.psutil, "pid_exists", lambda pid: False)
+
+        result, _mocks = self._run(monkeypatch)
+
+        assert result.status == "ok"
+
+    def test_unreadable_lock_file_is_taken_over(self, monkeypatch):
+        import src.pipeline as module
+
+        module.LOCK_FILE.write_text("abc")
+
+        result, _mocks = self._run(monkeypatch)
+
+        assert result.status == "ok"
+
+    def test_lock_is_released_after_ok_and_failed_runs(self, monkeypatch):
+        import src.pipeline as module
+
+        result, _mocks = self._run(monkeypatch)
+        assert result.status == "ok"
+        assert not module.LOCK_FILE.exists()
+
+        result, _mocks = self._run(monkeypatch, scrape_side_effect=RuntimeError("boom"))
+        assert result.status == "failed"
+        assert not module.LOCK_FILE.exists()
+
 
 class TestRepairIncompleteChampions:
     """SPEC-01 A4: _repair_incomplete_champions() reuses scripts/repair_data.py's

@@ -43,8 +43,10 @@ def _guard_production_untouched():
 
 @pytest.fixture(autouse=True)
 def _isolate_logs(monkeypatch, tmp_path):
-    """Redirect src.pipeline's log directory so no test writes to logs/update_all.log."""
+    """Redirect src.pipeline's log directory and update lock so no test writes
+    to logs/update_all.log or data/update.lock (SPEC-37 §2)."""
     monkeypatch.setattr(pipeline_module, "DEFAULT_LOG_DIR", tmp_path / "logs")
+    monkeypatch.setattr(pipeline_module, "LOCK_FILE", tmp_path / "update.lock")
 
 
 @pytest.fixture(autouse=True)
