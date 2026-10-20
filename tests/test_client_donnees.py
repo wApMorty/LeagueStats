@@ -152,6 +152,24 @@ def test_logging_restaure_apres_run():
     assert root.level == level_before
 
 
+def test_le_run_reste_en_cours_tant_que_le_logging_n_est_pas_rendu(monkeypatch):
+    """`running` ne retombe qu'après la restauration du logging du client (pas de fenêtre entre les deux)."""
+    root = logging.getLogger()
+    seen = []
+    job = UpdateJob(run=lambda progress, stop: PipelineResult(status="ok"), clock=_Clock())
+    real = root.setLevel
+
+    def spy(level):
+        if threading.current_thread().name == "donnees-update":
+            seen.append(job.running)
+        real(level)
+
+    monkeypatch.setattr(root, "setLevel", spy)
+    job.start()
+    _end(job)
+    assert seen == [True] and not job.running
+
+
 def test_run_qui_leve_passe_en_failed():
     def run(progress, stop):
         raise RuntimeError("boom")

@@ -27,5 +27,5 @@ def emit(progress: Optional[Progress], event: dict) -> None:
         return
     try:
         progress(event)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         logger.warning("Callback de progression en erreur (ignoré): %s", e)

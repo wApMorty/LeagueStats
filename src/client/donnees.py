@@ -167,20 +167,18 @@ class UpdateJob:
         root = logging.getLogger()
         handlers = list(root.handlers)
         level = root.level
+        state, error, report = "failed", None, ""
         try:
             result = self._run(progress=self._on_progress, stop=self._stop)
-            with self._lock:
-                self._state = result.status
-                self._error = result.error
-                self._report = result.report
-        except Exception as e:
-            with self._lock:
-                self._state = "failed"
-                self._error = f"{type(e).__name__}: {e}"
+            state, error, report = result.status, result.error, result.report
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            error = f"{type(e).__name__}: {e}"
         finally:
+            # Logging rendu avant que `running` ne retombe : aucune fenêtre où le client le croit fini.
             root.handlers[:] = handlers
             root.setLevel(level)
             with self._lock:
+                self._state, self._error, self._report = state, error, report
                 self._finished_at = self._clock()
 
     def _on_progress(self, event: dict) -> None:

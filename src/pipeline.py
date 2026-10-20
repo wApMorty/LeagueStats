@@ -293,7 +293,11 @@ def run_pipeline(
 
     # SPEC-37 §2 : un seul run à la fois (console ou client). Le verrou est
     # levé en dernier dans le finally ; un échec avant le try le lève ici.
-    holder = _acquire_lock(LOCK_FILE)
+    try:
+        holder = _acquire_lock(LOCK_FILE)
+    except OSError as e:
+        logger.error("Verrou %s impossible à poser : %s", LOCK_FILE, e)
+        return PipelineResult(status="failed", error=f"Verrou de mise à jour impossible : {e}")
     if holder is not None:
         logger.error("Mise à jour déjà en cours (PID %d), verrou %s", holder, LOCK_FILE)
         return PipelineResult(status="failed", error=f"Mise à jour déjà en cours (PID {holder})")

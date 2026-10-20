@@ -391,6 +391,20 @@ class TestRunPipeline:
         mocks["notifier"].notify_failure.assert_not_called()
         assert lock.exists()
 
+    def test_unwritable_lock_fails_without_raising(self, monkeypatch, tmp_path):
+        """« Never raises » vaut aussi pour le verrou : dossier impossible à créer, run en échec."""
+        import src.pipeline as module
+
+        blocker = tmp_path / "not-a-dir"
+        blocker.write_text("x")
+        monkeypatch.setattr(module, "LOCK_FILE", blocker / "update.lock")
+
+        result, mocks = self._run(monkeypatch)
+
+        assert result.status == "failed"
+        assert "verrou" in result.error.lower()
+        mocks["backup_database"].assert_not_called()
+
     def test_dead_pid_lock_is_taken_over(self, monkeypatch):
         import src.pipeline as module
 
