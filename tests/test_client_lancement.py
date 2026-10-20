@@ -209,7 +209,7 @@ def test_run_client_sans_base_ne_demarre_rien(journal, monkeypatch):
 
 
 def test_run_client_arrete_tout_meme_si_la_fenetre_leve(journal, monkeypatch):
-    def casse(url):
+    def casse(url, should_close=None):
         raise RuntimeError("webview")
 
     monkeypatch.setattr(launch.window, "run", casse)

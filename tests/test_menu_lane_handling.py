@@ -50,6 +50,8 @@ def _setup_pipeline_mocks(monkeypatch, discovered_lane):
         include_matchups=True,
         include_synergies=True,
         init_tables=True,
+        progress=None,
+        stop=None,
     ):
         # SPEC-02: one page visit covers both datasets; record the lane on
         # whichever side(s) the caller actually asked for, mirroring
