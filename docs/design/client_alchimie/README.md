@@ -170,7 +170,7 @@ Lueurs de la couleur d'accent, par exemple `0 0 22px oklch(0.8 0.1 165 / 0.35)` 
 - Après le ban : tampon et explosion magenta. 1,1 s plus tard, révélation des bans adverses en cascade (120 ms), puis apparition des picks adverses (150 ms), puis passage en phase de picks.
 
 **Phase de picks**
-- 4 cartes de recommandation (lien de couleur en haut : or, menthe, bleu, violet) : portrait, nom, games, win % sur 2 décimales, delta en pts (menthe ou rose), « Suite attendue : … ».
+- 4 cartes de recommandation (lien de couleur en haut : or, menthe, bleu, violet) : portrait, nom, games, victoire immédiate (si verrouillé maintenant) sur 2 décimales, delta en pts face à la position actuelle (menthe ou rose), « Fin de draft attendue X % · suite : … » (SPEC-40).
 - Clic sur une carte = survol. Le bouton principal « Verrouiller X » est en haut à droite de la rangée.
 
 **Grimoire des champions** (overlay sur 1480 × 950)
