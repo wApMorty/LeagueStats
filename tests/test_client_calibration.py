@@ -283,6 +283,15 @@ def test_la_cible_porte_le_garde_htmx_des_409_et_500(db, temp_db):
 
 
 @pytest.mark.parametrize("phase_kind", ["draft", "game"])
+def test_la_page_grise_appliquer_en_phase_de_jeu(db, temp_db, phase_kind):
+    """GET /calibration lit la phase du bus : en draft ou en partie le bouton est grisé d'emblée."""
+    predictions(db, CURRENT, _rows(400, 0.4))
+    page = web_en_phase(temp_db, phase_kind).get("/calibration").text
+    tag = re.search(r'<button[^>]*class="btn-primary calib-apply"[^>]*>', page).group(0)
+    assert "disabled" in tag and phase_reason(phase_kind) in page
+
+
+@pytest.mark.parametrize("phase_kind", ["draft", "game"])
 def test_appliquer_refuse_en_phase_de_jeu(db, temp_db, reglage, phase_kind):
     predictions(db, CURRENT, _rows(400, 0.4))
     web = web_en_phase(temp_db, phase_kind)
