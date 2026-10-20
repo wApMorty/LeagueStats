@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 
 from src.client.app import create_app
 from src.client.assets import Assets
-from src.client.review import clock, game_page, games_view, load_model
+from src.client.review import _pts, clock, game_page, games_view, load_model
 from src.client.draft_view import Champions
 from src.coaching.metrics import death_trades
 from src.config_client import client_config
@@ -271,17 +271,37 @@ def test_les_morts_avant_14_min_avec_echange_et_impact(db, assets, modele):
     assert [r["time"] for r in deaths["rows"]] == [
         clock(t.death["timestamp"] / 1000) for t in expected
     ]
-    stored = {
-        r["event_time_ms"]: r["delta_p"]
-        for r in CoachingRepository(db).impact_rows(7998195590)
-        if r["participant_id"] == 1 and r["event_type"] in ("death", "death_solo")
-    }
-    first = expected[0].death["timestamp"]
-    assert first in stored and deaths["rows"][0]["delta_text"].endswith(" pts")
+    stored = {}
+    for r in CoachingRepository(db).impact_rows(7998195590):
+        if r["participant_id"] == 1 and r["event_type"] in ("death", "death_solo"):
+            stored[r["event_time_ms"]] = stored.get(r["event_time_ms"], 0.0) + r["delta_p"]
+    for row, trade in zip(deaths["rows"], expected):
+        at = trade.death["timestamp"]
+        assert row["delta_text"] == (f"{_pts(stored[at])} pts" if at in stored else "—")
     assert deaths["rows"][0]["delta_text"] != "—"
     assert deaths["rows"][0]["traded"]  # les deux morts de la fixture sont échangées
     assert deaths["rows"][0]["traded"].endswith(clock(expected[0].trade["timestamp"] / 1000))
-    assert deaths["rates"].startswith("Taux mesurés en Top")
+    assert deaths["rates"] == (
+        "Taux mesurés en Top : une mort ≈ −3,3 pts, "
+        "une mort sans contrepartie ≈ −6,6 pts (SPEC-35)"
+    )
+
+
+def test_tueur_mort_solo_et_tourelle(db, assets, modele):
+    timeline = copy.deepcopy(TIMELINE)
+    for frame in timeline["frames"]:
+        for e in frame["events"]:
+            if e["type"] == "CHAMPION_KILL" and e["timestamp"] == 669156:
+                e["killerId"], e["assistingParticipantIds"] = 0, []
+    capture(db, pid=6, timeline=timeline)
+    rows = game_page(CoachingRepository(db), 7998195590, Champions(assets), modele, NOW)["deaths"][
+        "rows"
+    ]
+    by_time = {r["time"]: r for r in rows}
+    olaf = Champions(assets).name(GAME["participants"][0]["championId"])
+    assert by_time["01:58"]["killer"] == olaf and by_time["01:58"]["solo"] is True
+    assert by_time["09:24"]["solo"] is False  # tué avec une assistance
+    assert by_time["11:09"]["killer"] == "Tourelle / sbires" and by_time["11:09"]["solo"] is False
 
 
 def test_une_mort_sans_contrepartie_est_dite(db, temp_db, assets, modele):
