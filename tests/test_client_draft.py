@@ -1119,6 +1119,9 @@ def test_parts_du_duel(client, bus, runes_assets, monkeypatch):
         else:
             assert page["duel_games"] is None
     assert any(page["duel_share"] is None for page in pages)
+    # Page 1 adaptée au duel (absente des deux pages), puis les deux pages générales.
+    assert pages[0]["share"] is None and pages[0]["duel_share"] is None
+    assert [page["duel_share"] for page in pages[1:]] == pytest.approx([0.225, 0.189], abs=1e-3)
 
 
 def test_pages_apres_verrouillage_viennent_d_onetricks(client, bus, runes_assets, onetricks):

@@ -451,6 +451,7 @@
   /** Choisir une page la applique (« Modifiée à la main ») et l'envoie dans le client avec les sorts de la colonne. */
   function choose(page) {
     closePages();
+    if (lo?.status !== "ready") return; // rechargement en cours (verrouillage) : pas de sorts à envoyer
     applyPage(clone(page));
     push();
   }
