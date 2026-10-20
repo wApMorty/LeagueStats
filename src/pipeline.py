@@ -15,8 +15,10 @@ USAGE:
     result = run_pipeline(recompute_only=True)        # scores/bans only, no scrape
 """
 
+import json
 import logging
 import sys
+import threading
 import traceback
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -39,6 +41,7 @@ from .lane_discovery import discover_lanes_for_champions
 from .multilane import group_champions_by_lane, scrape_all_multilane
 from .notifications import Notifier
 from .parallel_parser import ParallelParser
+from .progress import PipelineCancelled, Progress, emit
 
 logger = logging.getLogger("update_all")
 
@@ -210,6 +213,8 @@ def run_pipeline(
     patch: Optional[str] = None,
     recompute_only: bool = False,
     skip_completeness: bool = False,
+    progress: Optional[Progress] = None,
+    stop: Optional[threading.Event] = None,
 ) -> PipelineResult:
     """Scrape (optional) -> completeness gate -> scores -> bans -> db_meta.
 
@@ -230,6 +235,11 @@ def run_pipeline(
         recompute_only: Skip scrape and completeness check; only recalculate
             scores/bans from data already in the database.
         skip_completeness: Skip the volumetric check (diagnostic only).
+        progress: Callback d'événements de progression (SPEC-37), relayé au
+            scrape ; une exception qu'il lève est ignorée.
+        stop: Event d'arrêt (SPEC-37). Posé pendant le scrape, le run se
+            termine en ``status="failed"`` (``error="Interrompu"``) et la base
+            est restaurée depuis la sauvegarde pré-scrape.
 
     Returns:
         PipelineResult with the run's outcome. Never raises: failures are
@@ -270,6 +280,7 @@ def run_pipeline(
             # in that window restores instead of destroying the data (the
             # exact mechanism behind the 2026-06-01 incident: 40 753 -> 16 179
             # matchups).
+            emit(progress, {"step": "preparation", "detail": "Sauvegarde"})
             backup_path = backup_database(config.DATABASE_PATH)
 
             # ── 1. Scrape (multi-lane, tagged) ───────────────────────────────
@@ -285,6 +296,8 @@ def run_pipeline(
                 champions=champions,
                 include_matchups=include_matchups,
                 include_synergies=include_synergies,
+                progress=progress,
+                stop=stop,
             )
             parser.close()
             parser = None
@@ -303,6 +316,16 @@ def run_pipeline(
             db.set_meta("last_update_patch", str(resolved_patch))
             db.set_meta("matchups_count", str(matchups_count))
             db.set_meta("synergies_count", str(synergies_count))
+            lanes = {
+                label: {
+                    "success": r.get("success", 0),
+                    "failed": r.get("failed", 0),
+                    "total": r.get("total", 0),
+                    "duration_s": round(r.get("duration", 0.0), 1),
+                }
+                for label, r in (stats["matchups"] or stats["synergies"]).items()
+            }
+            db.set_meta("last_scrape_lanes", json.dumps(lanes))
 
             # ── 2. Completeness gate (before recalculating anything) ────────
             if skip_completeness:
@@ -318,6 +341,7 @@ def run_pipeline(
         # ── 3 & 4. Scores + ban recommendations (SQLite only) ───────────────
         from .assistant import Assistant
 
+        emit(progress, {"step": "recalcul"})
         assistant = Assistant(Database(config.DATABASE_PATH), verbose=False)
         scores_count = assistant.calculate_global_scores()
         logger.info("champion_scores recalculated: %d (champion, lane) rows", scores_count)
@@ -353,6 +377,7 @@ def run_pipeline(
 
         # ── 4b. Targeted repair for warning-only gaps (SPEC-01 A4) ──────────
         if completeness_report is not None and completeness_report.warnings:
+            emit(progress, {"step": "reparation"})
             repair_results = _repair_incomplete_champions(
                 db, completeness_report, resolved_patch, workers
             )
@@ -435,11 +460,18 @@ def run_pipeline(
         )
         return PipelineResult(status="failed", error=str(e))
 
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, PipelineCancelled) as e:
         # Ctrl+C mid-scrape is the scenario A5 exists for: the tables have
         # already been dropped, restore what backup_database() saved before
-        # that instead of leaving the base half-scraped (SPEC-01 A5).
-        logger.error("Pipeline interrupted by user (Ctrl+C)")
+        # that instead of leaving the base half-scraped (SPEC-01 A5). An
+        # arrêt demandé (SPEC-37, fermeture du client) takes the same path.
+        cancelled = isinstance(e, PipelineCancelled)
+        if cancelled:
+            logger.error("Pipeline interrompu (arrêt demandé)")
+            reason = "Pipeline interrompu (arrêt demandé)"
+        else:
+            logger.error("Pipeline interrupted by user (Ctrl+C)")
+            reason = "Pipeline interrompu par l'utilisateur (Ctrl+C)"
         restore_note = ""
         if backup_path is not None:
             restore_database(backup_path, config.DATABASE_PATH)
@@ -448,8 +480,10 @@ def run_pipeline(
             db.set_meta("last_scrape_status", "failed")
         notifier.notify_failure(
             "LeagueStats — Interrompu",
-            f"Pipeline interrompu par l'utilisateur (Ctrl+C).\nVoir {log_file}{restore_note}",
+            f"{reason}.\nVoir {log_file}{restore_note}",
         )
+        if cancelled:
+            return PipelineResult(status="failed", error="Interrompu")
         return PipelineResult(status="failed", error="Interrupted by user (KeyboardInterrupt)")
 
     except Exception as e:

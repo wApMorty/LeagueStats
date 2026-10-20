@@ -13,11 +13,13 @@ behavior is covered by tests/regression/test_regression_parallel_parser_fixes.py
 Author: @pj35 - LeagueStats Coach
 """
 
+import threading
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from src.parallel_parser import ParallelParser
+from src.progress import PipelineCancelled
 
 
 @pytest.fixture
@@ -157,3 +159,77 @@ class TestParsePageByRole:
         db.update_champions_from_riot_api.assert_not_called()
         db.init_matchups_table.assert_not_called()
         db.init_synergies_table.assert_not_called()
+
+
+class TestParsePageByRoleProgress:
+    """SPEC-37 tâche 181 : progression et arrêt coopératif de parse_page_by_role."""
+
+    def test_progress_emits_start_and_done_per_champion(self, pp):
+        db = _make_db()
+        matchups = [("zed", 52.0, 10.0, 20.0, 15.0, 500)]
+        events = []
+
+        def fake_scrape(champ, lane, nf, inc_syn):
+            return (champ, [] if champ == "Broken" else matchups, [])
+
+        with patch.object(pp, "_scrape_champion_page_with_retry", side_effect=fake_scrape):
+            pp.parse_page_by_role(
+                db, ["Aatrox", "Caitlyn", "Broken"], "top", str.lower, progress=events.append
+            )
+
+        starts = [e for e in events if e["step"] == "start"]
+        dones = {e["champion"]: e for e in events if e["step"] == "done"}
+        assert sorted(e["champion"] for e in starts) == ["Aatrox", "Broken", "Caitlyn"]
+        assert all(e["lane"] == "top" for e in starts)
+        assert len(dones) == 3
+        assert dones["Aatrox"]["ok"] is True
+        assert dones["Caitlyn"]["ok"] is True
+        assert dones["Broken"]["ok"] is False
+
+    def test_stop_cancels_remaining_champions_without_further_writes(self, pp):
+        """Stop posé au premier « done » : le fil principal s'arrête au tour
+        suivant (PipelineCancelled) et n'écrit plus rien après l'arrêt."""
+        db = _make_db()
+        stop = threading.Event()
+        matchups = [("zed", 52.0, 10.0, 20.0, 15.0, 500)]
+
+        def on_event(event):
+            if event["step"] == "done":
+                stop.set()
+
+        with patch.object(
+            pp,
+            "_scrape_champion_page_with_retry",
+            side_effect=lambda champ, lane, nf, inc_syn: (champ, matchups, []),
+        ):
+            with pytest.raises(PipelineCancelled):
+                pp.parse_page_by_role(
+                    db,
+                    ["Aatrox", "Caitlyn", "Zed"],
+                    "top",
+                    str.lower,
+                    progress=on_event,
+                    stop=stop,
+                )
+
+        assert (
+            db.add_matchups_batch.call_count == 1
+        )  # seul le premier champion, écrit avant l'arrêt
+
+    def test_progress_callback_error_does_not_fail_scrape(self, pp):
+        db = _make_db()
+        matchups = [("zed", 52.0, 10.0, 20.0, 15.0, 500)]
+
+        def broken_progress(event):
+            raise RuntimeError("callback en panne")
+
+        with patch.object(
+            pp,
+            "_scrape_champion_page_with_retry",
+            side_effect=lambda champ, lane, nf, inc_syn: (champ, matchups, []),
+        ):
+            stats = pp.parse_page_by_role(
+                db, ["Aatrox", "Caitlyn"], "top", str.lower, progress=broken_progress
+            )
+
+        assert stats["success"] == 2

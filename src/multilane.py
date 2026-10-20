@@ -14,12 +14,14 @@ their LoLalytics default lane is scraped and stored untagged (lane=NULL).
 """
 
 import logging
+import threading
 from typing import Dict, List, Optional
 
 from .config_constants import scraping_config
 from .db import Database
 from .lane_discovery import discover_lanes_for_champions
 from .parallel_parser import ParallelParser
+from .progress import PipelineCancelled, Progress, emit
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +57,8 @@ def scrape_all_multilane(
     champions: Optional[List[str]] = None,
     include_matchups: bool = True,
     include_synergies: bool = True,
+    progress: Optional[Progress] = None,
+    stop: Optional[threading.Event] = None,
 ) -> dict:
     """Run the multi-lane scrape: discovery, matchups, synergies.
 
@@ -66,6 +70,13 @@ def scrape_all_multilane(
             (default) refreshes the full roster from the Riot API first.
         include_matchups: Also scrape matchups (default True)
         include_synergies: Also scrape synergies (default True)
+        progress: Callback d'événements de progression (SPEC-37) : étapes
+            "preparation", "plan", puis les événements des champions.
+        stop: Event d'arrêt (SPEC-37) ; posé, la lane en cours est interrompue
+            et PipelineCancelled est levée.
+
+    Raises:
+        PipelineCancelled: ``stop`` a été posé avant ou pendant une lane.
 
     Returns:
         Aggregated statistics::
@@ -79,6 +90,7 @@ def scrape_all_multilane(
                 "success": int, "failed": int, "total": int,
             }
     """
+    emit(progress, {"step": "preparation", "detail": "Champions (API Riot)"})
     # ── 1. Schema/reference data ─────────────────────────────────────────────
     if champions is None:
         if not db.create_riot_champions_table():
@@ -103,6 +115,7 @@ def scrape_all_multilane(
 
     # ── 2. Lane discovery (cheap HTTP, parallel) ─────────────────────────────
     lane_distributions: Dict[str, Dict[str, float]] = {}
+    emit(progress, {"step": "preparation", "detail": "Découverte des lanes"})
     lane_map = discover_lanes_for_champions(
         champions, parser.patch_version, normalize_func, distributions_out=lane_distributions
     )
@@ -122,6 +135,13 @@ def scrape_all_multilane(
             db.save_champion_lane_distribution(champion_id, distribution)
 
     groups = group_champions_by_lane(lane_map)
+    emit(
+        progress,
+        {
+            "step": "plan",
+            "lanes": {(lane or "default"): len(champs) for lane, champs in groups.items()},
+        },
+    )
     pages_per_phase = sum(len(champs) for champs in groups.values())
     logger.info(
         "Scrape plan: %d (champion, lane) pages per phase — %s",
@@ -143,6 +163,8 @@ def scrape_all_multilane(
     #      same page visit (SPEC-02) ─────────────────────────────────────────
     lane_results: Dict[Optional[str], dict] = {}
     for lane, champs in groups.items():
+        if stop is not None and stop.is_set():
+            raise PipelineCancelled(f"Arrêt demandé avant la lane {lane or 'default'}")
         lane_results[lane] = parser.parse_page_by_role(
             db,
             champs,
@@ -151,6 +173,8 @@ def scrape_all_multilane(
             include_matchups=include_matchups,
             include_synergies=include_synergies,
             init_tables=False,
+            progress=progress,
+            stop=stop,
         )
 
     if include_matchups:

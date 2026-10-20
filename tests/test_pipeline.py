@@ -2,12 +2,14 @@
 scripts/update_all.py and the in-app menu (src/ui/lol_coach_legacy.py),
 SPEC-01 A2."""
 
+import json
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import scripts.repair_data as repair_data_module
 from src.data_quality import CompletenessReport, DataCompletenessError
+from src.progress import PipelineCancelled
 
 
 def _scrape_stats():
@@ -32,6 +34,7 @@ class TestRunPipeline:
         completeness_return_value=None,
         repair_results=None,
         recheck_return_value=None,
+        scrape_side_effect=None,
         **kwargs,
     ):
         """Run run_pipeline() with every external dependency mocked."""
@@ -47,7 +50,7 @@ class TestRunPipeline:
         mocks["parser"] = MagicMock()
         monkeypatch.setattr(module, "ParallelParser", MagicMock(return_value=mocks["parser"]))
 
-        mocks["scrape"] = MagicMock(return_value=_scrape_stats())
+        mocks["scrape"] = MagicMock(return_value=_scrape_stats(), side_effect=scrape_side_effect)
         monkeypatch.setattr(module, "scrape_all_multilane", mocks["scrape"])
 
         if completeness_return_value is None:
@@ -342,6 +345,31 @@ class TestRunPipeline:
         # SPEC-01 A5: the scrape already DROPped+repopulated the tables by
         # this point, so a downstream crash still needs a restore.
         mocks["restore_database"].assert_called_once()
+
+    # SPEC-37 tâche 181 : progression relayée et arrêt coopératif.
+    def test_cancelled_scrape_fails_with_interrupted_and_restores_backup(self, monkeypatch):
+        result, mocks = self._run(
+            monkeypatch,
+            scrape_side_effect=PipelineCancelled("Arrêt demandé pendant la lane top"),
+        )
+
+        assert result.status == "failed"
+        assert result.error == "Interrompu"
+        mocks["restore_database"].assert_called_once()
+        assert mocks["restore_database"].call_args.args[0] == mocks["backup_database"].return_value
+        mocks["notifier"].notify_failure.assert_called_once()
+        mocks["completeness"].assert_not_called()
+
+    def test_successful_run_records_lane_stats_and_reports_progress(self, monkeypatch):
+        events = []
+        result, mocks = self._run(monkeypatch, progress=events.append)
+
+        assert result.status == "ok"
+        meta_calls = {call.args[0]: call.args[1] for call in mocks["db"].set_meta.call_args_list}
+        lanes = json.loads(meta_calls["last_scrape_lanes"])
+        assert lanes == {"top": {"success": 1, "failed": 0, "total": 1, "duration_s": 0.0}}
+        assert [e["step"] for e in events] == ["preparation", "recalcul"]
+        assert events[0]["detail"] == "Sauvegarde"
 
 
 class TestRepairIncompleteChampions:

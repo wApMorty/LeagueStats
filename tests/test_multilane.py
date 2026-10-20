@@ -1,8 +1,12 @@
 """Tests for src/multilane.py (Horizon 1 — multi-lane orchestration)."""
 
+import threading
 from unittest.mock import MagicMock, call, patch
 
+import pytest
+
 from src.multilane import group_champions_by_lane, scrape_all_multilane
+from src.progress import PipelineCancelled
 
 
 class TestGroupChampionsByLane:
@@ -73,6 +77,8 @@ class TestScrapeAllMultilane:
                 include_matchups=True,
                 include_synergies=True,
                 init_tables=False,
+                progress=None,
+                stop=None,
             )
             in page_calls
         )
@@ -85,6 +91,8 @@ class TestScrapeAllMultilane:
                 include_matchups=True,
                 include_synergies=True,
                 init_tables=False,
+                progress=None,
+                stop=None,
             )
             in page_calls
         )
@@ -110,6 +118,8 @@ class TestScrapeAllMultilane:
             include_matchups=True,
             include_synergies=True,
             init_tables=False,
+            progress=None,
+            stop=None,
         )
         assert stats["discovery_failures"] == ["Broken"]
 
@@ -129,6 +139,8 @@ class TestScrapeAllMultilane:
             include_matchups=True,
             include_synergies=False,
             init_tables=False,
+            progress=None,
+            stop=None,
         )
         assert stats["synergies"] == {}
         assert stats["pages_total"] == 1
@@ -165,6 +177,8 @@ class TestScrapeAllMultilane:
             include_matchups=True,
             include_synergies=True,
             init_tables=False,
+            progress=None,
+            stop=None,
         )
 
     def test_restricted_champions_refreshes_roster_when_champions_table_empty(self):
@@ -193,6 +207,8 @@ class TestScrapeAllMultilane:
             include_matchups=False,
             include_synergies=True,
             init_tables=False,
+            progress=None,
+            stop=None,
         )
         assert stats["matchups"] == {}
         assert stats["pages_total"] == 1
@@ -212,3 +228,53 @@ class TestScrapeAllMultilane:
             stats = scrape_all_multilane(db, parser, str.lower)
 
         assert stats["synergies_missing"] == ["Aatrox"]
+
+    def test_plan_event_emitted_before_first_lane_scrape(self):
+        """SPEC-37 : l'événement « plan » donne les effectifs par lane, dans
+        l'ordre de scrape, et précède le premier parse_page_by_role."""
+        db = self._make_db(["Aatrox", "Caitlyn"])
+        parser = self._make_parser()
+        order = []
+        events = []
+
+        def record(event):
+            events.append(event)
+            order.append(event["step"])
+
+        parser.parse_page_by_role.side_effect = lambda *a, **k: (
+            order.append("parse"),
+            {"success": 1, "failed": 0, "total": 1, "synergies_missing": []},
+        )[1]
+
+        with patch(
+            "src.multilane.discover_lanes_for_champions",
+            return_value={"Aatrox": ["top"], "Caitlyn": ["jungle"]},
+        ):
+            scrape_all_multilane(db, parser, str.lower, progress=record)
+
+        plan = next(e for e in events if e["step"] == "plan")
+        assert list(plan["lanes"]) == ["top", "jungle"]
+        assert plan["lanes"] == {"top": 1, "jungle": 1}
+        assert order.index("plan") < order.index("parse")
+        assert order.count("parse") == 2
+
+    def test_stop_interrupts_before_next_lane(self):
+        """SPEC-37 : stop posé pendant la première lane → aucune autre lane."""
+        db = self._make_db(["Aatrox", "Caitlyn"])
+        parser = self._make_parser()
+        stop = threading.Event()
+
+        def stop_during_first_lane(*args, **kwargs):
+            stop.set()
+            return {"success": 1, "failed": 0, "total": 1, "synergies_missing": []}
+
+        parser.parse_page_by_role.side_effect = stop_during_first_lane
+
+        with patch(
+            "src.multilane.discover_lanes_for_champions",
+            return_value={"Aatrox": ["top"], "Caitlyn": ["jungle"]},
+        ):
+            with pytest.raises(PipelineCancelled):
+                scrape_all_multilane(db, parser, str.lower, stop=stop)
+
+        assert parser.parse_page_by_role.call_count == 1

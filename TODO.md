@@ -389,7 +389,7 @@ SPEC-37 §5 (tâches 181 à 186, 18 pts) :
 
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
-| 181 | Progression et arrêt : `progress`/`stop` dans `parse_page_by_role`, `scrape_all_multilane`, `run_pipeline` ; `PipelineCancelled` restaure ; `db_meta.last_scrape_lanes` | 5 | — | ⬜ |
+| 181 | Progression et arrêt : `progress`/`stop` dans `parse_page_by_role`, `scrape_all_multilane`, `run_pipeline` ; `PipelineCancelled` restaure ; `db_meta.last_scrape_lanes` | 5 | — | ✅ 2026-10-20 : 7 tests (événements start/done, arrêt sans écriture après, rappel en panne ignoré, plan avant la 1re lane, arrêt entre lanes, restauration, bilan par lane) ; `Progress` et `PipelineCancelled` dans `src/progress.py` (cycle d'imports) |
 | 182 | Verrou `data/update.lock` (PID, `psutil`) dans `run_pipeline`, `UPDATE_LOCK_FILE` | 2 | — | ⬜ |
 | 183 | `src/client/donnees.py` : `UpdateJob` (fil, état, ETA, logging restauré, `cancel`) et `donnees_view` ; constantes `DONNEES_*` | 3 | 181 | ⬜ |
 | 184 | Écran Données : routes, `NAV`, gabarits, CSS, refus en `draft`/`game`, bandeau de l'écran Draft | 5 | 182, 183 | ⬜ |

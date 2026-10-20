@@ -16,6 +16,7 @@ dans parallel_parser.py), sans dupliquer cet état partagé ni le re-câbler.
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
+import threading
 from typing import List, Optional, Tuple
 
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
@@ -24,6 +25,7 @@ from selenium.common.exceptions import WebDriverException, TimeoutException
 
 from .db import Database
 from .cloudflare_detector import CloudflareException
+from .progress import PipelineCancelled, Progress, emit
 from .utils.console import is_headless_mode as _is_headless_mode
 
 logger = logging.getLogger(__name__)
@@ -317,6 +319,20 @@ class _RoleScrapeMixin:
 
         return stats
 
+    def _scrape_page_with_progress(
+        self,
+        champion: str,
+        lane: Optional[str],
+        normalize_func,
+        include_synergies: bool,
+        progress: Optional[Progress],
+    ) -> Tuple[str, List[Tuple], List[Tuple]]:
+        """Émet l'événement « start » du champion, puis scrape avec retry (SPEC-37)."""
+        emit(progress, {"step": "start", "lane": lane or "default", "champion": champion})
+        return self._scrape_champion_page_with_retry(
+            champion, lane, normalize_func, include_synergies
+        )
+
     def parse_page_by_role(
         self,
         db: Database,
@@ -326,6 +342,8 @@ class _RoleScrapeMixin:
         include_matchups: bool = True,
         include_synergies: bool = True,
         init_tables: bool = False,
+        progress: Optional[Progress] = None,
+        stop: Optional[threading.Event] = None,
     ) -> dict:
         """Scrape matchups + synergies for one lane group from a single page
         visit per champion (SPEC-02), replacing the sequential
@@ -352,11 +370,20 @@ class _RoleScrapeMixin:
                 DROP+recreate the matchups/synergies tables. MUST be False
                 when called once per lane in the multi-lane pipeline,
                 otherwise each lane wipes the previous one.
+            progress: Callback recevant un événement par champion : "start"
+                (avant le scrape) et "done" (avec "ok"). Une exception levée
+                par ce callback est ignorée (SPEC-37).
+            stop: Event d'arrêt. Posé pendant le scrape, les tâches restantes
+                sont annulées et PipelineCancelled est levée ; aucune écriture
+                n'a lieu après l'arrêt (SPEC-37).
 
         Returns:
             dict: Statistics with keys 'success', 'failed', 'total', 'lane',
                 'duration', 'synergies_missing' (champions whose matchups
                 were written but whose synergies tab never rendered).
+
+        Raises:
+            PipelineCancelled: ``stop`` a été posé pendant la lane.
         """
         import time
 
@@ -387,11 +414,12 @@ class _RoleScrapeMixin:
         self.executor = ThreadPoolExecutor(max_workers=self.max_workers)
         futures = {
             self.executor.submit(
-                self._scrape_champion_page_with_retry,
+                self._scrape_page_with_progress,
                 champion,
                 lane,
                 normalize_func,
                 include_synergies,
+                progress,
             ): champion
             for champion in champion_list
         }
@@ -413,7 +441,12 @@ class _RoleScrapeMixin:
             disable=disable_tqdm,
         ) as pbar:
             for future in as_completed(futures):
+                if stop is not None and stop.is_set():
+                    for pending in futures:
+                        pending.cancel()
+                    raise PipelineCancelled(f"Arrêt demandé pendant la lane {lane_label}")
                 champion = futures[future]
+                ok = False
                 try:
                     champ_name, matchups, synergies = future.result()
                     if not matchups:
@@ -435,11 +468,16 @@ class _RoleScrapeMixin:
                             )
 
                     success_count += 1
+                    ok = True
                 except Exception as e:
                     logger.error(f"Failed to scrape {champion} ({lane_label}): {e}")
                     failed_count += 1
                 finally:
                     pbar.update(1)
+                    emit(
+                        progress,
+                        {"step": "done", "lane": lane_label, "champion": champion, "ok": ok},
+                    )
 
         duration = time.time() - start_time
 
