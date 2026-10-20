@@ -268,6 +268,26 @@ def test_fixer_un_axe_ecrit_en_base_et_renvoie_les_places(db, temp_db, assets):
     assert target == pytest.approx(1.0)  # la norme du moment (norm_mean des parties)
 
 
+def test_fixer_un_axe_a_cible_fixe_ecrit_une_cible_fixe(db, temp_db, assets):
+    web = client(temp_db, assets)
+    response = web.post(
+        "/accueil/axe?metric=untraded_deaths_14&role=top&origin=player", headers=token(web)
+    )
+    assert response.status_code == 200
+    assert goals_in(temp_db) == [("untraded_deaths_14", "top", "player", "active")]
+    assert "cible ≤ 1" in response.text
+    (goal,) = CoachingRepository(db).goals()
+    assert goal["reference"] == "fixed"
+    assert goal["target"] == pytest.approx(1.0)
+
+
+def test_une_place_libre_propose_les_morts_sans_contrepartie(db, temp_db, assets):
+    store(db, "top", "cs_10", [70.0] * 3, z=0.0)  # pas de schéma négatif : la place reste libre
+    page = client(temp_db, assets).get("/").text
+    assert "Choisir une autre métrique" in page
+    assert ">Morts sans contrepartie avant 14 min</button>" in page
+
+
 def test_fixer_sans_jeton_ou_avec_une_origine_etrangere_est_refuse(db, temp_db, assets):
     weak_history(db)
     web = client(temp_db, assets)

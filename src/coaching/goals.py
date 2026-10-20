@@ -6,6 +6,7 @@ norme du moment (faire au moins aussi bien que ses pairs), ou, pour un axe
 d'objectif (SPEC-29), l'objectif OneTricks du champion joué dans la partie.
 Chaque partie donne un verdict (tenu ou non) ; l'axe est acquis quand il tient
 GOAL_HOLD parties sur les GOAL_WINDOW dernières, et le suivant est proposé.
+Un axe à cible fixe (GOAL_FIXED_TARGETS, référence `fixed`) garde cette cible, sans norme.
 
 Le coach choisit en deux étages : un schéma négatif net face à la norme (défaut
 avéré, fixé seul), sinon la métrique la plus basse face à l'objectif (un
@@ -68,13 +69,14 @@ def set_goal(
     """Active un axe sur la métrique ; le plus ancien cède sa place au-delà du maximum."""
     if metric not in METRICS:
         return f"[AXE] Métrique inconnue : '{metric}'. Valeurs : {', '.join(METRICS)}"
-    history = repo.player_history(role)
-    if reference == "objective":
-        target = _objective_value(history, metric)
+    if metric in coaching_config.GOAL_FIXED_TARGETS and reference != "objective":
+        reference, target = "fixed", coaching_config.GOAL_FIXED_TARGETS[metric]
+    elif reference == "objective":
+        target = _objective_value(repo.player_history(role), metric)
         if target is None:
             return f"[AXE] {METRICS[metric].label} n'a aucun objectif OneTricks en base"
     else:
-        target = _target(history, metric)
+        target = _target(repo.player_history(role), metric)
     if target is None:
         return f"[AXE] Aucune partie analysée en {role} pour fixer la cible de {metric}"
     active = repo.goals()

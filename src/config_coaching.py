@@ -74,6 +74,11 @@ class CoachingConfig:
     MAX_ACTIVE_GOALS: int = 2
     GOAL_WINDOW: int = 5
     GOAL_HOLD: int = 4
+    # Cible fixe d'un axe, sans norme du moment (référence `fixed`). Validée par @pj35 le
+    # 2026-10-20 (SPEC-36 §1 : 64 % de victoires à 0 mort sans contrepartie, 54 % à 1, 27 % à 2+).
+    GOAL_FIXED_TARGETS: Dict[str, float] = field(
+        default_factory=lambda: {"untraded_deaths_14": 1.0}
+    )
     REVIEW_EVERY: int = 10
 
     # ---------- SPEC-35, étude Moneyball (tâche 171) ----------

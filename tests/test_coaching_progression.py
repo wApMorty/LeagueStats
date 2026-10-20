@@ -173,6 +173,25 @@ class TestGoals:
 
         assert line.startswith("[AXE] Axe de travail « Morts avant 14 min » (top, cible ≤ 1)")
 
+    def test_fixed_target_goal_needs_no_history(self, db):
+        repo = CoachingRepository(db)
+
+        message = goals.set_goal(repo, "untraded_deaths_14", "top")
+
+        assert "Nouvel axe" in message
+        (goal,) = repo.goals()
+        assert (goal["reference"], goal["target"]) == ("fixed", 1.0)
+
+    def test_fixed_target_goal_is_judged_against_the_fixed_target(self, db):
+        repo = _store_history(db, "untraded_deaths_14", [1.0, 2.0], z=0.0)
+        goals.set_goal(repo, "untraded_deaths_14", "top")
+
+        (held,) = goals.judge(repo, _analysis(1, 1.0, metric="untraded_deaths_14"))
+        (missed,) = goals.judge(repo, _analysis(2, 2.0, metric="untraded_deaths_14"))
+
+        assert held.startswith("[OK]") and "tenu (1/1" in held
+        assert missed.startswith("[ALERTE]") and "non tenu (1/2" in missed
+
 
 class TestReview:
     def test_review_without_games(self, db):
