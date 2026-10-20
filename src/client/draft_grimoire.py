@@ -78,6 +78,8 @@ def _info(
             for s in rec["variation"]
         )
         suite = f" · suite attendue : {steps}" if steps else ""
+        if win is not None:
+            return f"Victoire prédite {fr(win * 100)} % · fin de draft attendue {fr(rec['win_probability'] * 100)} % · {games_short(rec['games'])} games{suite}"
         return f"Victoire prédite {fr(rec['win_probability'] * 100)} % · {games_short(rec['games'])} games{suite}"
     model = f" · victoire prédite {fr(win * 100)} % (modèle seul)" if win is not None else ""
     if in_pool:

@@ -608,10 +608,36 @@ def test_meta_des_tuiles_en_pick(client, bus):
     html = client.get("/draft/champions").text
     assert '<span class="g-meta g-tone-win">54,8 %</span>' in html
     assert (
-        'data-info="Victoire prédite 54,8 % · 1,2k games · suite attendue : Alistar (Support)"'
+        'data-info="Victoire prédite 54,8 % · fin de draft attendue 54,8 % · 1,2k games · suite attendue : Alistar (Support)"'
         in html
     )
     assert "Pool GRIND uniquement" in html
+
+
+def test_barre_du_grimoire_affiche_victoire_immediate_et_fin_de_draft(assets):
+    champions = [
+        asdict(SnapshotChampion(266, "Aatrox", ["top"], 0.5027, None)),
+        asdict(SnapshotChampion(122, "Darius", ["top"], 0.5390, None)),
+        asdict(SnapshotChampion(103, "Ahri", ["middle"], 0.4950, None)),
+    ]
+    view = grimoire_view(pick_snapshot(champions=champions), assets)
+    aatrox = next(t for t in view["tiles"] if t["id"] == 266)
+    assert aatrox["info"] == (
+        "Victoire prédite 50,3 % · fin de draft attendue 54,8 % · 1,2k games · suite attendue : Alistar (Support)"
+    )
+
+
+def test_barre_du_grimoire_sans_victoire_immediate_garde_le_texte_d_aujourd_hui(assets):
+    champions = [
+        asdict(SnapshotChampion(266, "Aatrox", ["top"], None, None)),
+        asdict(SnapshotChampion(122, "Darius", ["top"], 0.5390, None)),
+        asdict(SnapshotChampion(103, "Ahri", ["middle"], 0.4950, None)),
+    ]
+    view = grimoire_view(pick_snapshot(champions=champions), assets)
+    aatrox = next(t for t in view["tiles"] if t["id"] == 266)
+    assert aatrox["info"] == (
+        "Victoire prédite 54,8 % · 1,2k games · suite attendue : Alistar (Support)"
+    )
 
 
 def test_info_pool_sans_donnees_et_hors_pool(client, bus):
