@@ -18,7 +18,8 @@ Pendant le champion select, le coach lit la draft dans le client LoL et classe l
 selon la victoire prédite face à la composition adverse. Il anticipe aussi les picks qui restent à
 jouer. En phase de bans, il chiffre les menaces qui pèsent sur ta pool. Un clic suffit pour survoler ou
 verrouiller. Au verrouillage, il écrit dans le client les runes, sorts et objets les plus joués par les
-one-tricks de ton champion, affinés contre ton adversaire direct.
+one-tricks de ton champion, affinés contre ton adversaire direct. Tu peux aussi comparer les trois
+pages de runes les plus jouées et en choisir une d'un clic.
 
 | Bans | Verrouillage, runes et build |
 |---|---|
@@ -178,4 +179,4 @@ LeagueStats Coach n'est ni approuvé ni sponsorisé par Riot Games et ne reflèt
 Games ni de quiconque ayant participé à la production ou à la gestion de League of Legends. League of
 Legends et Riot Games sont des marques ou des marques déposées de Riot Games, Inc.
 
-**Version** : 5.6.0
+**Version** : 5.7.0

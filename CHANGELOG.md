@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+## [5.7.0] - 2026-10-20
+
+Pendant la draft, la colonne « Runes & sorts » ouvre un écran avec les trois pages de runes OneTricks les plus recommandées, leur popularité et leur part contre l'adversaire de lane ; un clic écrit la page choisie dans le client. Aucune action requise : pas de migration Alembic, pas de scrape.
+
 ### ✨ Feature
 
 - **Trois pages de runes OneTricks au choix pendant la draft (SPEC-38)** — la colonne « Runes & sorts » gagne un bouton « 3 pages OneTricks » qui ouvre un écran avec trois pages complètes côte à côte : la page que l'import pousse au verrouillage (affinée au duel), puis les deux pages publiées les plus jouées ensuite, toutes keystones confondues. Chaque page affiche sa part des parties OneTricks (« 8,2 % · 41 parties ») et, une fois l'adversaire de lane connu, sa part dans le duel ou « non publiée ». Les runes qui diffèrent de la page 1 sont entourées. « Choisir » écrit la page dans le client avec les sorts de la colonne ; elle prime ensuite sur l'import du verrouillage. Aucune requête OneTricks de plus (pages en cache), nouvelle route `GET /draft/loadout/pages`, constante `LOADOUT_RUNE_PAGES`.
