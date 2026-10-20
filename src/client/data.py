@@ -498,7 +498,7 @@ def _signed_num(value: float) -> str:
     return ("−" if value < 0 else "") + fr(abs(value), 2)
 
 
-def _verdict(scale: float) -> str:
+def _scale_verdict(scale: float) -> str:
     """Phrase qui dit dans quel sens le facteur d'échelle corrige le modèle (seuils de format_summary)."""
     if scale <= 0:
         return "aucun signal : aucun réglage de K ne corrige cela"
@@ -558,7 +558,7 @@ def calibration_view(repo, version: Optional[str], phase_kind: str = "closed") -
         scale=fr(diagnostic.scale, 3),
         interval=f"[{_signed_num(diagnostic.low)} ; {_signed_num(diagnostic.high)}]",
         confidence=f"{round(analysis_config.CALIBRATION_CI_CONFIDENCE * 100)} %",
-        verdict=_verdict(diagnostic.scale),
+        verdict=_scale_verdict(diagnostic.scale),
         brier=fr(brier, 4),
         brier_value=brier,
         table=[
