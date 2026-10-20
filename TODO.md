@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-10-20 (SPEC-36 rédigée : morts sans contrepartie, axe et revue ; SPEC-35 livrée : étude « Moneyball » du début de partie, aucune action adoptée ; SPEC-33 : tâches 151 à 159 faites, mesure du terme de forme en attente de couverture (3 / 5 000), recette @pj35 à faire ; SPEC-32 livrée : classement MVP / ACE en post-game, recette @pj35 à faire ; SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette @pj35 à faire)
+**Mis à jour** : 2026-10-20 (SPEC-37 rédigée : écran « Données » pour actualiser la base depuis le client ; SPEC-36 rédigée : morts sans contrepartie, axe et revue ; SPEC-35 livrée : étude « Moneyball » du début de partie, aucune action adoptée ; SPEC-33 : tâches 151 à 159 faites, mesure du terme de forme en attente de couverture (3 / 5 000), recette @pj35 à faire ; SPEC-32 livrée : classement MVP / ACE en post-game, recette @pj35 à faire ; SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette @pj35 à faire)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -376,6 +376,25 @@ pile réelle sur faux LCU (§3). Découpage en SPEC-34 §5 (tâches 163 à 170, 
 | 168 | Projet Remotion : versions exactes, config, polices, scènes « Accroche », « Draft », « Verrouillage » et « Clôture » | 5 | 166 | ✅ 2026-10-16 : Remotion 4.0.531 (licence gratuite pour un particulier, vérifiée sur LICENSE.md), polices du client, chiffres de draft relevés dans le manifeste par `capture_screens.py` (n° 1 Dr. Mundo 55,96 %, fin de draft 54,6 %) |
 | 169 | Scènes « En partie » (courbe SVG), « Revue et coaching » et « Mosaïque » ; `hero.gif` dans le README | 5 | 167, 168 | ✅ 2026-10-16 : teaser de 30,0 s en 1 920 × 1 080 sans audio (12,2 Mo) ; `hero.gif` 960 × 540 à 10 i/s, 4,1 Mo, encodé par ffmpeg (palette optimisée ; l'encodeur GIF de Remotion donnait 10,3 Mo), fond figé dans la boucle |
 | 170 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure ; recette à l'œil de @pj35 | 3 | 169 | ✅ 2026-10-16 ; recette à l'œil (captures, GIF, `docs/presentation/video/out/teaser.mp4`) laissée à @pj35 |
+
+### Lot suivant — SPEC-37, écran « Données » : actualiser la base depuis le client (🟡 rédigée le 2026-10-20)
+
+[SPEC-37](docs/specs/SPEC-37-ecran-donnees-et-actualisation.md) ajoute au groupe Coaching un écran « Données » : un
+bouton « Actualiser » lance `run_pipeline` dans un fil du client, et la page (relue toutes les 2 s par htmx) suit
+l'étape, une jauge par lane (`43/67`, échecs), les champions en cours, le temps écoulé et restant, puis le bilan du
+dernier passage. Le scrape dure 1 h 40 et vide la base en cours de route (mesuré le 2026-10-20 : 0 ligne dans
+`champion_scores`) : bouton grisé en draft et en partie, verrou PID contre un run console simultané, fermeture de la
+fenêtre confirmée puis arrêt propre et restauration de la sauvegarde. Arbitrages validés le 2026-10-20. Découpage en
+SPEC-37 §5 (tâches 181 à 186, 18 pts) :
+
+| # | Tâche | Pts | Dépend de | État |
+|---|---|---|---|---|
+| 181 | Progression et arrêt : `progress`/`stop` dans `parse_page_by_role`, `scrape_all_multilane`, `run_pipeline` ; `PipelineCancelled` restaure ; `db_meta.last_scrape_lanes` | 5 | — | ⬜ |
+| 182 | Verrou `data/update.lock` (PID, `psutil`) dans `run_pipeline`, `UPDATE_LOCK_FILE` | 2 | — | ⬜ |
+| 183 | `src/client/donnees.py` : `UpdateJob` (fil, état, ETA, logging restauré, `cancel`) et `donnees_view` ; constantes `DONNEES_*` | 3 | 181 | ⬜ |
+| 184 | Écran Données : routes, `NAV`, gabarits, CSS, refus en `draft`/`game`, bandeau de l'écran Draft | 5 | 182, 183 | ⬜ |
+| 185 | Fermeture gardée : `window.run(should_close)`, dialogue de confirmation, `cancel` dans `launch.py` | 2 | 183 | ⬜ |
+| 186 | Clôture : `CHANGELOG.md`, statuts, README des specs, `docs/PROJECT_STRUCTURE.md`, recette @pj35 | 1 | 184, 185 | ⬜ |
 
 ### Lot suivant — SPEC-36, morts sans contrepartie : axe et revue (🟡 rédigée le 2026-10-20)
 
