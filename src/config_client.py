@@ -190,6 +190,15 @@ class ClientConfig:
     LIVE_COACH_RETRY_S: float = 15.0
     LIVE_COACH_STOP_TIMEOUT_S: float = 5.0
 
+    # Écran Données (SPEC-37 §4.3) : rafraîchissement de la progression, pages faites avant d'afficher
+    # un temps restant, délai d'attente de la fin de la mise à jour à la fermeture du client.
+    # Origines : POLL = une page toutes les ~12 s, 2 s montre chaque champion qui passe (log du
+    # 2026-10-06, 90 pages à 5 fils en 1 079 s) ; ETA_MIN_PAGES = moins d'une page par fil, pas
+    # d'estimation ; CLOSE_TIMEOUT = pages en cours (~60 s chacune) puis copie de la sauvegarde.
+    DONNEES_POLL_S: int = 2
+    DONNEES_ETA_MIN_PAGES: int = 5
+    DONNEES_CLOSE_TIMEOUT_S: float = 240.0
+
     # Banc `/_motion` (critère 11) : budget par image (60 Hz) et durée d'une scène.
     MOTION_BUDGET_MS: float = 16.7
     MOTION_BENCH_SCENE_S: int = 3
