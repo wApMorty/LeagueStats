@@ -13,11 +13,13 @@ from typing import Dict, List, Optional, Sequence, Tuple
 from markupsafe import Markup
 
 from ..analysis.calibration import brier_score, calibration_buckets, fetch_labeled_predictions
+from ..calibration_overrides import next_version
 from ..coaching.grid import GRID
 from ..coaching.metrics import METRICS, format_value
 from ..coaching.progression import DIVISIONS, TIERS, lp_scale, patterns, trends
 from ..config_client import client_config
 from ..config_constants import analysis_config, coaching_config
+from ..draft.calibration_notice import diagnose
 from .charts import (
     Band,
     Series,
@@ -482,12 +484,39 @@ def finding_reference(row: dict) -> Tuple[Optional[str], Optional[str]]:
 # ---------- calibration ----------
 
 
-def calibration_view(repo, version: Optional[str]) -> dict:
+def phase_reason(phase_kind: str) -> Optional[str]:
+    """Raison qui grise une action pendant un draft ou une partie, None hors de ces phases."""
+    if phase_kind == "draft":
+        return "Sélection des champions en cours"
+    if phase_kind == "game":
+        return "Partie en cours"
+    return None
+
+
+def _signed_num(value: float) -> str:
+    """Nombre à la française, avec le vrai signe moins (U+2212) quand il est négatif."""
+    return ("−" if value < 0 else "") + fr(abs(value), 2)
+
+
+def _verdict(scale: float) -> str:
+    """Phrase qui dit dans quel sens le facteur d'échelle corrige le modèle (seuils de format_summary)."""
+    if scale <= 0:
+        return "aucun signal : aucun réglage de K ne corrige cela"
+    if abs(scale - 1.0) < 0.05:
+        return "proche de 1 : K raisonnables"
+    if scale > 1.0:
+        return "le modèle devrait être plus confiant"
+    return "le modèle devrait être plus prudent"
+
+
+def calibration_view(repo, version: Optional[str], phase_kind: str = "closed") -> dict:
     """L'écran Calibration d'une version du modèle de draft (jamais de mélange, SPEC-05 §7).
 
     `repo` : `CoachingRepository` ; `version` absente ou inconnue : la version courante de
     `analysis_config` si elle a des issues, sinon la plus fournie. Sous `MIN_ROWS_FOR_CALIBRATION`
     prédictions : le même refus que la console (`scripts/calibrate_model.py`), sans diagramme.
+    Au-delà, le diagnostic complet (facteur, intervalle, verdict) et si « Appliquer » est permis,
+    avec la raison quand il ne l'est pas ; `phase_kind` est la phase du client (draft, game, ...).
     """
     labelled = repo.labelled_versions()
     names = [name for name, _ in labelled]
@@ -505,6 +534,15 @@ def calibration_view(repo, version: Optional[str]) -> dict:
         "chart": None,
         "table": [],
         "brier": None,
+        "scale": None,
+        "interval": None,
+        "confidence": None,
+        "verdict": None,
+        "suggested": None,
+        "can_apply": False,
+        "apply_reason": None,
+        "proposal": None,
+        "message": None,
     }
     if chosen is None:
         return view
@@ -514,8 +552,13 @@ def calibration_view(repo, version: Optional[str]) -> dict:
         return view
     buckets = calibration_buckets(rows)
     brier = brier_score(rows)
+    diagnostic = diagnose(rows, chosen)
     view.update(
         enough=True,
+        scale=fr(diagnostic.scale, 3),
+        interval=f"[{_signed_num(diagnostic.low)} ; {_signed_num(diagnostic.high)}]",
+        confidence=f"{round(analysis_config.CALIBRATION_CI_CONFIDENCE * 100)} %",
+        verdict=_verdict(diagnostic.scale),
         brier=fr(brier, 4),
         brier_value=brier,
         table=[
@@ -538,6 +581,21 @@ def calibration_view(repo, version: Optional[str]) -> dict:
             )
         ),
     )
+    if chosen == current:
+        view["suggested"] = {
+            "k_matchup": f"{fr(analysis_config.K_MATCHUP, 2)} → "
+            f"{fr(analysis_config.K_MATCHUP * diagnostic.scale, 2)}",
+            "k_synergy": f"{fr(analysis_config.K_SYNERGY, 2)} → "
+            f"{fr(analysis_config.K_SYNERGY * diagnostic.scale, 2)}",
+            "version": f"{current} → {next_version(current)}",
+        }
+    if chosen != current:
+        apply_reason = f"Seule la version courante {current} se règle"
+    else:
+        apply_reason = phase_reason(phase_kind) or diagnostic.refusal
+    view["apply_reason"] = apply_reason
+    view["can_apply"] = apply_reason is None
+    view["proposal"] = diagnostic.proposal if view["can_apply"] else None
     return view
 
 

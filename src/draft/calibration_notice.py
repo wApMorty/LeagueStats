@@ -16,9 +16,10 @@ reusing the same math from src/analysis/calibration.py.
 """
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import List, Optional
 
 from ..analysis.calibration import (
+    Row,
     brier_score,
     calibration_curve,
     fetch_labeled_predictions,
@@ -117,26 +118,53 @@ class Proposal:
     model_version: str
 
 
-def build_proposal(db, model_version: str) -> Optional[Proposal]:
-    """Une proposition seulement si elle repose sur assez de parties
-    (CALIBRATION_APPLY_MIN_ROWS) et que l'intervalle de confiance du facteur
-    exclut 1,0 sans atteindre 0 : sinon appliquer un réglage reviendrait à
-    ajuster du bruit."""
-    rows = fetch_labeled_predictions(db, model_version)
-    if len(rows) < analysis_config.CALIBRATION_APPLY_MIN_ROWS:
-        return None
-    low, high = _interval(rows)
-    if low <= 0 or low <= 1.0 <= high:
-        return None
+@dataclass(frozen=True)
+class Diagnostic:
+    """Facteur, intervalle et proposition calculés sur un jeu de lignes."""
+
+    n: int
+    scale: float
+    low: float
+    high: float
+    proposal: Optional[Proposal]  # None : voir refusal
+    refusal: Optional[str]  # raison en français, None si proposal
+
+
+def diagnose(rows: List[Row], model_version: str) -> Diagnostic:
+    """Facteur, intervalle et proposition (règle de build_proposal) sur des lignes déjà lues.
+
+    Une proposition exige au moins CALIBRATION_APPLY_MIN_ROWS parties et un intervalle de
+    confiance du facteur qui exclut 1,0 sans atteindre 0 : sinon appliquer un réglage
+    reviendrait à ajuster du bruit. `refusal` dit la première raison qui s'applique.
+    """
     scale = suggest_scale(rows)
-    return Proposal(
-        scale=scale,
-        low=low,
-        high=high,
-        k_matchup=analysis_config.K_MATCHUP * scale,
-        k_synergy=analysis_config.K_SYNERGY * scale,
-        model_version=next_version(model_version),
-    )
+    low, high = _interval(rows)
+    n = len(rows)
+    refusal = None
+    if n < analysis_config.CALIBRATION_APPLY_MIN_ROWS:
+        refusal = f"{n} issues sur {analysis_config.CALIBRATION_APPLY_MIN_ROWS} nécessaires"
+    elif low <= 0:
+        refusal = (
+            "L'intervalle atteint 0 : les prédictions ne séparent pas les victoires des défaites"
+        )
+    elif low <= 1.0 <= high:
+        refusal = "L'intervalle contient 1,0 : un réglage ajusterait du bruit"
+    proposal = None
+    if refusal is None:
+        proposal = Proposal(
+            scale=scale,
+            low=low,
+            high=high,
+            k_matchup=analysis_config.K_MATCHUP * scale,
+            k_synergy=analysis_config.K_SYNERGY * scale,
+            model_version=next_version(model_version),
+        )
+    return Diagnostic(n=n, scale=scale, low=low, high=high, proposal=proposal, refusal=refusal)
+
+
+def build_proposal(db, model_version: str) -> Optional[Proposal]:
+    """Proposition de réglage, None si la règle de `diagnose` la refuse."""
+    return diagnose(fetch_labeled_predictions(db, model_version), model_version).proposal
 
 
 def format_proposal(proposal: Proposal) -> str:

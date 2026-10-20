@@ -15,7 +15,7 @@ from typing import Any, Callable, Optional
 
 from ..config_client import client_config
 from ..data_freshness import FreshnessInfo
-from .data import ago, date_fr, plural, thousands
+from .data import ago, date_fr, phase_reason, plural, thousands
 from .draft_view import ROLE_LABELS
 
 STEP_LABELS = {
@@ -239,11 +239,7 @@ def _reason(running: bool, phase_kind: str) -> Optional[str]:
     """Raison qui grise le bouton de lancement, None si on peut lancer."""
     if running:
         return "Mise à jour en cours"
-    if phase_kind == "draft":
-        return "Sélection des champions en cours"
-    if phase_kind == "game":
-        return "Partie en cours"
-    return None
+    return phase_reason(phase_kind)
 
 
 def _outcome(snapshot: dict) -> Optional[dict]:

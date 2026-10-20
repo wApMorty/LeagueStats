@@ -388,7 +388,7 @@ intervalle de −1,17 à 2,25). Arbitrages validés le 2026-10-20. Découpage en
 
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
-| 191 | `Diagnostic` et `diagnose()` dans `calibration_notice.py`, `build_proposal` qui s'appuie dessus ; `phase_reason` dans `donnees.py` ; champs de `calibration_view` ; tests | 3 | — | |
+| 191 | `Diagnostic` et `diagnose()` dans `calibration_notice.py`, `build_proposal` qui s'appuie dessus ; `phase_reason` dans `donnees.py` ; champs de `calibration_view` ; tests | 3 | — | ✅ 2026-10-20 : 13 tests ; `phase_reason` dans `data.py` (cycle d'import avec `donnees.py`) ; sur `db.db` : facteur 0,613, intervalle [−1,17 ; 2,25], refus « l'intervalle atteint 0 » |
 | 192 | Route `POST /calibration/appliquer`, phase dans `GET /calibration`, gabarit et CSS ; tests de route | 3 | 191 | |
 | 193 | Clôture : `CHANGELOG.md`, statuts, README des specs, recette @pj35 | 1 | 192 | |
 

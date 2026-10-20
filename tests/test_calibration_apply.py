@@ -9,7 +9,7 @@ from types import SimpleNamespace
 import pytest
 
 from src import calibration_overrides as overrides
-from src.analysis.calibration import scale_interval, suggest_scale
+from src.analysis.calibration import fetch_labeled_predictions, scale_interval, suggest_scale
 from src.config_constants import AnalysisConfig, analysis_config
 from src.draft import calibration_notice
 from src.draft.commands import CommandListener
@@ -168,3 +168,39 @@ class TestTrackerAsksTheQuestion:
 
         assert monitor._pending_calibration.model_version == "v1+cal1"
         assert "Appliquer ? (o/n)" in capsys.readouterr().out
+
+
+class TestDiagnose:
+    def test_moins_de_100_lignes_refus_avec_le_compte(self):
+        diagnostic = calibration_notice.diagnose(_rows(99, 0.4), "v1")
+        assert diagnostic.proposal is None
+        assert diagnostic.refusal == (
+            f"99 issues sur {analysis_config.CALIBRATION_APPLY_MIN_ROWS} nécessaires"
+        )
+
+    def test_sans_signal_refus_intervalle_atteint_zero(self):
+        coin_flip = [(0.55, 1), (0.55, 0), (0.45, 1), (0.45, 0)] * 50
+        diagnostic = calibration_notice.diagnose(coin_flip, "v1")
+        assert diagnostic.proposal is None
+        assert diagnostic.refusal.startswith("L'intervalle atteint 0")
+
+    def test_modele_calibre_refus_intervalle_contient_1(self):
+        diagnostic = calibration_notice.diagnose(_rows(400, 1.0), "v1")
+        assert diagnostic.proposal is None
+        assert diagnostic.refusal == "L'intervalle contient 1,0 : un réglage ajusterait du bruit"
+
+    def test_modele_trop_confiant_propose_sans_refus(self):
+        diagnostic = calibration_notice.diagnose(_rows(400, 0.4), "v1")
+        assert diagnostic.refusal is None
+        assert diagnostic.proposal.k_matchup == pytest.approx(
+            analysis_config.K_MATCHUP * diagnostic.scale
+        )
+        assert diagnostic.proposal.model_version == "v1+cal1"
+        assert diagnostic.n == 400
+
+    def test_build_proposal_rend_ce_que_rend_diagnose(self, db):
+        _fill(db, _rows(400, 0.4))
+        rows = fetch_labeled_predictions(db, "v1")
+        assert calibration_notice.build_proposal(db, "v1") == (
+            calibration_notice.diagnose(rows, "v1").proposal
+        )

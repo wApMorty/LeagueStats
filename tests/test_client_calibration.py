@@ -9,12 +9,20 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from src.analysis.calibration import brier_score, fetch_labeled_predictions
+from src.analysis.calibration import (
+    brier_score,
+    fetch_labeled_predictions,
+    scale_interval,
+    suggest_scale,
+)
+from src.calibration_overrides import next_version
 from src.client.app import create_app
-from src.client.data import calibration_empty, calibration_view
+from src.client.data import calibration_empty, calibration_view, phase_reason
+from src.client.donnees import _reason
 from src.config_constants import analysis_config
 from src.repositories.coaching import CoachingRepository
 from tests.test_analysis_calibration import _lcg_rows
+from tests.test_calibration_apply import _rows
 
 LOCAL = "http://127.0.0.1"
 CURRENT = analysis_config.MODEL_VERSION
@@ -159,3 +167,66 @@ def test_la_consultation_n_ecrit_pas_dans_la_base(db, temp_db):
     before = (temp_db.stat().st_mtime_ns, temp_db.read_bytes())
     assert client(temp_db).get("/calibration").status_code == 200
     assert (temp_db.stat().st_mtime_ns, temp_db.read_bytes()) == before
+
+
+# ---------- diagnostic et « Appliquer » ----------
+
+
+def _signed_fr(value, digits=2):
+    return ("−" if value < 0 else "") + f"{abs(value):.{digits}f}".replace(".", ",")
+
+
+def test_facteur_et_intervalle_egaux_au_diagnostic(db):
+    rows = _lcg_rows(MINIMUM + 50)
+    predictions(db, CURRENT, rows)
+    view = calibration_view(CoachingRepository(db), None)
+    low, high = scale_interval(
+        rows, analysis_config.CALIBRATION_CI_CONFIDENCE, analysis_config.CALIBRATION_CI_RESAMPLES
+    )
+    assert view["scale"] == f"{suggest_scale(rows):.3f}".replace(".", ",")
+    assert view["interval"] == f"[{_signed_fr(low)} ; {_signed_fr(high)}]"
+    assert view["confidence"] == "90 %"
+
+
+def test_version_ancienne_sans_suggestion_et_sans_appliquer(db):
+    predictions(db, "b7-v1", _lcg_rows(MINIMUM + 10))
+    view = calibration_view(CoachingRepository(db), "b7-v1", "closed")
+    assert view["scale"] is not None and view["interval"] is not None
+    assert view["suggested"] is None
+    assert view["can_apply"] is False
+    assert view["apply_reason"].startswith("Seule la version courante")
+
+
+@pytest.mark.parametrize("phase_kind", ["draft", "game"])
+def test_phase_de_jeu_grise_appliquer_meme_si_le_diagnostic_propose(db, phase_kind):
+    predictions(db, CURRENT, _rows(400, 0.4))
+    view = calibration_view(CoachingRepository(db), None, phase_kind)
+    assert view["apply_reason"] == phase_reason(phase_kind)
+    assert view["can_apply"] is False and view["proposal"] is None
+
+
+def test_diagnostic_qui_propose_permet_appliquer_hors_partie(db):
+    predictions(db, CURRENT, _rows(400, 0.4))
+    view = calibration_view(CoachingRepository(db), None, "closed")
+    assert view["can_apply"] is True and view["apply_reason"] is None
+    assert view["proposal"] is not None
+    assert view["suggested"]["version"] == f"{CURRENT} → {next_version(CURRENT)}"
+
+
+def test_diagnostic_qui_refuse_donne_sa_raison(db):
+    predictions(db, CURRENT, _lcg_rows(MINIMUM + 50))
+    view = calibration_view(CoachingRepository(db), None, "closed")
+    assert view["can_apply"] is False
+    assert view["apply_reason"] is not None and view["proposal"] is None
+
+
+def test_phase_reason_textes_et_rien_hors_draft_ou_partie():
+    assert phase_reason("draft") == "Sélection des champions en cours"
+    assert phase_reason("game") == "Partie en cours"
+    assert phase_reason("closed") is None
+
+
+def test_reason_de_donnees_inchangee():
+    assert _reason(True, "closed") == "Mise à jour en cours"
+    assert _reason(False, "draft") == "Sélection des champions en cours"
+    assert _reason(False, "closed") is None
