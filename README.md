@@ -100,15 +100,16 @@ Menu principal :
 ## Mise à jour des données
 
 Les matchups sont scrapés sur LoLalytics avec Selenium et Firefox, en parallèle sur les cinq rôles. Un
-scrape complet prend environ **45 minutes**.
+scrape complet prend environ **1 h 40** (109 min mesurées le 2026-10-06, 343 pages).
 
 ```bash
 python scripts/update_all.py
 ```
 
 C'est l'implémentation de référence : contrôle de complétude, sauvegarde avant réécriture, journal
-dans `logs/update_all.log`. Le menu 3 s'appuie sur le même pipeline. La mise à jour reste manuelle, par
-choix.
+dans `logs/update_all.log`. Le menu 3 et l'écran **Données** du client (bouton « Actualiser », avancement
+lane par lane) s'appuient sur le même pipeline ; un verrou `data/update.lock` empêche deux mises à jour
+simultanées. La mise à jour reste manuelle, par choix.
 
 ## Distribution
 
@@ -177,4 +178,4 @@ LeagueStats Coach n'est ni approuvé ni sponsorisé par Riot Games et ne reflèt
 Games ni de quiconque ayant participé à la production ou à la gestion de League of Legends. League of
 Legends et Riot Games sont des marques ou des marques déposées de Riot Games, Inc.
 
-**Version** : 5.5.0
+**Version** : 5.6.0

@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+## [5.6.0] - 2026-10-20
+
+Le client gagne un écran « Données » : un bouton lance la mise à jour de la base (~1 h 40) et en suit l'avancement lane par lane, avec un verrou contre une mise à jour simultanée en console et une fermeture de fenêtre qui restaure la base. Le coaching suit les morts sans contrepartie avant 14 min, en axe de travail et dans la revue de partie. Aucune action requise : pas de migration Alembic, pas de scrape ; l'accueil recalcule seul ses analyses au premier lancement (`GRID_VERSION` 2).
+
 ### ✨ Feature
 
 - **Écran « Données » : actualiser la base depuis le client (SPEC-37)** — nouvelle entrée « Données » dans le groupe Coaching. Le bouton « Actualiser » lance la mise à jour complète (le même pipeline que `scripts/update_all.py`, ~1 h 40) en arrière-plan, et la page suit l'étape en cours, une jauge par lane (« 43/67 », échecs), les champions en cours de lecture, le temps écoulé et le temps restant estimé. Le bloc « Dernier passage » donne la date, le statut, les volumes et le bilan par lane (nouvelle clé `db_meta.last_scrape_lanes`). La base est vide pendant le scrape : le bouton est grisé en sélection des champions et en partie, et l'écran Draft affiche un bandeau si une mise à jour tourne. Un verrou `data/update.lock` empêche deux mises à jour simultanées, console comprise : `update_all.py` refuse de démarrer pendant celle du client, et inversement. Fermer la fenêtre pendant une mise à jour demande confirmation, puis arrête proprement et restaure la sauvegarde d'avant le scrape.
