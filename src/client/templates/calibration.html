@@ -2,7 +2,9 @@
 {% block title %}Calibration · LeagueStats{% endblock %}
 {% block page_class %} page-coaching page-calibration{% endblock %}
 {% block content %}
-<div id="calib">
+{# htmx:beforeSwap part de la cible (#calib) : un 409 ou un 500 d'« Appliquer » s'affiche aussi. #}
+<div id="calib" hx-on:htmx:before-swap="if([409,500].includes(event.detail.xhr.status)){event.detail.shouldSwap=true;event.detail.isError=false}">
+{% if v.message %}<p class="fine" role="status">{{ v.message }}</p>{% endif %}
 <header class="page-head" data-rise="1">
   <div class="page-titles">
     <div class="kicker">Coaching · modèle de draft{% if v.version %} · {{ v.version }}{% endif %}</div>
@@ -36,6 +38,15 @@
       <div class="queue-name">Score de Brier</div>
       <div class="sample-line"><b>{{ v.brier }}</b></div>
       <div class="sample-note">{{ v.n }} prédictions · 0 = parfait, 0,25 = toujours 50 %</div>
+    </section>
+    <section class="sample" data-rise="1" data-delay="260">
+      <div class="queue-name">Facteur d'échelle</div>
+      <div class="sample-line"><b>{{ v.scale }}</b></div>
+      <div class="sample-note">intervalle à {{ v.confidence }} : {{ v.interval }} · {{ v.verdict }}</div>
+      {% if v.suggested %}<div class="sample-note">K_MATCHUP {{ v.suggested.k_matchup }} · K_SYNERGY {{ v.suggested.k_synergy }} · {{ v.suggested.version }}</div>{% endif %}
+      <button type="button" class="btn-primary calib-apply" hx-post="/calibration/appliquer" hx-target="#calib" hx-select="#calib" hx-swap="outerHTML"
+              {% if not v.can_apply %}disabled title="{{ v.apply_reason }}"{% endif %}>Appliquer</button>
+      {% if not v.can_apply and v.apply_reason %}<p class="fine">{{ v.apply_reason }}</p>{% endif %}
     </section>
     <table class="calib-table" data-rise="1" data-delay="320">
       <caption class="sr-only">Prédit et observé par classe</caption>

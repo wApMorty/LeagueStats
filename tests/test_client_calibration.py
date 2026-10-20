@@ -2,12 +2,14 @@
 minimum, mêmes Brier et n que `scripts/calibrate_model.py`."""
 
 import importlib.util
+import json
 import re
 import sqlite3
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from markupsafe import escape
 
 from src.analysis.calibration import (
     brier_score,
@@ -17,9 +19,12 @@ from src.analysis.calibration import (
 )
 from src.calibration_overrides import next_version
 from src.client.app import create_app
+from src.client.bus import EventBus
 from src.client.data import calibration_empty, calibration_view, phase_reason
 from src.client.donnees import _reason
+from src.config_client import client_config
 from src.config_constants import analysis_config
+from src.draft import calibration_notice
 from src.repositories.coaching import CoachingRepository
 from tests.test_analysis_calibration import _lcg_rows
 from tests.test_calibration_apply import _rows
@@ -230,3 +235,106 @@ def test_reason_de_donnees_inchangee():
     assert _reason(True, "closed") == "Mise à jour en cours"
     assert _reason(False, "draft") == "Sélection des champions en cours"
     assert _reason(False, "closed") is None
+
+
+# ---------- route « Appliquer » (SPEC-39 tâche 192) ----------
+
+
+@pytest.fixture
+def reglage(monkeypatch, tmp_path):
+    """Fichier de calibration redirigé vers tmp_path ; K et version restaurés après le test."""
+    from src import calibration_overrides as overrides
+
+    monkeypatch.setattr(
+        overrides, "get_calibration_path", lambda: str(tmp_path / "calibration.json")
+    )
+    for name in ("K_MATCHUP", "K_SYNERGY", "MODEL_VERSION"):
+        monkeypatch.setattr(analysis_config, name, getattr(analysis_config, name))
+    return tmp_path / "calibration.json"
+
+
+def web_en_phase(temp_db, kind):
+    bus = EventBus()
+    bus.publish("phase", {"kind": kind})
+    return TestClient(create_app(temp_db, bus=bus), base_url=LOCAL, raise_server_exceptions=False)
+
+
+def _jeton(web):
+    return {client_config.TOKEN_HEADER: web.app.state.session_token}
+
+
+def test_page_diagnostic_facteur_et_bouton_grise(db, temp_db):
+    rows = _rows(400, 1.0)
+    predictions(db, CURRENT, rows)
+    page = client(temp_db).get("/calibration").text
+    view = calibration_view(CoachingRepository(db), None, "closed")
+    assert "Facteur d'échelle" in page and view["scale"] in page
+    tag = re.search(r'<button[^>]*class="btn-primary calib-apply"[^>]*>', page).group(0)
+    assert "disabled" in tag and not view["can_apply"]
+    assert str(escape(view["apply_reason"])) in page
+
+
+def test_la_cible_porte_le_garde_htmx_des_409_et_500(db, temp_db):
+    """htmx:beforeSwap est émis sur la cible (#calib), pas sur le bouton : le garde y vit."""
+    predictions(db, CURRENT, _rows(400, 0.4))
+    page = client(temp_db).get("/calibration").text
+    target = re.search(r'<div id="calib"[^>]*>', page).group(0)
+    assert 'hx-on:htmx:before-swap="if([409,500].includes(event.detail.xhr.status))' in target
+
+
+@pytest.mark.parametrize("phase_kind", ["draft", "game"])
+def test_appliquer_refuse_en_phase_de_jeu(db, temp_db, reglage, phase_kind):
+    predictions(db, CURRENT, _rows(400, 0.4))
+    web = web_en_phase(temp_db, phase_kind)
+    response = web.post("/calibration/appliquer", headers=_jeton(web))
+    assert response.status_code == 409
+    assert phase_reason(phase_kind) in response.text and not reglage.exists()
+
+
+@pytest.mark.parametrize("rows", [lambda: _rows(400, 1.0), lambda: _lcg_rows(MINIMUM + 50)])
+def test_appliquer_refuse_quand_le_diagnostic_refuse(db, temp_db, reglage, rows):
+    data = rows()
+    predictions(db, CURRENT, data)
+    web = client(temp_db)
+    response = web.post("/calibration/appliquer", headers=_jeton(web))
+    reason = calibration_view(CoachingRepository(db), None, "closed")["apply_reason"]
+    assert response.status_code == 409 and not reglage.exists()
+    assert str(escape(reason)) in response.text
+
+
+def test_appliquer_sans_jeton_403(db, temp_db, reglage):
+    predictions(db, CURRENT, _rows(400, 0.4))
+    response = client(temp_db).post("/calibration/appliquer")
+    assert response.status_code == 403 and not reglage.exists()
+
+
+def test_appliquer_ecrit_le_reglage_et_le_retient(db, temp_db, reglage):
+    rows = _rows(400, 0.4)
+    predictions(db, CURRENT, rows)
+    old_matchup, old_synergy = analysis_config.K_MATCHUP, analysis_config.K_SYNERGY
+    scale = suggest_scale(rows)
+    web = client(temp_db)
+    response = web.post("/calibration/appliquer", headers=_jeton(web))
+    assert response.status_code == 200
+    saved = json.loads(reglage.read_text(encoding="utf-8"))
+    assert saved["K_MATCHUP"] == pytest.approx(old_matchup * scale)
+    assert saved["K_SYNERGY"] == pytest.approx(old_synergy * scale)
+    assert saved["MODEL_VERSION"] == f"{CURRENT}+cal1"
+    assert analysis_config.MODEL_VERSION == f"{CURRENT}+cal1"
+    assert "Réglage appliqué" in response.text
+
+
+def test_ecriture_impossible_500_sans_changement(db, temp_db, reglage, monkeypatch):
+    predictions(db, CURRENT, _rows(400, 0.4))
+    monkeypatch.setattr(calibration_notice, "save_overrides", lambda *args, **kwargs: False)
+    before = (analysis_config.K_MATCHUP, analysis_config.K_SYNERGY, analysis_config.MODEL_VERSION)
+    web = client(temp_db)
+    response = web.post("/calibration/appliquer", headers=_jeton(web))
+    assert response.status_code == 500
+    assert "Écriture de calibration.json impossible" in response.text
+    assert (
+        analysis_config.K_MATCHUP,
+        analysis_config.K_SYNERGY,
+        analysis_config.MODEL_VERSION,
+    ) == before
+    assert not reglage.exists()

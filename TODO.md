@@ -389,7 +389,7 @@ intervalle de −1,17 à 2,25). Arbitrages validés le 2026-10-20. Découpage en
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
 | 191 | `Diagnostic` et `diagnose()` dans `calibration_notice.py`, `build_proposal` qui s'appuie dessus ; `phase_reason` dans `donnees.py` ; champs de `calibration_view` ; tests | 3 | — | ✅ 2026-10-20 : 13 tests ; `phase_reason` dans `data.py` (cycle d'import avec `donnees.py`) ; sur `db.db` : facteur 0,613, intervalle [−1,17 ; 2,25], refus « l'intervalle atteint 0 » |
-| 192 | Route `POST /calibration/appliquer`, phase dans `GET /calibration`, gabarit et CSS ; tests de route | 3 | 191 | |
+| 192 | Route `POST /calibration/appliquer`, phase dans `GET /calibration`, gabarit et CSS ; tests de route | 3 | 191 | ✅ 2026-10-20 : 9 tests (409 en draft, en partie et sur refus du diagnostic, 403 sans jeton, écriture de `calibration.json` en `+cal1`, 500 sans changement) ; garde htmx des 409/500 sur `#calib`, la cible de `htmx:beforeSwap` ; échange réel à voir à la recette |
 | 193 | Clôture : `CHANGELOG.md`, statuts, README des specs, recette @pj35 | 1 | 192 | |
 
 ### Lot SPEC-38, trois pages de runes OneTricks au choix (✅ livrée le 2026-10-20, recette @pj35 à faire)

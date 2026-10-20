@@ -17,7 +17,9 @@ from sse_starlette.sse import EventSourceResponse
 
 from ..config import get_resource_path
 from ..config_client import client_config
+from ..config_constants import analysis_config
 from ..data_freshness import get_freshness_info
+from ..draft import calibration_notice
 from ..pool_manager import PoolManager, get_user_data_path
 from ..coaching.goals import set_goal
 from ..coaching.grid import GRID
@@ -48,7 +50,7 @@ from .en_partie import en_partie_view
 from .draft_swaps import run as run_draft_swap
 from .draft_actions import Refusal, role_command, run as run_draft_action
 from .draft_skins import SkinBook, select_skin
-from .draft_view import Champions, signature, stage_view
+from .draft_view import Champions, fr, signature, stage_view
 from .lcu_proxy import LcuProxy
 from .lobby import (
     cancel as cancel_search,
@@ -333,10 +335,44 @@ def create_app(
             request, "progression.html", v=coaching(read, lambda: progression_view({}, [], role))
         )
 
+    def phase_kind() -> str:
+        """Phase du client LoL (draft, game, closed) : « Appliquer » n'écrit jamais pendant une partie."""
+        return (bus.latest("phase") or {}).get("kind", "closed") if bus else "closed"
+
     @app.get("/calibration", response_class=HTMLResponse)
     def calibration(request: Request, version: Optional[str] = None):
-        view = coaching(lambda repo: calibration_view(repo, version), calibration_empty)
+        view = coaching(
+            lambda repo: calibration_view(repo, version, phase_kind()), calibration_empty
+        )
         return render(request, "calibration.html", v=view)
+
+    @app.post("/calibration/appliquer", response_class=HTMLResponse)
+    def calibration_appliquer(request: Request):
+        """Applique la proposition du diagnostic (SPEC-39) ; refusée (409) si la vue l'interdit, 500 si
+        `calibration.json` ne s'écrit pas. Le jeton est exigé par le garde, comme pour tout POST."""
+
+        def read(version: Optional[str]) -> dict:
+            return coaching(
+                lambda repo: calibration_view(repo, version, phase_kind()), calibration_empty
+            )
+
+        view = read(None)
+        if not view["can_apply"]:
+            return render(request, "calibration.html", status_code=409, v=view)
+        proposal = view["proposal"]
+        old_matchup, old_synergy = analysis_config.K_MATCHUP, analysis_config.K_SYNERGY
+        if not calibration_notice.apply_proposal(proposal):
+            message = "Écriture de calibration.json impossible, rien n'est modifié"
+            failed = {**read(view["version"]), "message": message}
+            return render(request, "calibration.html", status_code=500, v=failed)
+        message = (
+            f"Réglage appliqué : K_MATCHUP {fr(old_matchup, 2)} → {fr(proposal.k_matchup, 2)}, "
+            f"K_SYNERGY {fr(old_synergy, 2)} → {fr(proposal.k_synergy, 2)}, "
+            f"version {proposal.model_version}. Un Live Coach ouvert en console ne le verra "
+            "qu'à son redémarrage."
+        )
+        # Relue sur l'ancienne version : elle a ses issues, la nouvelle n'en a pas encore.
+        return render(request, "calibration.html", v={**read(view["version"]), "message": message})
 
     def donnees_body() -> dict:
         """Écran Données : état de la mise à jour, dernier scrape (lanes lues en lecture seule)."""
