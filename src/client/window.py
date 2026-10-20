@@ -13,6 +13,7 @@ import webbrowser
 from ctypes import wintypes
 from typing import Any, Callable, Optional, Tuple
 
+from ..config import get_resource_path
 from ..config_client import client_config
 
 Rect = Tuple[int, int, int, int]  # x, y, largeur, hauteur
@@ -159,7 +160,8 @@ def _open(url: str, frameless: bool, should_close: Optional[ShouldClose] = None)
             api._window.events.closing += _closing_handler(api._window, should_close)
         except Exception as exc:  # pylint: disable=broad-exception-caught
             print(f"[ALERTE] Garde de fermeture non branchée, fermeture sans garde : {exc}")
-    webview.start()
+    # Sans `icon`, pywebview prend celle de `sys.executable` : le logo Python hors exe.
+    webview.start(icon=get_resource_path(client_config.WINDOW_ICON))
 
 
 def run(url: str, should_close: Optional[ShouldClose] = None) -> bool:

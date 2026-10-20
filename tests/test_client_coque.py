@@ -1,6 +1,7 @@
 """Coque du client LeagueStats (SPEC-21 tâches 68 et 69) : pages, navigation, thème, états, fenêtre."""
 
 import json
+import os
 import re
 import sqlite3
 import sys
@@ -391,7 +392,8 @@ def faux_webview(monkeypatch):
         module.created.append((title, url, kwargs))
         return FauxWindow()
 
-    def start():
+    def start(**kwargs):
+        module.start_kwargs = kwargs
         if len(module.created) <= module.fail_until:
             raise RuntimeError("WebView2 absent")
 
@@ -413,6 +415,7 @@ def test_run_ouvre_la_fenetre_sans_bordure(faux_webview, navigateur):
     assert (title, url) == (client_config.WINDOW_TITLE, "http://127.0.0.1:1")
     assert kwargs["frameless"] is True and kwargs["easy_drag"] is False
     assert kwargs["min_size"] == client_config.WINDOW_MIN_SIZE
+    assert os.path.isfile(faux_webview.start_kwargs["icon"])  # pas le logo Python
     assert navigateur == []
 
 

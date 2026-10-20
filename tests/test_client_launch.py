@@ -81,7 +81,7 @@ def test_cablage_dans_la_fenetre_et_garde_en_echec(monkeypatch, capsys):
         return module.fenetres[-1]
 
     module.create_window = create_window
-    module.start = lambda: None
+    module.start = lambda **kwargs: None
     monkeypatch.setitem(sys.modules, "webview", module)
 
     recus = []

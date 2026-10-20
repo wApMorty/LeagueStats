@@ -24,6 +24,9 @@ class ClientConfig:
     WINDOW_SIZE: Tuple[int, int] = (1280, 800)
     WINDOW_MIN_SIZE: Tuple[int, int] = (960, 600)
     WINDOW_BACKGROUND: str = "#030e0a"  # équivalent hexadécimal de `--bg` (style.css)
+    WINDOW_ICON: str = (
+        "src/client/static/icon.ico"  # aussi l'icône de l'exe (LeagueStatsCoach.spec)
+    )
 
     # Réglage Motion (SPEC-21 §4.3) : « systeme » suit `prefers-reduced-motion`, « reduit » coupe
     # tout, « complet » anime quel que soit le système (Windows annonce `reduce` chez @pj35).

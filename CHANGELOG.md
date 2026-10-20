@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### 🎨 Style
+
+- **Icône LeagueStats** — la fenêtre et l'exe ont leur propre icône (sceau or, gemme menthe, charte Alchimie) au lieu du logo Python ou de celle de PyInstaller.
+
 ## [5.8.1] - 2026-10-20
 
 Les cartes de recommandation de la draft affichent la même victoire que le grimoire (si tu verrouilles maintenant), avec la fin de draft attendue en sous-ligne ; la jauge suit tout champion survolé. Aucune action requise : pas de migration Alembic, pas de scrape.
