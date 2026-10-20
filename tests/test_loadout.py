@@ -25,6 +25,8 @@ from src.draft.loadout import (
     get_page,
     option_name,
     pick_build,
+    rune_pages,
+    RunePage,
 )
 from src.draft.loadout import _core_path, _option
 
@@ -518,3 +520,67 @@ class TestOptionName:
 
     def test_unknown_id_falls_back_to_the_id(self):
         assert option_name(loadout._trim(load(GENERAL)), "Bottes", (999999,)) == "999999"
+
+
+class TestRunePages:
+    """SPEC-38 §4.1 : la page de l'import, puis les pages publiées les plus jouées."""
+
+    def test_ambessa_top_gives_the_three_most_played_pages(self):
+        page = load(AMBESSA)
+        pages = rune_pages(page, pick_build(page))
+        assert [(p.primary_style, p.sub_style) for p in pages] == [
+            (8400, 8300),
+            (8200, 8100),
+            (8400, 8300),
+        ]
+        assert [8437 in p.perks for p in pages] == [True, False, True]
+        assert 8230 in pages[1].perks
+        assert [p.share for p in pages] == pytest.approx([0.0817, 0.0761, 0.0687], abs=1e-3)
+        assert all(p.duel_share is None for p in pages)
+
+    def test_duel_shares_on_jinx_against_draven(self):
+        general, duel = load(GENERAL), load(DUEL)
+        pages = rune_pages(general, pick_build(general), duel)
+        assert pages[0].duel_share == pytest.approx(0.225, abs=1e-3)
+        assert pages[1].duel_share == pytest.approx(0.189, abs=1e-3)
+        assert pages[2].duel_share is None
+        assert pages[2].share == pytest.approx(0.134, abs=1e-3)
+
+    def test_adapted_first_page_absent_from_general_goes_first(self):
+        general = load(GENERAL)
+        first = replace(pick_build(general), perks=(8008, 8009, 8014, 8017, 8313, 8321))
+        pages = rune_pages(general, first)
+        assert pages[0].perks == (8008, 8009, 8014, 8017, 8313, 8321)
+        assert pages[0].share is None
+        assert [p.share for p in pages[1:]] == pytest.approx([0.299, 0.212], abs=1e-3)
+
+    def test_first_equal_to_second_general_page_has_no_duplicate(self):
+        general = load(GENERAL)
+        first = replace(
+            pick_build(general), sub_style=8200, perks=(8008, 8009, 8017, 8233, 8236, 9103)
+        )
+        pages = rune_pages(general, first)
+        assert [(p.sub_style, p.share is not None) for p in pages] == [
+            (8200, True),
+            (8300, True),
+            (8300, True),
+        ]
+        assert len({(p.primary_style, p.sub_style, p.perks) for p in pages}) == 3
+        assert [p.share for p in pages] == pytest.approx([0.212, 0.299, 0.134], abs=1e-3)
+
+    def test_single_published_page_gives_one_page(self):
+        general = copy.deepcopy(load(GENERAL))
+        first_entry = general["firstItemStats"]["all"]["all"]["popRunes"]["8008"][0]
+        general["firstItemStats"]["all"]["all"]["popRunes"] = {"8008": [first_entry]}
+        assert len(rune_pages(general, pick_build(general))) == 1
+
+    def test_missing_rune_pages_gives_empty_list(self):
+        general = copy.deepcopy(load(GENERAL))
+        general["firstItemStats"]["all"]["all"].pop("popRunes")
+        assert rune_pages(general, pick_build(load(GENERAL))) == []
+
+    def test_count_bounds_the_list(self):
+        general = load(GENERAL)
+        pages = rune_pages(general, pick_build(general), count=1)
+        assert len(pages) == 1
+        assert isinstance(pages[0], RunePage)

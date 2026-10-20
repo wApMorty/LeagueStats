@@ -292,6 +292,58 @@ def get_build(champion: str, lane: Optional[str]) -> Optional[Build]:
     return pick_build(page) if page else None
 
 
+# ---------- pages de runes au choix (SPEC-38) ----------
+
+
+@dataclass(frozen=True)
+class RunePage:
+    """Une page de runes candidate, sans fragments (communs, `popStat`)."""
+
+    primary_style: int
+    sub_style: int
+    perks: Tuple[int, ...]  # triées par id, comme OneTricks
+    # Part des parties de la page générale ; None si non publiée (page 1 adaptée au duel).
+    share: Optional[float]
+    duel_share: Optional[float]  # part des parties du duel ; None sans duel ou si non publiée
+
+
+def _published_pages(page: dict) -> List[Tuple[Tuple[int, int, Tuple[int, ...]], float]]:
+    """Pages publiées (toutes keystones) : ((principal, secondaire, perks), part), par part décroissante."""
+    entries = [
+        ((int(primary), int(sub), tuple(sorted(int(perk) for perk in perks))), float(share))
+        for keystone_pages in page["firstItemStats"]["all"]["all"]["popRunes"].values()
+        for perks, share, (primary, sub, _) in keystone_pages
+    ]
+    return sorted(entries, key=lambda entry: -entry[1])
+
+
+def rune_pages(
+    general: dict,
+    first: Build,
+    duel: Optional[dict] = None,
+    count: int = draft_config.LOADOUT_RUNE_PAGES,
+) -> List[RunePage]:
+    """La page de `first` puis les pages publiées les plus jouées, sans doublon ; [] si la page est illisible."""
+    try:
+        published = _published_pages(general)
+        shares = dict(published)
+        duel_shares = dict(_published_pages(duel)) if duel else {}
+        first_key = (first.primary_style, first.sub_style, tuple(sorted(first.perks)))
+        keys = [first_key] + [key for key, _ in published if key != first_key]
+        return [
+            RunePage(
+                primary_style=key[0],
+                sub_style=key[1],
+                perks=key[2],
+                share=shares.get(key),
+                duel_share=duel_shares.get(key),
+            )
+            for key in keys[:count]
+        ]
+    except (KeyError, IndexError, TypeError, ValueError):
+        return []
+
+
 # ---------- affinage au duel ----------
 
 

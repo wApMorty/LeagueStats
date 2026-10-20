@@ -325,6 +325,9 @@ class DraftConfig:
     LOADOUT_PATH_MIN_GAMES: int = 3
     # Taille du bloc « Autres cores » : seconds items des autres cores (Ambessa 3, Jinx 2).
     LOADOUT_ALT_CORE_ITEMS: int = 4
+    # Pages de runes proposées au choix dans la draft (SPEC-38) : la page de l'import, puis
+    # les plus jouées ensuite ; 3 = la demande de @pj35 du 2026-10-20.
+    LOADOUT_RUNE_PAGES: int = 3
 
     # Draft phase detection
     READY_CHECK_COOLDOWN: float = 2.0  # Seconds after accepting queue
