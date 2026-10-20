@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-10-20 (SPEC-37 rédigée : écran « Données » pour actualiser la base depuis le client ; SPEC-36 rédigée : morts sans contrepartie, axe et revue ; SPEC-35 livrée : étude « Moneyball » du début de partie, aucune action adoptée ; SPEC-33 : tâches 151 à 159 faites, mesure du terme de forme en attente de couverture (3 / 5 000), recette @pj35 à faire ; SPEC-32 livrée : classement MVP / ACE en post-game, recette @pj35 à faire ; SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette @pj35 à faire)
+**Mis à jour** : 2026-10-20 (SPEC-37 rédigée : écran « Données » pour actualiser la base depuis le client ; SPEC-36 livrée : morts sans contrepartie, axe et revue, recette @pj35 à faire ; SPEC-35 livrée : étude « Moneyball » du début de partie, aucune action adoptée ; SPEC-33 : tâches 151 à 159 faites, mesure du terme de forme en attente de couverture (3 / 5 000), recette @pj35 à faire ; SPEC-32 livrée : classement MVP / ACE en post-game, recette @pj35 à faire ; SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette @pj35 à faire)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -396,7 +396,7 @@ SPEC-37 §5 (tâches 181 à 186, 18 pts) :
 | 185 | Fermeture gardée : `window.run(should_close)`, dialogue de confirmation, `cancel` dans `launch.py` | 2 | 183 | ⬜ |
 | 186 | Clôture : `CHANGELOG.md`, statuts, README des specs, `docs/PROJECT_STRUCTURE.md`, recette @pj35 | 1 | 184, 185 | ⬜ |
 
-### Lot suivant — SPEC-36, morts sans contrepartie : axe et revue (🟡 rédigée le 2026-10-20)
+### Lot SPEC-36, morts sans contrepartie : axe et revue (✅ livrée le 2026-10-20, recette @pj35 à faire)
 
 [SPEC-36](docs/specs/SPEC-36-morts-sans-contrepartie.md) traduit SPEC-35 en jeu : au top, une mort sans contrepartie
 avant 14 min coûte −6,6 pts de win chance, et tes parties à 2 ou plus se gagnent à 27 % (64 % à 0). La règle passe
@@ -410,7 +410,7 @@ décision ; arbitrages validés le 2026-10-20. Découpage en SPEC-36 §5 (tâche
 | 177 | `metrics.death_trades` (règle déplacée de `moneyball.py`), métrique `untraded_deaths_14`, grille des cinq rôles, `GRID_VERSION` 2 | 3 | — | ✅ 2026-10-20 : 8 tests (échange le plus proche, fenêtre, métrique égale à l'étude, grille) ; tests Moneyball inchangés |
 | 178 | Référence `fixed` : `GOAL_FIXED_TARGETS`, `set_goal` | 2 | 177 | ✅ 2026-10-20 : 4 tests (axe fixe sans historique, verdict à ≤ 1, route de l'accueil, choix sur une place libre) |
 | 179 | Revue : panneau « Tes morts avant 14 min », `MONEYBALL_DEATH_PTS` | 3 | 177 | ✅ 2026-10-20 : 3 tests (morts échangées et ΔP stocké, mort sans contrepartie dans la page, pas de panneau sans timeline) ; un objectif inconnu d'`event_kind` (Atakhan) se dit « Objectif » |
-| 180 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure, recette @pj35 | 1 | 178, 179 | ⬜ |
+| 180 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure, recette @pj35 | 1 | 178, 179 | ✅ 2026-10-20 (docs) ; recette @pj35 à faire |
 
 ### Lot SPEC-35, étude « Moneyball » du début de partie (✅ livrée le 2026-10-20, rien d'adopté)
 

@@ -68,7 +68,7 @@ src/
 ├── coaching/                # Coach de gameplay (SPEC-19)
 │   ├── capture.py, ranked.py            # Capture brute des parties, photos de classement
 │   ├── post_game_watcher.py              # Fil de lecture de l'écran de fin et des LP, cadencé par la phase (SPEC-25)
-│   ├── metrics.py, grid.py               # Métriques des 10 joueurs, grille par rôle, norme, objectif
+│   ├── metrics.py, grid.py               # Métriques des 10 joueurs (morts sans contrepartie : SPEC-36), grille par rôle
 │   ├── findings.py, report.py             # Constats de fin de partie, sorties console
 │   ├── progression.py, goals.py            # Schémas, tendances, LP, axes de travail
 │   └── moneyball.py                        # Valeur des actions du début de partie, écart du joueur (SPEC-35)

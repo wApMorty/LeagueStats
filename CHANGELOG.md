@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### ✨ Feature
+
+- **Morts sans contrepartie avant 14 min (SPEC-36)** — nouvelle métrique dans la grille des cinq rôles (poids 2) : une mort avant 14 min que ton équipe n'échange par aucun kill, monstre épique ou bâtiment à ± 20 s. Au top, elle coûte −6,6 pts de win chance (SPEC-35). La règle vit maintenant dans `metrics.death_trades`, partagée avec l'étude Moneyball. L'accueil propose un axe à cible fixe ≤ 1 par partie (référence `fixed`, sans historique OneTricks) à fixer d'un clic. La revue d'une partie ajoute le panneau « Tes morts avant 14 min » : tueur, mort solo, échange ou « Sans contrepartie », ΔP de SPEC-20, et en pied les taux mesurés de ton rôle. `GRID_VERSION` passe à 2 : l'accueil recalcule les analyses au premier lancement. Aucune migration Alembic, pas de scrape.
+
 ## [5.5.0] - 2026-10-20
 
 Une étude « Moneyball » chiffre ce que valent en win chance les actions des 14 premières minutes (CS, morts, morts sans contrepartie, présence aux objectifs) et ton écart à tes adversaires de lane : aucune action à travailler n'en ressort, tu es en avance de 10 CS à 14 min. Aucune action requise : pas de migration Alembic, pas de scrape.
