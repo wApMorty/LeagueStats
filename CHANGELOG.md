@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+## [5.8.0] - 2026-10-20
+
+L'écran Calibration du client montre le diagnostic complet du modèle de draft (facteur d'échelle, intervalle de confiance, K suggérés) et permet d'appliquer le réglage proposé d'un clic, avec le même garde-fou que le Live Coach. Aucune action requise : pas de migration Alembic, pas de scrape.
+
 ### ✨ Feature
 
 - **Écran Calibration : diagnostic complet et « Appliquer » (SPEC-39)** — l'écran montre maintenant ce que seul `scripts/calibrate_model.py` donnait : facteur d'échelle, intervalle de confiance à 90 %, sens de la correction et K suggérés pour la version courante. Un bouton « Appliquer » reprend la règle du Live Coach (au moins 100 issues, intervalle qui exclut 1,0 sans atteindre 0) : il écrit `calibration.json`, passe `MODEL_VERSION` à `+calN` et vaut tout de suite pour le Live Coach du client, qui ne pouvait pas répondre au « o/n » de la console. Il est grisé avec sa raison en draft, en partie, sur une ancienne version ou quand le diagnostic refuse (aujourd'hui sur `spec13-v1` : facteur 0,613, intervalle de −1,17 à 2,25, « l'intervalle atteint 0 »).
