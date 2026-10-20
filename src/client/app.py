@@ -17,6 +17,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from ..config import get_resource_path
 from ..config_client import client_config
+from ..data_freshness import get_freshness_info
 from ..pool_manager import PoolManager, get_user_data_path
 from ..coaching.goals import set_goal
 from ..coaching.grid import GRID
@@ -32,6 +33,7 @@ from .data import (
     rank_view,
 )
 from .db import read_only, writable
+from .donnees import UpdateJob, donnees_view, last_scrape_lanes
 from .home import ORIGINS, REFERENCES, axes_view, empty_home, home_view
 from .draft_grimoire import grimoire_view
 from .draft_loadout import normalize_page, plan as loadout_plan, runes_payload, send as send_loadout
@@ -87,6 +89,7 @@ NAV = (
             NavItem("progression", "Progression", "ᛏ", 290, "/progression"),
             NavItem("parties", "Parties", "ᛗ", 85, "/parties"),
             NavItem("calibration", "Calibration", "ᛉ", 345, "/calibration"),
+            NavItem("donnees", "Données", "ᛚ", 205, "/donnees"),
         ),
     ),
     NavGroup(
@@ -137,6 +140,8 @@ def create_app(
     lcu: Any = None,
     assets: Optional[Assets] = None,
     commands: Optional[Callable[[str], bool]] = None,
+    *,
+    update_job: Optional[UpdateJob] = None,
 ) -> FastAPI:
     """Construit l'application ; `bus` et `lcu` sont ceux que les écrans liront.
 
@@ -151,6 +156,7 @@ def create_app(
     app.state.db_path = Path(db_path)
     app.state.bus = bus
     app.state.lcu = lcu
+    app.state.update_job = update_job or UpdateJob()
     app.state.assets = assets or Assets(Path(get_user_data_path(client_config.ASSETS_DIR)))
     app.state.session_token = secrets.token_urlsafe(client_config.SESSION_TOKEN_BYTES)
     probe = LcuProbe(lcu)
@@ -325,6 +331,48 @@ def create_app(
     def calibration(request: Request, version: Optional[str] = None):
         view = coaching(lambda repo: calibration_view(repo, version), calibration_empty)
         return render(request, "calibration.html", v=view)
+
+    def donnees_body() -> dict:
+        """Écran Données : état de la mise à jour, dernier scrape (lanes lues en lecture seule)."""
+        try:
+            with read_only(app.state.db_path) as db:
+                last_lanes = last_scrape_lanes(db.connection)
+        except sqlite3.Error:
+            last_lanes = {}
+        phase_kind = (bus.latest("phase") or {}).get("kind", "closed") if bus else "closed"
+        return donnees_view(
+            app.state.update_job.snapshot(),
+            get_freshness_info(str(app.state.db_path)),
+            last_lanes,
+            phase_kind,
+            datetime.now(timezone.utc),
+        )
+
+    def donnees_fragment(request: Request, status_code: int = 200):
+        """L'état de l'écran Données, rechargé par htmx (sondage pendant un run, réponse au lancement)."""
+        return templates.TemplateResponse(
+            request,
+            "partials/donnees_etat.html",
+            {"d": donnees_body(), "poll": client_config.DONNEES_POLL_S},
+            status_code=status_code,
+        )
+
+    @app.get("/donnees", response_class=HTMLResponse)
+    def donnees(request: Request):
+        return render(request, "donnees.html", d=donnees_body(), poll=client_config.DONNEES_POLL_S)
+
+    @app.get("/donnees/etat", response_class=HTMLResponse)
+    def donnees_etat(request: Request):
+        return donnees_fragment(request)
+
+    @app.post("/donnees/actualiser", response_class=HTMLResponse)
+    def donnees_actualiser(request: Request):
+        """Lance une mise à jour ; refusée (409) si la vue l'interdit ou si un run tourne déjà."""
+        if not donnees_body()["can_start"]:
+            return donnees_fragment(request, 409)
+        if app.state.update_job.start() is not None:
+            return donnees_fragment(request, 409)
+        return donnees_fragment(request)
 
     @app.get("/parties", response_class=HTMLResponse)
     def parties(request: Request):
@@ -518,14 +566,24 @@ def create_app(
     def draft_page(request: Request):
         snapshot = draft_snapshot()
         view = stage_view(snapshot, app.state.assets, intro=True, skins=locked_skins(snapshot))
-        return render(request, "draft.html", v=view, stage_size=client_config.DRAFT_STAGE_SIZE)
+        return render(
+            request,
+            "draft.html",
+            v=view,
+            stage_size=client_config.DRAFT_STAGE_SIZE,
+            updating=app.state.update_job.running,
+        )
 
     @app.get("/draft/stage", response_class=HTMLResponse)
     def draft_stage(request: Request):
         """Le contenu synchronisé de l'écran, rechargé par le script à chaque snapshot du bus."""
         snapshot = draft_snapshot()
         view = stage_view(snapshot, app.state.assets, skins=locked_skins(snapshot))
-        return templates.TemplateResponse(request, "partials/draft_stage.html", {"v": view})
+        return templates.TemplateResponse(
+            request,
+            "partials/draft_stage.html",
+            {"v": view, "updating": app.state.update_job.running},
+        )
 
     @app.post("/draft/skin")
     def draft_skin(skin_id: int):

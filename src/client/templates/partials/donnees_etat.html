@@ -1,0 +1,26 @@
+<section id="donnees-etat" class="panel donnees" data-rise="1"{% if d.running %} hx-get="/donnees/etat" hx-trigger="every {{ poll }}s" hx-swap="outerHTML"{% endif %}>
+  <div class="panel-head">
+    <button type="button" hx-post="/donnees/actualiser" hx-target="#donnees-etat" hx-swap="outerHTML"
+            {% if not d.can_start %}disabled title="{{ d.reason }}"{% endif %}>Actualiser</button>
+  </div>
+  {% if not d.can_start %}<p class="muted">{{ d.reason }}</p>{% endif %}
+  {% if d.outcome %}<p class="donnees-outcome donnees-{{ d.outcome.kind }}">{{ d.outcome.text }}</p>{% endif %}
+  {% if d.running %}
+  <p class="donnees-step">{{ d.step }}{% if d.elapsed %} · {{ d.elapsed }}{% endif %}{% if d.eta %} · {{ d.eta }}{% endif %}</p>
+  {% for lane in d.lanes %}
+  <div class="donnees-lane">
+    <span>{{ lane.label }}</span>
+    <progress value="{{ lane.done }}" max="{{ lane.total }}"></progress>
+    <span class="tab">{{ lane.done }}/{{ lane.total }}</span>
+    {% if lane.failed > 0 %}<span class="donnees-failed">{{ lane.failed }} échec{{ "s" if lane.failed > 1 }}</span>{% endif %}
+    <span class="muted">{{ lane.current }}</span>
+  </div>
+  {% endfor %}
+  {% endif %}
+  <div class="donnees-last">
+    <h2>Dernier passage</h2>
+    <p>{{ d.last.when }} · statut {{ d.last.status }}</p>
+    <p class="muted">{{ d.last.matchups }} matchups · {{ d.last.synergies }} synergies</p>
+    {% for lane in d.last.lanes %}<p class="muted">{{ lane.label }} : {{ lane.text }}</p>{% endfor %}
+  </div>
+</section>

@@ -392,7 +392,7 @@ SPEC-37 §5 (tâches 181 à 186, 18 pts) :
 | 181 | Progression et arrêt : `progress`/`stop` dans `parse_page_by_role`, `scrape_all_multilane`, `run_pipeline` ; `PipelineCancelled` restaure ; `db_meta.last_scrape_lanes` | 5 | — | ✅ 2026-10-20 : 7 tests (événements start/done, arrêt sans écriture après, rappel en panne ignoré, plan avant la 1re lane, arrêt entre lanes, restauration, bilan par lane) ; `Progress` et `PipelineCancelled` dans `src/progress.py` (cycle d'imports) |
 | 182 | Verrou `data/update.lock` (PID, `psutil`) dans `run_pipeline`, `UPDATE_LOCK_FILE` | 2 | — | ✅ 2026-10-20 : 4 tests (PID vivant refusé sans sauvegarde ni scrape, PID mort et fichier illisible repris, verrou levé après succès et échec) |
 | 183 | `src/client/donnees.py` : `UpdateJob` (fil, état, ETA, logging restauré, `cancel`) et `donnees_view` ; constantes `DONNEES_*` | 3 | 181 | ✅ 2026-10-20 : 9 tests (lanes et champions en cours, échecs, ETA à 5 pages, double lancement, logging restauré, run qui lève, arrêt, `db_meta` tolérant, vue) |
-| 184 | Écran Données : routes, `NAV`, gabarits, CSS, refus en `draft`/`game`, bandeau de l'écran Draft | 5 | 182, 183 | ⬜ |
+| 184 | Écran Données : routes, `NAV`, gabarits, CSS, refus en `draft`/`game`, bandeau de l'écran Draft | 5 | 182, 183 | ✅ 2026-10-20 : 7 tests (page et lien actif, sondage seulement pendant un run, 409 en draft et en partie, 403 sans jeton, bandeau du Draft) ; bandeau à clé `updating` pour la synchro par clé de `draft.js` |
 | 185 | Fermeture gardée : `window.run(should_close)`, dialogue de confirmation, `cancel` dans `launch.py` | 2 | 183 | ⬜ |
 | 186 | Clôture : `CHANGELOG.md`, statuts, README des specs, `docs/PROJECT_STRUCTURE.md`, recette @pj35 | 1 | 184, 185 | ⬜ |
 

@@ -40,6 +40,7 @@
 </svg>
 {%- endmacro %}
 
+{% if updating %}<p class="draft-updating" data-key="updating" data-sig="updating" role="status">Données en cours de mise à jour : recommandations sur une base incomplète</p>{% endif %}
 {% if v.empty %}
 <div class="d-empty" data-key="empty" data-sig="empty">
   <svg viewBox="-60 -60 120 120" aria-hidden="true"><circle data-trace="1400" r="52"/><path data-trace="1800" d="M0,-48 L28.2,38.8 L-45.6,-14.8 L45.6,-14.8 L-28.2,38.8 Z"/></svg>
