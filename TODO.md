@@ -389,7 +389,7 @@ OneTricks de plus (pages en cache). Arbitrages validés le 2026-10-20. Découpag
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
 | 187 | `RunePage`, `loadout.rune_pages()`, `LOADOUT_RUNE_PAGES` + 5 tests sur fixtures | 3 | — | ✅ 2026-10-20 : 7 tests (Ambessa 8,2 / 7,6 / 6,9 %, parts du duel Jinx contre Draven, page adaptée en tête, sans doublon, une page, `popRunes` absent, `count`) |
-| 188 | `draft_loadout.pages()` et route `GET /draft/loadout/pages` + tests | 2 | 187 | ⬜ |
+| 188 | `draft_loadout.pages()` et route `GET /draft/loadout/pages` + tests | 2 | 187 | ✅ 2026-10-20 : 6 tests (trois pages Jinx, page 1 = plan, parts du duel contre Draven sur 40 parties, pages après verrouillage depuis OneTricks, champion inconnu et page indisponible, sans champ select) |
 | 189 | Écran « Pages OneTricks » : bouton, écran superposé, `pageCard` paramétré, `is-diff`, « Choisir » qui écrit, CSS + test du script | 5 | 188 | ⬜ |
 | 190 | Clôture : `CHANGELOG.md`, statuts, README des specs, recette @pj35 en draft réelle | 1 | 189 | ⬜ |
 

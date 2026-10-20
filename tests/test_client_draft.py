@@ -1070,6 +1070,94 @@ def test_page_indisponible(client, bus, runes_assets, monkeypatch):
     )
 
 
+def test_trois_pages_au_choix(client, bus, runes_assets, onetricks):
+    bus.publish("draft", jinx_snapshot())
+    body = client.get("/draft/loadout/pages", params={"champion_id": 222}).json()
+    fixture = json.loads((FIXTURES_DIR / "onetricks_jinx_bot.json").read_text(encoding="utf-8"))
+    pages = body["pages"]
+    assert body["available"] and len(pages) == 3
+    assert pages[0]["page"]["primary"] == 8000 and pages[0]["page"]["sub"] == 8300
+    assert pages[0]["page"]["keystone"] == 8008
+    assert pages[0]["share"] == pytest.approx(
+        fixture["firstItemStats"]["all"]["all"]["popRunes"]["8008"][0][1]
+    )
+    for page in pages:
+        assert page["share"] is not None
+        assert page["games"] == round(page["share"] * 500)
+    assert body["games"] == 500 and body["opponent"] is None and body["duel_games"] is None
+    assert body["shards"] == [5005, 5008, 5011]
+
+
+def test_page_1_identique_au_plan(client, bus, runes_assets, onetricks):
+    bus.publish("draft", jinx_snapshot())
+    plan = client.get("/draft/loadout", params={"champion_id": 222}).json()
+    pages = client.get("/draft/loadout/pages", params={"champion_id": 222}).json()["pages"]
+    assert pages[0]["page"] == plan["page"]
+
+
+def test_parts_du_duel(client, bus, runes_assets, monkeypatch):
+    from src.draft import loadout
+
+    general = json.loads((FIXTURES_DIR / "onetricks_jinx_bot.json").read_text(encoding="utf-8"))
+    duel = json.loads(
+        (FIXTURES_DIR / "onetricks_jinx_bot_vs_draven.json").read_text(encoding="utf-8")
+    )
+
+    def fake(champion, lane, opponent=None):
+        if opponent is None:
+            return general
+        return duel if opponent == "Draven" else None
+
+    monkeypatch.setattr(loadout, "get_page", fake)
+    bus.publish("draft", jinx_snapshot(versus="Draven"))
+    body = client.get("/draft/loadout/pages", params={"champion_id": 222}).json()
+    assert body["opponent"] == "Draven" and body["duel_games"] == 40
+    pages = body["pages"]
+    for page in pages:
+        if page["duel_share"] is not None:
+            assert page["duel_games"] == round(page["duel_share"] * 40)
+        else:
+            assert page["duel_games"] is None
+    assert any(page["duel_share"] is None for page in pages)
+
+
+def test_pages_apres_verrouillage_viennent_d_onetricks(client, bus, runes_assets, onetricks):
+    applied = {
+        "champion_id": 222,
+        "label": "Jinx bottom",
+        "primary_style": 8000,
+        "sub_style": 8300,
+        "perks": [8008, 8009, 8017, 8313, 8321, 9103],
+        "shards": [5005, 5008, 5011],
+        "spells": [4, 7],
+        "item_blocks": [{"title": "Core (50%)", "items": [3031]}],
+        "games": 321,
+    }
+    bus.publish("draft", jinx_snapshot(loadout=applied))
+    body = client.get("/draft/loadout/pages", params={"champion_id": 222}).json()
+    assert body["available"] and len(body["pages"]) == 3
+    assert ("Jinx", "bottom", None) in onetricks
+
+
+def test_pages_champion_inconnu_et_page_indisponible(client, bus, runes_assets, monkeypatch):
+    from src.draft import loadout
+
+    bus.publish("draft", jinx_snapshot())
+    body = client.get("/draft/loadout/pages", params={"champion_id": 999}).json()
+    assert body == {"available": False, "reason": "Champion inconnu"}
+    monkeypatch.setattr(loadout, "get_page", lambda *a, **k: None)
+    body = client.get("/draft/loadout/pages", params={"champion_id": 222}).json()
+    assert body == {
+        "available": False,
+        "reason": "Page OneTricks indisponible pour ce champion",
+    }
+
+
+def test_pages_sans_champ_select(client):
+    body = client.get("/draft/loadout/pages", params={"champion_id": 222}).json()
+    assert body == {"available": False, "reason": "Pas de champ select en cours"}
+
+
 def test_loadout_sans_champ_select(client):
     assert client.get("/draft/loadout", params={"champion_id": 222}).json()["available"] is False
 

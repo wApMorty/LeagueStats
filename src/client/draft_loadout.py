@@ -1,9 +1,10 @@
 """Loadout de la draft : page de runes, sorts et objets (SPEC-21 tâches 91 et 92, SPEC-15, ADR-003).
 
-Trois choses côté serveur :
+Quatre choses côté serveur :
 
 - `plan` : la page que le Live Coach importerait pour (champion, lane, adversaire), lue sur OneTricks
   (ou, une fois le champion verrouillé, la page déjà écrite dans le client) ;
+- `pages` : les trois pages OneTricks au choix pour ce champion, avec leurs parts (SPEC-38) ;
 - `runes_payload` : les arbres de Data Dragon, les fragments et les sorts, pour le gabarit de la page ;
 - `send` : écrit la page et les sorts choisis à la main dans le client, après validation contre les arbres.
 
@@ -198,6 +199,58 @@ def plan(
         "page": page,
         "spells": list(build.spells),
         "items": _items(build),
+    }
+
+
+def pages(
+    snapshot: Dict[str, Any], champion_id: int, styles: Sequence[Dict[str, Any]]
+) -> Dict[str, Any]:
+    """Les pages OneTricks au choix pour `champion_id` ; `available` faux (avec la raison) sinon."""
+    row = next((c for c in snapshot.get("champions", []) if c["champion_id"] == champion_id), None)
+    if row is None:
+        return {"available": False, "reason": "Champion inconnu"}
+    lane = snapshot.get("local_role")
+    build, opponent = _onetricks_build(row["champion"], lane, snapshot.get("versus"))
+    general = onetricks.get_page(row["champion"], lane)
+    if build is None or general is None:
+        return {"available": False, "reason": "Page OneTricks indisponible pour ce champion"}
+    duel = onetricks.get_page(row["champion"], lane, opponent) if opponent else None
+    games = int(general["patchStats"]["all"])
+    duel_games = int(duel["patchStats"]["all"]) if duel else None
+    listed = []
+    for candidate in onetricks.rune_pages(general, build, duel):
+        page = normalize_page(
+            styles,
+            candidate.primary_style,
+            candidate.sub_style,
+            candidate.perks,
+            build.shards,
+        )
+        if page is None:
+            continue
+        listed.append(
+            {
+                "page": page,
+                "share": candidate.share,
+                "games": round(candidate.share * games) if candidate.share is not None else None,
+                "duel_share": candidate.duel_share,
+                "duel_games": (
+                    round(candidate.duel_share * duel_games)
+                    if candidate.duel_share is not None
+                    else None
+                ),
+            }
+        )
+    if not listed:
+        return {"available": False, "reason": "Aucune page de runes lisible"}
+    return {
+        "available": True,
+        "champion_id": champion_id,
+        "games": games,
+        "opponent": opponent,
+        "duel_games": duel_games,
+        "shards": list(build.shards),
+        "pages": listed,
     }
 
 

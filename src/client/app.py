@@ -36,7 +36,13 @@ from .db import read_only, writable
 from .donnees import UpdateJob, donnees_view, last_scrape_lanes
 from .home import ORIGINS, REFERENCES, axes_view, empty_home, home_view
 from .draft_grimoire import grimoire_view
-from .draft_loadout import normalize_page, plan as loadout_plan, runes_payload, send as send_loadout
+from .draft_loadout import (
+    normalize_page,
+    pages as loadout_pages,
+    plan as loadout_plan,
+    runes_payload,
+    send as send_loadout,
+)
 from . import found
 from .en_partie import en_partie_view
 from .draft_swaps import run as run_draft_swap
@@ -627,6 +633,14 @@ def create_app(
         if not snapshot:
             return {"available": False, "reason": "Pas de champ select en cours"}
         return loadout_plan(snapshot, champion_id, app.state.assets.rune_styles())
+
+    @app.get("/draft/loadout/pages")
+    def draft_loadout_pages(champion_id: int) -> dict:
+        """Les trois pages de runes OneTricks au choix pour ce champion, avec leurs parts."""
+        snapshot = draft_snapshot()
+        if not snapshot:
+            return {"available": False, "reason": "Pas de champ select en cours"}
+        return loadout_pages(snapshot, champion_id, app.state.assets.rune_styles())
 
     def tell_live_coach(line: str) -> bool:
         return commands is not None and commands(line)
