@@ -1,6 +1,6 @@
 # SPEC-40 — Victoire immédiate sur les cartes de draft
 
-**Statut** : 🟡 Rédigée le 2026-10-20, arbitrages validés par @pj35 le 2026-10-20 (§2).
+**Statut** : ✅ Livrée le 2026-10-20 (tâches 194 et 195) ; recette réelle de @pj35 à faire (§6, vérification de bout en bout).
 
 **Origine** : @pj35, 2026-10-20 — « J'ai l'impression que l'assistant draft du GUI n'affiche pas le win chance
 recalculé pour chaque pick. Cependant je les retrouve correctement lorsque j'ouvre la page de sélection étendue. »
@@ -96,6 +96,8 @@ attendue reste visible en second et continue de fixer l'ordre des cartes.
   la carte (`/draft/stage`) est celui de la tuile du grimoire (`/draft/champions`),
   l'écart vaut immédiat − position actuelle, la sous-ligne porte « Fin de draft attendue 48,22 % ». Vérifié rouge
   avant le fix.
+- Correction à l'implémentation : `test_meta_des_tuiles_en_pick` donnait déjà une valeur immédiate à Aatrox, son
+  `data-info` est passé au texte à deux chiffres de §4.2 (il n'est donc pas resté « tel quel »).
 - `tests/test_client_draft.py` : `state["win"]` couvre un champion hors des cartes avec sa valeur immédiate et
   `state["names"]` son nom ; repli sans table de champions (les tests existants restent verts tels quels) ; barre du
   grimoire d'un champion recommandé avec les deux chiffres.

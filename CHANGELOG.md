@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### 🐛 Fix
+
+- **Cartes de draft : la victoire immédiate, comme le grimoire (SPEC-40)** — les cartes de recommandation affichaient la fin de draft attendue de la recherche (l'adversaire contre au mieux ensuite), toujours sous la position actuelle, alors que le grimoire donnait la victoire si l'on verrouille maintenant : deux chiffres différents pour le même champion, et des écarts presque toujours négatifs. Le gros chiffre de la carte est maintenant la victoire immédiate, l'écart vaut immédiat − position actuelle, et la fin de draft attendue passe en sous-ligne ; l'ordre des cartes reste celui de la recherche. La jauge suit la victoire immédiate de tout champion libre survolé, et la barre du grimoire donne les deux chiffres.
+
 ## [5.8.0] - 2026-10-20
 
 L'écran Calibration du client montre le diagnostic complet du modèle de draft (facteur d'échelle, intervalle de confiance, K suggérés) et permet d'appliquer le réglage proposé d'un clic, avec le même garde-fou que le Live Coach. Aucune action requise : pas de migration Alembic, pas de scrape.
