@@ -130,6 +130,7 @@ def test_les_axes_actifs_et_leurs_verdicts(db, temp_db, assets):
             ("xp_diff_15", "Écart d'XP @15"),
             ("solo_deaths", "Morts en solo"),
             ("deaths_per_10", "Morts / 10 min"),
+            ("untraded_deaths_14", "Morts sans contrepartie avant 14 min"),
             ("damage_per_min", "Dégâts / min"),
             ("structure_damage_per_min", "Dégâts aux structures / min"),
         ]

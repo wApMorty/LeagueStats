@@ -53,7 +53,8 @@ class CoachingConfig:
 
     # Incrémenté à chaque changement de grille ou de métriques : les analyses
     # d'une autre version sont recalculées au démarrage (SPEC-19 §8).
-    GRID_VERSION: int = 1
+    # SPEC-36 : métrique untraded_deaths_14
+    GRID_VERSION: int = 2
     # La norme se lit sur les parties les plus récentes, pour suivre le niveau.
     NORM_WINDOW_GAMES: int = 50
     # Sous ces tailles d'échantillon, un Z est stocké mais jamais affiché.

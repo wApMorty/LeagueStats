@@ -9,9 +9,11 @@ timeline absente, adversaire direct inconnu) est omise plutôt que mise à 0.
 """
 
 from dataclasses import dataclass
-from typing import Dict, List, NamedTuple, Optional
+from typing import Dict, List, NamedTuple, Optional, Tuple
 
 from ..config_constants import coaching_config
+from ..winprob.impact import scoring_team
+from ..winprob.state import _other
 
 # Postes de l'écran de fin -> lanes internes (scraping_config.LANES).
 EOG_POSITIONS = {
@@ -45,6 +47,7 @@ METRICS: Dict[str, Metric] = {
     "deaths_before_14": Metric("Morts avant 14 min", -1, "{:.0f}"),
     "solo_deaths": Metric("Morts en solo", -1, "{:.0f}"),
     "deaths_per_10": Metric("Morts / 10 min", -1, "{:.1f}"),
+    "untraded_deaths_14": Metric("Morts sans contrepartie avant 14 min", -1, "{:.0f}"),
     "kill_participation": Metric("Participation aux kills", 1, "{:.0%}"),
     "objective_presence": Metric("Présence aux objectifs", 1, "{:.0%}"),
     "damage_per_min": Metric("Dégâts / min", 1, "{:.0f}"),
@@ -54,6 +57,13 @@ METRICS: Dict[str, Metric] = {
     "wards_killed_per_10": Metric("Wards détruites / 10 min", 1, "{:.1f}"),
     "control_wards_per_10": Metric("Pinks achetées / 10 min", 1, "{:.1f}"),
 }
+
+
+class DeathTrade(NamedTuple):
+    """Une mort et l'événement de son équipe qui l'échange (None : sans contrepartie)."""
+
+    death: dict
+    trade: Optional[dict]
 
 
 class MetricRow(NamedTuple):
@@ -137,6 +147,43 @@ def _events(timeline: Optional[dict], kind: str) -> List[dict]:
     ]
 
 
+def _scoring_events(timeline: Optional[dict], team_of: Dict[int, int]) -> List[Tuple[dict, int]]:
+    """(événement, équipe qu'il rapporte) : un kill rapporte à l'équipe adverse de la victime, un
+    monstre épique ou un bâtiment à l'équipe qui le marque."""
+    out: List[Tuple[dict, int]] = []
+    for e in _events(timeline, "CHAMPION_KILL"):
+        if e.get("victimId") in team_of:
+            out.append((e, _other(team_of[e["victimId"]])))
+    for kind in ("ELITE_MONSTER_KILL", "BUILDING_KILL"):
+        for e in _events(timeline, kind):
+            team = scoring_team(e, team_of)
+            if team is not None:
+                out.append((e, team))
+    return out
+
+
+def death_trades(game: dict, timeline: dict, pid: int, minute: int) -> List[DeathTrade]:
+    """Morts de `pid` avant `minute`, dans l'ordre, avec l'événement de son équipe qui les échange.
+
+    Un événement de l'équipe échange la mort s'il est à ± `MONEYBALL_TRADE_WINDOW_S` ; le plus proche
+    l'emporte, à égalité le plus ancien. `trade` vaut None si aucun ne tombe dans la fenêtre.
+    """
+    team_of = {p["participantId"]: p["teamId"] for p in game["participants"]}
+    window = int(coaching_config.MONEYBALL_TRADE_WINDOW_S * 1000)
+    cutoff = minute * 60_000
+    team = team_of.get(pid)
+    own = [e for e, t in _scoring_events(timeline, team_of) if t == team]
+    out: List[DeathTrade] = []
+    for death in _events(timeline, "CHAMPION_KILL"):
+        if death.get("victimId") != pid or death["timestamp"] >= cutoff:
+            continue
+        at = death["timestamp"]
+        near = [e for e in own if abs(e["timestamp"] - at) <= window]
+        trade = min(near, key=lambda e: (abs(e["timestamp"] - at), e["timestamp"]), default=None)
+        out.append(DeathTrade(death, trade))
+    return out
+
+
 def compute_metrics(
     game: dict, timeline: Optional[dict] = None, eog: Optional[dict] = None
 ) -> List[MetricRow]:
@@ -195,6 +242,12 @@ def compute_metrics(
                 and e.get("killerId") in team_of
                 and not e.get("assistingParticipantIds")
             )
+            if len(timeline["frames"]) > coaching_config.LANE_MINUTE:
+                values["untraded_deaths_14"] = sum(
+                    1
+                    for d in death_trades(game, timeline, pid, coaching_config.LANE_MINUTE)
+                    if d.trade is None
+                )
             team_monsters = [e for e in monsters if team_of[e["killerId"]] == team]
             values["objective_presence"] = _ratio(
                 sum(

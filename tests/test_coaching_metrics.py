@@ -9,7 +9,9 @@ from pathlib import Path
 
 import pytest
 
-from src.coaching.metrics import compute_metrics, is_remake, participant_roles
+from src.coaching.grid import GRID
+from src.coaching.metrics import compute_metrics, death_trades, is_remake, participant_roles
+from src.coaching.moneyball import player_actions
 
 FIXTURES = Path(__file__).parent / "fixtures" / "spike_gameplay"
 GAME = json.loads((FIXTURES / "7998195590_game.json").read_text(encoding="utf-8"))
@@ -109,3 +111,62 @@ class TestMetrics:
         game["participants"][3]["stats"]["gameEndedInEarlySurrender"] = True
         assert is_remake(game)
         assert compute_metrics(game, TIMELINE) == []
+
+
+def _timeline_with(*events) -> dict:
+    """Copie de la timeline de la fixture sans événement, plus `events` à l'image de 5 min."""
+    timeline = copy.deepcopy(TIMELINE)
+    for frame in timeline["frames"]:
+        frame["events"] = []
+    timeline["frames"][5]["events"] = list(events)
+    return timeline
+
+
+def _death_at_5_min(*extra) -> dict:
+    """Mort de 1 à 5 min 00, tuée par 6 sans assistant, plus `extra`."""
+    return _timeline_with(_event("CHAMPION_KILL", killer=6, victim=1, timestamp=300_000), *extra)
+
+
+class TestDeathTrades:
+    def test_allied_dragon_10_s_after_the_death_is_the_trade(self):
+        dragon = _event("ELITE_MONSTER_KILL", killer=2, timestamp=310_000, monster="DRAGON")
+        [death] = death_trades(GAME, _death_at_5_min(dragon), 1, 14)
+        assert death.trade is dragon
+
+    def test_closest_event_of_the_team_wins_over_a_kill_15_s_later(self):
+        tower = {
+            "type": "BUILDING_KILL",
+            "timestamp": 295_000,
+            "teamId": 200,
+            "killerId": 1,
+        }
+        kill = _event("CHAMPION_KILL", killer=1, victim=6, timestamp=315_000)
+        [death] = death_trades(GAME, _death_at_5_min(tower, kill), 1, 14)
+        assert death.trade is tower
+
+    def test_death_without_candidate_has_no_trade(self):
+        [death] = death_trades(GAME, _death_at_5_min(), 1, 14)
+        assert death.trade is None
+
+    def test_death_at_15_min_is_out_of_the_14_min_window(self):
+        timeline = _timeline_with(_event("CHAMPION_KILL", killer=6, victim=1, timestamp=900_000))
+        assert death_trades(GAME, timeline, 1, 14) == []
+        assert len(death_trades(GAME, timeline, 1, 16)) == 1
+
+
+class TestUntradedDeathsMetric:
+    def test_value_matches_moneyball_for_each_participant(self):
+        rows = compute_metrics(GAME, TIMELINE, EOG)
+        actions = player_actions(GAME, TIMELINE, 14)
+        for pid in range(1, 11):
+            assert _values(rows, pid)["untraded_deaths_14"] == actions[pid]["untraded_deaths"]
+
+    def test_untraded_death_is_counted_for_its_player(self):
+        timeline = _death_at_5_min()
+        assert _values(compute_metrics(GAME, timeline, EOG), 1)["untraded_deaths_14"] == 1
+
+    def test_no_timeline_omits_the_metric(self):
+        assert "untraded_deaths_14" not in _values(compute_metrics(GAME, None, EOG), 1)
+
+    def test_grid_weights_it_in_every_role(self):
+        assert all(GRID[role]["untraded_deaths_14"] == 2 for role in ROLES)

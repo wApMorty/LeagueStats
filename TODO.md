@@ -388,7 +388,7 @@ décision ; arbitrages validés le 2026-10-20. Découpage en SPEC-36 §5 (tâche
 
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
-| 177 | `metrics.death_trades` (règle déplacée de `moneyball.py`), métrique `untraded_deaths_14`, grille des cinq rôles, `GRID_VERSION` 2 | 3 | — | ⬜ |
+| 177 | `metrics.death_trades` (règle déplacée de `moneyball.py`), métrique `untraded_deaths_14`, grille des cinq rôles, `GRID_VERSION` 2 | 3 | — | ✅ 2026-10-20 : 8 tests (échange le plus proche, fenêtre, métrique égale à l'étude, grille) ; tests Moneyball inchangés |
 | 178 | Référence `fixed` : `GOAL_FIXED_TARGETS`, `set_goal` | 2 | 177 | ⬜ |
 | 179 | Revue : panneau « Tes morts avant 14 min », `MONEYBALL_DEATH_PTS` | 3 | 177 | ⬜ |
 | 180 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure, recette @pj35 | 1 | 178, 179 | ⬜ |

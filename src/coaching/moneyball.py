@@ -17,7 +17,7 @@ from ..analysis.calibration import brier_score
 from ..config_constants import coaching_config
 from ..winprob import impact
 from ..winprob.model import WinModel, _solve, expand, fit
-from ..winprob.state import BLUE, _other
+from ..winprob.state import BLUE
 from . import metrics
 
 ACTIONS = ("cs", "deaths", "solo_deaths", "untraded_deaths", "presence")
@@ -40,29 +40,6 @@ def _usable(game: dict, timeline: Optional[dict], minute: int) -> bool:
     )
 
 
-def _contributions(timeline: dict, team_of: Dict[int, int]) -> List[Tuple[int, int]]:
-    """(instant, équipe) de chaque événement qui rapporte à une équipe, dans toute la timeline.
-
-    Un kill rapporte à l'équipe de la victime adverse (comme le compteur de `winprob.state`). Un monstre
-    épique ou un bâtiment rapporte à l'équipe qui le marque.
-    """
-    out = []
-    for e in metrics._events(timeline, "CHAMPION_KILL"):
-        if e.get("victimId") in team_of:
-            out.append((e["timestamp"], _other(team_of[e["victimId"]])))
-    for kind in ("ELITE_MONSTER_KILL", "BUILDING_KILL"):
-        for e in metrics._events(timeline, kind):
-            team = impact.scoring_team(e, team_of)
-            if team is not None:
-                out.append((e["timestamp"], team))
-    return out
-
-
-def _traded(t: int, team: int, contributions: List[Tuple[int, int]], window: int) -> bool:
-    """Vrai si `team` rapporte un événement à ± `window` ms de l'instant `t` (la mort s'échange)."""
-    return any(c_team == team and abs(ts - t) <= window for ts, c_team in contributions)
-
-
 def player_actions(game: dict, timeline: dict, minute: int) -> Dict[int, Dict[str, float]]:
     """participantId -> actions à `minute` : CS, morts, morts solo, morts sans contrepartie, présence
     aux objectifs (part des monstres épiques de son équipe avant `minute` où il est présent). Plus
@@ -75,9 +52,6 @@ def player_actions(game: dict, timeline: dict, minute: int) -> Dict[int, Dict[st
         return {}
     team_of = _team_of(game)
     cutoff = minute * 60_000
-    window = int(coaching_config.MONEYBALL_TRADE_WINDOW_S * 1000)
-    kills = metrics._events(timeline, "CHAMPION_KILL")
-    contributions = _contributions(timeline, team_of)
     monsters = [
         e
         for e in metrics._events(timeline, "ELITE_MONSTER_KILL")
@@ -88,13 +62,13 @@ def player_actions(game: dict, timeline: dict, minute: int) -> Dict[int, Dict[st
     actions: Dict[int, Dict[str, float]] = {}
     for p in game["participants"]:
         pid, team = p["participantId"], p["teamId"]
-        deaths = [e for e in kills if e.get("victimId") == pid and e["timestamp"] < cutoff]
+        trades = metrics.death_trades(game, timeline, pid, minute)
         solo = [
-            e
-            for e in deaths
-            if e.get("killerId") in team_of and not e.get("assistingParticipantIds")
+            d
+            for d in trades
+            if d.death.get("killerId") in team_of and not d.death.get("assistingParticipantIds")
         ]
-        untraded = [e for e in deaths if not _traded(e["timestamp"], team, contributions, window)]
+        untraded = [d for d in trades if d.trade is None]
         team_monsters = [e for e in monsters if team_of[e["killerId"]] == team]
         present = [
             e
@@ -105,7 +79,7 @@ def player_actions(game: dict, timeline: dict, minute: int) -> Dict[int, Dict[st
         ]
         actions[pid] = {
             "cs": float(metrics._cs(frame, pid)),
-            "deaths": float(len(deaths)),
+            "deaths": float(len(trades)),
             "solo_deaths": float(len(solo)),
             "untraded_deaths": float(len(untraded)),
             "presence": len(present) / max(len(team_monsters), 1),
