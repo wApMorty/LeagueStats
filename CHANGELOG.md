@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### 📝 Docs
+
+- **Terme de forme mesuré et refusé (SPEC-33 tâche 159)** — sur 92 689 parties de `crawl.db` (6 525 à huit joueurs connus), ni le taux de victoire récent, ni le KDA, ni l'impact ΔP moyen des joueurs n'améliorent la win chance au seuil figé (Brier ≤ 10 min amélioré d'au moins 0,002) : meilleur gain +0,0013 pour l'impact. La win chance reste inchangée ; la pastille de forme en partie reste un indicateur. `scripts/measure_form_term.py` calcule maintenant sa couverture en 1 s au lieu de neuf minutes.
+
 ### 🐛 Fix
 
 - **Icône dans la barre des tâches en mode Python** — lancé par `python lol_coach.py`, le client montrait encore le logo Python dans la barre des tâches : Windows y range le processus sous `python.exe`. Le client pose son propre identifiant d'application avant d'ouvrir la fenêtre, et la barre des tâches affiche l'icône LeagueStats.

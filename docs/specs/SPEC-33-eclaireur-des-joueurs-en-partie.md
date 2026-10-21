@@ -1,6 +1,6 @@
 # SPEC-33 — Éclaireur des joueurs en partie
 
-**Statut** : 🟢 Validée par @pj35 le 2026-10-13 ; tâches 151 à 154, 156 et 158 implémentées le même jour, banc réel 155 le 2026-10-15, pastilles (157) et script de mesure (159) le 2026-10-15. Reste : la mesure du terme de forme, en attente de couverture (§7), la clôture 160, la conditionnelle 161 et la recette @pj35. Spike retiré le même jour (relevés de SPEC-25 et SPEC-27 suffisants, §1). Indicateur, win chance, affichage, déclencheur, concurrence,
+**Statut** : 🟢 Validée par @pj35 le 2026-10-13 ; tâches 151 à 154, 156 et 158 implémentées le même jour, banc réel 155 le 2026-10-15, pastilles (157) et script de mesure (159) le 2026-10-15. Mesure du terme de forme faite le 2026-10-21 : les trois variables refusées (§7), la conditionnelle 161 est sans objet. Reste : la clôture 160 et la recette @pj35. Spike retiré le même jour (relevés de SPEC-25 et SPEC-27 suffisants, §1). Indicateur, win chance, affichage, déclencheur, concurrence,
 fenêtre, files, suite en partie, seuils de couleur et seuil d'adoption validés par @pj35 (§2).
 
 **Origine** : @pj35, 2026-10-13 : « ajouter une analyse des joueurs dans l'analyse in-game. Si on arrive
@@ -372,7 +372,22 @@ couverture **3** parties lues à dix joueurs connus (12 à huit, 51 à cinq), po
 `crawl_histories` compte 7 256 parties de 454 joueurs. Mesure en attente. Essai `--force --limit 3000` (113 s,
 2 936 parties) : script vérifié de bout en bout, chiffres sans valeur (forme connue pour trop peu de joueurs).
 
-*Forme de la session gameflow (recette) et résultat de la mesure du terme de forme : à remplir.*
+**Mesure du terme de forme (2026-10-21)** : couverture 6 525 parties à huit joueurs connus (3 798 à dix,
+9 349 à cinq) pour 5 000 ; `crawl_histories` compte 790 116 parties de 40 789 joueurs. 94 499 parties
+lues, 92 689 retenues (319 233 images), 1 927 s. Validation croisée à 5 blocs, Brier ≤ 10 min :
+
+| Variable | Parties | Brier ≤ 10 min (en place → avec) | Gain | Écart max | Décision |
+|---|---|---|---|---|---|
+| `form_wr` | 92 689 | 0,2328 → 0,2329 | −0,0000 | 1,0 pts | Refusé |
+| `form_kda` | 92 689 | 0,2328 → 0,2329 | −0,0001 | 0,9 pts | Refusé |
+| `form_impact` (sous-ensemble couvert) | 13 723 | 0,2339 → 0,2326 | +0,0013 | 2,4 pts | Refusé |
+
+Lecture : taux de victoire et KDA récents n'apportent rien (AUC 0,800 inchangée). L'impact ΔP gagne
+0,0013, sous le seuil de 0,002, et ce gain est optimiste (impacts tirés du modèle en place, entraîné sur
+ces parties). Aucun terme de forme dans la win chance ; la tâche 161 est sans objet. La couverture du
+script reprend le calcul en mémoire de `scripts/monitor_crawl.py` (0,8 s contre 178 s par seuil en SQL).
+
+*Forme de la session gameflow (recette) : à remplir.*
 
 ## 8. Hors périmètre
 
