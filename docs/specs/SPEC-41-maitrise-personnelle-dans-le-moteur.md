@@ -1,6 +1,6 @@
 # SPEC-41 — Maîtrise personnelle dans le moteur de draft
 
-**Statut** : 🟢 Validée par @pj35 le 2026-10-21 (tous les arbitrages de §2). Phase A : tâches 196 et 199 faites le 2026-10-21, **terme adopté** (§8) ; 197 écrite, à exécuter client ouvert ; 198 en attente du spike ; phase B (200 à 202) à planifier.
+**Statut** : 🟢 Validée par @pj35 le 2026-10-21 (tous les arbitrages de §2). Phase A faite le 2026-10-21 : 196 et 199, **terme adopté** (§8) ; 197 exécutée, pagination ignorée par le LCU, donc 198 abandonnée. Phase B (200 à 202) à planifier.
 
 **Origine** : @pj35, 2026-10-21 : « J'aimerais qu'on ajoute un degré d'analyse au moteur, pour qu'il soit plus
 corrélé à mes performances personnelles, et moins à des stats globales prises sur Internet. Par exemple, je suis
@@ -232,8 +232,12 @@ champion du pool que si sa victoire immédiate le dépasse encore une fois le te
 
 ## 8. Résultats
 
-*Spike de la pagination (tâche 197) : script écrit (`scripts/spike_lcu_history_pages.py`), exécution à faire,
-client LoL ouvert.*
+**Spike de la pagination (tâche 197, 2026-10-21)** : `python scripts/spike_lcu_history_pages.py`, client ouvert,
+hors partie. La page `begIndex=0` sert 20 parties SoloQ, du 2026-10-19 15:47 au 2026-10-21 05:24 UTC. La page
+`begIndex=20` renvoie **les mêmes 20 `gameId`** : le LCU ignore la pagination. La plus ancienne partie servie a
+son détail (10 participants, HTTP 200) et sa timeline (32 images, HTTP 200). Les 20 parties sont déjà dans
+`game_records`. **Décision : tâche 198 abandonnée** (§4.2). L'historique perso ne grossit que par la capture,
+d'environ 5 parties par jour.
 
 **Mesure du terme (tâche 199, 2026-10-21)** : `python scripts/measure_mastery_term.py`, sans limite. 85 359
 parties lues (90 exclues parce que @pj35 y joue, 3 300 hors filtre), dont 81 969 retenues, en 1 323 s ;

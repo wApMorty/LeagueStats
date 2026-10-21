@@ -391,8 +391,8 @@ le rattrapage dans `game_records` et la prédiction journalisée sans le terme. 
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
 | 196 | `src/analysis/mastery.py` : `Mastery`, `shrink_k`, `masteries` (variantes a et b) + tests | 3 | — | ✅ 2026-10-21 : 6 tests ; K synthétique retrouvé à 15,56 pour 16 (n0, groupes déséquilibrés) |
-| 197 | Spike `scripts/spike_lcu_history_pages.py` : pagination `begIndex` ≥ 20, détail et timeline de la plus ancienne | 1 | — | 🟡 2026-10-21 : script écrit (a5cdea3), exécution client ouvert à faire |
-| 198 | *Conditionnelle (197)* : `scripts/backfill_own_games.py` par le chemin de la capture, test sur faux LCU | 3 | 197 | ⬜ |
+| 197 | Spike `scripts/spike_lcu_history_pages.py` : pagination `begIndex` ≥ 20, détail et timeline de la plus ancienne | 1 | — | ✅ 2026-10-21 : `begIndex=20` renvoie les mêmes 20 parties, le LCU ignore la pagination |
+| 198 | *Conditionnelle (197)* : `scripts/backfill_own_games.py` par le chemin de la capture, test sur faux LCU | 3 | 197 | ❌ Abandonnée le 2026-10-21 : pas de pagination (197) |
 | 199 | `scripts/measure_mastery_term.py` : étude sur `crawl.db`, seuil figé, résultat et décision en §8 | 5 | 196 | ✅ 2026-10-21 : **adopté** (variante a), 81 969 parties, 24 438 joueurs focaux ; b = 0,0717 logit/pt [0,060 ; 0,084], gain de Brier +0,00008 [+0,00005 ; +0,00011], K = 42,4 ; Gnar −2,0 pts de victoire |
 | 200 | *Conditionnelle (199)* : `MasteryTerm`, terme à la racine de la recherche, `SearchResult.personal_points`, console + tests | 3 | 199 | ⬜ |
 | 201 | *Conditionnelle (199)* : grimoire, analyse finale (affichée seulement), blind pick + tests | 3 | 200 | ⬜ |
