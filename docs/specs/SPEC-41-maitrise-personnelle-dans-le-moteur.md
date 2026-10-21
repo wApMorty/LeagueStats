@@ -287,3 +287,37 @@ Maîtrise de @pj35 avec ces constantes (impact rétréci, puis effet sur la vict
 
 L'échelle est celle de la draft (p10 à p90 de 45 à 55 %) : Gnar ne passera devant un champion à maîtrise nulle
 que si sa draft le met au moins 2 pts au-dessus.
+
+**Impact ramené à la partie (2026-10-22, demande de @pj35)** : « si je fais +5 dans une game où tout le monde
+fait +20, je me suis fait carry ». Deux variantes ajoutées à l'étude, avec la même règle d'adoption, puis la
+règle de choix du §2 généralisée : une variante ne remplace a que si l'IC95 de son gain moins celui de a est
+entièrement positif. (c) **relatif aux coéquipiers** : son impact moins la moyenne de ses 4 coéquipiers ;
+(d) **relatif à l'adversaire de lane** : son impact moins celui de son vis-à-vis. Sur les parties de @pj35,
+l'impact brut a une corrélation de 0,62 avec la victoire de la même partie ; relatif aux coéquipiers, elle tombe
+à −0,03 : la variante c retire bien l'issue de la partie.
+
+`python scripts/measure_mastery_term.py` : 85 709 parties lues, dont 82 294 retenues (1 881 s) ; 24 541 joueurs
+focaux, soit 451 177 lignes.
+
+| Variante | K | b (logit par point) | Gain de Brier | Gain − a |
+|---|---|---|---|---|
+| a : brut (en place) | 42,5 | 0,0720 [0,0593 ; 0,0856] | +0,00008 [+0,00005 ; +0,00012] | — |
+| b : moins la norme du champion | 120,1 | 0,1810 [0,1473 ; 0,2145] | +0,00008 [+0,00005 ; +0,00011] | [−0,00001 ; +0,00001] |
+| c : relatif aux coéquipiers | 18,7 | 0,0387 [0,0316 ; 0,0458] | +0,00007 [+0,00004 ; +0,00010] | [−0,00003 ; +0,00001] |
+| d : relatif à l'adversaire de lane | 58,1 | 0,0453 [0,0357 ; 0,0545] | +0,00006 [+0,00004 ; +0,00009] | **[−0,00003 ; −0,00001]** |
+
+**Décision : la variante a reste en place.** c et d passent toutes deux le seuil (le signal existe dans les
+trois lectures), mais aucune ne bat l'impact brut : c fait jeu égal, d fait significativement moins bien. Le
+moteur et ses constantes (0,0717 et 42,4, mesurées sur 81 969 parties) ne changent pas ; ce passage redonne
+0,0720 et 42,5, dans leur marge.
+
+Lecture :
+- **Être porté dans une partie ne biaise pas la maîtrise, ça la bruite.** La maîtrise d'une partie vient des
+  AUTRES parties du joueur, sur des équipes tirées au hasard : être porté dans l'une, porter dans une autre, ça
+  se compense sur la moyenne. Retrancher les coéquipiers enlève ce bruit (K tombe de 42,5 à 18,7 : chaque partie
+  compte plus), mais enlève aussi du vrai signal.
+- **Ce signal perdu, c'est le jeu qui profite aux autres.** Un kill se partage entre le tueur et ceux qui
+  l'assistent : un engage ou une ult de soutien fait monter les coéquipiers, et la variante c retire ce mérite au
+  joueur. Les deux effets s'annulent, d'où le jeu égal.
+- **Contre l'adversaire de lane, la lecture est trop étroite** : le jeu hors lane (roams, combats, objectifs)
+  disparaît, d'où la perte significative.

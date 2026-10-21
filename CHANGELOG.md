@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### 📝 Docs
+
+- **Maîtrise relative à la partie, mesurée et non retenue (SPEC-41)** — l'étude de la maîtrise compare maintenant ton impact brut à deux lectures ramenées à la partie : ton impact moins celui de tes coéquipiers (pour ne pas compter les parties où tu es porté), et ton impact moins celui de ton adversaire de lane. Sur 82 294 parties de `crawl.db`, les deux prédisent la victoire, mais aucune mieux que l'impact brut (relatif aux coéquipiers : à égalité ; relatif à l'adversaire de lane : moins bien). Le coach garde l'impact brut, sans changement pour toi. `scripts/measure_mastery_term.py` mesure les quatre variantes.
+
 ## [5.9.0] - 2026-10-21
 
 Le coach de draft tient compte de ton niveau sur chaque champion, tiré de tes propres parties : un champion sur lequel tu performes mal ne passe en tête que si la draft le justifie, et les cartes disent « dont toi sur X ». L'icône LeagueStats s'affiche aussi dans la barre des tâches en mode Python. Aucune action requise : pas de migration Alembic, pas de scrape.
