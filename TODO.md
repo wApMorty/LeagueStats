@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-10-20 (SPEC-40 livrée : victoire immédiate sur les cartes de draft, comme le grimoire, recette @pj35 à faire ; SPEC-39 livrée : diagnostic complet et « Appliquer » sur l'écran Calibration, recette @pj35 à faire ; SPEC-38 livrée : trois pages de runes OneTricks au choix pendant la draft, recette @pj35 à faire ; SPEC-37 livrée : écran « Données » pour actualiser la base depuis le client, recette @pj35 à faire ; SPEC-36 livrée : morts sans contrepartie, axe et revue, recette @pj35 à faire ; SPEC-35 livrée : étude « Moneyball » du début de partie, aucune action adoptée ; SPEC-33 : tâches 151 à 159 faites, mesure du terme de forme en attente de couverture (3 / 5 000), recette @pj35 à faire ; SPEC-32 livrée : classement MVP / ACE en post-game, recette @pj35 à faire ; SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette @pj35 à faire)
+**Mis à jour** : 2026-10-21 (SPEC-41 rédigée : maîtrise personnelle dans le moteur, étude sur crawl.db avant application ; SPEC-40 livrée : victoire immédiate sur les cartes de draft, comme le grimoire, recette @pj35 à faire ; SPEC-39 livrée : diagnostic complet et « Appliquer » sur l'écran Calibration, recette @pj35 à faire ; SPEC-38 livrée : trois pages de runes OneTricks au choix pendant la draft, recette @pj35 à faire ; SPEC-37 livrée : écran « Données » pour actualiser la base depuis le client, recette @pj35 à faire ; SPEC-36 livrée : morts sans contrepartie, axe et revue, recette @pj35 à faire ; SPEC-35 livrée : étude « Moneyball » du début de partie, aucune action adoptée ; SPEC-33 : tâches 151 à 159 faites, mesure du terme de forme en attente de couverture (3 / 5 000), recette @pj35 à faire ; SPEC-32 livrée : classement MVP / ACE en post-game, recette @pj35 à faire ; SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette @pj35 à faire)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -376,6 +376,28 @@ pile réelle sur faux LCU (§3). Découpage en SPEC-34 §5 (tâches 163 à 170, 
 | 168 | Projet Remotion : versions exactes, config, polices, scènes « Accroche », « Draft », « Verrouillage » et « Clôture » | 5 | 166 | ✅ 2026-10-16 : Remotion 4.0.531 (licence gratuite pour un particulier, vérifiée sur LICENSE.md), polices du client, chiffres de draft relevés dans le manifeste par `capture_screens.py` (n° 1 Dr. Mundo 55,96 %, fin de draft 54,6 %) |
 | 169 | Scènes « En partie » (courbe SVG), « Revue et coaching » et « Mosaïque » ; `hero.gif` dans le README | 5 | 167, 168 | ✅ 2026-10-16 : teaser de 30,0 s en 1 920 × 1 080 sans audio (12,2 Mo) ; `hero.gif` 960 × 540 à 10 i/s, 4,1 Mo, encodé par ffmpeg (palette optimisée ; l'encodeur GIF de Remotion donnait 10,3 Mo), fond figé dans la boucle |
 | 170 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure ; recette à l'œil de @pj35 | 3 | 169 | ✅ 2026-10-16 ; recette à l'œil (captures, GIF, `docs/presentation/video/out/teaser.mp4`) laissée à @pj35 |
+
+### Lot SPEC-41, maîtrise personnelle dans le moteur de draft (🟡 rédigée le 2026-10-21)
+
+[SPEC-41](docs/specs/SPEC-41-maitrise-personnelle-dans-le-moteur.md) ajoute au moteur un terme de maîtrise par
+champion, tiré de l'impact ΔP de SPEC-20 (et non du winrate). Sur 5 parties, Gnar fait 3 victoires mais un impact de
+−10,5 pts par partie, soit −2,8 pts une fois rétréci (K ≈ 13,5). Sur 141 parties de @pj35, le gain ne se mesure pas
+(Brier 0,2496 → 0,2502). D'où une étude sur `crawl.db` d'abord : on adopte si le coefficient et le gain de Brier ont
+un IC95 qui exclut 0. Si c'est le cas, le terme est additif sur mon pick (recherche, grimoire, analyse finale
+affichée, blind pick), avec « dont toi sur Gnar » sur les cartes. Arbitrages validés le 2026-10-21, sauf deux à
+valider (rattrapage dans `game_records`, prédiction journalisée sans le terme). Découpage en SPEC-41 §5 (tâches 196
+à 203, 21 pts, dont 200 à 202 conditionnelles) :
+
+| # | Tâche | Pts | Dépend de | État |
+|---|---|---|---|---|
+| 196 | `src/analysis/mastery.py` : `Mastery`, `shrink_k`, `masteries` (variantes a et b) + tests | 3 | — | ⬜ |
+| 197 | Spike `scripts/spike_lcu_history_pages.py` : pagination `begIndex` ≥ 20, détail et timeline de la plus ancienne | 1 | — | ⬜ |
+| 198 | *Conditionnelle (197)* : `scripts/backfill_own_games.py` par le chemin de la capture, test sur faux LCU | 3 | 197 | ⬜ |
+| 199 | `scripts/measure_mastery_term.py` : étude sur `crawl.db`, seuil figé, résultat et décision en §8 | 5 | 196 | ⬜ |
+| 200 | *Conditionnelle (199)* : `MasteryTerm`, terme à la racine de la recherche, `SearchResult.personal_points`, console + tests | 3 | 199 | ⬜ |
+| 201 | *Conditionnelle (199)* : grimoire, analyse finale (affichée seulement), blind pick + tests | 3 | 200 | ⬜ |
+| 202 | *Conditionnelle (199)* : snapshot et sous-ligne « dont toi sur X » des cartes + tests | 2 | 200 | ⬜ |
+| 203 | Clôture : critères, `CHANGELOG.md`, statuts, README des specs | 1 | 199 (202 si adoptée) | ⬜ |
 
 ### Lot SPEC-40, victoire immédiate sur les cartes de draft (✅ livrée le 2026-10-20, recette @pj35 à faire)
 
