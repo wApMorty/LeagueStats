@@ -11,6 +11,7 @@ from src.config_constants import draft_config
 from src.draft.search import PickTurn, SearchResult
 from src.draft.snapshot import TOPIC
 from src.draft.state_parser import DraftStateParser
+from src.analysis.mastery import Mastery, MasteryTerm
 from src.draft_monitor import DraftMonitor, DraftState
 from src.models import Matchup
 
@@ -407,3 +408,18 @@ def test_le_parseur_tolere_un_timer_nul():
     data = {"timer": None, "localPlayerCellId": 0, "myTeam": [], "theirTeam": []}
     state, _ = DraftStateParser(lcu, str).parse(data, {}, {})
     assert state.phase == "" and state.time_left_ms is None
+
+
+# ---------- ma maîtrise par candidat (SPEC-41 §4.4, tâche 202) ----------
+
+
+def test_snapshot_reporte_ma_maitrise_et_mes_parties_par_candidat(monitor):
+    monitor.mastery = MasteryTerm({"Aatrox": Mastery("Aatrox", 5, -2.8, -2.8)})
+    ranked = [
+        SearchResult("Aatrox", "top", 0.5731, [], 2, personal_points=-2.8),
+        SearchResult("Darius", "top", 0.5210, [], 2),
+    ]
+    _, payload = snapshot_of(monitor, pick_state(), ranked)
+    first, second = payload["recommendations"]
+    assert (first["personal_points"], first["personal_games"]) == (-2.8, 5)
+    assert (second["personal_points"], second["personal_games"]) == (0.0, 0)

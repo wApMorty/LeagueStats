@@ -383,6 +383,20 @@ def _immediate(snapshot: Dict[str, Any]) -> Dict[int, float]:
     }
 
 
+def _personal(rec: Dict[str, Any]) -> str:
+    """La sous-ligne « dont toi sur X » : ma maîtrise du champion, ou l'absence de partie (SPEC-41 §4.4).
+
+    Vide quand le snapshot n'a pas le champ (snapshot d'avant SPEC-41).
+    """
+    games = rec.get("personal_games")
+    if games is None:
+        return ""
+    if games == 0:
+        return f" · aucune partie sur {rec['champion']}"
+    count = f"{games} partie" + ("" if games == 1 else "s")
+    return f" · dont toi sur {rec['champion']} : {signed(rec['personal_points'])} pts ({count})"
+
+
 def recommendations(snapshot: Dict[str, Any], champions: Champions) -> List[Dict[str, Any]]:
     """Les cartes de pick : victoire immédiate, écart à la base, fin de draft attendue et suite.
 
@@ -414,6 +428,7 @@ def recommendations(snapshot: Dict[str, Any], champions: Champions) -> List[Dict
                 f"Fin de draft attendue {fr(rec['win_probability'] * 100, 2)} % · "
                 f"suite : {variation or '—'}"
             )
+        line += _personal(rec)
         cards.append(
             {
                 "champion_id": rec["champion_id"],

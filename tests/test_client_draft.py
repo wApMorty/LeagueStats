@@ -1699,3 +1699,37 @@ def test_le_numero_fait_partie_de_l_empreinte_du_sceau(client, bus):
     after = client.get("/draft/stage").text
     sigs = lambda html: re.findall(r'data-sig="([^"]+)"', html)
     assert sigs(before) != sigs(after)
+
+
+# ---------- sous-ligne « dont toi sur X » (SPEC-41 §4.4, tâche 202) ----------
+
+
+def _first_line(snapshot, assets):
+    return draft_view.recommendations(snapshot, draft_view.Champions(assets))[0]["line"]
+
+
+def test_sous_ligne_dont_toi_sur_le_champion(assets):
+    snapshot = pick_snapshot()
+    snapshot["recommendations"][0].update(personal_points=-2.8, personal_games=5)
+    assert _first_line(snapshot, assets) == (
+        "Suite attendue : Alistar (Support) · dont toi sur Aatrox : −2,8 pts (5 parties)"
+    )
+
+
+def test_sous_ligne_singulier_une_partie(assets):
+    snapshot = pick_snapshot()
+    snapshot["recommendations"][0].update(personal_points=3.0, personal_games=1)
+    assert _first_line(snapshot, assets).endswith("dont toi sur Aatrox : +3,0 pts (1 partie)")
+
+
+def test_sous_ligne_aucune_partie(assets):
+    snapshot = pick_snapshot()
+    snapshot["recommendations"][0].update(personal_points=0.0, personal_games=0)
+    assert _first_line(snapshot, assets).endswith("· aucune partie sur Aatrox")
+
+
+def test_sans_les_cles_de_maitrise_la_ligne_ne_change_pas(assets):
+    snapshot = pick_snapshot()
+    for key in ("personal_points", "personal_games"):
+        del snapshot["recommendations"][0][key]
+    assert _first_line(snapshot, assets) == "Suite attendue : Alistar (Support)"

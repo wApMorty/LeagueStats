@@ -396,7 +396,7 @@ le rattrapage dans `game_records` et la prédiction journalisée sans le terme. 
 | 199 | `scripts/measure_mastery_term.py` : étude sur `crawl.db`, seuil figé, résultat et décision en §8 | 5 | 196 | ✅ 2026-10-21 : **adopté** (variante a), 81 969 parties, 24 438 joueurs focaux ; b = 0,0717 logit/pt [0,060 ; 0,084], gain de Brier +0,00008 [+0,00005 ; +0,00011], K = 42,4 ; Gnar −2,0 pts de victoire |
 | 200 | *Conditionnelle (199)* : `MasteryTerm`, terme à la racine de la recherche, `SearchResult.personal_points`, console + tests | 3 | 199 | ✅ 2026-10-21 : terme chargé au démarrage et à chaque nouvelle draft ; sur la vraie base Gnar −2,0 pts, Olaf +5,7, Ambessa −3,2 |
 | 201 | *Conditionnelle (199)* : grimoire, analyse finale (affichée seulement), blind pick + tests | 3 | 200 | ✅ 2026-10-21 : grimoire et analyse finale affichée avec ma maîtrise, prédiction journalisée sur la draft seule, blind pick en points de victoire |
-| 202 | *Conditionnelle (199)* : snapshot et sous-ligne « dont toi sur X » des cartes + tests | 2 | 200 | ⬜ |
+| 202 | *Conditionnelle (199)* : snapshot et sous-ligne « dont toi sur X » des cartes + tests | 2 | 200 | ✅ 2026-10-21 : sous-ligne « dont toi sur X : ±n pts (k parties) » ou « aucune partie sur X » ; 302 tests du client et des régressions verts |
 | 203 | Clôture : critères, `CHANGELOG.md`, statuts, README des specs | 1 | 199 (202 si adoptée) | ⬜ |
 
 ### Lot SPEC-40, victoire immédiate sur les cartes de draft (✅ livrée le 2026-10-20, recette @pj35 à faire)

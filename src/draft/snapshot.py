@@ -9,6 +9,7 @@ et des fragments).
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+from ..analysis.mastery import term_of
 from ..config_constants import draft_config
 from .search import SearchResult
 from .state import Cell, DraftState
@@ -76,6 +77,8 @@ class SnapshotRecommendation:
     depth: int
     games: Optional[int]
     variation: List[Dict[str, Optional[str]]] = field(default_factory=list)  # suite attendue
+    personal_points: Optional[float] = None  # ma maîtrise de ce champion, en points (SPEC-41)
+    personal_games: int = 0  # mes parties capturées sur ce champion (SPEC-41)
 
 
 @dataclass
@@ -231,6 +234,7 @@ def build_snapshot(
     results = list(analysis.results)
     base = analysis.base_probability
     games = analysis.games_by_champion
+    mastery = term_of(monitor)
     ids = {n.lower(): i for i, n in monitor.champion_id_to_name.items()}
     ban_rows, gains = (
         monitor.ban_advisor.advice(state, draft_config.SNAPSHOT_BAN_COUNT, ids)
@@ -269,6 +273,8 @@ def build_snapshot(
                 depth=r.depth,
                 games=games.get(r.champion),
                 variation=[{"champion": c, "lane": lane} for c, lane in r.principal_variation],
+                personal_points=r.personal_points,
+                personal_games=mastery.games(r.champion),
             )
             for r in results
         ],
