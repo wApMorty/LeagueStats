@@ -58,13 +58,12 @@ def test_prior_form_sous_le_minimum_donne_none() -> None:
     assert mft.prior_form(rows, "2026-09-20 12:00:00", 999, 10, 3) is not None
 
 
-def test_covered_games_compte_une_partie_a_dix_joueurs_pas_une_a_neuf(tmp_path) -> None:
+def test_coverage_compte_une_partie_a_dix_joueurs_pas_une_a_neuf(tmp_path) -> None:
     db = _crawl_db(tmp_path / "crawl.db")
     _add_game(db, 5001, "2026-10-01 12:00:00", players=10)
     _add_game(db, 5002, "2026-10-02 12:00:00", players=9)
-    assert mft.covered_games(db, 10, cfg.SCOUT_MIN_IMPACT_GAMES) == 1
-    assert mft.covered_games(db, 9, cfg.SCOUT_MIN_IMPACT_GAMES) == 2
-    assert mft.covered_games(db, 10, 4) == 0  # trois parties antérieures seulement
+    assert mft.coverage(db, cfg.SCOUT_MIN_IMPACT_GAMES) == {10: 1, 8: 2, 5: 2}
+    assert mft.coverage(db, 4)[10] == 0  # 5001 : trois parties antérieures seulement
     db.close()
 
 

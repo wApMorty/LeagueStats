@@ -2,7 +2,7 @@
 
 Une ligne par relevé : parties lues et joueurs visités sur la dernière heure, taille de `crawl_histories`,
 couverture de la mesure du terme de forme (parties lues dont 10 / 8 / 5 joueurs ont au moins
-`SCOUT_MIN_IMPACT_GAMES` parties antérieures, même définition que `scripts/measure_form_term.py`, calculée
+`SCOUT_MIN_IMPACT_GAMES` parties antérieures, reprise par `scripts/measure_form_term.py`, calculée
 en mémoire en moins d'une seconde) et état du verrou. Lecture seule, lectures courtes : la base n'est
 jamais tenue plus de quelques secondes, le Live Coach continue d'écrire.
 
@@ -37,7 +37,7 @@ UTC_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 def coverage(db: sqlite3.Connection, min_games: int) -> Dict[int, int]:
     """Parties lues dont au moins 10 / 8 / 5 joueurs ont la partie dans `crawl_histories` et au moins
-    `min_games` parties antérieures (définition de `measure_form_term.covered_games`)."""
+    `min_games` parties antérieures (utilisée aussi par `measure_form_term`)."""
     rows: Dict[str, list] = defaultdict(list)
     for puuid, game_id, creation in db.execute(
         "SELECT puuid, game_id, creation_utc FROM crawl_histories"

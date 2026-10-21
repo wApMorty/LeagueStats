@@ -31,6 +31,7 @@ from typing import Dict, List, Optional, Sequence, Tuple
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+from scripts.monitor_crawl import coverage
 from src.analysis.calibration import brier_score
 from src.coaching.metrics import participant_roles
 from src.config_winprob import winprob_config as cfg
@@ -66,27 +67,6 @@ def _parse_args() -> argparse.Namespace:
         "--force", action="store_true", help="mesurer même sous FORM_MIN_COVERED_GAMES"
     )
     return parser.parse_args()
-
-
-def covered_games(db: sqlite3.Connection, players: int, min_games: int) -> int:
-    """Parties lues où au moins `players` joueurs ont la partie dans `crawl_histories` et au moins
-    `min_games` parties antérieures. Sans décompression : approximation, qui compte aussi les parties
-    lues sans timeline ou trop courtes, écartées ensuite par la mesure."""
-    (count,) = db.execute(
-        """
-        SELECT COUNT(*) FROM (
-            SELECT h.game_id
-            FROM crawl_histories h
-            JOIN crawl_games g ON g.game_id = h.game_id AND g.read_utc IS NOT NULL
-            WHERE (SELECT COUNT(*) FROM crawl_histories p
-                   WHERE p.puuid = h.puuid AND p.creation_utc < h.creation_utc) >= ?
-            GROUP BY h.game_id
-            HAVING COUNT(*) >= ?
-        )
-        """,
-        (min_games, players),
-    ).fetchone()
-    return count
 
 
 def load_histories(db: sqlite3.Connection) -> Dict[str, List[tuple]]:
@@ -322,10 +302,7 @@ def main() -> None:
         print(f"[ERREUR] Pas de base de collecte : {path}")
         raise SystemExit(1)
     db = sqlite3.connect(f"file:{path.as_posix()}?mode=ro", uri=True, timeout=cfg.FORM_DB_TIMEOUT_S)
-    covered = {
-        p: covered_games(db, p, cfg.SCOUT_MIN_IMPACT_GAMES)
-        for p in sorted({10, cfg.FORM_COVERED_PLAYERS, 5}, reverse=True)
-    }
+    covered = coverage(db, cfg.SCOUT_MIN_IMPACT_GAMES)
     print(
         "[DATA] Couverture (parties lues, joueurs ayant la partie et des parties antérieures) : "
         + ", ".join(f"{p} joueurs {n}" for p, n in covered.items())
