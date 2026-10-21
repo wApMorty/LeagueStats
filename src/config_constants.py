@@ -250,6 +250,16 @@ class AnalysisConfig:
     MAX_VARIANCE: float = 10.0
     MAX_PEAK_IMPACT: float = 2.0
 
+    # SPEC-41 §4.5 : étude du terme de maîtrise personnelle (scripts/measure_mastery_term.py).
+    # Un joueur focal a assez de parties lues dans crawl.db pour une maîtrise sans la partie prédite
+    # (5 239 joueurs en ont 20 ou plus, SPEC-33 §1) ; bootstrap à l'ordre de grandeur de SPEC-35 ;
+    # 5 blocs de joueurs, comme les validations croisées de SPEC-20 à SPEC-35 ; SoloQ seule (§2).
+    MASTERY_STUDY_MIN_GAMES: int = 10
+    MASTERY_STUDY_BOOTSTRAP: int = 1_000
+    MASTERY_STUDY_FOLDS: int = 5
+    MASTERY_STUDY_SEED: int = 41
+    MASTERY_QUEUE_IDS: Tuple[int, ...] = (420,)
+
 
 @dataclass
 class DraftConfig:
