@@ -1,6 +1,6 @@
 # SPEC-41 — Maîtrise personnelle dans le moteur de draft
 
-**Statut** : 🟡 Rédigée le 2026-10-21, arbitrages « à valider » en §2 (rattrapage de l'historique, prédiction journalisée).
+**Statut** : 🟢 Validée par @pj35 le 2026-10-21 (tous les arbitrages de §2).
 
 **Origine** : @pj35, 2026-10-21 : « J'aimerais qu'on ajoute un degré d'analyse au moteur, pour qu'il soit plus
 corrélé à mes performances personnelles, et moins à des stats globales prises sur Internet. Par exemple, je suis
@@ -72,8 +72,8 @@ Il ne s'applique que s'il améliore, sur des joueurs tiers, la prédiction de la
 | Files | **Validé (@pj35, 2026-10-21)** : SoloQ (420) seule. |
 | Périmètre | **Validé (@pj35, 2026-10-21)** : classement de draft (recherche, cartes, console, auto-hover), grimoire, analyse finale, blind pick initial. Le conseil d'échange de rôles (`swap_advice.py`) n'est pas concerné (§7). |
 | Affichage | **Validé (@pj35, 2026-10-21)** : la victoire affichée inclut le terme, avec la part de la maîtrise en sous-ligne : « dont toi sur Gnar : −2,8 pts (5 parties) ». |
-| Historique ancien | **Validé (@pj35, 2026-10-21)** : spike LCU de la pagination (`begIndex` ≥ 20), puis rattrapage si elle répond. **À valider** : les parties rattrapées vont dans `game_records`, la table de la capture (recommandé). Le coaching (bilan, tendances) les voit donc aussi, comme des parties plus anciennes. L'alternative est une table à part, qui ne servirait qu'à ce terme. |
-| Prédiction journalisée | **À valider** : la probabilité **affichée** de l'analyse finale inclut le terme. La prédiction **journalisée** (`predictions.predicted_probability`) reste la draft seule, sous `MODEL_VERSION` inchangé. Sinon l'écran Calibration (SPEC-39) absorberait la maîtrise dans le facteur d'échelle de `K_MATCHUP`, et le compteur de 100 issues repartirait de zéro. |
+| Historique ancien | **Validé (@pj35, 2026-10-21)** : spike LCU de la pagination (`begIndex` ≥ 20), puis rattrapage si elle répond. **Validé (@pj35, 2026-10-21)** : les parties rattrapées vont dans `game_records`, la table de la capture. Le coaching (bilan, tendances) les voit donc aussi, comme des parties plus anciennes. L'alternative, une table à part qui ne servirait qu'à ce terme, est écartée. |
+| Prédiction journalisée | **Validé (@pj35, 2026-10-21)** : la probabilité **affichée** de l'analyse finale inclut le terme. La prédiction **journalisée** (`predictions.predicted_probability`) reste la draft seule, sous `MODEL_VERSION` inchangé. Sinon l'écran Calibration (SPEC-39) absorberait la maîtrise dans le facteur d'échelle de `K_MATCHUP`, et le compteur de 100 issues repartirait de zéro. |
 
 ## 3. Approches considérées
 
@@ -161,7 +161,7 @@ Fonctions de logistique, de validation croisée et de Brier : celles de `src/coa
   `personal_points: float = 0.0`.
 - **Grimoire** (`_fill_candidates`) : `sigmoid(team_logit(alliés + [moi], ennemis) + mastery.logit(name))`.
 - **Analyse finale** : la probabilité affichée ajoute `mastery.logit` de mon champion verrouillé. La prédiction
-  journalisée reste la draft seule (§2, à valider).
+  journalisée reste la draft seule (§2).
 - **Blind pick** (`automation.py`) : score = winrate de lane rétréci + `mastery.points(name)`, les deux en points.
 - **Console** : `_print_results` ajoute ` · toi −2,8 pts (5 parties)` quand le terme est non nul.
 - **Client** : `SnapshotRecommendation` gagne `personal_points: Optional[float]` et `personal_games: int`, et
