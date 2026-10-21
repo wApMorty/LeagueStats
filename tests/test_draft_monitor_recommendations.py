@@ -193,19 +193,25 @@ class TestMasteryReload:
 
     def test_une_nouvelle_draft_recharge_le_terme(self, monitor):
         fresh = MasteryTerm()
-        with patch("src.draft.lifecycle.MasteryTerm.load", return_value=fresh) as load:
+        with patch("src.draft.lifecycle.MasteryTerm.read", return_value=fresh) as read:
             self._new_episode(monitor)
 
-        load.assert_called_once_with(monitor.assistant.db)
+        read.assert_called_once_with(monitor.assistant.db)
         assert monitor.mastery is fresh
 
-    def test_une_recharge_qui_leve_garde_l_ancien_terme(self, monitor):
-        previous = monitor.mastery
-        with patch("src.draft.lifecycle.MasteryTerm.load", side_effect=RuntimeError("base")):
-            self._new_episode(monitor)  # ne lève pas
+    def test_une_base_en_panne_garde_l_ancien_terme(self, monitor, capsys):
+        """Vraie panne (base illisible), sans faux `read` : le bon terme reste en place, la draft
+        est ré-armée, et le mode verbeux le dit."""
+        previous = MasteryTerm({"Gnar": Mastery("Gnar", 5, -10.0, -1.1)})
+        monitor.mastery = previous
+        monitor.verbose = True
+        monitor.assistant.db.get_all_champion_names.side_effect = RuntimeError("base verrouillée")
+
+        self._new_episode(monitor)  # ne lève pas
 
         assert monitor.mastery is previous
-        assert monitor._draft_episode == 5  # la draft est bien ré-armée malgré l'erreur
+        assert monitor._draft_episode == 5
+        assert "[ALERTE] Maîtrise personnelle non rechargée" in capsys.readouterr().out
 
     def test_la_recherche_recoit_le_terme_du_monitor(self, monitor, state):
         """Le classement passe la maîtrise du monitor à la recherche (logit de mon pick)."""
@@ -246,3 +252,19 @@ class TestGrimoireMastery:
         )
         assert with_mastery[122] < without[122]
         assert with_mastery[266] == without[266]  # Aatrox, jamais joué : inchangé
+
+
+def test_la_console_cite_ma_maitrise_du_champion(monitor, capsys):
+    """« · toi −2,0 pts (5 parties) » après la victoire, seulement quand le terme est non nul."""
+    monitor.mastery = MasteryTerm({"Darius": Mastery("Darius", 5, -10.0, -1.1)})
+    results = [
+        SearchResult("Darius", "top", 0.52, personal_points=-2.0),
+        SearchResult("Garen", "top", 0.51),
+    ]
+
+    monitor.recommender._print_results(results, {}, "top", None)
+
+    out = capsys.readouterr().out
+    assert "Darius (top) 52.00% de victoire · toi -2.0 pts (5 parties)" in out
+    assert "Garen (top) 51.00% de victoire" in out
+    assert "· toi" not in out.split("Garen")[1]

@@ -324,25 +324,21 @@ class CoachingRepository:
 
     def player_champion_impacts(self, queue_ids: Sequence[int]) -> List[Tuple[int, float]]:
         """(championId, 100 × Σ ΔP du joueur) par partie capturée des files `queue_ids`, de la plus
-        ancienne à la plus récente (SPEC-41 : maîtrise personnelle par champion)."""
-        placeholders = ",".join("?" * len(queue_ids))
-        return [
-            (champion_id, points)
-            for champion_id, points in self._rows(
-                f"""
-                SELECT m.champion_id, 100 * SUM(i.delta_p)
-                FROM game_records g
-                JOIN game_impact i
-                  ON i.game_id = g.game_id AND i.participant_id = g.player_participant_id
-                JOIN (SELECT DISTINCT game_id, champion_id FROM game_metrics WHERE is_player = 1) m
-                  ON m.game_id = g.game_id
-                WHERE g.queue_id IN ({placeholders})
-                GROUP BY g.game_id, m.champion_id
-                ORDER BY g.game_creation_utc
-                """,
-                tuple(queue_ids),
-            )
-        ]
+        ancienne à la plus récente (SPEC-41 : maîtrise personnelle par champion). Les files sont
+        filtrées ici : quelques centaines de parties, et une requête sans liste `IN` à construire.
+        """
+        rows = self._rows("""
+            SELECT g.queue_id, m.champion_id, 100 * SUM(i.delta_p)
+            FROM game_records g
+            JOIN game_impact i
+              ON i.game_id = g.game_id AND i.participant_id = g.player_participant_id
+            JOIN (SELECT DISTINCT game_id, champion_id FROM game_metrics WHERE is_player = 1) m
+              ON m.game_id = g.game_id
+            GROUP BY g.game_id, m.champion_id
+            ORDER BY g.game_creation_utc
+            """)
+        wanted = set(queue_ids)
+        return [(champion_id, points) for queue, champion_id, points in rows if queue in wanted]
 
     def player_impact(self, limit: int) -> List[dict]:
         """Impacts du joueur sur ses `limit` dernières parties avec impact, de la plus récente à la plus ancienne."""

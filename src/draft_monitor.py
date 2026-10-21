@@ -102,7 +102,7 @@ class DraftMonitor:
                 "depuis la racine du projet pour les calculer."
             )
         # SPEC-41 : ma maîtrise par champion, rechargée à chaque nouvelle draft (lifecycle).
-        self.mastery = MasteryTerm.load(self.assistant.db)
+        self.mastery = MasteryTerm.load(self.assistant.db, verbose)
         self.search = DraftSearch(
             self.evaluator,
             CandidatePool(self.assistant.db, draft_config.SEARCH_TOP_N, verbose=verbose),

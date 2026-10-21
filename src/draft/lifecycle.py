@@ -170,7 +170,7 @@ class MonitorLifecycle:
         """Ma maîtrise avec la dernière partie capturée (SPEC-41). Best-effort : en cas d'erreur, le
         terme précédent reste en place et la draft continue."""
         try:
-            self.m.mastery = MasteryTerm.load(self.m.assistant.db)
+            self.m.mastery = MasteryTerm.read(self.m.assistant.db)
         except Exception as error:  # pylint: disable=broad-exception-caught
             if self.m.verbose:
                 print(f"[ALERTE] Maîtrise personnelle non rechargée ({error})")

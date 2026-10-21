@@ -143,21 +143,29 @@ class MasteryTerm:
         self._table = {name.lower(): mastery for name, mastery in (table or {}).items()}
 
     @classmethod
-    def load(cls, db) -> "MasteryTerm":
+    def read(cls, db) -> "MasteryTerm":
         """Maîtrise tirée des parties capturées (`MASTERY_QUEUE_IDS`), rétrécie à `MASTERY_K`.
 
-        Best-effort : toute erreur (tables absentes, base fermée) donne un terme vide.
+        Lève en cas d'erreur (tables absentes, base verrouillée) : à l'appelant de garder le terme
+        qu'il a déjà, ou de partir d'un terme vide (`load`).
         """
+        names = db.get_all_champion_names() or {}
+        games = [
+            (names.get(champion_id, str(champion_id)), points)
+            for champion_id, points in CoachingRepository(db).player_champion_impacts(
+                analysis_config.MASTERY_QUEUE_IDS
+            )
+        ]
+        return cls(masteries(games, analysis_config.MASTERY_K))
+
+    @classmethod
+    def load(cls, db, verbose: bool = False) -> "MasteryTerm":
+        """`read`, ou un terme vide en cas d'erreur (premier chargement, au démarrage)."""
         try:
-            names = db.get_all_champion_names() or {}
-            games = [
-                (names.get(champion_id, str(champion_id)), points)
-                for champion_id, points in CoachingRepository(db).player_champion_impacts(
-                    analysis_config.MASTERY_QUEUE_IDS
-                )
-            ]
-            return cls(masteries(games, analysis_config.MASTERY_K))
-        except Exception:  # pylint: disable=broad-exception-caught
+            return cls.read(db)
+        except Exception as error:  # pylint: disable=broad-exception-caught
+            if verbose:
+                print(f"[ALERTE] Maîtrise personnelle non chargée ({error})")
             return cls()
 
     def logit(self, name: str) -> float:

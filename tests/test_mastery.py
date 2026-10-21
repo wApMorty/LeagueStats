@@ -1,5 +1,6 @@
 """Tests de src/analysis/mastery.py : shrink_k (méthode des moments) et masteries (SPEC-41)."""
 
+import math
 import random
 from unittest.mock import Mock
 
@@ -18,6 +19,7 @@ from src.analysis.mastery import (
     shrink_k,
     term_of,
     to_win_points,
+    with_term,
 )
 from src.analysis.probability import sigmoid
 from src.config_constants import analysis_config
@@ -259,6 +261,15 @@ def test_mastery_term_vide_sans_parties_ou_en_erreur(db):
     broken = Mock()
     broken.get_all_champion_names.side_effect = RuntimeError("base fermée")
     assert MasteryTerm.load(broken).logit("Gnar") == 0.0
+    with pytest.raises(RuntimeError):
+        MasteryTerm.read(broken)  # `read` laisse l'appelant garder son terme
+
+
+def test_with_term_ajoute_le_terme_en_log_odds():
+    """Valeur écrite à la main : p = 0,6, terme 0,2 -> 1 / (1 + exp(−(ln(0,6 / 0,4) + 0,2)))."""
+    expected = 1.0 / (1.0 + math.exp(-(math.log(0.6 / 0.4) + 0.2)))
+    assert with_term(0.6, 0.2) == pytest.approx(expected, abs=1e-12)
+    assert with_term(0.6, 0.0) == 0.6
 
 
 def test_term_of_ignore_un_monitor_mock():

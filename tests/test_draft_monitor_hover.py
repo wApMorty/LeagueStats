@@ -258,3 +258,12 @@ class TestBlindPickMastery:
         monitor.mastery = MasteryTerm()
 
         assert monitor._get_best_champion_from_pool() == "Garen"
+
+    def test_le_mode_verbeux_cite_ma_maitrise(self, monitor, lane_winrates, capsys):
+        monitor.assistant.get_matchups_for_draft.return_value = matchups(1000)
+        monitor.verbose = True
+        monitor.mastery = MasteryTerm({"Garen": Mastery("Garen", 10, 2.0, 1.0)})
+
+        assert monitor._get_best_champion_from_pool() == "Garen"
+        points = monitor.mastery.points("Garen")
+        assert f"de winrate lissé, dont toi {points:+.1f} pts)" in capsys.readouterr().out
