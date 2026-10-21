@@ -5,7 +5,9 @@ seule. Pour chaque joueur focal (au moins `MASTERY_STUDY_MIN_GAMES` parties lues
 champion joué est tirée de son impact ΔP (SPEC-20) sur ses AUTRES parties, puis on teste si elle prédit
 la victoire au-delà du logit de draft (`GameEvaluator`). Validation croisée à 5 blocs de joueurs,
 IC95 par bootstrap sur les joueurs, seuil de SPEC-41 §2 figé avant la mesure. Deux références : (a)
-écart à la moyenne du joueur, (b) le même moins la norme ΔP du champion. Aucune écriture.
+écart à la moyenne du joueur, (b) le même moins la norme ΔP du champion, (c) l'impact relatif aux
+coéquipiers de la partie (le sien moins leur moyenne), (d) l'impact relatif à l'adversaire de lane.
+Aucune écriture.
 
 USAGE:
     python scripts/measure_mastery_term.py                 # mesure complète (~35 min)
@@ -57,7 +59,9 @@ from src.winprob.state import BLUE, blue_win
 from src.winprob.train import crawl_path, load_model
 
 PROGRESS_EVERY = 5000
-VARIANTS = ("a", "b")
+VARIANTS = ("a", "b", "c", "d")
+# La valeur de partie lue par chaque variante (b retranche en plus la norme du champion).
+VALUE_OF = {"a": "points", "b": "points", "c": "team_rel", "d": "lane_rel"}
 
 
 @dataclass(frozen=True)
@@ -70,6 +74,31 @@ class Row:
     win: int
     points: float  # 100 × Σ ΔP de ses lignes d'impact
     draft: float  # logit de draft de son équipe
+    team_rel: float = 0.0  # points moins la moyenne de ses 4 coéquipiers (variante c)
+    lane_rel: float = 0.0  # points moins ceux de son adversaire de lane (variante d)
+
+
+def relative_values(
+    points: Dict[int, float], team_of: Dict[int, int], roles: Dict[int, Optional[str]]
+) -> Dict[int, Tuple[float, float]]:
+    """participantId -> (impact moins la moyenne des coéquipiers, impact moins l'adversaire de lane).
+
+    Ramène l'impact à la partie : un +5 quand ses coéquipiers font +20 vaut −15 relatif. Sans
+    adversaire de même poste, l'écart de lane vaut 0.
+    """
+    out: Dict[int, Tuple[float, float]] = {}
+    for pid, team in team_of.items():
+        mates = [points.get(q, 0.0) for q, t in team_of.items() if t == team and q != pid]
+        rivals = [
+            points.get(q, 0.0)
+            for q, t in team_of.items()
+            if t != team and roles.get(q) is not None and roles.get(q) == roles.get(pid)
+        ]
+        own = points.get(pid, 0.0)
+        team_rel = own - sum(mates) / len(mates) if mates else 0.0
+        lane_rel = own - rivals[0] if len(rivals) == 1 else 0.0
+        out[pid] = (team_rel, lane_rel)
+    return out
 
 
 def _parse_args() -> argparse.Namespace:
@@ -108,6 +137,7 @@ def _game_rows(
     blue = [(champion_of[pid], roles[pid]) for pid in roles if team_of[pid] == BLUE]
     red = [(champion_of[pid], roles[pid]) for pid in roles if team_of[pid] != BLUE]
     blue_logit = evaluator.team_logit(blue, red)  # antisymétrique : le rouge vaut l'opposé
+    relative = relative_values(points, team_of, roles)
     return [
         Row(
             puuid=puuid_of[pid],
@@ -116,6 +146,8 @@ def _game_rows(
             win=int(win) if team_of[pid] == BLUE else 1 - int(win),
             points=points[pid],
             draft=blue_logit if team_of[pid] == BLUE else -blue_logit,
+            team_rel=relative[pid][0],
+            lane_rel=relative[pid][1],
         )
         for pid in roles
     ]
@@ -188,26 +220,31 @@ def _by_player(rows: Sequence[Row]) -> Dict[str, List[Row]]:
 
 
 def estimate_k(
-    by_player: Dict[str, List[Row]], norms: Optional[Dict[str, float]]
+    by_player: Dict[str, List[Row]], norms: Optional[Dict[str, float]], field: str = "points"
 ) -> Optional[float]:
-    """K de la population : variance entre champions à l'intérieur de chaque joueur, regroupée."""
+    """K de la population : variance entre champions à l'intérieur de chaque joueur, regroupée.
+
+    `field` : la valeur de partie de la variante (`VALUE_OF`)."""
     offsets = norms or {}
     players = []
     for games in by_player.values():
         groups: Dict[str, List[float]] = defaultdict(list)
         for row in games:
-            groups[row.champion].append(row.points - offsets.get(row.champion, 0.0))
+            groups[row.champion].append(getattr(row, field) - offsets.get(row.champion, 0.0))
         players.append(groups)
     return pooled_shrink_k(players)
 
 
 def offsets_of(
-    by_player: Dict[str, List[Row]], k: float, norms: Optional[Dict[str, float]]
+    by_player: Dict[str, List[Row]],
+    k: float,
+    norms: Optional[Dict[str, float]],
+    field: str = "points",
 ) -> Dict[Tuple[str, int], float]:
     """(joueur, partie) -> maîtrise du champion joué, calculée sans cette partie."""
     out: Dict[Tuple[str, int], float] = {}
     for puuid, games in by_player.items():
-        points = leave_one_out_points([(r.champion, r.points) for r in games], k, norms)
+        points = leave_one_out_points([(r.champion, getattr(r, field)) for r in games], k, norms)
         for row, value in zip(games, points):
             out[(puuid, row.game)] = value
     return out
@@ -225,7 +262,7 @@ class Pooled:
 
 
 def cross_validate(rows: Sequence[Row], focal: Set[str]) -> Optional[Pooled]:
-    """Validation croisée à blocs de joueurs : draft seule contre draft + maîtrise (a et b)."""
+    """Validation croisée à blocs de joueurs : draft seule contre draft + maîtrise (a à d)."""
     pooled = Pooled([], [], [], {v: [] for v in VARIANTS}, {v: [] for v in VARIANTS})
     for fold in range(cfg.MASTERY_STUDY_FOLDS):
         train_all = [r for r in rows if _fold(r.puuid) != fold]
@@ -244,14 +281,15 @@ def cross_validate(rows: Sequence[Row], focal: Set[str]) -> Optional[Pooled]:
         pooled.wins.extend(r.win for r in test_rows)
         for variant in VARIANTS:
             variant_norms = norms if variant == "b" else None
-            k = estimate_k(train, variant_norms)
+            field = VALUE_OF[variant]
+            k = estimate_k(train, variant_norms, field)
             if k is None:
                 print(f"[INFO] Variante {variant}, bloc {fold} : tau2 <= 0, terme nul.")
                 pooled.variants[variant].extend(pooled.base[-len(test_rows) :])
                 continue
             pooled.ks[variant].append(k)
-            train_off = offsets_of(train, k, variant_norms)
-            test_off = offsets_of(test, k, variant_norms)
+            train_off = offsets_of(train, k, variant_norms, field)
+            test_off = offsets_of(test, k, variant_norms, field)
             coef = fit_logistic(
                 [[1.0, r.draft, train_off[(r.puuid, r.game)]] for r in train_rows],
                 [r.win for r in train_rows],
@@ -261,6 +299,28 @@ def cross_validate(rows: Sequence[Row], focal: Set[str]) -> Optional[Pooled]:
                 for r in test_rows
             )
     return pooled
+
+
+def choose(
+    adopted: Dict[str, Tuple[float, List[float]]],
+    gains: Dict[str, List[float]],
+    players: Sequence[str],
+    seed: int,
+) -> Optional[str]:
+    """La variante retenue parmi celles qui passent le seuil : a, la référence de SPEC-41 §8, sauf si
+    une autre la bat significativement (IC95 de son gain moins celui de a entièrement positif) ;
+    entre plusieurs qui la battent, le plus grand gain moyen. Sans a adoptée, le plus grand gain."""
+    others = [v for v in adopted if v != "a"]
+    if "a" not in adopted:
+        return max(others, key=lambda v: sum(gains[v]), default=None)
+    better = []
+    for variant in others:
+        diff = [gv - ga for ga, gv in zip(gains["a"], gains[variant])]
+        low, high = ci95(player_mean_bootstrap(players, diff, cfg.MASTERY_STUDY_BOOTSTRAP, seed))
+        print(f"[DATA] Gain {variant} - a : IC95 [{low:+.5f} ; {high:+.5f}]")
+        if low > 0:
+            better.append(variant)
+    return max(better, key=lambda v: sum(gains[v])) if better else "a"
 
 
 def _squared_errors(probs: Sequence[float], wins: Sequence[int]) -> List[float]:
@@ -273,10 +333,11 @@ def full_fit(
     """Sur tout l'échantillon : K, coefficients [biais, draft, maîtrise] et IC95 du coefficient."""
     by_player = _by_player([r for r in rows if r.puuid in focal])
     norms = champion_norms(rows) if variant == "b" else None
-    k = estimate_k(by_player, norms)
+    field = VALUE_OF[variant]
+    k = estimate_k(by_player, norms, field)
     if k is None:
         return None
-    off = offsets_of(by_player, k, norms)
+    off = offsets_of(by_player, k, norms, field)
     focal_rows = [r for games in by_player.values() for r in games]
     xs = [[1.0, r.draft, off[(r.puuid, r.game)]] for r in focal_rows]
     ys = [r.win for r in focal_rows]
@@ -294,6 +355,37 @@ def _own_games(game_db: sqlite3.Connection, names: Dict[int, str]) -> List[Tuple
         (names.get(cid, str(cid)), points)
         for cid, points in repository.player_champion_impacts(cfg.MASTERY_QUEUE_IDS)
     ]
+
+
+def _own_relative(
+    game_db: sqlite3.Connection, names: Dict[int, str]
+) -> Dict[str, List[Tuple[str, float]]]:
+    """Parties SoloQ de @pj35 en impact relatif : `team_rel` et `lane_rel` -> (champion, valeur)."""
+    points: Dict[Tuple[int, int], float] = defaultdict(float)
+    for game_id, pid, delta in game_db.execute(
+        "SELECT game_id, participant_id, delta_p FROM game_impact"
+    ):
+        points[(game_id, pid)] += 100 * delta
+    out: Dict[str, List[Tuple[str, float]]] = {"team_rel": [], "lane_rel": []}
+    query = (
+        "SELECT game_id, queue_id, player_participant_id, raw_game, raw_eog FROM game_records "
+        "ORDER BY game_creation_utc"
+    )
+    for game_id, queue_id, player, raw_game, raw_eog in game_db.execute(query):
+        if queue_id not in cfg.MASTERY_QUEUE_IDS or (game_id, player) not in points:
+            continue
+        game = json.loads(raw_game)
+        team_of = {p["participantId"]: p["teamId"] for p in game["participants"]}
+        roles = participant_roles(game, json.loads(raw_eog) if raw_eog else None)
+        game_points = {pid: points.get((game_id, pid), 0.0) for pid in team_of}
+        team_rel, lane_rel = relative_values(game_points, team_of, roles)[player]
+        champion_id = next(
+            p["championId"] for p in game["participants"] if p["participantId"] == player
+        )
+        champion = names.get(champion_id, str(champion_id))
+        out["team_rel"].append((champion, team_rel))
+        out["lane_rel"].append((champion, lane_rel))
+    return out
 
 
 def _print_own(own: List[Tuple[str, float]], k_population: Optional[float]) -> None:
@@ -339,6 +431,7 @@ def main() -> None:
             counts = {"lues": 0, "illisibles": 0, "exclues": 0, "hors_filtre": 0, "retenues": 0}
             rows = read_rows(crawl_db, args.limit, puuids, model, names, evaluator, counts)
             own = _own_games(game_db, names)
+            own_relative = _own_relative(game_db, names)
         finally:
             db.close()
             crawl_db.close()
@@ -394,17 +487,7 @@ def main() -> None:
         if decide(coef_ci, gain_ci):
             adopted[variant] = (k, coef)
 
-    choice = None
-    if "b" in adopted:
-        diff = [gb - ga for ga, gb in zip(gains["a"], gains["b"])]
-        diff_ci = ci95(
-            player_mean_bootstrap(pooled.players, diff, cfg.MASTERY_STUDY_BOOTSTRAP, args.seed)
-        )
-        print(f"[DATA] Gain b - a : IC95 [{diff_ci[0]:+.5f} ; {diff_ci[1]:+.5f}]")
-        if diff_ci[0] > 0 or "a" not in adopted:
-            choice = "b"
-    if choice is None and "a" in adopted:
-        choice = "a"
+    choice = choose(adopted, gains, pooled.players, args.seed)
     if choice is None:
         print("[INFO] Non adopté : seuil de SPEC-41 §2 non atteint.")
         _print_own(own, k_by_variant.get("a"))
@@ -414,7 +497,10 @@ def main() -> None:
         f"[OK] Adopté (variante {choice}) : MASTERY_LOGIT_PER_POINT = {coef[2]:.4f}, "
         f"MASTERY_K = {k:.1f}"
     )
-    _print_own(own, k)
+    field = VALUE_OF[choice]
+    if choice == "b":
+        print("[INFO] Table de @pj35 en variante a : la norme par champion n'est pas retranchée.")
+    _print_own(own if field == "points" else own_relative[field], k)
 
 
 if __name__ == "__main__":
