@@ -21,7 +21,7 @@ from dataclasses import asdict
 from typing import List, Optional, Sequence, Tuple
 
 from ..analysis.game_eval import Placed
-from ..analysis.mastery import term_of
+from ..analysis.mastery import term_of, with_term
 from ..config_constants import draft_config, ui_config
 from ..utils.display import format_games_count
 from .search import PickTurn, SearchResult
@@ -189,10 +189,12 @@ class DraftRecommender:
             allies = self._placed(state.ally_picks, state)
             enemies = self._placed(state.enemy_picks, state)
             taken = set(state.get_all_actions())
+            term = term_of(self.m)  # SPEC-41 : ma maîtrise du champion, sur mon pick
             for champion_id, name in self.m.champion_id_to_name.items():
                 if champion_id not in taken:
-                    analysis.candidates[champion_id] = self.m.evaluator.win_probability(
-                        allies + [(name, lane)], enemies
+                    analysis.candidates[champion_id] = with_term(
+                        self.m.evaluator.win_probability(allies + [(name, lane)], enemies),
+                        term.logit(name),
                     )
         except Exception:  # pylint: disable=broad-exception-caught
             analysis.candidates.clear()

@@ -22,6 +22,7 @@ from itertools import zip_longest
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from ..analysis.game_eval import Placed
+from ..analysis.mastery import term_of, with_term
 from ..analysis.probability import sigmoid
 from ..coaching.goals import draft_reminder
 from ..config_constants import analysis_config, draft_config, scraping_config
@@ -65,12 +66,14 @@ class FinalAnalysis:
     """L'analyse de fin de draft, en données : la console l'imprime, l'écran « En partie » la relit."""
 
     lines: List[FaceOffLine]
-    win_probability: float
+    win_probability: float  # affichée : la draft et ma maîtrise de mon champion (SPEC-41)
     draft_diff: float  # écart entre les deux camps, en points
     evaluation: str
     loadout: Optional[Dict[str, Any]] = field(default=None)
     # SPEC-27 : vérification des postes en partie (état, écarts), None tant que rien n'est vérifié.
     reality: Optional[Dict[str, Any]] = field(default=None)
+    # SPEC-41 : la draft seule, celle qu'on journalise (la calibration ne doit pas voir la maîtrise).
+    draft_probability: Optional[float] = field(default=None)
 
     def to_payload(self) -> Dict[str, Any]:
         """Charge utile du bus (types simples, sérialisable en JSON)."""
@@ -326,7 +329,12 @@ class FinalDraftAnalyzer:
                 ally_champions=ally_picks,
                 enemy_champions=enemy_picks,
                 ally_lanes=ally_lanes,
-                predicted_probability=win_probability,
+                # SPEC-41 §2 : la draft seule, sans ma maîtrise.
+                predicted_probability=(
+                    analysis.draft_probability
+                    if analysis.draft_probability is not None
+                    else win_probability
+                ),
                 # SPEC-12 : le suffixe « +lane-restante » (SPEC-11, supprimé depuis)
                 # décrivait un régime du modèle par delta, que la recherche
                 # n'emprunte plus. MODEL_VERSION seul, comme outcome_tracker.py
@@ -366,7 +374,9 @@ def build_final_analysis(
     enemies: List[Placed] = [
         (monitor._get_display_name(champ_id), ally_lanes.get(champ_id)) for champ_id in enemy_picks
     ]
-    win_probability = monitor.evaluator.win_probability(allies, enemies)
+    draft_probability = monitor.evaluator.win_probability(allies, enemies)
+    mine = _my_champion(monitor)
+    win_probability = with_term(draft_probability, term_of(monitor).logit(mine) if mine else 0.0)
     # Même définition qu'avant SPEC-12 (écart entre les deux camps), pour que les seuils
     # d'évaluation gardent leur calibrage.
     draft_diff = (2.0 * win_probability - 1.0) * 100.0
@@ -376,7 +386,20 @@ def build_final_analysis(
         draft_diff=draft_diff,
         evaluation=evaluation_of(draft_diff)[0],
         loadout=_loadout_of(monitor),
+        draft_probability=draft_probability,
     )
+
+
+def _my_champion(monitor) -> Optional[str]:
+    """Le champion verrouillé dans ma cellule (dernier état de la draft), None si inconnu."""
+    try:
+        state = monitor.last_draft_state
+        for cell in state.ally_cells:
+            if cell.cell_id == state.local_player_cell_id and cell.champion_id:
+                return monitor._get_display_name(cell.champion_id)
+    except Exception:  # pylint: disable=broad-exception-caught
+        pass  # monitor simulé ou état illisible : pas de terme personnel
+    return None
 
 
 def _loadout_of(monitor) -> Optional[Dict[str, Any]]:

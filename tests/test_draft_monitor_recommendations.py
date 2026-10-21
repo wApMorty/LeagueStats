@@ -12,7 +12,9 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from src.analysis.mastery import MasteryTerm
+from src.analysis.mastery import Mastery, MasteryTerm, with_term
+from src.draft.snapshot import Analysis
+from src.draft.state import Cell
 from src.draft.search import PickTurn, SearchResult
 from src.draft_monitor import DraftMonitor, DraftState
 from src.models import Matchup
@@ -214,3 +216,33 @@ class TestMasteryReload:
         monitor._provide_recommendations(state)
 
         assert monitor.search.rank.call_args.kwargs["personal"] == monitor.mastery.logit
+
+
+class TestGrimoireMastery:
+    """SPEC-41 critère 6 : la victoire immédiate du grimoire inclut ma maîtrise du champion."""
+
+    def _candidates(self, monitor):
+        state = DraftState(
+            phase="BAN_PICK",
+            enemy_picks=[64],
+            local_player_cell_id=0,
+            ally_positions={0: "top"},
+            ally_cells=[Cell(cell_id=0)],
+        )
+        analysis = Analysis()
+        with patch.object(monitor, "_is_ban_phase", return_value=False):
+            monitor.recommender._fill_candidates(state, analysis)
+        return analysis.candidates
+
+    def test_le_grimoire_ajoute_le_terme_a_mon_champion(self, monitor):
+        monitor.mastery = MasteryTerm()
+        without = self._candidates(monitor)
+        monitor.mastery = MasteryTerm({"Darius": Mastery("Darius", 10, -4.0, -2.0)})
+
+        with_mastery = self._candidates(monitor)
+
+        assert with_mastery[122] == pytest.approx(
+            with_term(without[122], monitor.mastery.logit("Darius"))
+        )
+        assert with_mastery[122] < without[122]
+        assert with_mastery[266] == without[266]  # Aatrox, jamais joué : inchangé

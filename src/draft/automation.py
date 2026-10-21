@@ -11,6 +11,7 @@ many cross-domain touches for plain composition.
 
 from typing import List, Optional, Tuple
 
+from ..analysis.mastery import term_of
 from ..analysis.shrink import shrunk_lane_winrates
 from ..config_constants import draft_config
 from ..utils.console import clear_console
@@ -142,10 +143,14 @@ class HoverAutomation:
             lane_winrates = (
                 shrunk_lane_winrates(self.m.assistant.db, player_lane) if eligible else {}
             )
+            # SPEC-41 : ma maîtrise du champion, en points de victoire comme le winrate de lane.
+            term = term_of(self.m)
             scores = []
             for champion_name, total_games in eligible:
                 if champion_name in lane_winrates:
-                    scores.append((champion_name, lane_winrates[champion_name]))
+                    scores.append(
+                        (champion_name, lane_winrates[champion_name] + term.points(champion_name))
+                    )
                 else:
                     skipped.append((champion_name, total_games))
 
@@ -161,8 +166,10 @@ class HoverAutomation:
                 scores.sort(key=lambda x: x[1], reverse=True)
                 best_champion = scores[0][0]
                 if self.m.verbose:
+                    personal = term.points(best_champion)
+                    personal_tag = f", dont toi {personal:+.1f} pts" if personal else ""
                     print(
-                        f"  [OK] [INITIAL-HOVER] Meilleur de la pool : {best_champion} ({scores[0][1]:.1f}% de winrate lissé)"
+                        f"  [OK] [INITIAL-HOVER] Meilleur de la pool : {best_champion} ({scores[0][1]:.1f}% de winrate lissé{personal_tag})"
                     )
                 return best_champion
             else:

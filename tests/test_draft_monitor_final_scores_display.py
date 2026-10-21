@@ -23,8 +23,10 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from src.analysis.mastery import Mastery, MasteryTerm, with_term
 from src.analysis.probability import sigmoid
 from src.config_constants import analysis_config
+from src.draft.state import Cell, DraftState
 from src.draft_monitor import DraftMonitor
 from src.models import Matchup
 
@@ -186,3 +188,43 @@ class TestFinalScoresComparison:
         kwargs = monitor.assistant.db.insert_prediction.call_args.kwargs
         assert kwargs["model_version"] == analysis_config.MODEL_VERSION
         assert kwargs["model_version"] != "b7-v1"
+
+
+class TestFinalScoresMastery:
+    """SPEC-41 critère 6 : la probabilité affichée inclut ma maîtrise, la journalisée non."""
+
+    def _with_mastery(self, monitor):
+        monitor.mastery = MasteryTerm({"Ally1": Mastery("Ally1", 10, 4.0, 2.0)})
+        monitor.last_draft_state = DraftState(
+            local_player_cell_id=0, ally_cells=[Cell(cell_id=0, champion_id=1)]
+        )
+        return with_term(sigmoid(TEAM_LOGIT), monitor.mastery.logit("Ally1"))
+
+    def test_la_probabilite_affichee_inclut_ma_maitrise(self, monitor, capsys):
+        shown = self._with_mastery(monitor)
+        assert shown > sigmoid(TEAM_LOGIT)
+
+        with patch("src.draft.final_analysis.clear_console"):
+            monitor._calculate_final_scores(ALLY_IDS, ENEMY_IDS)
+
+        assert f"Probabilité de victoire estimée : {shown * 100.0:.2f}%" in capsys.readouterr().out
+
+    def test_la_prediction_journalisee_reste_la_draft_seule(self, monitor):
+        self._with_mastery(monitor)
+
+        with patch("src.draft.final_analysis.clear_console"):
+            monitor._calculate_final_scores(ALLY_IDS, ENEMY_IDS)
+
+        kwargs = monitor.assistant.db.insert_prediction.call_args.kwargs
+        assert kwargs["predicted_probability"] == pytest.approx(sigmoid(TEAM_LOGIT))
+
+    def test_sans_mon_champion_aucun_terme(self, monitor, capsys):
+        """Ma cellule sans champion verrouillé : la probabilité est celle de la draft."""
+        self._with_mastery(monitor)
+        monitor.last_draft_state = DraftState(local_player_cell_id=0, ally_cells=[Cell(0)])
+
+        with patch("src.draft.final_analysis.clear_console"):
+            monitor._calculate_final_scores(ALLY_IDS, ENEMY_IDS)
+
+        expected = sigmoid(TEAM_LOGIT) * 100.0
+        assert f"Probabilité de victoire estimée : {expected:.2f}%" in capsys.readouterr().out

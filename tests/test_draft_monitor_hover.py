@@ -14,6 +14,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from src.analysis.mastery import Mastery, MasteryTerm
 from src.config_constants import draft_config
 from src.draft_monitor import DraftMonitor
 
@@ -239,3 +240,21 @@ class TestGetBestChampionFromPool:
 
         out = capsys.readouterr().out
         assert "[ALERTE] [INITIAL-HOVER] Erreur d'obtention du meilleur champion: db down" in out
+
+
+class TestBlindPickMastery:
+    """SPEC-41 : le blind pick ajoute ma maîtrise (points de victoire) au winrate de lane."""
+
+    def test_une_maitrise_negative_fait_passer_un_autre_champion(self, monitor, lane_winrates):
+        """Garen 55 % mais −5,4 pts de maîtrise : Darius (51 %) passe devant."""
+        monitor.assistant.get_matchups_for_draft.return_value = matchups(1000)
+        monitor.mastery = MasteryTerm({"Garen": Mastery("Garen", 10, -6.0, -3.0)})
+        assert monitor.mastery.points("Garen") < -4.0
+
+        assert monitor._get_best_champion_from_pool() == "Darius"
+
+    def test_sans_maitrise_le_classement_ne_change_pas(self, monitor, lane_winrates):
+        monitor.assistant.get_matchups_for_draft.return_value = matchups(1000)
+        monitor.mastery = MasteryTerm()
+
+        assert monitor._get_best_champion_from_pool() == "Garen"

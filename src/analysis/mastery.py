@@ -17,7 +17,7 @@ from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 from ..config_constants import analysis_config
 from ..repositories.coaching import CoachingRepository
 from ..winprob.model import _solve
-from .probability import sigmoid
+from .probability import logit, sigmoid
 
 # Quantiles du bootstrap à 2,5 % et 97,5 %, et critère d'arrêt de Newton : constantes
 # statistiques, pas des réglages.
@@ -177,9 +177,14 @@ class MasteryTerm:
         return mastery.games if mastery else 0
 
 
-def to_win_points(logit: float) -> float:
+def to_win_points(term: float) -> float:
     """Log-odds d'un terme -> points de victoire autour de 50 %."""
-    return 100.0 * (sigmoid(logit) - 0.5)
+    return 100.0 * (sigmoid(term) - 0.5)
+
+
+def with_term(probability: float, term: float) -> float:
+    """`probability` avec le terme ajouté en log-odds ; inchangée, au bit près, si le terme est nul."""
+    return probability if not term else sigmoid(logit(probability) + term)
 
 
 def term_of(monitor) -> MasteryTerm:
