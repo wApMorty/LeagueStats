@@ -390,8 +390,8 @@ le rattrapage dans `game_records` et la prédiction journalisée sans le terme. 
 
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
-| 196 | `src/analysis/mastery.py` : `Mastery`, `shrink_k`, `masteries` (variantes a et b) + tests | 3 | — | ⬜ |
-| 197 | Spike `scripts/spike_lcu_history_pages.py` : pagination `begIndex` ≥ 20, détail et timeline de la plus ancienne | 1 | — | ⬜ |
+| 196 | `src/analysis/mastery.py` : `Mastery`, `shrink_k`, `masteries` (variantes a et b) + tests | 3 | — | ✅ 2026-10-21 : 6 tests ; K synthétique retrouvé à 15,56 pour 16 (n0, groupes déséquilibrés) |
+| 197 | Spike `scripts/spike_lcu_history_pages.py` : pagination `begIndex` ≥ 20, détail et timeline de la plus ancienne | 1 | — | 🟡 2026-10-21 : script écrit (a5cdea3), exécution client ouvert à faire |
 | 198 | *Conditionnelle (197)* : `scripts/backfill_own_games.py` par le chemin de la capture, test sur faux LCU | 3 | 197 | ⬜ |
 | 199 | `scripts/measure_mastery_term.py` : étude sur `crawl.db`, seuil figé, résultat et décision en §8 | 5 | 196 | ⬜ |
 | 200 | *Conditionnelle (199)* : `MasteryTerm`, terme à la racine de la recherche, `SearchResult.personal_points`, console + tests | 3 | 199 | ⬜ |
