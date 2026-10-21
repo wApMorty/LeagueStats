@@ -1,6 +1,6 @@
 # SPEC-41 — Maîtrise personnelle dans le moteur de draft
 
-**Statut** : 🟢 Validée par @pj35 le 2026-10-21 (tous les arbitrages de §2). Phase A faite le 2026-10-21 : 196 et 199, **terme adopté** (§8) ; 197 exécutée, pagination ignorée par le LCU, donc 198 abandonnée. Phase B (200 à 202) à planifier.
+**Statut** : ✅ Livrée le 2026-10-21. Phase A : 196 et 199, **terme adopté** (§8) ; 197 exécutée, le LCU ignore la pagination, donc 198 abandonnée. Phase B : 200 à 202 (recherche, grimoire, analyse finale affichée, blind pick, « dont toi sur X » sur les cartes). Recette @pj35 à faire (§6, vérification de bout en bout).
 
 **Origine** : @pj35, 2026-10-21 : « J'aimerais qu'on ajoute un degré d'analyse au moteur, pour qu'il soit plus
 corrélé à mes performances personnelles, et moins à des stats globales prises sur Internet. Par exemple, je suis
