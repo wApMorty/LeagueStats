@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-10-21 (SPEC-41 validée : maîtrise personnelle dans le moteur, étude sur crawl.db avant application ; SPEC-40 livrée : victoire immédiate sur les cartes de draft, comme le grimoire, recette @pj35 à faire ; SPEC-39 livrée : diagnostic complet et « Appliquer » sur l'écran Calibration, recette @pj35 à faire ; SPEC-38 livrée : trois pages de runes OneTricks au choix pendant la draft, recette @pj35 à faire ; SPEC-37 livrée : écran « Données » pour actualiser la base depuis le client, recette @pj35 à faire ; SPEC-36 livrée : morts sans contrepartie, axe et revue, recette @pj35 à faire ; SPEC-35 livrée : étude « Moneyball » du début de partie, aucune action adoptée ; SPEC-33 : tâches 151 à 159 faites, terme de forme mesuré et refusé (2026-10-21), 161 sans objet, recette @pj35 à faire ; SPEC-32 livrée : classement MVP / ACE en post-game, recette @pj35 à faire ; SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette @pj35 à faire)
+**Mis à jour** : 2026-10-21 (SPEC-41 validée : maîtrise personnelle dans le moteur, étude sur crawl.db avant application ; SPEC-40 livrée : victoire immédiate sur les cartes de draft, comme le grimoire, recette @pj35 à faire ; SPEC-39 livrée : diagnostic complet et « Appliquer » sur l'écran Calibration, recette @pj35 à faire ; SPEC-38 livrée : trois pages de runes OneTricks au choix pendant la draft, recette @pj35 à faire ; SPEC-37 livrée : écran « Données » pour actualiser la base depuis le client, recette @pj35 à faire ; SPEC-36 livrée : morts sans contrepartie, axe et revue, recette @pj35 à faire ; SPEC-35 livrée : étude « Moneyball » du début de partie, aucune action adoptée ; SPEC-33 livrée : éclaireur et pastilles de forme en partie, terme de forme mesuré et refusé, recette @pj35 à faire, recette @pj35 à faire ; SPEC-32 livrée : classement MVP / ACE en post-game, recette @pj35 à faire ; SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette @pj35 à faire)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -332,7 +332,7 @@ Emplacement du panneau (entre la courbe et les cartes) validé le 2026-10-12. D�
 | 149 | Gabarit et CSS : deux listes, portraits, barres, badges MVP et ACE, rupture à 1 500 px, tests de rendu | 5 | 148 | ✅ 2026-10-12 : 4 tests de rendu (rendu à l'œil laissé à @pj35) |
 | 150 | Clôture : vérification sur les 98 parties de la base, module ajouté aux listes, `CHANGELOG.md`, statuts, recette @pj35 | 2 | 149 | ✅ 2026-10-12 : 98 / 98 parties, 17 ACE négatifs ; recette à l'œil laissée à @pj35 |
 
-### Lot suivant — SPEC-33, éclaireur des joueurs en partie (🟢 validée le 2026-10-13)
+### Lot SPEC-33, éclaireur des joueurs en partie (✅ livrée le 2026-10-21, recette @pj35 à faire)
 
 [SPEC-33](docs/specs/SPEC-33-eclaireur-des-joueurs-en-partie.md) : dès l'écran de chargement, une pastille de niveau à côté
 de chacun des dix champions du face-à-face (ΔP moyen sur 10 parties classées, taux de victoire en attendant), détail 5 / 10 / 20
@@ -353,7 +353,7 @@ Tous les arbitrages validés par @pj35 le 2026-10-13 (suite en partie à 2 threa
 | 157 | Écran « En partie » : pastilles et infobulle dans le face-à-face, remesure de la marge | 5 | 155, 156 | ✅ 2026-10-15 : 16 tests ; pastille dans la cellule Tot (§4.4), marge 30 px à 1 920 × 986 |
 | 158 | `crawl_histories` : forme brute rangée à chaque visite d'historique (aucune requête de plus) | 3 | 152, 153 | ✅ 2026-10-13 : 2 tests (visite de la collecte, éclaireur) |
 | 159 | `scripts/measure_form_term.py` : seuil figé, mesure du terme de forme une fois `crawl_histories` fournie | 5 | 158 | ✅ 2026-10-15 : script livré, 6 tests, essai `--force --limit 3000` en 113 s ; mesure faite le 2026-10-21 (92 689 parties) : `form_wr`, `form_kda` et `form_impact` refusés (meilleur gain +0,0013 < 0,002, SPEC-33 §7) |
-| 160 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure, exe, recette @pj35 | 2 | 157, 159 | ⬜ |
+| 160 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure, exe, recette @pj35 | 2 | 157, 159 | ✅ 2026-10-21 ; exe : éclaireur et pastilles livrés depuis la 5.4.0 ; recette (pastilles en partie, forme de la session gameflow) laissée à @pj35 |
 | 161 | *Conditionnelle* : terme de forme dans le modèle si la tâche 159 l'adopte | 3 | 159 | ➖ sans objet : la tâche 159 refuse les trois variables (2026-10-21) |
 | 162 | Visites de couverture : après chaque partie lue, historique de ses joueurs non couverts (amendement du 2026-10-15) | 2 | 158 | ✅ 2026-10-15 : 2 tests ; couverture à suivre par `scripts/monitor_crawl.py` |
 

@@ -125,7 +125,8 @@ scripts/
 ├── repair_data.py               # Réparation ciblée de données incomplètes
 ├── calibrate_model.py            # Calibration des coefficients du modèle log-odds (SPEC-05 B7)
 ├── bench_scout.py, measure_scout_quartiles.py  # Banc de l'éclaireur, seuils de la pastille (SPEC-33)
-├── measure_form_term.py           # Mesure du terme de forme dans la win chance (SPEC-33, en attente de couverture)
+├── measure_form_term.py           # Mesure du terme de forme dans la win chance (SPEC-33, refusé le 2026-10-21)
+├── monitor_crawl.py               # Suivi en direct de crawl.db : débit, couverture, verrou (SPEC-33)
 ├── measure_moneyball.py            # Étude « Moneyball » du début de partie (SPEC-35, rien d'adopté le 2026-10-20)
 ├── measure_en_partie.py            # Mesure de l'écran « En partie » en Firefox headless (SPEC-30, SPEC-33)
 ├── demo_client.py, demo/           # Client en mode démo sur faux LCU local, sans League of Legends (SPEC-34)

@@ -1,6 +1,6 @@
 # SPEC-33 — Éclaireur des joueurs en partie
 
-**Statut** : 🟢 Validée par @pj35 le 2026-10-13 ; tâches 151 à 154, 156 et 158 implémentées le même jour, banc réel 155 le 2026-10-15, pastilles (157) et script de mesure (159) le 2026-10-15. Mesure du terme de forme faite le 2026-10-21 : les trois variables refusées (§7), la conditionnelle 161 est sans objet. Reste : la clôture 160 et la recette @pj35. Spike retiré le même jour (relevés de SPEC-25 et SPEC-27 suffisants, §1). Indicateur, win chance, affichage, déclencheur, concurrence,
+**Statut** : ✅ Livrée le 2026-10-21, recette @pj35 à faire. Validée par @pj35 le 2026-10-13 ; tâches 151 à 154, 156 et 158 implémentées le même jour, banc réel 155 le 2026-10-15, pastilles (157) et script de mesure (159) le 2026-10-15. Mesure du terme de forme faite le 2026-10-21 : les trois variables refusées (§7), la conditionnelle 161 est sans objet ; clôture 160 le même jour. Spike retiré le même jour (relevés de SPEC-25 et SPEC-27 suffisants, §1). Indicateur, win chance, affichage, déclencheur, concurrence,
 fenêtre, files, suite en partie, seuils de couleur et seuil d'adoption validés par @pj35 (§2).
 
 **Origine** : @pj35, 2026-10-13 : « ajouter une analyse des joueurs dans l'analyse in-game. Si on arrive
