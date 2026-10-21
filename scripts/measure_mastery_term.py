@@ -244,7 +244,7 @@ def cross_validate(rows: Sequence[Row], focal: Set[str]) -> Optional[Pooled]:
             variant_norms = norms if variant == "b" else None
             k = estimate_k(train, variant_norms)
             if k is None:
-                print(f"[INFO] Variante {variant}, bloc {fold} : τ² ≤ 0, terme nul.")
+                print(f"[INFO] Variante {variant}, bloc {fold} : tau2 <= 0, terme nul.")
                 pooled.variants[variant].extend(pooled.base[-len(test_rows) :])
                 continue
             pooled.ks[variant].append(k)
@@ -310,7 +310,7 @@ def _print_own(own: List[Tuple[str, float]], k_population: Optional[float]) -> N
     for champion, points in own:
         groups[champion].append(points)
     k_own = shrink_k(groups)
-    own_text = "τ² ≤ 0" if k_own is None else f"{k_own:.1f}"
+    own_text = "tau2 <= 0" if k_own is None else f"{k_own:.1f}"
     print(f"[DATA] @pj35 : {len(own)} parties SoloQ avec impact, K propre {own_text}")
     if not own or k_population is None:
         return
@@ -357,7 +357,7 @@ def main() -> None:
     focal_rows = sum(games_per_player[p] for p in focal)
     print(
         f"[DATA] {len(games_per_player)} joueurs, {len(focal)} focaux "
-        f"(≥ {cfg.MASTERY_STUDY_MIN_GAMES} parties lues), {focal_rows} lignes de prédiction"
+        f"(>= {cfg.MASTERY_STUDY_MIN_GAMES} parties lues), {focal_rows} lignes de prédiction"
     )
     print(
         "[INFO] Impacts tirés du modèle en place, entraîné sur ces parties (biais marginal : la "
@@ -388,7 +388,7 @@ def main() -> None:
         brier = brier_score(list(zip(pooled.variants[variant], pooled.wins)))
         fitted = full_fit(rows, focal, variant, args.seed)
         if fitted is None:
-            print(f"[DATA] Variante {variant} : τ² ≤ 0 sur l'échantillon complet, terme nul.")
+            print(f"[DATA] Variante {variant} : tau2 <= 0 sur l'échantillon complet, terme nul.")
             continue
         k, coef, coef_ci = fitted
         k_by_variant[variant] = k
@@ -408,7 +408,7 @@ def main() -> None:
         diff_ci = ci95(
             player_mean_bootstrap(pooled.players, diff, cfg.MASTERY_STUDY_BOOTSTRAP, args.seed)
         )
-        print(f"[DATA] Gain b − a : IC95 [{diff_ci[0]:+.5f} ; {diff_ci[1]:+.5f}]")
+        print(f"[DATA] Gain b - a : IC95 [{diff_ci[0]:+.5f} ; {diff_ci[1]:+.5f}]")
         if diff_ci[0] > 0 or "a" not in adopted:
             choice = "b"
     if choice is None and "a" in adopted:
