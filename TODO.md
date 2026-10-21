@@ -377,7 +377,7 @@ pile réelle sur faux LCU (§3). Découpage en SPEC-34 §5 (tâches 163 à 170, 
 | 169 | Scènes « En partie » (courbe SVG), « Revue et coaching » et « Mosaïque » ; `hero.gif` dans le README | 5 | 167, 168 | ✅ 2026-10-16 : teaser de 30,0 s en 1 920 × 1 080 sans audio (12,2 Mo) ; `hero.gif` 960 × 540 à 10 i/s, 4,1 Mo, encodé par ffmpeg (palette optimisée ; l'encodeur GIF de Remotion donnait 10,3 Mo), fond figé dans la boucle |
 | 170 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure ; recette à l'œil de @pj35 | 3 | 169 | ✅ 2026-10-16 ; recette à l'œil (captures, GIF, `docs/presentation/video/out/teaser.mp4`) laissée à @pj35 |
 
-### Lot SPEC-41, maîtrise personnelle dans le moteur de draft (🟢 validée le 2026-10-21)
+### Lot SPEC-41, maîtrise personnelle dans le moteur de draft (🟢 validée le 2026-10-21, terme adopté par l'étude)
 
 [SPEC-41](docs/specs/SPEC-41-maitrise-personnelle-dans-le-moteur.md) ajoute au moteur un terme de maîtrise par
 champion, tiré de l'impact ΔP de SPEC-20 (et non du winrate). Sur 5 parties, Gnar fait 3 victoires mais un impact de
@@ -393,7 +393,7 @@ le rattrapage dans `game_records` et la prédiction journalisée sans le terme. 
 | 196 | `src/analysis/mastery.py` : `Mastery`, `shrink_k`, `masteries` (variantes a et b) + tests | 3 | — | ✅ 2026-10-21 : 6 tests ; K synthétique retrouvé à 15,56 pour 16 (n0, groupes déséquilibrés) |
 | 197 | Spike `scripts/spike_lcu_history_pages.py` : pagination `begIndex` ≥ 20, détail et timeline de la plus ancienne | 1 | — | 🟡 2026-10-21 : script écrit (a5cdea3), exécution client ouvert à faire |
 | 198 | *Conditionnelle (197)* : `scripts/backfill_own_games.py` par le chemin de la capture, test sur faux LCU | 3 | 197 | ⬜ |
-| 199 | `scripts/measure_mastery_term.py` : étude sur `crawl.db`, seuil figé, résultat et décision en §8 | 5 | 196 | ⬜ |
+| 199 | `scripts/measure_mastery_term.py` : étude sur `crawl.db`, seuil figé, résultat et décision en §8 | 5 | 196 | ✅ 2026-10-21 : **adopté** (variante a), 81 969 parties, 24 438 joueurs focaux ; b = 0,0717 logit/pt [0,060 ; 0,084], gain de Brier +0,00008 [+0,00005 ; +0,00011], K = 42,4 ; Gnar −2,0 pts de victoire |
 | 200 | *Conditionnelle (199)* : `MasteryTerm`, terme à la racine de la recherche, `SearchResult.personal_points`, console + tests | 3 | 199 | ⬜ |
 | 201 | *Conditionnelle (199)* : grimoire, analyse finale (affichée seulement), blind pick + tests | 3 | 200 | ⬜ |
 | 202 | *Conditionnelle (199)* : snapshot et sous-ligne « dont toi sur X » des cartes + tests | 2 | 200 | ⬜ |

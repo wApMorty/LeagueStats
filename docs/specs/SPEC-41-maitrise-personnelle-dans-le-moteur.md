@@ -1,6 +1,6 @@
 # SPEC-41 — Maîtrise personnelle dans le moteur de draft
 
-**Statut** : 🟢 Validée par @pj35 le 2026-10-21 (tous les arbitrages de §2).
+**Statut** : 🟢 Validée par @pj35 le 2026-10-21 (tous les arbitrages de §2). Phase A : tâches 196 et 199 faites le 2026-10-21, **terme adopté** (§8) ; 197 écrite, à exécuter client ouvert ; 198 en attente du spike ; phase B (200 à 202) à planifier.
 
 **Origine** : @pj35, 2026-10-21 : « J'aimerais qu'on ajoute un degré d'analyse au moteur, pour qu'il soit plus
 corrélé à mes performances personnelles, et moins à des stats globales prises sur Internet. Par exemple, je suis
@@ -132,14 +132,15 @@ Lecture seule de `crawl.db` et `db.db`, modèle de partie de `load_model` (comme
    (somme de ses lignes `impacts(...)["rows"]`), champion, victoire, `puuid`.
 2. **Joueurs focaux** : `puuid` avec au moins `MASTERY_STUDY_MIN_GAMES` parties lues. Pour chacune de leurs
    parties : `offset` du champion joué, calculé par `masteries` sur **ses autres** parties (la partie prédite
-   exclue), K estimé sur les blocs d'entraînement.
+   exclue). K est estimé sur les blocs d'entraînement par `pooled_shrink_k` : variance entre champions à
+   l'intérieur de chaque joueur, regroupée (§8).
 3. Logit de draft de la partie, vu de son équipe : `GameEvaluator(db).team_logit(alliés, ennemis)`, lanes
    données par `participant_roles`.
 4. Logistique `victoire ~ a · logit_draft + b · offset` contre `victoire ~ a · logit_draft`, validation croisée
    à 5 blocs de joueurs (un joueur n'est jamais à la fois en entraînement et en test), puis Brier poolé. IC95 de
    `b` et du gain de Brier par bootstrap sur les joueurs (`MASTERY_STUDY_BOOTSTRAP` tirages).
-5. Les deux références du §2 (a, puis b avec la norme par champion calculée sur les participants non focaux des
-   blocs d'entraînement), sur les mêmes blocs.
+5. Les deux références du §2 sont évaluées sur les mêmes blocs : a, puis b, avec la norme par champion calculée
+   sur tous les participants hors bloc de test, focaux d'entraînement compris.
 6. Sortie : parties et joueurs retenus, K, `b` et son IC95, Brier des deux modèles, gain et son IC95, décision
    `[OK] Adopté (variante x)` ou `[INFO] Non adopté`, puis K de @pj35 et sa table du §1 recalculée. Résultat
    consigné en §8 par la tâche 199.
@@ -231,4 +232,54 @@ champion du pool que si sa victoire immédiate le dépasse encore une fois le te
 
 ## 8. Résultats
 
-*Spike de la pagination (tâche 197) et mesure du terme (tâche 199) : à remplir.*
+*Spike de la pagination (tâche 197) : script écrit (`scripts/spike_lcu_history_pages.py`), exécution à faire,
+client LoL ouvert.*
+
+**Mesure du terme (tâche 199, 2026-10-21)** : `python scripts/measure_mastery_term.py`, sans limite. 85 359
+parties lues (90 exclues parce que @pj35 y joue, 3 300 hors filtre), dont 81 969 retenues, en 1 323 s ;
+164 378 joueurs, dont 24 438 focaux (10 parties lues ou plus), soit 448 711 lignes de prédiction. Validation
+croisée à 5 blocs de joueurs, IC95 par bootstrap sur les joueurs (1 000 tirages) :
+
+| Variante | K (complet / médiane des blocs) | b (logit par point de ΔP) | Brier draft → draft + terme | Gain |
+|---|---|---|---|---|
+| a : écart à sa moyenne | 42,4 / 42,8 | **0,0717** [0,0596 ; 0,0839] | 0,24903 → 0,24895 | **+0,00008** [+0,00005 ; +0,00011] |
+| b : moins la norme du champion | 119,2 / 121,0 | 0,1795 [0,1478 ; 0,2109] | 0,24903 → 0,24895 | +0,00008 [+0,00005 ; +0,00011] |
+
+Gain b − a : IC95 [−0,00001 ; +0,00001]. **Décision : adopté, variante a** (les deux variantes passent le seuil,
+b n'est pas meilleure). Constantes de la phase B : `MASTERY_LOGIT_PER_POINT` = 0,0717 et `MASTERY_K` = 42,4.
+
+Lecture :
+- **Le signal existe, mais il est petit en moyenne.** La draft seule gagne ~0,0010 de Brier sur une constante
+  (0,2500 → 0,2490). La maîtrise ajoute 0,00008, à peu près 8 % de ce que vaut la draft sur un joueur tiré au
+  hasard : la plupart des joueurs ont une maîtrise proche de 0 sur la plupart de leurs champions.
+- **Il pèse sur les champions où l'écart est net.** Un point de ΔP rétréci vaut 0,0717 logit, soit ~1,8 pt de
+  win chance à 50 %. Le coefficient dépasse le 1:1 parce que l'offset est fortement rétréci (K = 42) : la
+  régression recalibre ce rétrécissement. Le moteur applique donc les deux constantes ensemble, jamais l'une
+  sans l'autre.
+- **K vaut 42 pour la population, 10,9 pour @pj35 seul** : sur 151 parties, son propre K est trop peu sûr, et
+  celui de la population (24 438 joueurs) fait foi, comme prévu au §2.
+- **Le premier essai donnait τ² ≤ 0 partout**, à cause d'un estimateur de K inadapté à plusieurs joueurs. Il a
+  été remplacé par une ANOVA regroupée par joueur (`pooled_shrink_k`, `src/analysis/mastery.py`). Sur
+  15 000 parties seulement (1 512 focaux), le terme n'était pas significatif (b de −0,012 à 0,098) : c'est la
+  taille de l'échantillon complet qui tranche.
+- **Biais rappelé par le script** : les impacts viennent du modèle de win chance, entraîné sur ces parties.
+  L'offset ne vient que des autres parties du joueur, ce qui rend le biais marginal, mais pas nul.
+
+Maîtrise de @pj35 avec ces constantes (impact rétréci, puis effet sur la victoire à 50 % :
+`100 × (sigmoid(0,0717 × points) − 0,5)`) :
+
+| Champion | Parties | Brut | Rétréci (pts de ΔP) | Effet sur la victoire |
+|---|---|---|---|---|
+| Olaf | 23 | +9,0 | +3,2 | +5,7 pts |
+| Malphite | 8 | +12,2 | +1,9 | +3,4 pts |
+| Yorick | 22 | +3,0 | +1,0 | +1,8 pt |
+| Ornn | 3 | +9,7 | +0,6 | +1,1 pt |
+| Kennen | 8 | +0,2 | +0,0 | 0 |
+| Shen | 14 | −2,9 | −0,7 | −1,3 pt |
+| Gnar | 5 | −10,5 | −1,1 | **−2,0 pts** |
+| Dr. Mundo | 3 | −16,5 | −1,1 | −2,0 pts |
+| Sion | 15 | −6,6 | −1,7 | −3,0 pts |
+| Ambessa | 30 | −4,3 | −1,8 | −3,2 pts |
+
+L'échelle est celle de la draft (p10 à p90 de 45 à 55 %) : Gnar ne passera devant un champion à maîtrise nulle
+que si sa draft le met au moins 2 pts au-dessus.

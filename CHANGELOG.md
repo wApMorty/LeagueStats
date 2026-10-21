@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### ✨ Feature
+
+- **Maîtrise personnelle mesurée (SPEC-41 phase A)** — `scripts/measure_mastery_term.py` vérifie sur 81 969 parties de `crawl.db` (24 438 joueurs) si l'impact ΔP d'un joueur sur un champion, tiré de ses autres parties et rétréci vers 0, prédit sa victoire au-delà de la draft. C'est le cas : le gain est petit mais significatif (Brier +0,00008, IC95 de +0,00005 à +0,00011), et 1 point d'impact rétréci vaut ~1,8 pt de victoire. Le terme est donc adopté pour le moteur de draft (phase B à venir). Pour toi : Olaf +5,7 pts, Gnar −2,0, Ambessa −3,2. `src/analysis/mastery.py` porte le calcul.
+
 ### 📝 Docs
 
 - **Terme de forme mesuré et refusé (SPEC-33 tâche 159)** — sur 92 689 parties de `crawl.db` (6 525 à huit joueurs connus), ni le taux de victoire récent, ni le KDA, ni l'impact ΔP moyen des joueurs n'améliorent la win chance au seuil figé (Brier ≤ 10 min amélioré d'au moins 0,002) : meilleur gain +0,0013 pour l'impact. La win chance reste inchangée ; la pastille de forme en partie reste un indicateur. `scripts/measure_form_term.py` calcule maintenant sa couverture en 1 s au lieu de neuf minutes.
