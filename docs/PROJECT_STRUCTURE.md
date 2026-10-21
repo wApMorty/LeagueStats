@@ -47,6 +47,7 @@ src/
 │   ├── recommendations.py         # RecommendationEngine (Tournament Coach)
 │   ├── matchup_cache.py            # Cache mémoire pour les lookups en draft
 │   ├── probability.py               # logit/sigmoid (modèle log-odds, SPEC-05 B7)
+│   ├── mastery.py                    # Maîtrise personnelle par champion, terme du moteur de draft (SPEC-41)
 │   ├── pool_statistics.py            # Statistiques de pool
 │   ├── team_analysis.py               # TeamAnalyzer (code non appelé par un menu)
 │   └── pool_value.py, trio_holistic.py, trio_counterpick.py,
@@ -128,6 +129,8 @@ scripts/
 ├── measure_form_term.py           # Mesure du terme de forme dans la win chance (SPEC-33, refusé le 2026-10-21)
 ├── monitor_crawl.py               # Suivi en direct de crawl.db : débit, couverture, verrou (SPEC-33)
 ├── measure_moneyball.py            # Étude « Moneyball » du début de partie (SPEC-35, rien d'adopté le 2026-10-20)
+├── measure_mastery_term.py         # Étude du terme de maîtrise personnelle sur crawl.db (SPEC-41, adopté le 2026-10-21)
+├── spike_lcu_history_pages.py      # Profondeur de l'historique LCU (SPEC-41 : pagination ignorée, 20 parties)
 ├── measure_en_partie.py            # Mesure de l'écran « En partie » en Firefox headless (SPEC-30, SPEC-33)
 ├── demo_client.py, demo/           # Client en mode démo sur faux LCU local, sans League of Legends (SPEC-34)
 ├── capture_screens.py              # Captures de la vitrine depuis le mode démo, en Firefox headless (SPEC-34)

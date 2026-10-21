@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+## [5.9.0] - 2026-10-21
+
+Le coach de draft tient compte de ton niveau sur chaque champion, tiré de tes propres parties : un champion sur lequel tu performes mal ne passe en tête que si la draft le justifie, et les cartes disent « dont toi sur X ». L'icône LeagueStats s'affiche aussi dans la barre des tâches en mode Python. Aucune action requise : pas de migration Alembic, pas de scrape.
+
 ### ✨ Feature
 
 - **Le coach de draft tient compte de ta maîtrise de chaque champion (SPEC-41)** — ton impact ΔP par champion (SPEC-20), rétréci vers 0 quand tu as peu de parties, s'ajoute à la victoire de ton pick : dans le classement de la recherche, le grimoire, l'analyse de fin de draft et le blind pick initial. Les cartes de draft disent « dont toi sur Gnar : −2,0 pts (5 parties) », ou « aucune partie sur X » pour un champion jamais joué. Un mauvais champion ne revient en tête que si la draft le met assez au-dessus. Le terme a été mesuré avant d'être adopté : `scripts/measure_mastery_term.py` montre, sur 81 969 parties de `crawl.db` (24 438 joueurs), que l'impact d'un joueur sur ses autres parties prédit sa victoire au-delà de la draft (gain de Brier +0,00008, IC95 de +0,00005 à +0,00011). Un point d'impact rétréci vaut ~1,8 pt de victoire. Pour toi : Olaf +5,7 pts, Gnar −2,0, Ambessa −3,2. La prédiction enregistrée pour la calibration reste celle de la draft seule. Le terme se recharge à chaque nouvelle draft, avec ta dernière partie capturée.
