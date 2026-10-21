@@ -1,6 +1,6 @@
 """Maîtrise personnelle par champion (SPEC-41).
 
-Fonctions pures, sans base ni I/O. Une partie est une paire ``(champion, ΔP)`` où ΔP
+Fonctions pures, sans base ni I/O, sauf `MasteryTerm.load` qui lit les parties du joueur. Une partie est une paire ``(champion, ΔP)`` où ΔP
 est le delta de win chance de la partie, en points. La maîtrise d'un champion est son
 écart moyen à la référence (moyenne de toutes les parties), rétréci vers 0 selon le
 nombre de parties : ``points = raw_points × n / (n + k)``.
@@ -14,6 +14,8 @@ import random
 from dataclasses import dataclass
 from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
+from ..config_constants import analysis_config
+from ..repositories.coaching import CoachingRepository
 from ..winprob.model import _solve
 from .probability import sigmoid
 
@@ -126,6 +128,68 @@ def masteries(
             points=raw * n / (n + k),
         )
     return result
+
+
+# ---------- le terme dans le moteur (SPEC-41 §4.4, tâche 200) ----------
+
+
+class MasteryTerm:
+    """Maîtrise de @pj35 par champion, prête pour le moteur de draft (SPEC-41 §4.4).
+
+    `logit` s'ajoute au logit de MON pick seulement ; un champion jamais joué vaut 0 (§2).
+    """
+
+    def __init__(self, table: Optional[Mapping[str, Mastery]] = None) -> None:
+        self._table = {name.lower(): mastery for name, mastery in (table or {}).items()}
+
+    @classmethod
+    def load(cls, db) -> "MasteryTerm":
+        """Maîtrise tirée des parties capturées (`MASTERY_QUEUE_IDS`), rétrécie à `MASTERY_K`.
+
+        Best-effort : toute erreur (tables absentes, base fermée) donne un terme vide.
+        """
+        try:
+            names = db.get_all_champion_names() or {}
+            games = [
+                (names.get(champion_id, str(champion_id)), points)
+                for champion_id, points in CoachingRepository(db).player_champion_impacts(
+                    analysis_config.MASTERY_QUEUE_IDS
+                )
+            ]
+            return cls(masteries(games, analysis_config.MASTERY_K))
+        except Exception:  # pylint: disable=broad-exception-caught
+            return cls()
+
+    def logit(self, name: str) -> float:
+        """Log-odds qu'ajoute ma maîtrise de `name` à mon pick (0.0 si jamais joué)."""
+        mastery = self._table.get(name.lower())
+        if mastery is None:
+            return 0.0
+        return analysis_config.MASTERY_LOGIT_PER_POINT * mastery.points
+
+    def points(self, name: str) -> float:
+        """Le même terme en points de victoire autour de 50 % : 100 × (sigmoid(logit) − 0,5)."""
+        return to_win_points(self.logit(name))
+
+    def games(self, name: str) -> int:
+        """Parties capturées de @pj35 sur `name`."""
+        mastery = self._table.get(name.lower())
+        return mastery.games if mastery else 0
+
+
+def to_win_points(logit: float) -> float:
+    """Log-odds d'un terme -> points de victoire autour de 50 %."""
+    return 100.0 * (sigmoid(logit) - 0.5)
+
+
+def term_of(monitor) -> MasteryTerm:
+    """`monitor.mastery` s'il en est un, sinon un terme vide.
+
+    Les tests construisent souvent le monitor avec `Mock()` : son attribut `mastery` serait un `Mock`,
+    et un calcul best-effort qui l'additionne échouerait en silence.
+    """
+    term = getattr(monitor, "mastery", None)
+    return term if isinstance(term, MasteryTerm) else MasteryTerm()
 
 
 # ---------- étude du terme (SPEC-41 §4.3, tâche 199) ----------

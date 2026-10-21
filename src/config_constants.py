@@ -259,6 +259,11 @@ class AnalysisConfig:
     MASTERY_STUDY_FOLDS: int = 5
     MASTERY_STUDY_SEED: int = 41
     MASTERY_QUEUE_IDS: Tuple[int, ...] = (420,)
+    # SPEC-41 §8, tâche 199 (81 969 parties de crawl.db, variante a) : un point d'impact ΔP rétréci vaut
+    # 0,0717 logit, avec le rétrécissement de la population K = 42,4. Les deux vont ensemble : le
+    # coefficient recalibre ce rétrécissement précis, l'un sans l'autre fausse le terme.
+    MASTERY_LOGIT_PER_POINT: float = 0.0717
+    MASTERY_K: float = 42.4
 
 
 @dataclass

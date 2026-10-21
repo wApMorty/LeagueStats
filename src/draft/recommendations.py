@@ -21,6 +21,7 @@ from dataclasses import asdict
 from typing import List, Optional, Sequence, Tuple
 
 from ..analysis.game_eval import Placed
+from ..analysis.mastery import term_of
 from ..config_constants import draft_config, ui_config
 from ..utils.display import format_games_count
 from .search import PickTurn, SearchResult
@@ -125,11 +126,15 @@ class DraftRecommender:
 
             games = games_by_champion.get(result.champion)
             volume_tag = f" · {format_games_count(games)} games" if games else ""
+            personal_tag = ""
+            if result.personal_points:
+                played = term_of(self.m).games(result.champion)
+                personal_tag = f" · toi {result.personal_points:+.1f} pts ({played} parties)"
 
             print(
                 f"  {rank} {result.champion}{lane_tag} "
                 f"{result.win_probability * 100:.2f}% de victoire"
-                f"{volume_tag}{self._format_variation(result)}"
+                f"{volume_tag}{personal_tag}{self._format_variation(result)}"
             )
 
             if i == 0:
@@ -347,6 +352,7 @@ class DraftRecommender:
                     remaining_turns=turns,
                     banned=banned,
                     player_lane=player_lane,
+                    personal=term_of(self.m).logit,
                 )
 
             analysis.player_lane = player_lane

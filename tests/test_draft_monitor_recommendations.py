@@ -12,6 +12,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from src.analysis.mastery import MasteryTerm
 from src.draft.search import PickTurn, SearchResult
 from src.draft_monitor import DraftMonitor, DraftState
 from src.models import Matchup
@@ -179,3 +180,37 @@ class TestTurnSelection:
         monitor._provide_recommendations(state)
 
         assert "Plus aucun pick à jouer de votre côté" in capsys.readouterr().out
+
+
+class TestMasteryReload:
+    """SPEC-41 critère 7 : la maîtrise se recharge à chaque nouvelle draft, sans jamais casser la boucle."""
+
+    def _new_episode(self, monitor, episode=5):
+        monitor.phase_tracker = Mock(draft_episode=episode)
+        monitor.lifecycle._rearm_for_new_draft(Mock())
+
+    def test_une_nouvelle_draft_recharge_le_terme(self, monitor):
+        fresh = MasteryTerm()
+        with patch("src.draft.lifecycle.MasteryTerm.load", return_value=fresh) as load:
+            self._new_episode(monitor)
+
+        load.assert_called_once_with(monitor.assistant.db)
+        assert monitor.mastery is fresh
+
+    def test_une_recharge_qui_leve_garde_l_ancien_terme(self, monitor):
+        previous = monitor.mastery
+        with patch("src.draft.lifecycle.MasteryTerm.load", side_effect=RuntimeError("base")):
+            self._new_episode(monitor)  # ne lève pas
+
+        assert monitor.mastery is previous
+        assert monitor._draft_episode == 5  # la draft est bien ré-armée malgré l'erreur
+
+    def test_la_recherche_recoit_le_terme_du_monitor(self, monitor, state):
+        """Le classement passe la maîtrise du monitor à la recherche (logit de mon pick)."""
+        monitor.mastery = MasteryTerm()
+        monitor.search = Mock()
+        monitor.search.rank.return_value = []
+
+        monitor._provide_recommendations(state)
+
+        assert monitor.search.rank.call_args.kwargs["personal"] == monitor.mastery.logit

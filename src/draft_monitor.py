@@ -20,6 +20,7 @@ from .draft import display
 from .draft.memory_diagnostics import log_memory_usage
 from .draft.tick_timer import TickTimer, open_journal
 from .analysis.game_eval import GameEvaluator
+from .analysis.mastery import MasteryTerm
 from .analysis.shrink import shrink_is_measured
 from .draft.search import CandidatePool, DraftSearch
 from .draft.state_parser import DraftStateParser
@@ -100,6 +101,8 @@ class DraftMonitor:
                 "Lancez `python scripts/update_all.py --recompute-only` "
                 "depuis la racine du projet pour les calculer."
             )
+        # SPEC-41 : ma maîtrise par champion, rechargée à chaque nouvelle draft (lifecycle).
+        self.mastery = MasteryTerm.load(self.assistant.db)
         self.search = DraftSearch(
             self.evaluator,
             CandidatePool(self.assistant.db, draft_config.SEARCH_TOP_N, verbose=verbose),

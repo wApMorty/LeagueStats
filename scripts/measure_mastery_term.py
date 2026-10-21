@@ -23,6 +23,7 @@ import zlib
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import Path
+from types import SimpleNamespace
 from statistics import median
 from typing import Dict, List, Optional, Sequence, Set, Tuple
 
@@ -48,6 +49,7 @@ from src.coaching.metrics import participant_roles
 from src.config import config
 from src.config_constants import analysis_config as cfg
 from src.db import Database
+from src.repositories.coaching import CoachingRepository
 from src.winprob.crawl import unpack
 from src.winprob.impact import impacts
 from src.winprob.model import WinModel
@@ -287,20 +289,10 @@ def full_fit(
 
 def _own_games(game_db: sqlite3.Connection, names: Dict[int, str]) -> List[Tuple[str, float]]:
     """Parties SoloQ de @pj35 : (champion, 100 × Σ ΔP de ses lignes d'impact)."""
-    placeholders = ",".join("?" * len(cfg.MASTERY_QUEUE_IDS))
-    query = f"""
-        SELECT m.champion_id, 100 * SUM(i.delta_p)
-        FROM game_records g
-        JOIN game_impact i ON i.game_id = g.game_id AND i.participant_id = g.player_participant_id
-        JOIN (SELECT DISTINCT game_id, champion_id FROM game_metrics WHERE is_player = 1) m
-          ON m.game_id = g.game_id
-        WHERE g.queue_id IN ({placeholders})
-        GROUP BY g.game_id, m.champion_id
-        ORDER BY g.game_creation_utc
-    """
+    repository = CoachingRepository(SimpleNamespace(connection=game_db))
     return [
         (names.get(cid, str(cid)), points)
-        for cid, points in game_db.execute(query, cfg.MASTERY_QUEUE_IDS)
+        for cid, points in repository.player_champion_impacts(cfg.MASTERY_QUEUE_IDS)
     ]
 
 

@@ -19,6 +19,7 @@ replacement (e.g. ``patch.object(monitor, "_handle_draft_change")`` then
 import time
 from typing import Callable, Optional, TypeVar
 
+from ..analysis.mastery import MasteryTerm
 from ..config_constants import draft_config
 from ..utils.console import clear_console
 from ..winprob.scout import TOPIC as SCOUT_TOPIC
@@ -161,8 +162,18 @@ class MonitorLifecycle:
         if episode == self.m._draft_episode:
             return
         self.m._draft_episode = episode
+        self._reload_mastery()
         self.m._reset_for_next_game()
         timer.draft_seen(tracker.since())
+
+    def _reload_mastery(self) -> None:
+        """Ma maîtrise avec la dernière partie capturée (SPEC-41). Best-effort : en cas d'erreur, le
+        terme précédent reste en place et la draft continue."""
+        try:
+            self.m.mastery = MasteryTerm.load(self.m.assistant.db)
+        except Exception as error:  # pylint: disable=broad-exception-caught
+            if self.m.verbose:
+                print(f"[ALERTE] Maîtrise personnelle non rechargée ({error})")
 
     def _handle_champ_select(self, champ_select_data: dict) -> None:
         """Traite une session de champ select : recommandations, runes, analyse finale."""

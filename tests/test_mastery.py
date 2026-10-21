@@ -1,10 +1,12 @@
 """Tests de src/analysis/mastery.py : shrink_k (méthode des moments) et masteries (SPEC-41)."""
 
 import random
+from unittest.mock import Mock
 
 import pytest
 
 from src.analysis.mastery import (
+    MasteryTerm,
     ci95,
     decide,
     fit_logistic,
@@ -14,8 +16,11 @@ from src.analysis.mastery import (
     player_mean_bootstrap,
     pooled_shrink_k,
     shrink_k,
+    term_of,
+    to_win_points,
 )
 from src.analysis.probability import sigmoid
+from src.config_constants import analysis_config
 
 
 def test_shrink_k_retrouve_le_k_synthetique():
@@ -198,3 +203,68 @@ def test_pooled_shrink_k_un_joueur_valeur_a_la_main():
     groups = {"a": [1.0, 5.0, 9.0], "b": [20.0, 24.0], "c": [-3.0, 1.0, 2.0, 0.0]}
     assert pooled_shrink_k([groups]) == pytest.approx(0.081478, abs=1e-5)
     assert shrink_k(groups) == pytest.approx(0.081478, abs=1e-5)
+
+
+# ---------- le terme dans le moteur (tâche 200) ----------
+
+
+def _capture(db, game_id: int, champion: str, delta_p: float, queue_id: int = 420) -> None:
+    """Une partie capturée de @pj35 (participant 1) avec son impact ΔP et son champion."""
+    cursor = db.connection.cursor()
+    cursor.execute("INSERT OR IGNORE INTO champions (name, role) VALUES (?, 'top')", (champion,))
+    champion_id = cursor.execute("SELECT id FROM champions WHERE name = ?", (champion,)).fetchone()[
+        0
+    ]
+    cursor.execute(
+        "INSERT INTO game_records (game_id, queue_id, game_creation_utc, player_participant_id, "
+        "raw_game, captured_utc) VALUES (?, ?, ?, 1, '{}', '2026-10-21')",
+        (game_id, queue_id, f"2026-10-21 10:{game_id:02d}:00"),
+    )
+    cursor.execute(
+        "INSERT INTO game_metrics (game_id, participant_id, metric, is_player, champion_id, value) "
+        "VALUES (?, 1, 'cs_14', 1, ?, 0)",
+        (game_id, champion_id),
+    )
+    for share in (0.5, 0.5):  # deux lignes d'impact : la somme fait foi
+        cursor.execute(
+            "INSERT INTO game_impact VALUES (?, 1, 0, 'kill', ?, 'v')", (game_id, delta_p * share)
+        )
+    db.connection.commit()
+
+
+def test_mastery_term_charge_les_parties_capturees(db):
+    """3 parties de Gnar à −0,10 et 2 d'Olaf à +0,05 : logit = coefficient × points rétrécis à K."""
+    for game_id, (champion, delta) in enumerate(
+        [("Gnar", -0.10), ("Gnar", -0.10), ("Gnar", -0.10), ("Olaf", 0.05), ("Olaf", 0.05)], 1
+    ):
+        _capture(db, game_id, champion, delta)
+    _capture(db, 9, "Gnar", 0.90, queue_id=440)  # Flex : hors MASTERY_QUEUE_IDS
+
+    term = MasteryTerm.load(db)
+
+    expected = masteries([("Gnar", -10.0)] * 3 + [("Olaf", 5.0)] * 2, analysis_config.MASTERY_K)[
+        "Gnar"
+    ].points
+    assert term.games("gnar") == 3
+    assert term.logit("GNAR") == pytest.approx(analysis_config.MASTERY_LOGIT_PER_POINT * expected)
+    assert term.logit("Gnar") < 0 < term.logit("Olaf")
+    assert term.points("Gnar") == pytest.approx(to_win_points(term.logit("Gnar")))
+    assert term.logit("Teemo") == 0.0 and term.games("Teemo") == 0
+
+
+def test_mastery_term_vide_sans_parties_ou_en_erreur(db):
+    """Base sans parties : terme vide ; requête qui lève : terme vide, sans exception."""
+    assert MasteryTerm.load(db).logit("Gnar") == 0.0
+
+    broken = Mock()
+    broken.get_all_champion_names.side_effect = RuntimeError("base fermée")
+    assert MasteryTerm.load(broken).logit("Gnar") == 0.0
+
+
+def test_term_of_ignore_un_monitor_mock():
+    """Un monitor `Mock()` n'a pas de vrai terme : `term_of` rend un terme vide, pas un Mock."""
+    assert term_of(Mock()).logit("Gnar") == 0.0
+    real = MasteryTerm({"Gnar": masteries([("Gnar", -10.0), ("Olaf", 10.0)], 1.0)["Gnar"]})
+    monitor = Mock()
+    monitor.mastery = real
+    assert term_of(monitor) is real

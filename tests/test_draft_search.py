@@ -10,6 +10,7 @@ que le classement par delta ne pouvait pas faire.
 import pytest
 
 from src.analysis.game_eval import GameEvaluator
+from src.analysis.mastery import to_win_points
 from src.draft.search import CandidatePool, DraftSearch, PickTurn
 
 GAMES = 10_000
@@ -282,3 +283,44 @@ class TestAllyLane:
         moves = self._moves(PickTurn(is_ally=True, lane="support"), [("Thresh", "support")])
         lanes = {lane for _, lane in moves}
         assert lanes == {"top", "jungle", "middle", "bottom"}
+
+
+class TestPersonalTerm:
+    """SPEC-41 critère 5 : ma maîtrise ne fait reculer un pick que si elle dépasse son avance."""
+
+    def _gap(self, search) -> float:
+        """Avance de Greedy sur Safe, en logit, sur la draft seule (profondeur 1)."""
+        greedy = search.evaluator.contribution(("Greedy", "top"), [], ENEMIES)
+        safe = search.evaluator.contribution(("Safe", "top"), [], ENEMIES)
+        return greedy - safe
+
+    def _rank(self, search, personal=None):
+        kwargs = {} if personal is None else {"personal": personal}
+        return search.rank(
+            allies=[],
+            enemies=ENEMIES,
+            pool=POOL,
+            remaining_turns=[OUR_TURN],
+            player_lane="top",
+            budget_seconds=5.0,
+            **kwargs,
+        )
+
+    def test_sans_terme_le_classement_ne_change_pas(self, search):
+        results = self._rank(search)
+        assert [r.champion for r in results] == ["Greedy", "Safe"]
+        assert all(r.personal_points == 0.0 for r in results)
+
+    def test_un_terme_plus_grand_que_l_avance_fait_reculer_le_pick(self, search):
+        gap = self._gap(search)
+        assert gap > 0
+        malus = -(gap + 0.01)
+        results = self._rank(search, lambda name: malus if name == "Greedy" else 0.0)
+        assert [r.champion for r in results] == ["Safe", "Greedy"]
+        greedy = next(r for r in results if r.champion == "Greedy")
+        assert greedy.personal_points == pytest.approx(to_win_points(malus))
+
+    def test_un_terme_plus_petit_que_l_avance_garde_le_pick(self, search):
+        malus = -(self._gap(search) - 0.01)
+        results = self._rank(search, lambda name: malus if name == "Greedy" else 0.0)
+        assert [r.champion for r in results] == ["Greedy", "Safe"]

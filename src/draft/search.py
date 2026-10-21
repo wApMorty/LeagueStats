@@ -27,10 +27,11 @@ L'équipe alliée maximise, l'ennemie minimise.
 
 import time
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Sequence, Set, Tuple
+from typing import Callable, Dict, List, Optional, Sequence, Set, Tuple
 
 from ..config_constants import draft_config, scraping_config
 from ..analysis.game_eval import GameEvaluator, Placed
+from ..analysis.mastery import to_win_points
 
 
 class _SearchTimeout(Exception):
@@ -58,6 +59,13 @@ class SearchResult:
     # Suite de coups supposée optimale après ce pick (le nôtre exclu).
     principal_variation: List[Placed] = field(default_factory=list)
     depth: int = 0
+    # SPEC-41 : part de ma maîtrise du champion dans `win_probability`, en points de victoire à 50 %.
+    personal_points: float = 0.0
+
+
+def _no_term(_name: str) -> float:
+    """Aucun terme personnel : le classement d'avant SPEC-41."""
+    return 0.0
 
 
 class CandidatePool:
@@ -228,11 +236,13 @@ class DraftSearch:
         banned: Sequence[str] = (),
         player_lane: Optional[str] = None,
         budget_seconds: Optional[float] = None,
+        personal: Callable[[str], float] = _no_term,
     ) -> List[SearchResult]:
         """Classe les champions de ``pool`` pour notre prochain pick.
 
         ``remaining_turns[0]`` est notre propre tour — l'appelant écarte les
-        tours qui le précèdent (cf. ``DraftRecommender``).
+        tours qui le précèdent (cf. ``DraftRecommender``). ``personal(nom)`` est
+        le log-odds de ma maîtrise du champion (SPEC-41), ajouté à mon seul pick.
 
         Returns:
             Un ``SearchResult`` par candidat jouable, du meilleur au pire.
@@ -282,6 +292,7 @@ class DraftSearch:
                     player_lane,
                     remaining_turns,
                     deadline,
+                    personal,
                 )
             except _SearchTimeout:
                 break
@@ -310,13 +321,18 @@ class DraftSearch:
         player_lane: Optional[str],
         remaining_turns: Sequence[PickTurn],
         deadline: float,
+        personal: Callable[[str], float] = _no_term,
     ) -> List[SearchResult]:
-        """Une itération complète d'approfondissement, à profondeur fixée."""
+        """Une itération complète d'approfondissement, à profondeur fixée.
+
+        Mon pick n'est joué qu'à la racine : c'est le seul endroit où ``personal`` s'ajoute.
+        """
         turns = list(remaining_turns[:depth])
         results: List[SearchResult] = []
 
         for move in root_moves:
-            contribution = self.evaluator.contribution(move, base_allies, base_enemies)
+            term = personal(move[0])
+            contribution = self.evaluator.contribution(move, base_allies, base_enemies) + term
             self.nodes += 1
             base_allies.append(move)
             base_taken.add(move[0].lower())
@@ -345,6 +361,7 @@ class DraftSearch:
                     win_probability=self.evaluator.probability(value),
                     principal_variation=line,
                     depth=depth,
+                    personal_points=to_win_points(term),
                 )
             )
             # Pas d'élagage sur alpha à la racine : on a besoin de la valeur
