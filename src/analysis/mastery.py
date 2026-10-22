@@ -356,3 +356,86 @@ def leave_one_out_points(
         raw = (sums[champion] - value) / n - reference
         out.append(raw * n / (n + k))
     return out
+
+
+# ---------- maîtrise par matchup (SPEC-42) ----------
+
+
+def matchup_shrink_k(cells: Sequence[Mapping[str, Sequence[float]]]) -> Optional[float]:
+    """K₂ de la maîtrise par matchup : un mapping par (joueur, champion), adversaire de lane -> valeurs.
+
+    C'est `pooled_shrink_k` appliqué à ces mappings : la variance entre adversaires À L'INTÉRIEUR de
+    chaque (joueur, champion), regroupée. None si τ² ≤ 0 ou sans degré de liberté.
+    """
+    return pooled_shrink_k(cells)
+
+
+def _matchup_tallies(
+    games: Sequence[Tuple[str, Optional[str], float]],
+) -> Tuple[
+    Dict[str, float], Dict[str, int], Dict[Tuple[str, str], float], Dict[Tuple[str, str], int]
+]:
+    """Sommes et comptes par champion (toutes parties) et par case (champion, vis-à-vis non None)."""
+    champ_sum: Dict[str, float] = {}
+    champ_n: Dict[str, int] = {}
+    cell_sum: Dict[Tuple[str, str], float] = {}
+    cell_n: Dict[Tuple[str, str], int] = {}
+    for champion, opponent, value in games:
+        champ_sum[champion] = champ_sum.get(champion, 0.0) + value
+        champ_n[champion] = champ_n.get(champion, 0) + 1
+        if opponent is not None:
+            cell = (champion, opponent)
+            cell_sum[cell] = cell_sum.get(cell, 0.0) + value
+            cell_n[cell] = cell_n.get(cell, 0) + 1
+    return champ_sum, champ_n, cell_sum, cell_n
+
+
+def _matchup_gap(cell_mean: float, champ_mean: float, n_cell: int, k2: float) -> float:
+    """Écart de la case à la moyenne du champion, rétréci : (case − champion) × n / (n + K₂)."""
+    return (cell_mean - champ_mean) * n_cell / (n_cell + k2)
+
+
+def leave_one_out_matchup_deviation(
+    games: Sequence[Tuple[str, Optional[str], float]], k2: float
+) -> List[float]:
+    """Pour chaque partie (champion, vis-à-vis, valeur) d'un joueur, D calculé sur ses AUTRES parties :
+    (moyenne de la case (champion, vis-à-vis) − moyenne du champion) × n_case / (n_case + k2).
+
+    0 si le vis-à-vis est None, ou si la case ou le champion n'ont pas d'autre partie. O(1) par partie,
+    comme `leave_one_out_points`.
+    """
+    champ_sum, champ_n, cell_sum, cell_n = _matchup_tallies(games)
+    out = []
+    for champion, opponent, value in games:
+        if opponent is None:
+            out.append(0.0)
+            continue
+        cell = (champion, opponent)
+        n_cell = cell_n[cell] - 1
+        if n_cell == 0:
+            out.append(0.0)
+            continue
+        n_champ = champ_n[champion] - 1
+        champ_mean = (champ_sum[champion] - value) / n_champ
+        cell_mean = (cell_sum[cell] - value) / n_cell
+        out.append(_matchup_gap(cell_mean, champ_mean, n_cell, k2))
+    return out
+
+
+def matchup_deviations(
+    games: Sequence[Tuple[str, Optional[str], float]], k2: float
+) -> Dict[Tuple[str, str], Tuple[int, float]]:
+    """(champion, vis-à-vis) -> (parties, D) sur toutes les parties, pour le moteur et la table de @pj35."""
+    champ_sum, champ_n, cell_sum, cell_n = _matchup_tallies(games)
+    return {
+        (champion, opponent): (
+            n_cell,
+            _matchup_gap(
+                cell_sum[(champion, opponent)] / n_cell,
+                champ_sum[champion] / champ_n[champion],
+                n_cell,
+                k2,
+            ),
+        )
+        for (champion, opponent), n_cell in cell_n.items()
+    }

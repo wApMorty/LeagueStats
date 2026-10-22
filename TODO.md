@@ -389,7 +389,7 @@ même règle de choix que SPEC-41. Arbitrages validés le 2026-10-22. Découpage
 
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
-| 204 | `src/analysis/mastery.py` : `matchup_shrink_k`, `leave_one_out_matchup_deviation`, `matchup_deviations` + tests | 2 | — | |
+| 204 | `src/analysis/mastery.py` : `matchup_shrink_k`, `leave_one_out_matchup_deviation`, `matchup_deviations` + tests | 2 | — || ✅ 2026-10-22 : 4 tests ; K₂ synthétique retrouvé à 12,97 pour 16 (graine fixe), leave-one-out identique au recalcul sur 200 tirages |
 | 205 | `scripts/measure_mastery_term.py` : variantes e, f, g, `decide` à plusieurs coefficients, mesure, résultat en §8 | 5 | 204 | |
 | 206 | *Conditionnelle (205)* : `MasteryTerm` avec vis-à-vis et duel, recherche, grimoire, analyse finale + tests | 3 | 205 | |
 | 207 | *Conditionnelle (205)* : sous-ligne « dont toi sur X contre Y » (snapshot, cartes, console) + tests | 2 | 206 | |

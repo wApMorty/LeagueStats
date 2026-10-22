@@ -11,8 +11,11 @@ from src.analysis.mastery import (
     ci95,
     decide,
     fit_logistic,
+    leave_one_out_matchup_deviation,
     leave_one_out_points,
     masteries,
+    matchup_deviations,
+    matchup_shrink_k,
     player_bootstrap,
     player_mean_bootstrap,
     pooled_shrink_k,
@@ -279,3 +282,84 @@ def test_term_of_ignore_un_monitor_mock():
     monitor = Mock()
     monitor.mastery = real
     assert term_of(monitor) is real
+
+
+# ---------- maîtrise par matchup (SPEC-42, tâche 204) ----------
+
+
+def test_matchup_shrink_k_retrouve_le_k_synthetique():
+    """400 (joueur, champion) : niveau propre gauss(0, 20), 2 à 6 vis-à-vis, effet de case τ = 4,
+    bruit σ = 16, 2 à 10 parties par case : K₂ attendu = 256 / 16 = 16, à ±20 % (graine fixe)."""
+    rng = random.Random(42)
+    cells = []
+    for _ in range(400):
+        level = rng.gauss(0.0, 20.0)
+        mapping = {}
+        for v in range(rng.randint(2, 6)):
+            effect = rng.gauss(0.0, 4.0)
+            mapping[f"v{v}"] = [
+                level + effect + rng.gauss(0.0, 16.0) for _ in range(rng.randint(2, 10))
+            ]
+        cells.append(mapping)
+
+    k2 = matchup_shrink_k(cells)
+
+    assert k2 is not None
+    assert 0.8 * 16 <= k2 <= 1.2 * 16
+
+
+def test_matchup_shrink_k_none_sans_variance_entre_vis_a_vis():
+    """Cases de même moyenne exacte (τ² ≤ 0) → None."""
+    cells = [
+        {"Darius": [1.0, 3.0], "Sylas": [0.0, 4.0]},
+        {"Darius": [2.0, 2.0], "Sylas": [-1.0, 5.0]},
+    ]
+    assert matchup_shrink_k(cells) is None
+
+
+def test_leave_one_out_matchup_egale_le_recalcul_sans_la_partie():
+    """200 tirages de 30 parties (3 champions, 4 vis-à-vis dont None) : la valeur leave-one-out
+    égale matchup_deviations recalculé sans la partie (0 si la case est absente), à 1e-9."""
+    rng = random.Random(9)
+    for _ in range(200):
+        games = [
+            (
+                rng.choice(["Gnar", "Ahri", "Lux"]),
+                rng.choice(["Darius", "Sylas", "Malphite", None]),
+                rng.gauss(0.0, 15.0),
+            )
+            for _ in range(30)
+        ]
+        got = leave_one_out_matchup_deviation(games, k2=3.0)
+
+        for i, (champion, opponent, _) in enumerate(games):
+            others = games[:i] + games[i + 1 :]
+            table = matchup_deviations(others, k2=3.0)
+            want = (
+                table[(champion, opponent)][1]
+                if opponent is not None and (champion, opponent) in table
+                else 0.0
+            )
+            assert got[i] == pytest.approx(want, abs=1e-9)
+
+
+def test_matchup_deviation_vis_a_vis_inconnu_ou_case_unique():
+    """Gnar : Darius 10, Darius 4, Sylas 0, None 2 ; k2 = 2. Champion = 4 (16 / 4).
+    Darius 10 : case sans elle = 4, champion sans elle = 2 → (4 − 2) × 1 / 3 = 2/3.
+    Darius 4 : case sans elle = 10, champion sans elle = 4 → (10 − 4) × 1 / 3 = 2.
+    Sylas (case unique) et None → 0."""
+    games = [
+        ("Gnar", "Darius", 10.0),
+        ("Gnar", "Darius", 4.0),
+        ("Gnar", "Sylas", 0.0),
+        ("Gnar", None, 2.0),
+    ]
+
+    got = leave_one_out_matchup_deviation(games, k2=2.0)
+
+    assert got == pytest.approx([2.0 / 3.0, 2.0, 0.0, 0.0], abs=1e-9)
+    table = matchup_deviations(games, k2=2.0)
+    # Darius : 2 parties, moyenne 7 ; (7 − 4) × 2 / (2 + 2) = 1,5. Sylas : (0 − 4) × 1 / 3 = −4/3.
+    assert table[("Gnar", "Darius")] == (2, pytest.approx(1.5, abs=1e-9))
+    assert table[("Gnar", "Sylas")] == (1, pytest.approx(-4.0 / 3.0, abs=1e-9))
+    assert ("Gnar", None) not in table
