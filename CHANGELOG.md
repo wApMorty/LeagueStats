@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### 🐛 Fix
+
+- **Plus de micro-fenêtre qui vole le focus à chaque lock** — lancé par le raccourci « LeagueStats Client » (`pythonw.exe`), le client n'a pas de console ; le Live Coach effaçait quand même la console à chaque pick, et `cls` en ouvrait une le temps d'un éclair. L'effacement ne fait plus rien sans console.
+
 ### 📝 Docs
 
 - **Maîtrise relative à la partie, mesurée et non retenue (SPEC-41)** — l'étude de la maîtrise compare maintenant ton impact brut à deux lectures ramenées à la partie : ton impact moins celui de tes coéquipiers (pour ne pas compter les parties où tu es porté), et ton impact moins celui de ton adversaire de lane. Sur 82 294 parties de `crawl.db`, les deux prédisent la victoire, mais aucune mieux que l'impact brut (relatif aux coéquipiers : à égalité ; relatif à l'adversaire de lane : moins bien). Le coach garde l'impact brut, sans changement pour toi. `scripts/measure_mastery_term.py` mesure les quatre variantes.

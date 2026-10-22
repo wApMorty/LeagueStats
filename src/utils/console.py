@@ -51,6 +51,8 @@ def clear_console() -> None:
     """
     if not _CLEAR_ENABLED:
         return  # Respect --no-clear flag
+    if is_headless_mode():
+        return  # pythonw : sans console, `cls` en ouvrirait une qui vole le focus
 
     # Cross-platform detection
     if sys.platform == "win32":
