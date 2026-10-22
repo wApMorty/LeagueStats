@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+## [5.9.1] - 2026-10-22
+
+Plus de micro-fenêtre qui vole le focus à chaque lock quand le client est lancé sans console. Deux études de la maîtrise personnelle (relative à la partie, selon le matchup) sont mesurées et non retenues : le coach de draft ne change pas. Aucune action requise : pas de migration Alembic, pas de scrape.
+
 ### 🐛 Fix
 
 - **Plus de micro-fenêtre qui vole le focus à chaque lock** — lancé par le raccourci « LeagueStats Client » (`pythonw.exe`), le client n'a pas de console ; le Live Coach effaçait quand même la console à chaque pick, et `cls` en ouvrait une le temps d'un éclair. L'effacement ne fait plus rien sans console.

@@ -180,4 +180,4 @@ LeagueStats Coach n'est ni approuvé ni sponsorisé par Riot Games et ne reflèt
 Games ni de quiconque ayant participé à la production ou à la gestion de League of Legends. League of
 Legends et Riot Games sont des marques ou des marques déposées de Riot Games, Inc.
 
-**Version** : 5.9.0
+**Version** : 5.9.1
