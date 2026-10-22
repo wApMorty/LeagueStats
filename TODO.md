@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-10-22 (SPEC-42 rédigée : maîtrise selon le matchup, à mesurer sur crawl.db ; SPEC-41 livrée : maîtrise personnelle dans le moteur de draft, mesurée sur crawl.db puis adoptée, recette @pj35 à faire ; SPEC-40 livrée : victoire immédiate sur les cartes de draft, comme le grimoire, recette @pj35 à faire ; SPEC-39 livrée : diagnostic complet et « Appliquer » sur l'écran Calibration, recette @pj35 à faire ; SPEC-38 livrée : trois pages de runes OneTricks au choix pendant la draft, recette @pj35 à faire ; SPEC-37 livrée : écran « Données » pour actualiser la base depuis le client, recette @pj35 à faire ; SPEC-36 livrée : morts sans contrepartie, axe et revue, recette @pj35 à faire ; SPEC-35 livrée : étude « Moneyball » du début de partie, aucune action adoptée ; SPEC-33 livrée : éclaireur et pastilles de forme en partie, terme de forme mesuré et refusé, recette @pj35 à faire, recette @pj35 à faire ; SPEC-32 livrée : classement MVP / ACE en post-game, recette @pj35 à faire ; SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette @pj35 à faire)
+**Mis à jour** : 2026-10-22 (SPEC-42 close : maîtrise selon le matchup mesurée sur crawl.db, rien d'adopté ; SPEC-41 livrée : maîtrise personnelle dans le moteur de draft, mesurée sur crawl.db puis adoptée, recette @pj35 à faire ; SPEC-40 livrée : victoire immédiate sur les cartes de draft, comme le grimoire, recette @pj35 à faire ; SPEC-39 livrée : diagnostic complet et « Appliquer » sur l'écran Calibration, recette @pj35 à faire ; SPEC-38 livrée : trois pages de runes OneTricks au choix pendant la draft, recette @pj35 à faire ; SPEC-37 livrée : écran « Données » pour actualiser la base depuis le client, recette @pj35 à faire ; SPEC-36 livrée : morts sans contrepartie, axe et revue, recette @pj35 à faire ; SPEC-35 livrée : étude « Moneyball » du début de partie, aucune action adoptée ; SPEC-33 livrée : éclaireur et pastilles de forme en partie, terme de forme mesuré et refusé, recette @pj35 à faire, recette @pj35 à faire ; SPEC-32 livrée : classement MVP / ACE en post-game, recette @pj35 à faire ; SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette @pj35 à faire)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -377,7 +377,7 @@ pile réelle sur faux LCU (§3). Découpage en SPEC-34 §5 (tâches 163 à 170, 
 | 169 | Scènes « En partie » (courbe SVG), « Revue et coaching » et « Mosaïque » ; `hero.gif` dans le README | 5 | 167, 168 | ✅ 2026-10-16 : teaser de 30,0 s en 1 920 × 1 080 sans audio (12,2 Mo) ; `hero.gif` 960 × 540 à 10 i/s, 4,1 Mo, encodé par ffmpeg (palette optimisée ; l'encodeur GIF de Remotion donnait 10,3 Mo), fond figé dans la boucle |
 | 170 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure ; recette à l'œil de @pj35 | 3 | 169 | ✅ 2026-10-16 ; recette à l'œil (captures, GIF, `docs/presentation/video/out/teaser.mp4`) laissée à @pj35 |
 
-### Lot SPEC-42, maîtrise selon le matchup (🟡 rédigée le 2026-10-22)
+### Lot SPEC-42, maîtrise selon le matchup (✅ close le 2026-10-22, rien d'adopté)
 
 [SPEC-42](docs/specs/SPEC-42-maitrise-selon-le-matchup.md) mesure si la maîtrise de SPEC-41 doit dépendre du
 vis-à-vis de lane. Constat : Olaf (+5,4 pts de maîtrise) passe devant tout le pool, car le duel de lane du moteur
@@ -390,10 +390,10 @@ même règle de choix que SPEC-41. Arbitrages validés le 2026-10-22. Découpage
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
 | 204 | `src/analysis/mastery.py` : `matchup_shrink_k`, `leave_one_out_matchup_deviation`, `matchup_deviations` + tests | 2 | — || ✅ 2026-10-22 : 4 tests ; K₂ synthétique retrouvé à 12,97 pour 16 (graine fixe), leave-one-out identique au recalcul sur 200 tirages |
-| 205 | `scripts/measure_mastery_term.py` : variantes e, f, g, `decide` à plusieurs coefficients, mesure, résultat en §8 | 5 | 204 | |
-| 206 | *Conditionnelle (205)* : `MasteryTerm` avec vis-à-vis et duel, recherche, grimoire, analyse finale + tests | 3 | 205 | |
-| 207 | *Conditionnelle (205)* : sous-ligne « dont toi sur X contre Y » (snapshot, cartes, console) + tests | 2 | 206 | |
-| 208 | Clôture : critères, `CHANGELOG.md`, statuts, README des specs | 1 | 205 (207 si adoptée) | |
+| 205 | `scripts/measure_mastery_term.py` : variantes e, f, g, `decide` à plusieurs coefficients, mesure, résultat en §8 | 5 | 204 | ✅ 2026-10-22 : **rien d'adopté**, 84 633 parties, 25 330 joueurs focaux ; interaction c = −0,031 [−0,241 ; +0,172], écart par vis-à-vis e = −0,023 [−0,078 ; +0,035], K₂ = 50,2 ; gains identiques à a (+0,00008) |
+| 206 | *Conditionnelle (205)* : `MasteryTerm` avec vis-à-vis et duel, recherche, grimoire, analyse finale + tests | 3 | 205 | ❌ Abandonnée le 2026-10-22 : rien d'adopté (205) |
+| 207 | *Conditionnelle (205)* : sous-ligne « dont toi sur X contre Y » (snapshot, cartes, console) + tests | 2 | 206 | ❌ Abandonnée le 2026-10-22 : rien d'adopté (205) |
+| 208 | Clôture : critères, `CHANGELOG.md`, statuts, README des specs | 1 | 205 (207 si adoptée) | ✅ 2026-10-22 |
 
 ### Lot SPEC-41, maîtrise personnelle dans le moteur de draft (✅ livrée le 2026-10-21, recette @pj35 à faire)
 

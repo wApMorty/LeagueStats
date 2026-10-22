@@ -10,6 +10,7 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### 📝 Docs
 
+- **Maîtrise selon le matchup, mesurée et non retenue (SPEC-42)** — l'étude teste si ta maîtrise d'un champion devrait compter différemment selon ton adversaire de lane : plus dans un matchup favorable, moins dans un matchup pénible, ou par vis-à-vis (Olaf contre Gangplank). Sur 84 633 parties de `crawl.db` (25 330 joueurs), aucune des deux lectures ne prédit mieux la victoire que la maîtrise par champion en place. Contre un même adversaire, il faudrait une cinquantaine de parties pour que l'écart compte à moitié. Le coach ne change pas pour toi. `scripts/measure_mastery_term.py` mesure maintenant sept variantes.
 - **Maîtrise relative à la partie, mesurée et non retenue (SPEC-41)** — l'étude de la maîtrise compare maintenant ton impact brut à deux lectures ramenées à la partie : ton impact moins celui de tes coéquipiers (pour ne pas compter les parties où tu es porté), et ton impact moins celui de ton adversaire de lane. Sur 82 294 parties de `crawl.db`, les deux prédisent la victoire, mais aucune mieux que l'impact brut (relatif aux coéquipiers : à égalité ; relatif à l'adversaire de lane : moins bien). Le coach garde l'impact brut, sans changement pour toi. `scripts/measure_mastery_term.py` mesure les quatre variantes.
 
 ## [5.9.0] - 2026-10-21

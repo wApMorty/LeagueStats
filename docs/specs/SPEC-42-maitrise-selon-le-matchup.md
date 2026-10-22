@@ -1,7 +1,7 @@
 # SPEC-42 — Maîtrise selon le matchup
 
-**Statut** : 🟡 Rédigée le 2026-10-22, arbitrages validés en §2. Phase A : 204 et 205 (mesure). Phase B : 206 et
-207, conditionnelles à l'adoption.
+**Statut** : ✅ Close le 2026-10-22. Phase A : 204 et 205, **rien d'adopté** (§8), la variante a reste en place.
+Phase B (206 et 207) abandonnée.
 
 **Origine** : @pj35, 2026-10-22 : « L'algorithme me recommande de jouer Olaf à toutes les games depuis qu'on a
 introduit les performances personnelles. » Puis : « j'ai déjà eu plusieurs fois à jouer contre des Gangplank en
@@ -202,4 +202,34 @@ son terme est plus bas que sans vis-à-vis.
 
 ## 8. Résultats
 
-*(À compléter par la tâche 205.)*
+**Mesure (tâche 205, 2026-10-22)** : `python scripts/measure_mastery_term.py`, sans limite. 88 143 parties lues
+(99 exclues parce que @pj35 y joue, 3 411 hors filtre), dont 84 633 retenues, en 2 131 s ; 167 735 joueurs, dont
+25 330 focaux, soit 468 703 lignes de prédiction. Validation croisée à 5 blocs de joueurs, IC95 par bootstrap sur
+les joueurs (1 000 tirages), seuil du §2 inchangé depuis la rédaction.
+
+| Variante | K / K₂ | Coefficient introduit | Gain de Brier |
+|---|---|---|---|
+| a : en place | 42,3 | b = 0,0723 [0,0595 ; 0,0846] | +0,00008 [+0,00005 ; +0,00011] |
+| e : M × duel de lane | 42,3 | c = −0,031 [−0,241 ; +0,172] | +0,00008 [+0,00005 ; +0,00011] |
+| f : écart par vis-à-vis D | 42,3 / 50,2 | e = −0,023 [−0,078 ; +0,035] | +0,00008 [+0,00005 ; +0,00011] |
+| g : e et f | 42,3 / 50,2 | c = −0,030 [−0,242 ; +0,171] ; e = −0,023 [−0,078 ; +0,035] | +0,00008 [+0,00005 ; +0,00011] |
+
+Les variantes b, c, d de SPEC-41 redonnent leurs chiffres (gains b − a, c − a, d − a : [−0,00001 ; +0,00001],
+[−0,00004 ; +0,00001], [−0,00003 ; −0,00001]). 69 242 lignes focales ont un écart D non nul (14,8 %).
+
+**Décision : rien d'adopté, la variante a reste en place.** e, f et g ont un gain de Brier identique à celui de
+a : tout leur gain vient de la maîtrise par champion. Leurs coefficients introduits ont un IC95 qui contient 0,
+avec un signe négatif. Tâches 206 et 207 abandonnées. Les constantes du moteur ne changent pas : 0,0723 et 42,3
+redonnent 0,0717 et 42,4 dans leur marge, comme au passage du 2026-10-22 de SPEC-41.
+
+Lecture :
+- **La maîtrise ne pèse pas différemment selon le duel.** Sur 25 330 joueurs, un bon joueur de son champion ne
+  gagne ni plus dans un matchup favorable, ni moins dans un matchup défavorable, que ce que le duel et sa maîtrise
+  prédisent séparément. Le terme additif en log-odds suffit : il atténue déjà l'effet de la maîtrise aux deux
+  extrêmes (§1, Malphite contre Sylas).
+- **La maîtrise par vis-à-vis est du bruit, même mesurée sur 69 242 lignes.** K₂ = 50,2 : il faut une
+  cinquantaine de parties contre le même adversaire, avec le même champion, pour que l'écart compte à moitié. Chez
+  @pj35, Olaf contre Gangplank (2 parties, ΔP −14 et −11) donnerait D = −0,8 pt de ΔP, contre +3,2 pour sa
+  maîtrise d'Olaf : deux défaites contre Gangplank ne se distinguent pas du hasard.
+- **Olaf reste en tête pour la même raison qu'au §1** : 31 parties, +7,6 pts de ΔP brut, +3,2 une fois rétréci,
+  soit environ +5,7 pts de victoire, quand le duel de lane du moteur reste dans ±1,2 pt.
