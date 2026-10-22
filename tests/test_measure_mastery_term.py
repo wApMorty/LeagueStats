@@ -1,13 +1,16 @@
-"""Tests de la validation croisée de scripts/measure_mastery_term.py (SPEC-41 tâche 199)."""
+"""Tests de la validation croisée de scripts/measure_mastery_term.py (SPEC-41 tâche 199, SPEC-42 tâche 205)."""
 
 import random
+
+import pytest
 
 from scripts import measure_mastery_term as study
 from src.config_constants import analysis_config
 
 
 def _rows(players: int = 30, games: int = 12, seed: int = 0):
-    """Lignes synthétiques : chaque joueur a 3 champions possibles, impact et victoire au hasard."""
+    """Lignes synthétiques : chaque joueur a 3 champions possibles, un vis-à-vis de lane parfois absent,
+    impact, lane et victoire au hasard."""
     rng = random.Random(seed)
     rows = []
     for p in range(players):
@@ -20,17 +23,19 @@ def _rows(players: int = 30, games: int = 12, seed: int = 0):
                     win=rng.randint(0, 1),
                     points=rng.gauss(0.0, 15.0),
                     draft=rng.gauss(0.0, 0.2),
+                    opponent=rng.choice(["Gangplank", "Malphite", "Sylas", None]),
+                    lane=rng.gauss(0.0, 0.05),
                 )
             )
     return rows
 
 
 def test_validation_croisee_sans_fuite_du_bloc_de_test(monkeypatch):
-    """Ni K ni les normes d'un bloc ne voient un joueur de ce bloc ; chaque ligne est prédite une fois."""
+    """Ni K, K₂ ni les normes d'un bloc ne voient un joueur de ce bloc ; chaque ligne est prédite une fois."""
     rows = _rows()
     focal = {r.puuid for r in rows}
     seen = []  # (fonction, puuids vus) dans l'ordre des appels, un bloc après l'autre
-    real_norms, real_k = study.champion_norms, study.estimate_k
+    real_norms, real_k, real_k2 = study.champion_norms, study.estimate_k, study.estimate_k2
 
     def spy_norms(train_rows):
         seen.append(("norms", {r.puuid for r in train_rows}))
@@ -40,13 +45,19 @@ def test_validation_croisee_sans_fuite_du_bloc_de_test(monkeypatch):
         seen.append(("k", set(by_player)))
         return real_k(by_player, norms, field)
 
+    def spy_k2(by_player):
+        seen.append(("k2", set(by_player)))
+        return real_k2(by_player)
+
     monkeypatch.setattr(study, "champion_norms", spy_norms)
     monkeypatch.setattr(study, "estimate_k", spy_k)
+    monkeypatch.setattr(study, "estimate_k2", spy_k2)
 
     pooled = study.cross_validate(rows, focal)
 
     assert pooled is not None
-    calls_per_fold = 1 + len(study.VARIANTS)  # une fois les normes, puis K par variante
+    # une fois les normes, K de a à d, puis K₂ une fois
+    calls_per_fold = 1 + 4 + 1
     assert len(seen) == analysis_config.MASTERY_STUDY_FOLDS * calls_per_fold
     for fold in range(analysis_config.MASTERY_STUDY_FOLDS):
         test_players = {p for p in focal if study._fold(p) == fold}
@@ -55,6 +66,41 @@ def test_validation_croisee_sans_fuite_du_bloc_de_test(monkeypatch):
     assert sorted(pooled.players) == sorted(r.puuid for r in rows)
     for variant in study.VARIANTS:
         assert len(pooled.variants[variant]) == len(rows)
+
+
+def test_colonnes_par_variante():
+    """a à d : biais, draft, maîtrise ; e ajoute M × lane ; f ajoute D ; g ajoute les deux."""
+    row = study.Row(
+        puuid="p",
+        game=0,
+        champion="Olaf",
+        win=1,
+        points=0.0,
+        draft=0.5,
+        opponent="Gangplank",
+        lane=0.2,
+    )
+    assert study._columns("a", row, 3.0, 9.0) == [1.0, 0.5, 3.0]
+    assert study._columns("d", row, 3.0, 9.0) == [1.0, 0.5, 3.0]
+    assert study._columns("e", row, 3.0, 9.0) == pytest.approx([1.0, 0.5, 3.0, 0.6])
+    assert study._columns("f", row, 3.0, 9.0) == [1.0, 0.5, 3.0, 9.0]
+    assert study._columns("g", row, 3.0, 9.0) == pytest.approx([1.0, 0.5, 3.0, 0.6, 9.0])
+
+
+def test_vis_a_vis_de_lane_unique_ou_absent():
+    """Un seul participant adverse par poste : c'est le vis-à-vis ; poste doublé ou inconnu : aucun."""
+    team_of = {1: 100, 2: 100, 3: 100, 4: 100, 5: 100, 6: 200, 7: 200, 8: 200, 9: 200, 10: 200}
+    roles = dict(zip(range(1, 11), ["top", "jungle", "middle", "bottom", "support"] * 2))
+    roles[7] = "top"  # équipe 200 : deux « top » (6 et 7) face au seul « top » 1
+    roles[10] = None  # poste inconnu : aucun vis-à-vis pour 5
+    opponents = study.lane_opponents(team_of, roles)
+    assert opponents[1] is None  # deux tops adverses : pas de vis-à-vis unique
+    assert (
+        opponents[6] == 1 and opponents[7] == 1
+    )  # chacun des deux « top » adverses a 1 pour unique vis-à-vis
+    assert opponents[2] is None  # jungle sans jungle adverse
+    assert opponents[5] is None  # support sans poste connu côté adverse
+    assert opponents[3] == 8 and opponents[8] == 3  # milieu contre milieu
 
 
 def test_impact_relatif_aux_coequipiers_et_a_l_adversaire_de_lane():

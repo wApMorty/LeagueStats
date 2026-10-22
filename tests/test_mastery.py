@@ -162,7 +162,15 @@ def test_moyenne_bootstrap_par_joueur():
 )
 def test_decide_seuil_fige(coef_ci, gain_ci, adopted):
     """Adopté seulement si l'IC du coefficient exclut 0 et celui du gain est positif."""
-    assert decide(coef_ci, gain_ci) is adopted
+    assert decide([coef_ci], gain_ci) is adopted
+
+
+def test_decide_refuse_si_un_des_deux_coefficients_contient_zero():
+    """SPEC-42 §2 : chaque coefficient introduit par la variante doit avoir son IC95 hors de 0."""
+    gain = (0.0001, 0.002)
+    assert decide([(0.01, 0.05), (0.02, 0.06)], gain) is True
+    assert decide([(0.01, 0.05), (-0.01, 0.06)], gain) is False
+    assert decide([(-0.01, 0.05), (0.02, 0.06)], gain) is False
 
 
 @pytest.mark.parametrize("norms", [None, {"Gnar": 4.0, "Ahri": -1.0}])

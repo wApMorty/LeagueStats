@@ -323,11 +323,12 @@ def player_mean_bootstrap(
     return out
 
 
-def decide(coef_ci: Tuple[float, float], gain_ci: Tuple[float, float]) -> bool:
-    """Seuil d'adoption de SPEC-41 §2, figé avant la mesure : l'IC95 du coefficient exclut 0 et
-    celui du gain de Brier est entièrement positif."""
-    coef_ok = coef_ci[0] > 0 or coef_ci[1] < 0
-    return coef_ok and gain_ci[0] > 0
+def decide(coef_cis: Sequence[Tuple[float, float]], gain_ci: Tuple[float, float]) -> bool:
+    """Seuil d'adoption de SPEC-41 §2, généralisé par SPEC-42 §2 (figé avant la mesure) : chaque IC95
+    des coefficients introduits par la variante exclut 0, et l'IC95 du gain de Brier est entièrement
+    positif."""
+    coefs_ok = all(low > 0 or high < 0 for low, high in coef_cis)
+    return coefs_ok and gain_ci[0] > 0
 
 
 def leave_one_out_points(
