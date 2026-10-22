@@ -134,3 +134,42 @@ def test_choix_de_la_variante():
     assert study.choose({v: adopted[v] for v in ("a", "d")}, gains, players, seed=1) == "a"
     assert study.choose({"d": adopted["d"]}, gains, players, seed=1) == "d"
     assert study.choose({}, gains, players, seed=1) is None
+
+
+def test_lignes_de_partie_portent_le_vis_a_vis_et_son_duel(monkeypatch):
+    """`_game_rows` : chaque ligne porte le champion de son vis-à-vis de lane et le duel vu de son
+    côté, (moi, poste) contre (lui, poste)."""
+    posts = ["top", "jungle", "middle", "bottom", "support"]
+    roles = {pid: posts[(pid - 1) % 5] for pid in range(1, 11)}
+    game = {
+        "participants": [
+            {"participantId": pid, "teamId": study.BLUE if pid <= 5 else 200, "championId": pid}
+            for pid in range(1, 11)
+        ],
+        "participantIdentities": [
+            {"participantId": pid, "player": {"puuid": f"p{pid}"}} for pid in range(1, 11)
+        ],
+    }
+    names = {1: "Olaf", 6: "Gangplank", **{i: f"C{i}" for i in (2, 3, 4, 5, 7, 8, 9, 10)}}
+    monkeypatch.setattr(study, "blue_win", lambda _game: True)
+    monkeypatch.setattr(study, "participant_roles", lambda _game: dict(roles))
+    monkeypatch.setattr(study, "impacts", lambda *_args: {"rows": []})
+    duels = []
+
+    class Evaluator:
+        def team_logit(self, _allies, _enemies):
+            return 0.0
+
+        def matchup_logit(self, champion, enemy):
+            duels.append((champion, enemy))
+            return 0.25 if champion == ("Olaf", "top") else -0.25
+
+    rows = study._game_rows(0, game, {"frames": [{}]}, None, names, Evaluator())
+
+    by_champion = {r.champion: r for r in rows}
+    assert by_champion["Olaf"].opponent == "Gangplank"
+    assert by_champion["Olaf"].lane == 0.25
+    assert by_champion["Gangplank"].opponent == "Olaf"
+    assert by_champion["Gangplank"].lane == -0.25
+    assert (("Olaf", "top"), ("Gangplank", "top")) in duels
+    assert by_champion["C3"].opponent == "C8"  # milieu contre milieu

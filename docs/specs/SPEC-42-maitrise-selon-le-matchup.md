@@ -217,7 +217,8 @@ les joueurs (1 000 tirages), seuil du §2 inchangé depuis la rédaction.
 Les variantes b, c, d de SPEC-41 redonnent leurs chiffres (gains b − a, c − a, d − a : [−0,00001 ; +0,00001],
 [−0,00004 ; +0,00001], [−0,00003 ; −0,00001]). 69 242 lignes focales ont un écart D non nul (14,8 %).
 
-**Décision : rien d'adopté, la variante a reste en place.** e, f et g ont un gain de Brier identique à celui de
+**Décision : rien d'adopté, la variante a reste en place.** Le script imprime `[OK] Adopté (variante a)` : la
+variante a, celle de SPEC-41 déjà en place, passe toujours le seuil, et aucune autre ne la bat. e, f et g ont un gain de Brier identique à celui de
 a : tout leur gain vient de la maîtrise par champion. Leurs coefficients introduits ont un IC95 qui contient 0,
 avec un signe négatif. Tâches 206 et 207 abandonnées. Les constantes du moteur ne changent pas : 0,0723 et 42,3
 redonnent 0,0717 et 42,4 dans leur marge, comme au passage du 2026-10-22 de SPEC-41.
