@@ -44,14 +44,14 @@
 
   // ---------- chargement ----------
 
-  async function load(championId) {
-    lo = { championId, status: "loading", modified: false, pushed: false, picker: null };
+  async function load(championId, key) {
+    const mine = (lo = { championId, key, status: "loading", modified: false, pushed: false, picker: null });
     render();
     const [plan] = await Promise.all([
       fetch(`/draft/loadout?champion_id=${championId}`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
       ensureTree(),
     ]);
-    if (!lo || lo.championId !== championId) return; // le champion a changé entre-temps
+    if (lo !== mine) return; // champion changé ou page rechargée entre-temps
     if (!plan?.available || !tree) {
       lo.status = "unavailable";
       lo.reason = plan?.reason || "Page indisponible";
@@ -74,10 +74,10 @@
     }
     if (!lo || lo.championId !== champion) {
       if (lo?.modified) Draft.post("/draft/loadout/manual", { on: 0 }); // la main ne vaut que pour ce champion
-      return void load(champion);
+      return void load(champion, state.loadout);
     }
-    if (lo.status === "ready" && !lo.modified && state.locked_id && lo.base.source !== "client" && state.loadout) {
-      load(champion); // le Live Coach vient d'écrire la page dans le client
+    if (!lo.modified && lo.key !== state.loadout) {
+      load(champion, state.loadout); // page (ré)écrite par le Live Coach, adversaire ou poste nouveau
     } else if (!host().firstElementChild) render();
   }
 

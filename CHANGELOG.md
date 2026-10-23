@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### 🐛 Fix
+
+- **La page de runes de la draft suit l'adversaire de lane** — quand ton adversaire apparaît après ton lock, le Live Coach écrivait bien la page et les sorts du duel dans le client LoL, mais la colonne loadout gardait la page générale. Elle se recharge maintenant dès que la page écrite, l'adversaire ou ton poste change (sauf page modifiée à la main).
+
 ## [5.9.1] - 2026-10-22
 
 Plus de micro-fenêtre qui vole le focus à chaque lock quand le client est lancé sans console. Deux études de la maîtrise personnelle (relative à la partie, selon le matchup) sont mesurées et non retenues : le coach de draft ne change pas. Aucune action requise : pas de migration Alembic, pas de scrape.
