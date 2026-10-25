@@ -83,11 +83,13 @@ def format_summary(db, model_version: str) -> Optional[str]:
         direction = "plus confiant" if scale > 1.0 else "plus prudent"
         k_m_suggested = analysis_config.K_MATCHUP * scale
         k_s_suggested = analysis_config.K_SYNERGY * scale
+        k_i_suggested = analysis_config.K_INTRINSIC * scale
         lines.append(
             f"[CALIBRATE] Facteur d'échelle suggéré : {scale:.3f} -- le modèle devrait être "
             f"{direction}. Piste de départ : K_MATCHUP {analysis_config.K_MATCHUP:.2f} -> "
             f"{k_m_suggested:.2f}, K_SYNERGY {analysis_config.K_SYNERGY:.2f} -> "
-            f"{k_s_suggested:.2f} (mise à l'échelle uniforme -- décision manuelle)."
+            f"{k_s_suggested:.2f}, K_INTRINSIC {analysis_config.K_INTRINSIC:.2f} -> "
+            f"{k_i_suggested:.2f} (mise à l'échelle uniforme -- décision manuelle)."
         )
 
     lines.append(
@@ -115,6 +117,7 @@ class Proposal:
     high: float
     k_matchup: float
     k_synergy: float
+    k_intrinsic: float
     model_version: str
 
 
@@ -157,6 +160,7 @@ def diagnose(rows: List[Row], model_version: str) -> Diagnostic:
             high=high,
             k_matchup=analysis_config.K_MATCHUP * scale,
             k_synergy=analysis_config.K_SYNERGY * scale,
+            k_intrinsic=analysis_config.K_INTRINSIC * scale,
             model_version=next_version(model_version),
         )
     return Diagnostic(n=n, scale=scale, low=low, high=high, proposal=proposal, refusal=refusal)
@@ -171,7 +175,8 @@ def format_proposal(proposal: Proposal) -> str:
     return (
         f"[CALIBRATE] Réglage proposé : K_MATCHUP {analysis_config.K_MATCHUP:.2f} -> "
         f"{proposal.k_matchup:.2f}, K_SYNERGY {analysis_config.K_SYNERGY:.2f} -> "
-        f"{proposal.k_synergy:.2f}, MODEL_VERSION {analysis_config.MODEL_VERSION!r} -> "
+        f"{proposal.k_synergy:.2f}, K_INTRINSIC {analysis_config.K_INTRINSIC:.2f} -> "
+        f"{proposal.k_intrinsic:.2f}, MODEL_VERSION {analysis_config.MODEL_VERSION!r} -> "
         f"{proposal.model_version!r}.\n"
         "[CALIBRATE] Appliquer ? (o/n)"
     )
@@ -181,9 +186,15 @@ def apply_proposal(proposal: Proposal) -> bool:
     """Écrit calibration.json et applique tout de suite au processus en cours,
     pour que les prochaines prédictions soient journalisées sous la nouvelle
     version avec les nouveaux K. False si l'écriture échoue (rien n'est changé)."""
-    if not save_overrides(proposal.k_matchup, proposal.k_synergy, proposal.model_version):
+    if not save_overrides(
+        proposal.k_matchup,
+        proposal.k_synergy,
+        proposal.model_version,
+        k_intrinsic=proposal.k_intrinsic,
+    ):
         return False
     analysis_config.K_MATCHUP = proposal.k_matchup
     analysis_config.K_SYNERGY = proposal.k_synergy
+    analysis_config.K_INTRINSIC = proposal.k_intrinsic
     analysis_config.MODEL_VERSION = proposal.model_version
     return True

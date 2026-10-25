@@ -392,7 +392,7 @@ surconfiant (coefficient 0,66). Terme par champion dans `GameEvaluator.contribut
 | 209 | `GameEvaluator` : terme de force intrinsèque dans `contribution`, `K_INTRINSIC` provisoire à 0,82 + tests | 3 | — | ✅ 2026-10-25 : `K_INTRINSIC` à 0,0 jusqu'à 211 (pas de prédictions mélangées sous `spec13-v1`), `lane_strength`, `strength_points`, `synergy_points` ; 10 tests |
 | 210 | `scripts/backtest_draft_model.py` : backtest sur `crawl.db`, CV, IC 90 %, K ajustés + tests ; mesure en §8 | 5 | 209 | ✅ 2026-10-25 : script et 6 tests ; la mesure sur `crawl.db` est faite et consignée avec 211 (reportée pendant une partie de @pj35) |
 | 211 | `config_constants` : K de 210, `MODEL_VERSION` `spec43-v1` ; 210 relancé, coefficient en vigueur ≈ 1 | 1 | 210 | ⬜ |
-| 212 | `calibration.json` : `K_INTRINSIC`, garde de version périmée, SPEC-39 (console et client) + tests | 3 | 211 | ⬜ |
+| 212 | `calibration.json` : `K_INTRINSIC`, garde de version périmée, SPEC-39 (console et client) + tests | 3 | 211 | ✅ 2026-10-25 (passée avant 211, valeurs indépendantes) : `K_INTRINSIC` facultatif, `base_version`, fichier d'une autre base ignoré avec `[INFO]`, proposition à trois K ; 15 tests ajoutés |
 | 213 | Étude de maîtrise relancée sur le nouveau logit, `MASTERY_LOGIT_PER_POINT` revu si hors IC95 ; §8 | 2 | 211 | ⬜ |
 | 214 | Clôture : suppression du script SPEC-18, SPEC-18, README des specs, `CHANGELOG.md`, `TODO.md` | 1 | 212, 213 | ⬜ |
 

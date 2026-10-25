@@ -361,6 +361,7 @@ def create_app(
             return render(request, "calibration.html", status_code=409, v=view)
         proposal = view["proposal"]
         old_matchup, old_synergy = analysis_config.K_MATCHUP, analysis_config.K_SYNERGY
+        old_intrinsic = analysis_config.K_INTRINSIC
         if not calibration_notice.apply_proposal(proposal):
             message = "Écriture de calibration.json impossible, rien n'est modifié"
             failed = {**read(view["version"]), "message": message}
@@ -368,6 +369,7 @@ def create_app(
         message = (
             f"Réglage appliqué : K_MATCHUP {fr(old_matchup, 2)} → {fr(proposal.k_matchup, 2)}, "
             f"K_SYNERGY {fr(old_synergy, 2)} → {fr(proposal.k_synergy, 2)}, "
+            f"K_INTRINSIC {fr(old_intrinsic, 2)} → {fr(proposal.k_intrinsic, 2)}, "
             f"version {proposal.model_version}. Un Live Coach ouvert en console ne le verra "
             "qu'à son redémarrage."
         )

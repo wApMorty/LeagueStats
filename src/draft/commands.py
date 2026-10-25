@@ -190,6 +190,7 @@ class CommandListener:
             print(
                 f"[CALIBRATE] Réglage appliqué (calibration.json) : K_MATCHUP "
                 f"{proposal.k_matchup:.2f}, K_SYNERGY {proposal.k_synergy:.2f}, "
+                f"K_INTRINSIC {proposal.k_intrinsic:.2f}, "
                 f"MODEL_VERSION {proposal.model_version!r}"
             )
         else:

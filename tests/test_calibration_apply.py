@@ -47,12 +47,85 @@ class TestSuggestScaleConverges:
 class TestOverrides:
     def test_roundtrip_applies_to_a_config(self, tmp_path):
         path = str(tmp_path / "calibration.json")
-        assert overrides.save_overrides(0.7, 0.3, "spec13-v1+cal1", path)
+        assert overrides.save_overrides(0.7, 0.3, "spec13-v1+cal1", path=path)
         cfg = AnalysisConfig()
+        cfg.MODEL_VERSION = "spec13-v1"
 
         overrides.apply_overrides(cfg, path)
 
         assert (cfg.K_MATCHUP, cfg.K_SYNERGY, cfg.MODEL_VERSION) == (0.7, 0.3, "spec13-v1+cal1")
+
+    def test_fichier_a_deux_k_lu_et_k_intrinsic_inchange(self, tmp_path):
+        path = tmp_path / "calibration.json"
+        path.write_text(
+            json.dumps({"K_MATCHUP": 0.7, "K_SYNERGY": 0.3, "MODEL_VERSION": "spec43-v1+cal1"}),
+            encoding="utf-8",
+        )
+        cfg = AnalysisConfig()
+        cfg.MODEL_VERSION = "spec43-v1"
+        before = cfg.K_INTRINSIC
+
+        assert overrides.apply_overrides(cfg, str(path))["MODEL_VERSION"] == "spec43-v1+cal1"
+        assert (cfg.K_MATCHUP, cfg.K_SYNERGY) == (0.7, 0.3)
+        assert cfg.K_INTRINSIC == before
+
+    def test_fichier_a_trois_k_lu(self, tmp_path):
+        path = str(tmp_path / "calibration.json")
+        assert overrides.save_overrides(0.7, 0.3, "spec43-v1+cal1", k_intrinsic=0.8, path=path)
+        cfg = AnalysisConfig()
+        cfg.MODEL_VERSION = "spec43-v1"
+
+        overrides.apply_overrides(cfg, path)
+
+        assert (cfg.K_MATCHUP, cfg.K_SYNERGY, cfg.K_INTRINSIC) == (0.7, 0.3, 0.8)
+
+    @pytest.mark.parametrize("value", [0, -0.5, True, float("nan")])
+    def test_k_intrinsic_invalide_rejette_tout_le_fichier(self, tmp_path, value):
+        path = tmp_path / "calibration.json"
+        content = {"K_MATCHUP": 0.7, "K_SYNERGY": 0.3, "K_INTRINSIC": value}
+        path.write_text(
+            json.dumps({**content, "MODEL_VERSION": "spec43-v1+cal1"}), encoding="utf-8"
+        )
+        cfg = AnalysisConfig()
+        cfg.MODEL_VERSION = "spec43-v1"
+        before = cfg.K_MATCHUP
+
+        assert overrides.apply_overrides(cfg, str(path)) == {}
+        assert cfg.K_MATCHUP == before
+
+    def test_spec13_cal1_ignore_sous_spec43(self, tmp_path, capsys):
+        path = str(tmp_path / "calibration.json")
+        overrides.save_overrides(0.7, 0.3, "spec13-v1+cal1", k_intrinsic=0.8, path=path)
+        cfg = AnalysisConfig()
+        cfg.MODEL_VERSION = "spec43-v1"
+        before = (cfg.K_MATCHUP, cfg.K_SYNERGY, cfg.K_INTRINSIC, cfg.MODEL_VERSION)
+
+        assert overrides.apply_overrides(cfg, path) == {}
+        assert (cfg.K_MATCHUP, cfg.K_SYNERGY, cfg.K_INTRINSIC, cfg.MODEL_VERSION) == before
+        assert (
+            "[INFO] calibration.json ignoré : réglé pour spec13-v1+cal1, " "le modèle est spec43-v1"
+        ) in capsys.readouterr().out
+
+    def test_spec43_cal2_applique_sous_spec43(self, tmp_path):
+        path = str(tmp_path / "calibration.json")
+        overrides.save_overrides(0.7, 0.3, "spec43-v1+cal2", k_intrinsic=0.8, path=path)
+        cfg = AnalysisConfig()
+        cfg.MODEL_VERSION = "spec43-v1"
+
+        overrides.apply_overrides(cfg, path)
+
+        assert (cfg.K_INTRINSIC, cfg.MODEL_VERSION) == (0.8, "spec43-v1+cal2")
+
+    @pytest.mark.parametrize(
+        "version, base",
+        [
+            ("spec13-v1", "spec13-v1"),
+            ("spec13-v1+cal1", "spec13-v1"),
+            ("spec43-v1+cal12", "spec43-v1"),
+        ],
+    )
+    def test_base_version_retire_le_suffixe(self, version, base):
+        assert overrides.base_version(version) == base
 
     @pytest.mark.parametrize(
         "content",
@@ -120,14 +193,35 @@ class TestAnswer:
         saved = (
             analysis_config.K_MATCHUP,
             analysis_config.K_SYNERGY,
+            analysis_config.K_INTRINSIC,
             analysis_config.MODEL_VERSION,
         )
         yield
-        analysis_config.K_MATCHUP, analysis_config.K_SYNERGY, analysis_config.MODEL_VERSION = saved
+        (
+            analysis_config.K_MATCHUP,
+            analysis_config.K_SYNERGY,
+            analysis_config.K_INTRINSIC,
+            analysis_config.MODEL_VERSION,
+        ) = saved
 
     def _monitor(self):
-        proposal = calibration_notice.Proposal(0.5, 0.3, 0.7, 0.5, 0.25, "spec13-v1+cal1")
+        proposal = calibration_notice.Proposal(0.5, 0.3, 0.7, 0.5, 0.25, 0.4, "spec13-v1+cal1")
         return SimpleNamespace(_pending_calibration=proposal, _command_queue=None), proposal
+
+    def test_apply_proposal_ecrit_et_pose_les_trois_k(self, tmp_path, monkeypatch, restore_config):
+        path = str(tmp_path / "calibration.json")
+        monkeypatch.setattr(overrides, "get_calibration_path", lambda: path)
+        _, proposal = self._monitor()
+
+        assert calibration_notice.apply_proposal(proposal)
+
+        saved = overrides.load_overrides(path)
+        assert (saved["K_MATCHUP"], saved["K_SYNERGY"], saved["K_INTRINSIC"]) == (0.5, 0.25, 0.4)
+        assert (
+            analysis_config.K_MATCHUP,
+            analysis_config.K_SYNERGY,
+            analysis_config.K_INTRINSIC,
+        ) == (0.5, 0.25, 0.4)
 
     def test_yes_writes_the_file_and_bumps_the_live_version(
         self, tmp_path, monkeypatch, restore_config
@@ -197,6 +291,11 @@ class TestDiagnose:
         )
         assert diagnostic.proposal.model_version == "v1+cal1"
         assert diagnostic.n == 400
+
+    def test_la_proposition_met_k_intrinsic_a_l_echelle(self, monkeypatch):
+        monkeypatch.setattr(analysis_config, "K_INTRINSIC", 0.8)
+        diagnostic = calibration_notice.diagnose(_rows(400, 0.4), "v1")
+        assert diagnostic.proposal.k_intrinsic == pytest.approx(0.8 * diagnostic.scale)
 
     def test_build_proposal_rend_ce_que_rend_diagnose(self, db):
         _fill(db, _rows(400, 0.4))

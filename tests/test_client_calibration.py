@@ -248,7 +248,7 @@ def reglage(monkeypatch, tmp_path):
     monkeypatch.setattr(
         overrides, "get_calibration_path", lambda: str(tmp_path / "calibration.json")
     )
-    for name in ("K_MATCHUP", "K_SYNERGY", "MODEL_VERSION"):
+    for name in ("K_MATCHUP", "K_SYNERGY", "K_INTRINSIC", "MODEL_VERSION"):
         monkeypatch.setattr(analysis_config, name, getattr(analysis_config, name))
     return tmp_path / "calibration.json"
 
@@ -321,6 +321,7 @@ def test_appliquer_ecrit_le_reglage_et_le_retient(db, temp_db, reglage):
     rows = _rows(400, 0.4)
     predictions(db, CURRENT, rows)
     old_matchup, old_synergy = analysis_config.K_MATCHUP, analysis_config.K_SYNERGY
+    old_intrinsic = analysis_config.K_INTRINSIC
     scale = suggest_scale(rows)
     web = client(temp_db)
     response = web.post("/calibration/appliquer", headers=_jeton(web))
@@ -328,9 +329,20 @@ def test_appliquer_ecrit_le_reglage_et_le_retient(db, temp_db, reglage):
     saved = json.loads(reglage.read_text(encoding="utf-8"))
     assert saved["K_MATCHUP"] == pytest.approx(old_matchup * scale)
     assert saved["K_SYNERGY"] == pytest.approx(old_synergy * scale)
+    assert saved["K_INTRINSIC"] == pytest.approx(old_intrinsic * scale)
     assert saved["MODEL_VERSION"] == f"{CURRENT}+cal1"
     assert analysis_config.MODEL_VERSION == f"{CURRENT}+cal1"
     assert "Réglage appliqué" in response.text
+    assert "K_INTRINSIC" in response.text
+
+
+def test_page_calibration_affiche_k_intrinsic(db, temp_db, monkeypatch):
+    monkeypatch.setattr(analysis_config, "K_INTRINSIC", 0.8)
+    predictions(db, CURRENT, _rows(400, 0.4))
+    view = calibration_view(CoachingRepository(db), None, "closed")
+    page = client(temp_db).get("/calibration").text
+    assert "K_INTRINSIC" in page
+    assert view["suggested"]["k_intrinsic"] in page
 
 
 def test_ecriture_impossible_500_sans_changement(db, temp_db, reglage, monkeypatch):

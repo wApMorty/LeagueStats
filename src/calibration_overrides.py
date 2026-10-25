@@ -1,10 +1,13 @@
 """Réglages du modèle appliqués par l'utilisateur via « Appliquer ? o/n ».
 
 `calibration.json` (à côté de l'exécutable, comme `user_prefs.json`) porte
-K_MATCHUP, K_SYNERGY et MODEL_VERSION. Il est lu à l'import de
+K_MATCHUP, K_SYNERGY, MODEL_VERSION et, depuis SPEC-43, K_INTRINSIC (facultatif :
+un fichier à deux K reste lisible). Il est lu à l'import de
 `config_constants` et écrase les valeurs par défaut du code : appliquer une
 calibration ne demande jamais d'ouvrir le code. Sans fichier, ou avec un
-fichier invalide, les valeurs du code restent en vigueur.
+fichier invalide, les valeurs du code restent en vigueur. Un fichier réglé pour
+une autre base de version que le code (ex. `spec13-v1+cal1` sous `spec43-v1`)
+est ignoré, avec un `[INFO]`.
 """
 
 import json
@@ -33,24 +36,37 @@ def next_version(version: str) -> str:
     return f"{version}+cal1"
 
 
-def _valid(data: Any) -> bool:
+def base_version(version: str) -> str:
+    """`spec43-v1+cal2` -> `spec43-v1` : la version sans le suffixe de calibration."""
+    return _VERSION_SUFFIX.sub("", version)
+
+
+def _positive_finite(value: Any) -> bool:
     return (
-        isinstance(data, dict)
-        and all(
-            isinstance(data.get(key), (int, float))
-            and not isinstance(data.get(key), bool)
-            and math.isfinite(data[key])
-            and data[key] > 0
-            for key in ("K_MATCHUP", "K_SYNERGY")
-        )
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(value)
+        and value > 0
+    )
+
+
+def _valid(data: Any) -> bool:
+    if not isinstance(data, dict):
+        return False
+    keys = ["K_MATCHUP", "K_SYNERGY"]
+    if "K_INTRINSIC" in data:
+        keys.append("K_INTRINSIC")
+    return (
+        all(_positive_finite(data.get(key)) for key in keys)
         and isinstance(data.get("MODEL_VERSION"), str)
         and bool(data["MODEL_VERSION"].strip())
     )
 
 
 def load_overrides(path: Optional[str] = None) -> Dict[str, Any]:
-    """Les trois réglages, ou {} si le fichier est absent, illisible ou invalide
-    (tout ou rien : une version sans ses K ne doit jamais s'appliquer seule)."""
+    """Les réglages présents, ou {} si le fichier est absent, illisible ou invalide
+    (tout ou rien : une version sans ses K ne doit jamais s'appliquer seule).
+    K_INTRINSIC n'est rendu que s'il est dans le fichier."""
     path = path or get_calibration_path()
     try:
         with open(path, "r", encoding="utf-8") as f:
@@ -59,23 +75,41 @@ def load_overrides(path: Optional[str] = None) -> Dict[str, Any]:
         return {}
     if not _valid(data):
         return {}
-    return {key: data[key] for key in ("K_MATCHUP", "K_SYNERGY", "MODEL_VERSION")}
+    keys = ("K_MATCHUP", "K_SYNERGY", "K_INTRINSIC", "MODEL_VERSION")
+    return {key: data[key] for key in keys if key in data}
 
 
 def apply_overrides(config: Any, path: Optional[str] = None) -> Dict[str, Any]:
-    """Écrase les réglages de `config` (un AnalysisConfig) ; rend ce qui a été posé."""
+    """Écrase les réglages de `config` (un AnalysisConfig) ; rend ce qui a été posé.
+    Rien n'est posé si la version du fichier n'a pas la même base que `config.MODEL_VERSION`."""
     overrides = load_overrides(path)
+    if not overrides:
+        return {}
+    file_version = overrides["MODEL_VERSION"]
+    if base_version(file_version) != base_version(config.MODEL_VERSION):
+        print(
+            f"[INFO] calibration.json ignoré : réglé pour {file_version}, "
+            f"le modèle est {config.MODEL_VERSION}"
+        )
+        return {}
     for key, value in overrides.items():
         setattr(config, key, value)
     return overrides
 
 
 def save_overrides(
-    k_matchup: float, k_synergy: float, model_version: str, path: Optional[str] = None
+    k_matchup: float,
+    k_synergy: float,
+    model_version: str,
+    k_intrinsic: Optional[float] = None,
+    path: Optional[str] = None,
 ) -> bool:
-    """Best-effort : ne lève jamais, rend False si l'écriture échoue."""
+    """Best-effort : ne lève jamais, rend False si l'écriture échoue.
+    K_INTRINSIC n'est écrit que s'il est fourni."""
     path = path or get_calibration_path()
     data = {"K_MATCHUP": k_matchup, "K_SYNERGY": k_synergy, "MODEL_VERSION": model_version}
+    if k_intrinsic is not None:
+        data["K_INTRINSIC"] = k_intrinsic
     try:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "w", encoding="utf-8") as f:

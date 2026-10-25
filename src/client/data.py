@@ -587,6 +587,8 @@ def calibration_view(repo, version: Optional[str], phase_kind: str = "closed") -
             f"{fr(analysis_config.K_MATCHUP * diagnostic.scale, 2)}",
             "k_synergy": f"{fr(analysis_config.K_SYNERGY, 2)} → "
             f"{fr(analysis_config.K_SYNERGY * diagnostic.scale, 2)}",
+            "k_intrinsic": f"{fr(analysis_config.K_INTRINSIC, 2)} → "
+            f"{fr(analysis_config.K_INTRINSIC * diagnostic.scale, 2)}",
             "version": f"{current} → {next_version(current)}",
         }
     if chosen != current:
