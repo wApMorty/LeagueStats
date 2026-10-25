@@ -190,3 +190,14 @@ def test_read_games_counts_unreadable_rows(tmp_path, monkeypatch):
     assert counts["illisibles"] == 1
     assert counts["courtes"] == 1
     assert counts["retenues"] == 1
+
+
+def test_effective_lane_weight_is_the_configured_weight_when_coefficients_match():
+    """Les variables portent déjà SAME_LANE_WEIGHT : des coefficients égaux confirment le poids en
+    vigueur (le diagnostic comparait à tort le rapport brut à 2)."""
+    from src.config_constants import role_inference_config as roles
+
+    expected = roles.SAME_LANE_WEIGHT / roles.OTHER_LANE_WEIGHT
+    assert backtest.effective_lane_weight(0.7, 0.7) == pytest.approx(expected)
+    assert backtest.effective_lane_weight(1.4, 0.7) == pytest.approx(2 * expected)
+    assert backtest.effective_lane_weight(0.7, 0.0) is None

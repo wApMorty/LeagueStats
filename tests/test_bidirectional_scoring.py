@@ -126,8 +126,8 @@ class TestBidirectionalAdvantage:
         # Should be: our_advantage - 0 (no opponent data)
         # Result should be positive (we have favorable matchup)
         assert result > 0
-        # With delta2=150, should be a strong advantage
-        assert result > 20.0
+        # With delta2=150, should be a strong advantage (le score suit K_MATCHUP, calibré par SPEC-43)
+        assert result > 20.0 * analysis_config.K_MATCHUP
 
     def test_partial_opponent_data(self, db, scorer, insert_matchup):
         """

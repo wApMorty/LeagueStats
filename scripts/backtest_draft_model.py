@@ -235,6 +235,23 @@ def wald_interval(
     return intervals
 
 
+def effective_lane_weight(coef_lane: float, coef_other: float) -> Optional[float]:
+    """Poids du duel de lane que préfèrent les données, à comparer à SAME_LANE_WEIGHT.
+
+    Les deux variables portent déjà leur poids (SAME_LANE_WEIGHT, OTHER_LANE_WEIGHT) : des
+    coefficients égaux veulent dire que le rapport en vigueur est juste. None si le coefficient hors
+    lane est nul.
+    """
+    if not coef_other:
+        return None
+    return (
+        coef_lane
+        / coef_other
+        * role_inference_config.SAME_LANE_WEIGHT
+        / role_inference_config.OTHER_LANE_WEIGHT
+    )
+
+
 def _interval90(samples: Sequence[float]) -> Tuple[float, float]:
     """IC 90 % percentile d'un échantillon bootstrap."""
     ranked = sorted(samples)
@@ -308,10 +325,11 @@ def _report(games: List[Game], terms: List[Terms]) -> None:
         )
 
     coef_diag = fit_logistic(diagnostic, ys)
-    if coef_diag[2]:
+    weight = effective_lane_weight(coef_diag[1], coef_diag[2])
+    if weight is not None:
         print(
-            f"[DATA] Diagnostic : duel de lane {coef_diag[1]:.3f} / hors lane {coef_diag[2]:.3f} "
-            f"= {coef_diag[1] / coef_diag[2]:.2f} (attendu : {role_inference_config.SAME_LANE_WEIGHT})"
+            f"[DATA] Diagnostic : poids effectif du duel de lane {weight:.2f} "
+            f"(en vigueur : SAME_LANE_WEIGHT {role_inference_config.SAME_LANE_WEIGHT})"
         )
 
     auc_ci, brier_ci = bootstrap_gains(pred_cur, pred_adj, ys, cfg.BACKTEST_BOOTSTRAP, seed)

@@ -140,7 +140,10 @@ class TestPairTerms:
         assert evaluator.matchup_logit(("Jax", "top"), ("Garen", "top")) == pytest.approx(
             baseline.matchup_logit(("Jax", "top"), ("Garen", "top"))
         )
-        assert abs(evaluator.synergy_logit(("Jax", "top"), ("Lulu", "support"))) < 0.01
+        # K de synergie à 20 000 : 1 000 games ne pèsent que 1 000 / 21 000.
+        assert evaluator.synergy_logit(("Jax", "top"), ("Lulu", "support")) == pytest.approx(
+            winrate_points_to_logit(6.0 * analysis_config.K_SYNERGY) * 1_000 / 21_000
+        )
 
     def test_unknown_pair_contributes_nothing(self, evaluator):
         assert evaluator.matchup_logit(("Inconnu", "top"), ("Autre", "top")) == 0.0

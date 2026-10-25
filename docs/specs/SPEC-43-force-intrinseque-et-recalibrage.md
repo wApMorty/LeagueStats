@@ -214,4 +214,42 @@ au Live Coach : cartes et jauge cohérentes, prédiction journalisée sous `spec
 
 ## 8. Résultats
 
-*À remplir en 210, 211 et 213.*
+### 8.1 Données disponibles (210, 2026-10-25)
+
+Le premier passage de `scripts/backtest_draft_model.py` ne trouve plus que 5 322 parties lues, contre 100 019 au
+moment de §1.3. La purge du crawler (`src/winprob/crawl.py`, `_purge`, `WINPROB_PATCH_WINDOW = 1`,
+`WINPROB_MIN_PATCH_GAMES = 5 000`) ne garde que le dernier patch dès qu'il atteint 5 000 parties : le 16.21 a
+franchi ce seuil dans la soirée et les ~95 000 parties du 16.20 ont été supprimées. Le backtest ne disposera
+jamais que des parties du patch en cours (entre 5 000 et `CRAWL_MAX_GAMES` = 100 000).
+
+### 8.2 Coefficients adoptés (211, décision de @pj35 le 2026-10-25)
+
+Les variables des 96 987 parties de §1.3 étaient restées en cache. Elles sont réajustées dans la forme exacte de
+la config, avec la régression et l'IC de Wald du script :
+
+| | 96 987 parties 16.20 (cache de §1.3) | 5 140 parties 16.21 (script officiel) |
+|---|---|---|
+| `K_MATCHUP` | **0,68** [0,61 ; 0,75] | 0,85 [0,57 ; 1,14] |
+| `K_SYNERGY` | **1,49** [1,10 ; 1,87] | 1,97 [0,30 ; 3,65] |
+| `K_INTRINSIC` | **0,83** [0,77 ; 0,89] | 0,70 [0,45 ; 0,95] |
+| AUC hors pli, en vigueur → ajusté | 0,530 → 0,553 | 0,538 → 0,545 |
+| Gain de Brier, IC 90 % | +0,0015 [+0,0013 ; +0,0018] | +0,0005 [−0,0002 ; +0,0013] |
+
+Les 97k remplissent la règle d'adoption de §2 ; les 5k n'ont pas la puissance de la trancher, mais chaque valeur
+adoptée tombe dans leur IC. Différence de méthode : sur les 97k, les postes viennent de la meilleure permutation
+selon `champion_lanes` (Châtiment = jungle), et non de `participant_roles`.
+
+### 8.3 Modèle en vigueur après 211 (`spec43-v1`)
+
+`python scripts/backtest_draft_model.py`, 5 340 parties lues, 5 158 retenues (16.21, hors de l'échantillon
+d'ajustement) :
+
+- AUC hors pli du modèle en vigueur **0,548** (0,538 avec les anciens K) : critère 3 rempli ;
+- coefficient du logit en vigueur **0,995**, IC 90 % [0,751 ; 1,239] : le modèle est calibré (0,851 avant) ;
+- réajuster les K n'apporte plus rien : gain de Brier −0,00009 [−0,00034 ; +0,00021], verdict « garder ».
+
+Diagnostic, rien d'adopté : le poids du duel de lane préféré par les données vaut 2,0 sur les 97k (coefficients
+0,676 et 0,688) pour `SAME_LANE_WEIGHT` = 2,0, et ~2,7 sur les 5k de 16.21, dans le bruit. Le premier passage du
+script comparait à tort le rapport brut des coefficients à 2 ; il affiche désormais le poids effectif
+(`effective_lane_weight`, corrigé en 211 avec son test).
+

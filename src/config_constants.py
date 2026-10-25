@@ -168,17 +168,19 @@ class AnalysisConfig:
     # identité de l'ancien delta2_to_win_advantage.
     LOGIT_PER_WINRATE_POINT: float = 0.04
 
-    # Correction du double comptage résiduel entre matchups/synergies qui se
-    # recouvrent partiellement (SPEC-05 §3.3). Valeurs de départ à calibrer
-    # une fois la table `predictions` alimentée (scripts/calibrate_model.py).
-    K_MATCHUP: float = 1.0
-    K_SYNERGY: float = 0.5
-    # SPEC-43 : poids de la force intrinsèque (winrate de lane rétréci − moyenne). Neutre (0.0) tant
-    # que la tâche 211 n'a pas posé la valeur ajustée sur crawl.db avec le changement de MODEL_VERSION.
-    K_INTRINSIC: float = 0.0
+    # Poids des trois termes du logit de draft (src/analysis/game_eval.py), en points de victoire par
+    # point de winrate. SPEC-43 §8, tâche 211 : ajustés ensemble par régression logistique sur 96 987
+    # parties classées de crawl.db (patch 16.20, mesure du 2026-10-25), IC 90 % de Wald entre
+    # crochets ; gain de Brier hors pli +0,0015 [+0,0013 ; +0,0018]. Confirmés sur 5 140 parties 16.21
+    # par scripts/backtest_draft_model.py (chaque valeur dans l'IC de ce second ajustement).
+    # Avant SPEC-43 : K_MATCHUP 1,0 et K_SYNERGY 0,5 (valeurs de départ jamais calibrées).
+    K_MATCHUP: float = 0.68  # [0,61 ; 0,75]
+    K_SYNERGY: float = 1.49  # [1,10 ; 1,87]
+    # Force intrinsèque : winrate de lane rétréci moins la moyenne de la lane (SPEC-43).
+    K_INTRINSIC: float = 0.83  # [0,77 ; 0,89]
 
     # Doit changer à chaque modification de LOGIT_PER_WINRATE_POINT/K_MATCHUP/
-    # K_SYNERGY/CONFIDENCE_K, sinon scripts/calibrate_model.py mélange des
+    # K_SYNERGY/K_INTRINSIC/CONFIDENCE_K, sinon scripts/calibrate_model.py mélange des
     # prédictions issues de modèles différents.
     #
     # SPEC-12 : le Live Coach prédit maintenant via src/analysis/game_eval.py
@@ -190,7 +192,8 @@ class AnalysisConfig:
     # un K mesuré par type (cf. src/analysis/shrink.py). Les matchups pèsent ~2x
     # moins et les synergies ~10x moins qu'en spec12-v1 : même formule, poids
     # différents, donc prédictions non mélangeables avec les précédentes.
-    MODEL_VERSION: str = "spec13-v1"
+    # SPEC-43 : terme de force intrinsèque et trois K ajustés sur crawl.db.
+    MODEL_VERSION: str = "spec43-v1"
 
     # SPEC-05 §4 B7 step 5 : en dessous de ce nombre de prédictions
     # labellisées, une courbe de calibration ou un k_m/k_s suggéré est du

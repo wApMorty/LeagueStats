@@ -10,10 +10,13 @@ Le 5v5 ci-dessous est entièrement déterministe et les attendus sont calculés 
 la main depuis la formule de SPEC-12, pas recopiés depuis une exécution :
 
     confidence(500 games)          = 500 / (500 + CONFIDENCE_K=500) = 0.5
-    matchup_logit(delta2)          = delta2 * K_MATCHUP(1.0) * 0.04 * 1.0 * 0.5
-                                   = delta2 * 0.02
-    synergy_logit(delta2)          = delta2 * K_SYNERGY(0.5) * 0.04 * 0.5
-                                   = delta2 * 0.01
+    matchup_logit(delta2)          = delta2 * K_MATCHUP * 0.04 * 1.0 * 0.5
+                                   = delta2 * K_MATCHUP * 0.02
+    synergy_logit(delta2)          = delta2 * K_SYNERGY * 0.04 * 0.5
+                                   = delta2 * K_SYNERGY * 0.02
+    force intrinsèque              = 0 (aucun winrate de lane servi)
+
+Les K sont lus dans ``analysis_config`` : ils sont calibrés (SPEC-43), la formule ne l'est pas.
     colonne affichée (points)      = (sigmoid(logit) - 0.5) * 100
 
 Aucune lane n'est fournie : toutes les paires pèsent OTHER_LANE_WEIGHT = 1.0.
@@ -56,7 +59,7 @@ MATCHUPS = {
 }
 
 # Toutes les paires d'une même équipe valent +2.0 : chaque champion a donc
-# 4 coéquipiers * synergy_logit(2.0) = 4 * 0.02 = 0.08 de log-odds.
+# 4 coéquipiers * synergy_logit(2.0) = 4 * 2.0 * K_SYNERGY * 0.02 de log-odds.
 SYNERGY_PER_PAIR = 2.0
 TEAM = [name.lower() for name in NAMES.values()]
 SYNERGIES = {(a, b): (SYNERGY_PER_PAIR, GAMES) for a in TEAM for b in TEAM if a != b}
@@ -68,8 +71,12 @@ def points(logit: float) -> float:
 
 
 # Log-odds attendus, par champion.
-ALLY_MATCHUP_LOGIT = {name: delta2 * 0.02 for name, delta2 in ALLY_DELTA2_VS_ENEMY6.items()}
-SYNERGY_LOGIT = 4 * SYNERGY_PER_PAIR * 0.01  # 0.08
+MATCHUP_LOGIT_PER_POINT = analysis_config.K_MATCHUP * 0.02
+SYNERGY_LOGIT_PER_POINT = analysis_config.K_SYNERGY * 0.02
+ALLY_MATCHUP_LOGIT = {
+    name: delta2 * MATCHUP_LOGIT_PER_POINT for name, delta2 in ALLY_DELTA2_VS_ENEMY6.items()
+}
+SYNERGY_LOGIT = 4 * SYNERGY_PER_PAIR * SYNERGY_LOGIT_PER_POINT
 # Enemy6 subit l'opposé de la somme alliée ; Enemy7-10 n'ont aucun matchup.
 ENEMY_MATCHUP_LOGIT = {
     "Enemy6": -sum(ALLY_MATCHUP_LOGIT.values()),
