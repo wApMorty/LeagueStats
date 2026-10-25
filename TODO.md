@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-10-22 (SPEC-42 close : maîtrise selon le matchup mesurée sur crawl.db, rien d'adopté ; SPEC-41 livrée : maîtrise personnelle dans le moteur de draft, mesurée sur crawl.db puis adoptée, recette @pj35 à faire ; SPEC-40 livrée : victoire immédiate sur les cartes de draft, comme le grimoire, recette @pj35 à faire ; SPEC-39 livrée : diagnostic complet et « Appliquer » sur l'écran Calibration, recette @pj35 à faire ; SPEC-38 livrée : trois pages de runes OneTricks au choix pendant la draft, recette @pj35 à faire ; SPEC-37 livrée : écran « Données » pour actualiser la base depuis le client, recette @pj35 à faire ; SPEC-36 livrée : morts sans contrepartie, axe et revue, recette @pj35 à faire ; SPEC-35 livrée : étude « Moneyball » du début de partie, aucune action adoptée ; SPEC-33 livrée : éclaireur et pastilles de forme en partie, terme de forme mesuré et refusé, recette @pj35 à faire, recette @pj35 à faire ; SPEC-32 livrée : classement MVP / ACE en post-game, recette @pj35 à faire ; SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette @pj35 à faire)
+**Mis à jour** : 2026-10-25 (SPEC-43 rédigée : force intrinsèque dans le moteur et recalibrage sur crawl.db, backtest de 96 987 parties ; SPEC-42 close : maîtrise selon le matchup mesurée sur crawl.db, rien d'adopté ; SPEC-41 livrée : maîtrise personnelle dans le moteur de draft, mesurée sur crawl.db puis adoptée, recette @pj35 à faire ; SPEC-40 livrée : victoire immédiate sur les cartes de draft, comme le grimoire, recette @pj35 à faire ; SPEC-39 livrée : diagnostic complet et « Appliquer » sur l'écran Calibration, recette @pj35 à faire ; SPEC-38 livrée : trois pages de runes OneTricks au choix pendant la draft, recette @pj35 à faire ; SPEC-37 livrée : écran « Données » pour actualiser la base depuis le client, recette @pj35 à faire ; SPEC-36 livrée : morts sans contrepartie, axe et revue, recette @pj35 à faire ; SPEC-35 livrée : étude « Moneyball » du début de partie, aucune action adoptée ; SPEC-33 livrée : éclaireur et pastilles de forme en partie, terme de forme mesuré et refusé, recette @pj35 à faire, recette @pj35 à faire ; SPEC-32 livrée : classement MVP / ACE en post-game, recette @pj35 à faire ; SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette @pj35 à faire)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -377,6 +377,25 @@ pile réelle sur faux LCU (§3). Découpage en SPEC-34 §5 (tâches 163 à 170, 
 | 169 | Scènes « En partie » (courbe SVG), « Revue et coaching » et « Mosaïque » ; `hero.gif` dans le README | 5 | 167, 168 | ✅ 2026-10-16 : teaser de 30,0 s en 1 920 × 1 080 sans audio (12,2 Mo) ; `hero.gif` 960 × 540 à 10 i/s, 4,1 Mo, encodé par ffmpeg (palette optimisée ; l'encodeur GIF de Remotion donnait 10,3 Mo), fond figé dans la boucle |
 | 170 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure ; recette à l'œil de @pj35 | 3 | 169 | ✅ 2026-10-16 ; recette à l'œil (captures, GIF, `docs/presentation/video/out/teaser.mp4`) laissée à @pj35 |
 
+### Lot SPEC-43, force intrinsèque et recalibrage sur `crawl.db` (🟡 rédigée le 2026-10-25)
+
+[SPEC-43](docs/specs/SPEC-43-force-intrinseque-et-recalibrage.md) fait suite à une défaite sur Olaf (prédiction
+257). Le moteur n'était pas en faute : Olaf reste 1er de la pool, porté par la maîtrise. Mais le backtest sur
+96 987 parties de `crawl.db` trouve deux défauts systémiques. La force intrinsèque manque au logit (AUC 0,530 →
+0,552, gain +0,022 avec un IC 90 % de [+0,019 ; +0,025], critère de SPEC-18 phase B rempli), et le logit est
+surconfiant (coefficient 0,66). Terme par champion dans `GameEvaluator.contribution`, trois K ajustés ensemble,
+`MODEL_VERSION` `spec43-v1`, backtest manuel comme critère permanent, calibration perso de SPEC-39 conservée et
+étendue. Arbitrages validés le 2026-10-25. Découpage en SPEC-43 §5 (tâches 209 à 214, 15 pts) :
+
+| # | Tâche | Pts | Dépend de | État |
+|---|---|---|---|---|
+| 209 | `GameEvaluator` : terme de force intrinsèque dans `contribution`, `K_INTRINSIC` provisoire à 0,82 + tests | 3 | — | ⬜ |
+| 210 | `scripts/backtest_draft_model.py` : backtest sur `crawl.db`, CV, IC 90 %, K ajustés + tests ; mesure en §8 | 5 | 209 | ⬜ |
+| 211 | `config_constants` : K de 210, `MODEL_VERSION` `spec43-v1` ; 210 relancé, coefficient en vigueur ≈ 1 | 1 | 210 | ⬜ |
+| 212 | `calibration.json` : `K_INTRINSIC`, garde de version périmée, SPEC-39 (console et client) + tests | 3 | 211 | ⬜ |
+| 213 | Étude de maîtrise relancée sur le nouveau logit, `MASTERY_LOGIT_PER_POINT` revu si hors IC95 ; §8 | 2 | 211 | ⬜ |
+| 214 | Clôture : suppression du script SPEC-18, SPEC-18, README des specs, `CHANGELOG.md`, `TODO.md` | 1 | 212, 213 | ⬜ |
+
 ### Lot SPEC-42, maîtrise selon le matchup (✅ close le 2026-10-22, rien d'adopté)
 
 [SPEC-42](docs/specs/SPEC-42-maitrise-selon-le-matchup.md) mesure si la maîtrise de SPEC-41 doit dépendre du
@@ -565,7 +584,6 @@ rétréci. Le modèle de prédiction ne change pas (approche C, @pj35).
 |---|---|---|
 | Recherche parallèle à la racine (`multiprocessing`, phase 2) | SPEC-17 §5 | Après le sprint 3, si le bench montre une profondeur < 5 en premier pick, ou si le premier pick reste mal conseillé à l'usage |
 | Recherche en tâche de fond pendant le chrono de pick (« pondering ») | SPEC-17 §7 | Après le sprint 3, si la profondeur reste le facteur limitant ; chantier d'UI (sortir `rank()` de la boucle du monitor) |
-| Force intrinsèque dans `GameEvaluator` (SPEC-05 §3.3, jamais implémentée) | SPEC-18 §3 | `scripts/compare_intrinsic_strength.py` donne une borne basse d'IC > 0 (au 2026-09-24 : +0,019 d'AUC, IC [−0,053 ; +0,090] sur 72 parties) |
 | Modèle de win chance plus riche (arbre boosté, puis réseau de neurones), entraînement éventuellement dans un projet adjacent | SPEC-20 §13 | La logistique de la phase 2 est mesurée (Brier, calibration, coût de l'exclusion de l'or) et laisse une marge |
 | Moteur d'optimisation, phase A (shrinkage mesuré du WPA) | SPEC-16 §2 | Coachless donne son autorisation écrite : le spike (SPEC-15 §2.1.1, 2026-09-24) confirme un WPA par composant avec échantillons, mais les CGU interdisent l'accès direct à l'API |
 
