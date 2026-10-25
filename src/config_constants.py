@@ -268,6 +268,20 @@ class AnalysisConfig:
     MASTERY_LOGIT_PER_POINT: float = 0.0717
     MASTERY_K: float = 42.4
 
+    # SPEC-43 §4.2, tâche 210 : backtest du modèle de draft (scripts/backtest_draft_model.py).
+    # Files 420 (SoloQ) et 440 (Flex), comme le backtest de SPEC-43 §1.3 (96 987 parties retenues).
+    BACKTEST_QUEUE_IDS: Tuple[int, ...] = (420, 440)
+    # SPEC-43 §4.2 : écarte les remakes et les abandons précoces (même seuil que SPEC-43 §1.3, 15 min).
+    BACKTEST_MIN_DURATION_S: int = 900
+    # SPEC-43 §1.3 : validation croisée à 5 plis, comme les validations de SPEC-20 à SPEC-41.
+    BACKTEST_FOLDS: int = 5
+    # SPEC-43 §1.3 : 200 tirages bootstrap pour les IC des gains d'AUC et de Brier.
+    BACKTEST_BOOTSTRAP: int = 200
+    # Graine du découpage en plis et du bootstrap, égale au numéro de la spec : mesure reproductible.
+    BACKTEST_SEED: int = 43
+    # SPEC-43 §2 : quantile normal bilatéral de l'IC 90 % de Wald des coefficients (1,645).
+    BACKTEST_Z90: float = 1.645
+
 
 @dataclass
 class DraftConfig:
