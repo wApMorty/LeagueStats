@@ -253,3 +253,11 @@ Diagnostic, rien d'adopté : le poids du duel de lane préféré par les donnée
 script comparait à tort le rapport brut des coefficients à 2 ; il affiche désormais le poids effectif
 (`effective_lane_weight`, corrigé en 211 avec son test).
 
+### 8.4 Maîtrise relancée sur le nouveau logit (213)
+
+`python scripts/measure_mastery_term.py`, 2026-10-25 : 4 865 parties retenues, 305 joueurs focaux (SPEC-41 :
+81 969 parties, 24 438 joueurs), la purge de §8.1 ayant retiré le 16.20. Variante a : b = −0,003 logit/pt,
+IC95 [−0,46 ; +0,44], gain de Brier −0,00002 [−0,00007 ; +0,00004]. L'intervalle est 35 fois plus large que celui
+de SPEC-41 [0,060 ; 0,084], qu'il contient entièrement : la mesure n'a pas la puissance de remettre en cause le
+coefficient. `MASTERY_LOGIT_PER_POINT` reste à 0,0717 et `MASTERY_K` à 42,4. À relancer quand le patch en cours
+aura accumulé un échantillon comparable à celui de SPEC-41.

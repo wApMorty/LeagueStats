@@ -393,7 +393,7 @@ surconfiant (coefficient 0,66). Terme par champion dans `GameEvaluator.contribut
 | 210 | `scripts/backtest_draft_model.py` : backtest sur `crawl.db`, CV, IC 90 %, K ajustés + tests ; mesure en §8 | 5 | 209 | ✅ 2026-10-25 : script et 6 tests ; la mesure sur `crawl.db` est faite et consignée avec 211 (reportée pendant une partie de @pj35) |
 | 211 | `config_constants` : K de 210, `MODEL_VERSION` `spec43-v1` ; 210 relancé, coefficient en vigueur ≈ 1 | 1 | 210 | ✅ 2026-10-25 : purge du 16.20 par le crawler, K pris sur les 96 987 parties du cache (décision @pj35) : K_MATCHUP 0,68, K_SYNERGY 1,49, K_INTRINSIC 0,83 ; sur 5 158 parties 16.21, AUC en vigueur 0,538 → 0,548 et coefficient 0,995 [0,75 ; 1,24] |
 | 212 | `calibration.json` : `K_INTRINSIC`, garde de version périmée, SPEC-39 (console et client) + tests | 3 | 211 | ✅ 2026-10-25 (passée avant 211, valeurs indépendantes) : `K_INTRINSIC` facultatif, `base_version`, fichier d'une autre base ignoré avec `[INFO]`, proposition à trois K ; 15 tests ajoutés |
-| 213 | Étude de maîtrise relancée sur le nouveau logit, `MASTERY_LOGIT_PER_POINT` revu si hors IC95 ; §8 | 2 | 211 | ⬜ |
+| 213 | Étude de maîtrise relancée sur le nouveau logit, `MASTERY_LOGIT_PER_POINT` revu si hors IC95 ; §8 | 2 | 211 | ✅ 2026-10-25 : 4 865 parties seulement (purge), b = −0,003 [−0,46 ; +0,44], IC 35 fois plus large que celui de SPEC-41 qu'il contient : coefficient gardé à 0,0717, à relancer sur un patch plus fourni |
 | 214 | Clôture : suppression du script SPEC-18, SPEC-18, README des specs, `CHANGELOG.md`, `TODO.md` | 1 | 212, 213 | ⬜ |
 
 ### Lot SPEC-42, maîtrise selon le matchup (✅ close le 2026-10-22, rien d'adopté)
