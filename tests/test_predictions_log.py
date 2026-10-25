@@ -109,6 +109,7 @@ class TestDraftMonitorBestEffortLogging:
         # les lookups de paires avant même l'enregistrement de la prédiction.
         monitor.assistant.db.get_all_matchups_bulk.return_value = {}
         monitor.assistant.db.get_all_synergies_bulk.return_value = {}
+        monitor.assistant.db.get_lane_winrates.return_value = {}
         return ally_ids, enemy_ids
 
     def test_insert_prediction_failure_is_silent(self, monitor, capsys):

@@ -40,6 +40,7 @@ def monitor():
     # ferait exploser les lookups de paires.
     assistant.db.get_all_matchups_bulk.return_value = {}
     assistant.db.get_all_synergies_bulk.return_value = {}
+    assistant.db.get_lane_winrates.return_value = {}
     assistant.db.get_all_champion_scores.return_value = []
 
     with patch("src.draft_monitor.LCUClient", return_value=Mock()):

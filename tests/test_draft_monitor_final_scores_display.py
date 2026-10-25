@@ -98,6 +98,7 @@ def monitor():
     ]
     monitor.assistant.db.get_all_matchups_bulk.return_value = MATCHUPS
     monitor.assistant.db.get_all_synergies_bulk.return_value = SYNERGIES
+    monitor.assistant.db.get_lane_winrates.return_value = {}
     monitor.assistant.db.insert_prediction.return_value = 7
     return monitor
 

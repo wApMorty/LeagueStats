@@ -21,11 +21,18 @@ class FakeDB:
     PONDÉRATION (même lane ou non), pas la table consultée.
     """
 
-    def __init__(self, matchups=None, synergies=None, meta=None):
+    def __init__(self, matchups=None, synergies=None, meta=None, winrates=None):
         self.matchups = matchups or {}
         self.synergies = synergies or {}
         self.meta = meta or {}
+        # SPEC-43 : {lane (None = toutes lanes): {nom: (winrate, games)}}.
+        self.winrates = winrates or {}
+        self.winrate_lanes = []
         self.matchup_loads = 0
+
+    def get_lane_winrates(self, lane):
+        self.winrate_lanes.append(lane)
+        return self.winrates.get(lane, {})
 
     def get_all_matchups_bulk(self, lane=None, with_games=False):
         self.matchup_loads += 1
@@ -261,3 +268,102 @@ class TestPairCache:
             assert evaluator.matchup_logit(champion, enemy) == evaluator._matchup_logit(
                 champion, enemy
             )
+
+
+class TestIntrinsicStrength:
+    """SPEC-43 : la force d'un champion (winrate de lane rétréci − moyenne) est un
+    terme à un seul champion, compté à sa pose, et ne doit casser ni
+    l'antisymétrie ni l'indépendance de l'ordre dont dépend la recherche."""
+
+    # Assez de games pour que le rétrécissement soit négligeable ; moyenne pondérée 50 %.
+    TOP = {"Jax": (54.0, 10_000_000), "Garen": (46.0, 10_000_000)}
+    JUNGLE = {"Amumu": (48.0, 10_000_000), "Other": (52.0, 10_000_000)}
+    SUPPORT = {"Nautilus": (53.0, 10_000_000), "Lulu": (47.0, 10_000_000)}
+
+    @pytest.fixture
+    def strong(self, monkeypatch):
+        monkeypatch.setattr(analysis_config, "K_INTRINSIC", 0.8)
+        db = FakeDB(
+            matchups={("jax", "garen"): (6.0, 10_000), ("garen", "jax"): (-2.0, 10_000)},
+            synergies={("jax", "nautilus"): (4.0, 10_000)},
+            winrates={
+                "top": self.TOP,
+                "jungle": self.JUNGLE,
+                "support": self.SUPPORT,
+                None: {"Jax": (51.0, 10_000_000), "Garen": (49.0, 10_000_000)},
+            },
+        )
+        return GameEvaluator(db)
+
+    def test_lone_champion_contributes_its_strength(self, strong):
+        assert strong.strength_points(("Jax", "top")) == pytest.approx(4.0, abs=0.01)
+        assert strong.contribution(("Jax", "top"), [], []) == pytest.approx(
+            winrate_points_to_logit(4.0 * 0.8), abs=1e-4
+        )
+
+    def test_unknown_lane_reads_the_all_lanes_winrate(self, strong):
+        assert strong.strength_points(("Jax", None)) == pytest.approx(1.0, abs=0.01)
+        assert None in strong.db.winrate_lanes
+
+    def test_champion_without_data_is_average(self, strong):
+        assert strong.strength_points(("Inconnu", "top")) == 0.0
+        assert strong.intrinsic_logit(("Inconnu", "top")) == 0.0
+
+    def test_zero_weight_leaves_contribution_unchanged(self, strong, monkeypatch):
+        allies = [("Nautilus", "support")]
+        enemies = [("Garen", "top")]
+        pairs_only = sum(strong.matchup_logit(("Jax", "top"), e) for e in enemies) + sum(
+            strong.synergy_logit(("Jax", "top"), a) for a in allies
+        )
+        monkeypatch.setattr(analysis_config, "K_INTRINSIC", 0.0)
+
+        assert strong.contribution(("Jax", "top"), allies, enemies) == pairs_only
+
+    def test_swapping_teams_flips_the_logit(self, strong):
+        allies = [("Jax", "top"), ("Nautilus", "support"), ("Amumu", "jungle")]
+        enemies = [("Garen", "top"), ("Lulu", "support")]
+
+        assert strong.team_logit(allies, enemies) != 0.0
+        assert strong.team_logit(allies, enemies) == pytest.approx(
+            -strong.team_logit(enemies, allies)
+        )
+
+    def test_incremental_sum_is_order_independent(self, strong):
+        allies = [("Jax", "top"), ("Nautilus", "support")]
+        enemies = [("Garen", "top"), ("Amumu", "jungle")]
+        expected = strong.team_logit(allies, enemies)
+
+        for mask in set(itertools.permutations([True, True, False, False])):
+            placed_allies, placed_enemies = [], []
+            ally_iter, enemy_iter = iter(allies), iter(enemies)
+            total = 0.0
+            for is_ally in mask:
+                if is_ally:
+                    champion = next(ally_iter)
+                    total += strong.contribution(champion, placed_allies, placed_enemies)
+                    placed_allies.append(champion)
+                else:
+                    champion = next(enemy_iter)
+                    total -= strong.contribution(champion, placed_enemies, placed_allies)
+                    placed_enemies.append(champion)
+            assert total == pytest.approx(expected)
+
+    def test_strength_table_is_loaded_once_per_lane(self, strong):
+        strong.strength_points(("Jax", "top"))
+        loads = strong.db.winrate_lanes.count("top")
+        strong.strength_points(("Garen", "top"))
+
+        assert loads == 1
+        assert strong.db.winrate_lanes.count("top") == 1
+
+
+def test_synergy_points_converted_match_synergy_logit(evaluator):
+    """SPEC-43 : `synergy_points` extrait de `_synergy_logit` sans en changer la valeur."""
+    pair = (("Jax", "top"), ("Nautilus", "support"))
+
+    assert evaluator.synergy_logit(*pair) == pytest.approx(
+        winrate_points_to_logit(4.0 * analysis_config.K_SYNERGY) * confidence(10_000)
+    )
+    assert winrate_points_to_logit(
+        evaluator.synergy_points(*pair) * analysis_config.K_SYNERGY
+    ) == pytest.approx(evaluator.synergy_logit(*pair))

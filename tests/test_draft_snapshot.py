@@ -40,6 +40,7 @@ def monitor():
     assistant.db = Mock()
     assistant.db.get_all_matchups_bulk.return_value = {}
     assistant.db.get_all_synergies_bulk.return_value = {}
+    assistant.db.get_lane_winrates.return_value = {}
     assistant.db.get_all_champion_scores.return_value = []
     assistant.get_matchups_for_draft.side_effect = lambda name, lane=None: (
         [] if name == "Malphite" else [_matchup(12500 if name == "Aatrox" else 840)]

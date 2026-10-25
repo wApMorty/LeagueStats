@@ -29,6 +29,10 @@ class FakeDB:
     def get_all_synergies_bulk(self, lane=None, with_games=False):
         return {}
 
+    def get_lane_winrates(self, lane):
+        """SPEC-43 : aucune force intrinsèque, la recherche est testée sur les seuls matchups."""
+        return {}
+
     def get_meta(self, key):
         """SPEC-13 : lu par GameEvaluator pour le shrink mesuré. Vide ici, donc
         repli sur CONFIDENCE_K — la recherche est testée sur son classement,

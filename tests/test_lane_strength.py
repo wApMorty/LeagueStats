@@ -8,7 +8,7 @@ Kassadin sortait 1er en top sur 606 parties.
 import pytest
 
 from src.analysis.champion_scores import GlobalScoreCalculator
-from src.analysis.shrink import shrunk_lane_winrates
+from src.analysis.shrink import lane_strength, shrunk_lane_winrates
 from src.analysis.tier_list import TierListGenerator
 
 
@@ -63,6 +63,22 @@ class TestShrunkLaneWinrates:
     def test_empty_lane_returns_empty(self):
         assert shrunk_lane_winrates(_FakeDb({}), "top") == {}
 
+
+
+class TestLaneStrength:
+    """SPEC-43 : force = winrate rétréci − moyenne pondérée de la lane, clés en minuscules."""
+
+    def test_centered_on_the_weighted_lane_mean(self):
+        raw = {"Strong": (56.0, 1_000_000), "Weak": (52.0, 3_000_000)}
+
+        strength = lane_strength(_FakeDb(raw), "top")
+
+        # Moyenne pondérée : (56 + 3 * 52) / 4 = 53.
+        assert strength["strong"] == pytest.approx(3.0, abs=0.01)
+        assert strength["weak"] == pytest.approx(-1.0, abs=0.01)
+
+    def test_empty_lane_returns_empty(self):
+        assert lane_strength(_FakeDb({}), "top") == {}
 
 def test_tier_list_performance_ignores_avg_delta2_noise(db, scorer, insert_matchup):
     """Un delta2 spectaculaire sur un petit échantillon ne fait plus la

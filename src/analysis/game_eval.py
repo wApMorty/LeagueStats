@@ -10,9 +10,12 @@ Forme retenue — une seule somme, sur les PAIRES et non sur les champions :
 
     logit(P_alliés) = Σ_{i allié, j ennemi} w(i,j) · c(i,j) · K_MATCHUP · δ(i,j)
                     + K_SYNERGY · ( Σ_{paires alliées} s − Σ_{paires ennemies} s )
+                    + K_INTRINSIC · ( Σ_{i allié} f(i) − Σ_{j ennemi} f(j) )
 
     δ(i,j) = (delta2(i→j) − delta2(j→i)) / 2        antisymétrique : δ(j,i) = −δ(i,j)
     s(a,b) = (syn(a→b) + syn(b→a)) / 2              symétrique
+    f(i)   = winrate de lane rétréci − moyenne      force intrinsèque (SPEC-43), seul
+                                                    terme à un champion : compté à sa pose
     w(i,j) = SAME_LANE_WEIGHT si même lane, sinon OTHER_LANE_WEIGHT
     c(i,j) = confidence(games, K)                   shrink des faibles échantillons,
                                                     K mesuré par type (SPEC-13)
@@ -37,7 +40,7 @@ from typing import Dict, Iterable, Optional, Sequence, Tuple
 
 from ..config_constants import analysis_config, role_inference_config
 from .probability import confidence, sigmoid, winrate_points_to_logit
-from .shrink import read_shrink_k
+from .shrink import lane_strength, read_shrink_k
 
 # (delta2 pondéré, games) par paire de noms en minuscules.
 PairTable = Dict[Tuple[str, str], Tuple[float, int]]
@@ -66,6 +69,7 @@ class GameEvaluator:
         self.verbose = verbose
         self._matchups: Dict[str, PairTable] = {}
         self._synergies: Dict[str, PairTable] = {}
+        self._strength: Dict[str, Dict[str, float]] = {}
         self._matchup_cache: Dict[Tuple[Placed, Placed], float] = {}
         self._synergy_cache: Dict[Tuple[Placed, Placed], float] = {}
         # SPEC-13 : demi-poids mesuré sur les données au dernier scrape, lu une
@@ -110,6 +114,20 @@ class GameEvaluator:
         for lane in lanes:
             self._matchup_table(lane)
             self._synergy_table(lane)
+            self._strength_table(lane)
+
+    def _strength_table(self, lane: Optional[str]) -> Dict[str, float]:
+        """Force de chaque champion sur ``lane`` (SPEC-43), chargée à la première demande.
+
+        ``lane=None`` lit le winrate toutes lanes, comme les paires se replient
+        sur la table toutes lanes.
+        """
+        key = lane or analysis_config.ALL_LANES_KEY
+        if key not in self._strength:
+            self._strength[key] = lane_strength(self.db, lane)
+            if self.verbose:
+                print(f"[EVAL] Force lane={key!r} : {len(self._strength[key])} champions")
+        return self._strength[key]
 
     # ---------- termes de paires ----------
 
@@ -186,6 +204,15 @@ class GameEvaluator:
         Symétrique : s(a,b) = s(b,a). Le signe est appliqué par l'appelant —
         positif pour une paire alliée, négatif pour une paire ennemie.
         """
+        return winrate_points_to_logit(
+            self.synergy_points(champion, ally) * analysis_config.K_SYNERGY
+        )
+
+    def synergy_points(self, champion: Placed, ally: Placed) -> float:
+        """Synergie de la paire en points de winrate rétrécis, sans ``K_SYNERGY`` (SPEC-43).
+
+        Pendant de ``duel_points`` : le backtest y lit le terme brut pour en ajuster le poids.
+        """
         name, lane = champion
         ally_name, ally_lane = ally
         forward = self._synergy_table(lane).get((name.lower(), ally_name.lower()))
@@ -201,9 +228,19 @@ class GameEvaluator:
         else:
             return 0.0
 
-        return winrate_points_to_logit(delta2 * analysis_config.K_SYNERGY) * confidence(
-            games, self._k_synergy
-        )
+        return delta2 * confidence(games, self._k_synergy)
+
+    # ---------- force intrinsèque ----------
+
+    def strength_points(self, champion: Placed) -> float:
+        """Force de ``champion`` sur sa lane, en points de winrate au-dessus de la
+        moyenne de la lane, sans ``K_INTRINSIC`` (SPEC-43). 0.0 sans données."""
+        name, lane = champion
+        return self._strength_table(lane).get(name.lower(), 0.0)
+
+    def intrinsic_logit(self, champion: Placed) -> float:
+        """Log-odds apporté à son camp par la force de ``champion``."""
+        return winrate_points_to_logit(self.strength_points(champion) * analysis_config.K_INTRINSIC)
 
     # ---------- composition ----------
 
@@ -216,9 +253,11 @@ class GameEvaluator:
         L'appelant l'ajoute au logit allié si le champion est allié, le
         soustrait s'il est ennemi. ``own_team``/``opposing_team`` ne doivent pas
         déjà contenir ``champion`` : chaque paire n'est comptée qu'une fois, au
-        moment où son second membre arrive.
+        moment où son second membre arrive. Sa force intrinsèque est comptée ici,
+        une seule fois aussi (SPEC-43).
         """
-        total = sum(self.matchup_logit(champion, enemy) for enemy in opposing_team)
+        total = self.intrinsic_logit(champion)
+        total += sum(self.matchup_logit(champion, enemy) for enemy in opposing_team)
         total += sum(self.synergy_logit(champion, ally) for ally in own_team)
         return total
 

@@ -222,15 +222,33 @@ def shrunk_lane_winrates(db, lane: Optional[str]) -> Dict[str, float]:
     Returns:
         {nom du champion: winrate rétréci en %} ; vide sans données.
     """
-    raw = db.get_lane_winrates(lane)
+    return _shrunk(db.get_lane_winrates(lane))[0]
+
+
+def _shrunk(raw: Dict[str, tuple]) -> Tuple[Dict[str, float], float]:
+    """``({nom: winrate rétréci}, moyenne pondérée)`` de ``raw`` ; ``({}, 0.0)`` sans games."""
     total_games = sum(games for _, games in raw.values())
     if not total_games:
-        return {}
+        return {}, 0.0
     mean = sum(winrate * games for winrate, games in raw.values()) / total_games
     k = estimate_shrink_k([(wr - mean, wr, games) for wr, games in raw.values()])
     if k is None:
         k = float(analysis_config.CONFIDENCE_K)
-    return {
+    shrunk = {
         name: mean + (winrate - mean) * confidence(games, k)
         for name, (winrate, games) in raw.items()
     }
+    return shrunk, mean
+
+
+def lane_strength(db, lane: Optional[str]) -> Dict[str, float]:
+    """Force de chaque champion sur ``lane`` : winrate rétréci moins la moyenne de la lane (SPEC-43).
+
+    La moyenne est pondérée par les games, comme dans ``shrunk_lane_winrates`` : un champion moyen
+    vaut 0, quel que soit le niveau absolu des winrates LoLalytics (~52,4 %).
+
+    Returns:
+        {nom du champion en minuscules: écart en points de winrate} ; vide sans données.
+    """
+    shrunk, mean = _shrunk(db.get_lane_winrates(lane))
+    return {name.lower(): value - mean for name, value in shrunk.items()}

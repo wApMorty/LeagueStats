@@ -173,6 +173,9 @@ class AnalysisConfig:
     # une fois la table `predictions` alimentée (scripts/calibrate_model.py).
     K_MATCHUP: float = 1.0
     K_SYNERGY: float = 0.5
+    # SPEC-43 : poids de la force intrinsèque (winrate de lane rétréci − moyenne). Neutre (0.0) tant
+    # que la tâche 211 n'a pas posé la valeur ajustée sur crawl.db avec le changement de MODEL_VERSION.
+    K_INTRINSIC: float = 0.0
 
     # Doit changer à chaque modification de LOGIT_PER_WINRATE_POINT/K_MATCHUP/
     # K_SYNERGY/CONFIDENCE_K, sinon scripts/calibrate_model.py mélange des
