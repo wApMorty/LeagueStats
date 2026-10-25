@@ -14,7 +14,6 @@ from src.analysis.calibration import (
     calibration_buckets,
     calibration_curve,
     fetch_labeled_predictions,
-    intrinsic_points,
     suggest_scale,
 )
 
@@ -106,14 +105,6 @@ def test_auc_perfect_random_and_inverted():
 def test_auc_without_both_outcomes_is_uninformative():
     assert auc([(0.9, 1), (0.8, 1)]) == 0.5
     assert auc([]) == 0.5
-
-
-def test_intrinsic_points_is_ally_minus_enemy_and_missing_counts_as_mean():
-    strength = {"top": {"Garen": 2.0, "Teemo": -1.0}, "middle": {"Ahri": 0.5}}
-    allies = [("Garen", "top"), ("Ahri", "middle"), ("Unknown", "jungle")]
-    enemies = [("Teemo", "top"), ("Zed", "middle"), ("Ahri", None)]
-
-    assert intrinsic_points(allies, enemies, strength) == 2.0 + 0.5 - (-1.0)
 
 
 def _lcg_rows(count=80):

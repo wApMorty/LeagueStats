@@ -1,7 +1,8 @@
 # SPEC-18 — La force d'un champion, c'est son winrate de lane, pas `avg_delta2`
 
-**Statut** : 🟢 Phases A et A2 (§4) **implémentées le 2026-09-24**. Phase B **reportée**, à rouvrir sur mesure
-(approche C, choisie par @pj35 le 2026-09-24).
+**Statut** : 🟢 Phases A et A2 (§4) **implémentées le 2026-09-24**. Phase B **reprise par
+[SPEC-43](SPEC-43-force-intrinseque-et-recalibrage.md)** le 2026-10-25 : critère de réouverture rempli sur 96 987
+parties de `crawl.db` (gain d'AUC +0,022, IC 90 % [+0,019 ; +0,025]).
 
 **Origine** : la tâche reportée « shrink de `avg_delta2` dans la tier list » (SPEC-17 §7,
 Kassadin 1er en top). Mesurée avant d'écrire la spec, elle ne tenait pas : il n'y a rien à
@@ -69,7 +70,10 @@ compteur de calibration continue). La colonne `champion_scores.avg_delta2` reste
 n'est plus lue par la tier list. La stabilité et la couverture (dérivées de `delta2`) n'ont pas été
 mesurées.
 
-## 3. Phase B — reportée, décidée sur mesure
+## 3. Phase B — reprise par SPEC-43 (2026-10-25)
+
+`scripts/compare_intrinsic_strength.py` est supprimé, remplacé par `scripts/backtest_draft_model.py`.
+Texte d'origine conservé ci-dessous.
 
 Ajouter le terme de SPEC-05 §3.3 à `GameEvaluator`. Coût : bump de `MODEL_VERSION`, donc
 compteur de calibration remis à 0 et pondération par lane restante désactivée jusqu'à 30 parties.

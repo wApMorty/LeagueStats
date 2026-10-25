@@ -10,7 +10,7 @@ numpy/scipy/sklearn on a 2-parameter logistic regression).
 
 import math
 import random
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import List, Optional, Sequence, Tuple
 
 Row = Tuple[float, int]  # (predicted_probability, outcome)
 
@@ -150,24 +150,3 @@ def auc(scored: Sequence[Tuple[float, int]]) -> float:
         return 0.5
     pairs = sum((w > l) + 0.5 * (w == l) for w in wins for l in losses)
     return pairs / (len(wins) * len(losses))
-
-
-Placed = Tuple[str, Optional[str]]  # (champion, lane)
-
-
-def intrinsic_points(
-    allies: Sequence[Placed],
-    enemies: Sequence[Placed],
-    strength: Dict[Optional[str], Dict[str, float]],
-) -> float:
-    """Écart de force intrinsèque entre les deux camps, en points de winrate
-    (SPEC-18, terme de SPEC-05 §3.3 jamais implémenté).
-
-    ``strength[lane][champion]`` est l'écart du winrate de lane rétréci à la
-    moyenne de la lane. Un champion sans donnée sur sa lane vaut la moyenne (0).
-    """
-
-    def total(team: Sequence[Placed]) -> float:
-        return sum(strength.get(lane, {}).get(champion, 0.0) for champion, lane in team)
-
-    return total(allies) - total(enemies)

@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### ✨ Feature
+
+- **Le coach de draft tient compte de la force de chaque champion (SPEC-43)** — jusqu'ici, la probabilité de victoire ne sommait que les matchups et les synergies, sans la force propre d'un champion sur sa lane. Elle ajoute maintenant son winrate de lane rétréci, pour les dix champions, ce que la recherche voit aussi chez l'adversaire. Les trois poids du modèle sont recalibrés sur 96 987 parties de `crawl.db` : matchups 0,68 (contre 1,0), synergies 1,49 (contre 0,5), force 0,83. L'AUC passe de 0,530 à 0,553 ; sur 5 158 parties du patch suivant, de 0,538 à 0,548, avec des probabilités enfin calibrées (le modèle annonçait des écarts 1,5 fois trop grands). Nouvelle version du modèle `spec43-v1` : le compteur de calibration repart de 0, la pondération par lane restante revient après 30 parties. Un `calibration.json` réglé pour l'ancienne version est ignoré, avec un message ; l'écran Calibration règle aussi le poids de la force. `scripts/backtest_draft_model.py` rejoue le modèle sur `crawl.db` et devient le passage obligé de tout changement du modèle ; il remplace `scripts/compare_intrinsic_strength.py`.
+
 ### 🐛 Fix
 
 - **La page de runes de la draft suit l'adversaire de lane** — quand ton adversaire apparaît après ton lock, le Live Coach écrivait bien la page et les sorts du duel dans le client LoL, mais la colonne loadout gardait la page générale. Elle se recharge maintenant dès que la page écrite, l'adversaire ou ton poste change (sauf page modifiée à la main).
