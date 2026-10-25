@@ -15,8 +15,9 @@ débriefe à la fin.
 ### La draft, en direct
 
 Pendant le champion select, le coach lit la draft dans le client LoL et classe les champions de ta pool
-selon la victoire prédite face à la composition adverse. Il anticipe aussi les picks qui restent à
-jouer, et tient compte de ton niveau sur chaque champion, tiré de tes propres parties : un champion
+selon la victoire prédite face à la composition adverse : force de chaque champion sur sa lane,
+duels et synergies, avec des poids calibrés sur des dizaines de milliers de parties classées. Il anticipe
+aussi les picks qui restent à jouer, et tient compte de ton niveau sur chaque champion, tiré de tes propres parties : un champion
 sur lequel tu performes mal ne passe en tête que si la draft le justifie vraiment. En phase de bans, il chiffre les menaces qui pèsent sur ta pool. Un clic suffit pour survoler ou
 verrouiller. Au verrouillage, il écrit dans le client les runes, sorts et objets les plus joués par les
 one-tricks de ton champion, affinés contre ton adversaire direct. Tu peux aussi comparer les trois

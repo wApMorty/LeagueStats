@@ -125,6 +125,7 @@ scripts/
 ├── auto_update_db.py          # Ancien orchestrateur, superseded par update_all.py — pas utilisé
 ├── repair_data.py               # Réparation ciblée de données incomplètes
 ├── calibrate_model.py            # Calibration des coefficients du modèle log-odds (SPEC-05 B7)
+├── backtest_draft_model.py        # Backtest du modèle de draft sur crawl.db, passage obligé de tout changement (SPEC-43)
 ├── bench_scout.py, measure_scout_quartiles.py  # Banc de l'éclaireur, seuils de la pastille (SPEC-33)
 ├── measure_form_term.py           # Mesure du terme de forme dans la win chance (SPEC-33, refusé le 2026-10-21)
 ├── monitor_crawl.py               # Suivi en direct de crawl.db : débit, couverture, verrou (SPEC-33)
