@@ -15,6 +15,7 @@ USAGE:
 
 import argparse
 import itertools
+import json
 import random
 import shutil
 import sqlite3
@@ -120,14 +121,13 @@ def read_games(
     Les identifiants sont lus d'abord, puis une ligne à la fois : une ligne illisible (erreur SQLite,
     blob qui ne se décompresse pas) est comptée dans `illisibles` et sautée.
     """
-    placeholders = ",".join("?" * len(cfg.BACKTEST_QUEUE_IDS))
     ids = [
         game_id
         for (game_id,) in crawl_db.execute(
-            f"SELECT game_id FROM crawl_games WHERE read_utc IS NOT NULL "
-            f"AND queue_id IN ({placeholders}) "
+            "SELECT game_id FROM crawl_games WHERE read_utc IS NOT NULL "
+            "AND queue_id IN (SELECT value FROM json_each(?)) "
             "ORDER BY game_creation_utc DESC, game_id DESC LIMIT ?",
-            (*cfg.BACKTEST_QUEUE_IDS, limit if limit else -1),
+            (json.dumps(cfg.BACKTEST_QUEUE_IDS), limit if limit else -1),
         )
     ]
     games: List[Game] = []

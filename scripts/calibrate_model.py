@@ -101,18 +101,20 @@ def main() -> None:
     scale = suggest_scale(rows)
     print(f"\n[CALIBRATE] Suggested log-odds scale factor: {scale:.3f}")
     if abs(scale - 1.0) < 0.05:
-        print("[CALIBRATE] Close to 1.0 -- current k_m/k_s look reasonably calibrated.")
+        print("[CALIBRATE] Close to 1.0 -- current k_m/k_s/k_i look reasonably calibrated.")
     else:
         k_m_suggested = analysis_config.K_MATCHUP * scale
         k_s_suggested = analysis_config.K_SYNERGY * scale
+        k_i_suggested = analysis_config.K_INTRINSIC * scale
         direction = (
             "more confident (further from 50%)" if scale > 1.0 else "more cautious (closer to 50%)"
         )
         print(
             f"[CALIBRATE] Predictions should be {direction}. As a starting point: "
             f"k_m {analysis_config.K_MATCHUP:.2f} -> {k_m_suggested:.2f}, "
-            f"k_s {analysis_config.K_SYNERGY:.2f} -> {k_s_suggested:.2f} (uniform scaling -- "
-            "this script can't separate the matchup and synergy contributions from a "
+            f"k_s {analysis_config.K_SYNERGY:.2f} -> {k_s_suggested:.2f}, "
+            f"k_i {analysis_config.K_INTRINSIC:.2f} -> {k_i_suggested:.2f} (uniform scaling -- "
+            "this script can't separate the matchup, synergy and strength contributions from a "
             "stored predicted_probability alone; treat this as a starting point for "
             "manual tuning, not a final answer)."
         )
