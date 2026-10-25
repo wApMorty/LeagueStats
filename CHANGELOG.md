@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+## [5.10.0] - 2026-10-25
+
+Le coach de draft tient compte de la force propre de chaque champion sur sa lane, et ses poids sont recalibrés sur des dizaines de milliers de parties classées : des probabilités plus justes et calibrées. La page de runes de la draft suit aussi l'adversaire de lane. Aucune action requise : pas de migration Alembic, pas de scrape ; le compteur de calibration repart de 0 sous la nouvelle version du modèle `spec43-v1`.
+
 ### ✨ Feature
 
 - **Le coach de draft tient compte de la force de chaque champion (SPEC-43)** — jusqu'ici, la probabilité de victoire ne sommait que les matchups et les synergies, sans la force propre d'un champion sur sa lane. Elle ajoute maintenant son winrate de lane rétréci, pour les dix champions, ce que la recherche voit aussi chez l'adversaire. Les trois poids du modèle sont recalibrés sur 96 987 parties de `crawl.db` : matchups 0,68 (contre 1,0), synergies 1,49 (contre 0,5), force 0,83. L'AUC passe de 0,530 à 0,553 ; sur 5 158 parties du patch suivant, de 0,538 à 0,548, avec des probabilités enfin calibrées (le modèle annonçait des écarts 1,5 fois trop grands). Nouvelle version du modèle `spec43-v1` : le compteur de calibration repart de 0, la pondération par lane restante revient après 30 parties. Un `calibration.json` réglé pour l'ancienne version est ignoré, avec un message ; l'écran Calibration règle aussi le poids de la force. `scripts/backtest_draft_model.py` rejoue le modèle sur `crawl.db` et devient le passage obligé de tout changement du modèle ; il remplace `scripts/compare_intrinsic_strength.py`.
