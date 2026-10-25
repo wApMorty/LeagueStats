@@ -64,7 +64,6 @@ class TestShrunkLaneWinrates:
         assert shrunk_lane_winrates(_FakeDb({}), "top") == {}
 
 
-
 class TestLaneStrength:
     """SPEC-43 : force = winrate rétréci − moyenne pondérée de la lane, clés en minuscules."""
 
@@ -79,6 +78,7 @@ class TestLaneStrength:
 
     def test_empty_lane_returns_empty(self):
         assert lane_strength(_FakeDb({}), "top") == {}
+
 
 def test_tier_list_performance_ignores_avg_delta2_noise(db, scorer, insert_matchup):
     """Un delta2 spectaculaire sur un petit échantillon ne fait plus la
