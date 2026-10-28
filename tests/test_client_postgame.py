@@ -26,7 +26,7 @@ from src.config_constants import coaching_config
 from src.repositories.coaching import CoachingRepository
 from src.winprob.model import WinModel
 from tests.test_client_parties import GAME, NOW, capture, impact, roles
-from tests.test_coaching_capture import GAME_ID, TIMELINE, _match
+from tests.test_coaching_capture import GAME_ID, TIMELINE, _fixture, _match
 from tests.test_winprob_impact import _model
 
 LOCAL = "http://127.0.0.1"
@@ -129,6 +129,72 @@ def test_un_bus_en_panne_n_interrompt_pas_le_passage(db):
     with patch.object(findings, "onetricks_objective", return_value={}):
         post_game_capture(db, bus).on_post_game()  # ne lève pas
     assert CoachingRepository(db).latest_game_id() == GAME_ID
+
+
+# ---------- LP arrivées après la revue (SPEC-45 tâche 221) ----------
+
+NOTE = _fixture("current-lp-change-notification.json")
+
+
+def lp_capture(db, bus=None):
+    capture = post_game_capture(db, bus)
+    capture.on_lcu_event({"uri": "/lol-ranked/v1/current-lp-change-notification", "data": NOTE})
+    return capture
+
+
+def test_une_photo_de_rang_ecrite_est_annoncee(db):
+    bus = EventBus()
+    with bus.subscribe(["rank_captured"]) as events:
+        lp_capture(db, bus).write_lp_snapshots()
+        assert events.get(0.1) == ("rank_captured", {"game_id": NOTE["gameId"]})
+
+
+def test_une_photo_deja_en_base_n_est_pas_reannoncee(db):
+    lp_capture(db).write_lp_snapshots()
+    bus = EventBus()
+    with bus.subscribe(["rank_captured"]) as events:
+        lp_capture(db, bus).write_lp_snapshots()  # INSERT OR IGNORE : rien d'écrit
+        assert events.get(0.1) is None
+
+
+def test_sans_bus_la_photo_est_ecrite_sans_annonce(db):
+    lp_capture(db).write_lp_snapshots()
+    assert CoachingRepository(db).rank_after_game(NOTE["gameId"])["lp_delta"] == 19
+
+
+def test_un_bus_en_panne_n_empeche_pas_la_photo(db):
+    bus = Mock()
+    bus.publish.side_effect = RuntimeError("bus cassé")
+    lp_capture(db, bus).write_lp_snapshots()  # ne lève pas
+    assert CoachingRepository(db).rank_after_game(NOTE["gameId"]) is not None
+
+
+def test_l_encart_lp_seul_avec_sa_photo(db, temp_db, assets):
+    capture(db, pid=1)
+    lp_capture(db).write_lp_snapshots()
+    html = client(temp_db, assets).get(f"/parties/{GAME_ID}/lp").text
+    assert f'<div id="lp-slot" data-game="{GAME_ID}">' in html
+    assert 'class="lp-gain gain"' in html and "LP</b>" in html
+
+
+def test_l_encart_lp_vide_sans_photo_ou_partie_inconnue(db, temp_db, assets):
+    capture(db, pid=1)
+    for game_id in (GAME_ID, 123):
+        response = client(temp_db, assets).get(f"/parties/{game_id}/lp")
+        assert response.status_code == 200
+        assert f'id="lp-slot" data-game="{game_id}"' in response.text
+        assert "lp-gain" not in response.text
+
+
+def test_la_revue_garde_l_emplacement_de_l_encart_sans_photo(db, temp_db, assets, modele):
+    capture(db, pid=1)
+    html = client(temp_db, assets).get(f"/parties/{GAME_ID}").text
+    assert f'<div id="lp-slot" data-game="{GAME_ID}">' in html and "lp-gain" not in html
+
+
+def test_coaching_js_recharge_l_encart_a_rank_captured():
+    script = (STATIC / "coaching.js").read_text(encoding="utf-8")
+    assert 'Sse?.open("rank_captured"' in script and "/lp`" in script
 
 
 # ---------- page ----------

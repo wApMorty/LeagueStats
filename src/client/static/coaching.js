@@ -65,4 +65,12 @@
     link.click();
     link.remove();
   });
+
+  // Les LP arrivent parfois après l'ouverture de la revue (sujet `rank_captured`, SPEC-45) : seul l'encart
+  // de la partie affichée est rechargé ; la page ne bouge pas et sa mise en scène ne se rejoue pas.
+  window.Sse?.open("rank_captured", (name, payload) => {
+    const id = Number(payload?.game_id);
+    const slot = id && document.querySelector(`#lp-slot[data-game="${id}"]`);
+    if (slot) htmx.ajax("GET", `/parties/${id}/lp`, { target: slot, swap: "outerHTML" });
+  });
 })();

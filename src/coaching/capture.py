@@ -90,9 +90,11 @@ class GameCapture:
         with self._lock:
             pending = dict(self._lp_by_game)
         for game_id, note in pending.items():
-            ranked.snapshot_after_game(note, self.m.assistant.db)
+            inserted = ranked.snapshot_after_game(note, self.m.assistant.db)
             with self._lock:
                 self._lp_by_game.pop(game_id, None)
+            if inserted:
+                self._safely(lambda game_id=game_id: self._publish_rank(game_id))
 
     @property
     def _client_mode(self) -> bool:
@@ -113,6 +115,13 @@ class GameCapture:
         fresh = self._captured_ids() - known
         if bus is not None and fresh:
             bus.publish("game_captured", {"game_id": max(fresh)})
+
+    def _publish_rank(self, game_id: int) -> None:
+        """Annonce au client la photo de rang d'une partie (sujet `rank_captured`) : la revue déjà
+        ouverte sur cette partie recharge son encart LP (SPEC-45)."""
+        bus = getattr(self.m, "bus", None)
+        if bus is not None:
+            bus.publish("rank_captured", {"game_id": game_id})
 
     def analyze(self, live: bool) -> None:
         """Analyse les parties capturées (tâches 34 à 38).

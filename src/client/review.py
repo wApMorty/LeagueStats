@@ -227,6 +227,17 @@ def lp_view(rank: Optional[dict], remake: bool) -> Optional[dict]:
     }
 
 
+def game_lp(repo: CoachingRepository, game_id: int) -> Optional[dict]:
+    """L'encart LP d'une partie capturée, relu seul quand sa photo de rang arrive après l'ouverture
+    de la revue (SPEC-45) ; None pour une partie inconnue ou sans photo."""
+    record = repo.game_record(game_id)
+    if record is None:
+        return None
+    game = json.loads(record["game"])
+    me = next(p for p in game["participants"] if p["participantId"] == record["pid"])
+    return lp_view(repo.rank_after_game(game_id), _remake(me))
+
+
 def _index_events(timeline: dict) -> Dict[Tuple[int, str], List[dict]]:
     index: Dict[Tuple[int, str], List[dict]] = defaultdict(list)
     for frame in timeline["frames"]:

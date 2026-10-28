@@ -26,9 +26,7 @@
       {% for a in g.axes %}<span class="axis-pill {{ 'held' if a.held else 'miss' }}"><i></i>{{ a.text }}</span>{% endfor %}
     </div>
     {% endif %}
-    {% if g.lp and g.lp.delta is not none %}
-    <div class="lp-gain {{ g.lp.tone }}" data-rise="1" data-delay="600"><b>{% if g.lp.tone == 'flat' %}0{% else %}{{ '+' if g.lp.tone == 'gain' else '−' }}<span data-count="{{ g.lp.value }}" data-delay="700">{{ g.lp.value }}</span>{% endif %} LP</b><span>{{ g.lp.rank }}{% if g.lp.note %} · {{ g.lp.note }}{% endif %}</span></div>
-    {% endif %}
+    {% include "partials/lp_gain.html" %}
     <a href="/parties">‹ Toutes les parties</a>
   </div>
 </header>

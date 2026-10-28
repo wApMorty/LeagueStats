@@ -1,0 +1,6 @@
+{# Encart LP de la revue (SPEC-45) ; rechargé seul par coaching.js à l'événement `rank_captured`. #}
+<div id="lp-slot" data-game="{{ g.game_id }}">
+  {% if g.lp and g.lp.delta is not none %}
+  <div class="lp-gain {{ g.lp.tone }}" data-rise="1" data-delay="600"><b>{% if g.lp.tone == 'flat' %}0{% else %}{{ '+' if g.lp.tone == 'gain' else '−' }}<span data-count="{{ g.lp.value }}" data-delay="700">{{ g.lp.value }}</span>{% endif %} LP</b><span>{{ g.lp.rank }}{% if g.lp.note %} · {{ g.lp.note }}{% endif %}</span></div>
+  {% endif %}
+</div>

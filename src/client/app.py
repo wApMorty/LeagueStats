@@ -67,7 +67,7 @@ from .pools import active_pool_name, champion_names, edit as edit_pool, forget_b
 from .historique import read_game, read_history
 from .profil import read_profile
 from .social import read_social
-from .review import game_page, games_view, load_model
+from .review import game_lp, game_page, games_view, load_model
 
 
 class NavItem(NamedTuple):
@@ -442,6 +442,15 @@ def create_app(
                 detail=f"La partie {game_id} n'est pas dans les parties capturées.",
             )
         return render(request, "partie.html", g=page, review=False)
+
+    @app.get("/parties/{game_id}/lp", response_class=HTMLResponse)
+    def partie_lp(request: Request, game_id: int):
+        """L'encart LP seul, relu par `coaching.js` à l'événement `rank_captured` (SPEC-45) ; vide pour
+        une partie inconnue ou sans photo, jamais une 404 qui casserait l'encart."""
+        view = coaching(lambda repo: game_lp(repo, game_id), lambda: None)
+        return templates.TemplateResponse(
+            request, "partials/lp_gain.html", {"g": {"game_id": game_id, "lp": view}}
+        )
 
     @app.get("/profil", response_class=HTMLResponse)
     def profil(request: Request):
