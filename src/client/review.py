@@ -171,7 +171,9 @@ def _row(repo: CoachingRepository, record: dict, champions: Champions, now: date
         "date": date_fr(ended),
         "ago": ago(ended, now),
         "lp": (
-            f"{signed(rank['lp_delta'], 0)} LP" if rank and rank["lp_delta"] is not None else None
+            ("0 LP" if rank["lp_delta"] == 0 else f"{signed(rank['lp_delta'], 0)} LP")
+            if rank and rank["lp_delta"] is not None
+            else None
         ),
         "impact": f"{_pts(impact)} pts" if impact is not None else None,
     }
@@ -196,6 +198,33 @@ def games_view(repo: CoachingRepository, champions: Champions, now: datetime) ->
 
 
 # ---------- page d'une partie ----------
+
+
+def _remake(me: dict) -> bool:
+    """Vrai si la partie a fini en remake (sortie précoce), d'après le brut du joueur."""
+    return bool(me["stats"].get("gameEndedInEarlySurrender"))
+
+
+def lp_view(rank: Optional[dict], remake: bool) -> Optional[dict]:
+    """L'encart LP de la revue, seule source de l'affichage : ton « gain », « loss » ou « flat »
+    (delta nul ou inconnu), delta affiché, valeur absolue pour le compteur, mention « remake » pour
+    un delta nul. None sans photo de rang."""
+    if rank is None:
+        return None
+    delta = rank["lp_delta"]
+    if delta is None or delta == 0:
+        tone = "flat"
+        shown = None if delta is None else "0"
+    else:
+        tone = "gain" if delta > 0 else "loss"
+        shown = signed(delta, 0)
+    return {
+        "delta": shown,
+        "tone": tone,
+        "value": abs(delta or 0),
+        "rank": f"{tier_name(rank)} · {rank['lp']} LP",
+        "note": "remake" if remake and delta == 0 else None,
+    }
 
 
 def _index_events(timeline: dict) -> Dict[Tuple[int, str], List[dict]]:
@@ -464,14 +493,7 @@ def game_page(
     if points:
         page["curve"] = _curve_chart(points, events)
 
-    rank = repo.rank_after_game(game_id)
-    if rank:
-        page["lp"] = {
-            "delta": signed(rank["lp_delta"], 0) if rank["lp_delta"] is not None else None,
-            "gain": (rank["lp_delta"] or 0) >= 0,
-            "value": abs(rank["lp_delta"] or 0),
-            "rank": f"{tier_name(rank)} · {rank['lp']} LP",
-        }
+    page["lp"] = lp_view(repo.rank_after_game(game_id), _remake(me))
     for verdict in repo.game_verdicts(game_id):
         metric = METRICS[verdict["metric"]]
         page["axes"].append(

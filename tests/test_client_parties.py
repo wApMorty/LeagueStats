@@ -116,6 +116,22 @@ def test_un_joueur_de_l_equipe_rouge_perd(db, assets):
     )  # poste inconnu : pas d'adversaire déduit
 
 
+def test_la_liste_affiche_0_lp_pour_un_delta_nul(db, assets):
+    capture(db, pid=1)
+    db.insert_rank_snapshot(
+        queue="RANKED_SOLO_5x5",
+        tier="EMERALD",
+        division="II",
+        lp=65,
+        wins=62,
+        losses=55,
+        lp_delta=0,
+        game_id=7998195590,
+    )
+    row = games_view(CoachingRepository(db), Champions(assets), NOW)["rows"][0]
+    assert row["lp"] == "0 LP"
+
+
 def test_la_liste_est_du_plus_recent_au_plus_ancien_avec_lp_et_impact(db, assets, modele):
     capture(db, game_id=1, created="2026-10-01 10:00:00")
     capture(db, game_id=7998195590, created="2026-10-05 16:00:00")

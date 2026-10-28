@@ -2,7 +2,9 @@
 en mode revue (impact, constats, LP, axes jugés), variante Défaite, rapport console remplacé en mode client.
 """
 
+import copy
 import json
+import re
 import shutil
 import subprocess
 from datetime import datetime, timezone
@@ -17,7 +19,7 @@ from src.client.app import create_app
 from src.client.assets import Assets
 from src.client.bus import EventBus
 from src.client.draft_view import Champions
-from src.client.review import game_page
+from src.client.review import game_page, lp_view
 from src.coaching import findings
 from src.coaching.capture import GameCapture
 from src.config_constants import coaching_config
@@ -217,12 +219,85 @@ def test_points_de_lp_de_la_partie(db, assets, modele):
         game_id=GAME_ID,
     )
     lp = page_of(db, assets, modele)["lp"]
-    assert lp == {"delta": "+18", "gain": True, "value": 18, "rank": "Émeraude II · 65 LP"}
+    assert lp == {
+        "delta": "+18",
+        "tone": "gain",
+        "value": 18,
+        "rank": "Émeraude II · 65 LP",
+        "note": None,
+    }
 
 
 def test_sans_photo_de_rang_pas_de_lp(db, assets, modele):
     capture(db, pid=1)
     assert page_of(db, assets, modele)["lp"] is None
+
+
+def _rank(delta, lp=65):
+    return {"tier": "EMERALD", "division": "II", "lp": lp, "lp_delta": delta}
+
+
+def test_lp_view_gain_perte_et_nul():
+    gain = lp_view(_rank(18), False)
+    assert gain == {
+        "delta": "+18",
+        "tone": "gain",
+        "value": 18,
+        "rank": "Émeraude II · 65 LP",
+        "note": None,
+    }
+    loss = lp_view(_rank(-22), False)
+    assert (loss["tone"], loss["delta"], loss["value"]) == ("loss", "−22", 22)
+    flat = lp_view(_rank(0), False)
+    assert (flat["tone"], flat["delta"], flat["value"], flat["note"]) == ("flat", "0", 0, None)
+
+
+def test_lp_view_nul_en_remake_seulement():
+    assert lp_view(_rank(0), True)["note"] == "remake"
+    assert lp_view(_rank(18), True)["note"] is None
+
+
+def test_lp_view_delta_inconnu_et_sans_photo():
+    unknown = lp_view(_rank(None), False)
+    assert (unknown["tone"], unknown["delta"], unknown["value"]) == ("flat", None, 0)
+    assert lp_view(None, True) is None
+
+
+def test_remake_a_0_lp_la_page_le_dit(db, temp_db, assets, modele):
+    raw = copy.deepcopy(GAME)
+    raw["participants"][0]["stats"]["gameEndedInEarlySurrender"] = True
+    capture(db, pid=1, raw=json.dumps(raw))
+    db.insert_rank_snapshot(
+        queue="RANKED_SOLO_5x5",
+        tier="EMERALD",
+        division="II",
+        lp=65,
+        wins=62,
+        losses=55,
+        lp_delta=0,
+        game_id=GAME_ID,
+    )
+    assert page_of(db, assets, modele)["lp"]["note"] == "remake"
+    html = client(temp_db, assets).get(f"/parties/{GAME_ID}").text
+    encart = re.search(r'<div class="lp-gain flat".*?</div>', html).group(0)
+    assert "<b>0 LP</b>" in encart and "· remake" in encart and "data-count" not in encart
+
+
+def test_une_photo_a_zero_s_affiche_neutre(db, temp_db, assets, modele):
+    capture(db, pid=1)
+    db.insert_rank_snapshot(
+        queue="RANKED_SOLO_5x5",
+        tier="EMERALD",
+        division="II",
+        lp=65,
+        wins=62,
+        losses=55,
+        lp_delta=0,
+        game_id=GAME_ID,
+    )
+    html = client(temp_db, assets).get(f"/parties/{GAME_ID}").text
+    encart = re.search(r'<div class="lp-gain flat".*?</div>', html).group(0)
+    assert "<b>0 LP</b>" in encart and "data-count" not in encart and "remake" not in encart
 
 
 def test_les_axes_juges_sur_la_partie(db, assets, modele):
@@ -282,7 +357,7 @@ def test_variante_defaite(db, temp_db, assets, modele):
     page = page_of(db, assets, modele)
     assert page["title"] == "Défaite" and page["win"] is False
     assert (
-        page["lp"]["gain"] is False and page["lp"]["delta"] == "−17" and page["lp"]["value"] == 17
+        page["lp"]["tone"] == "loss" and page["lp"]["delta"] == "−17" and page["lp"]["value"] == 17
     )
     html = client(temp_db, assets).get(f"/parties/{GAME_ID}").text
     assert 'class="game-title loss"' in html and 'class="lp-gain loss"' in html

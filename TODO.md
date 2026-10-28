@@ -388,7 +388,7 @@ mention remake. Arbitrages validés le 2026-10-28. Découpage en SPEC-45 §5 (t�
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
 | 219 | Correctif CSS `.lp-gain > span` + régression `test_regression_lp_counter_style.py` | 1 | — | ✅ 2026-10-28 : 2 tests, rouges sans le correctif, verts après |
-| 220 | `lp_view` : ton gain / perte / neutre, « 0 LP », mention remake, liste des parties + tests | 2 | 219 | ⬜ |
+| 220 | `lp_view` : ton gain / perte / neutre, « 0 LP », mention remake, liste des parties + tests | 2 | 219 | ✅ 2026-10-28 : `lp_view` seule source de l'encart (`tone`, `note`) ; 6 tests |
 | 221 | LP tardives : `rank_captured`, partiel `lp_gain.html`, route `/parties/{id}/lp`, écouteur `coaching.js` + tests | 3 | 220 | ⬜ |
 | 222 | Clôture : critères, `CHANGELOG.md`, statut, README des specs, `TODO.md` | 1 | 221 | ⬜ |
 
