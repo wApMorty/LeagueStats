@@ -899,7 +899,7 @@ h2 { margin: 0; font: 600 24px/1 var(--font-title); }
 .lp-gain b { font: 600 58px/1 var(--font-title); background: linear-gradient(90deg, oklch(0.9 0.14 95), oklch(0.82 0.15 165));
   -webkit-background-clip: text; background-clip: text; color: transparent; }
 .lp-gain.loss b { background-image: linear-gradient(90deg, oklch(0.72 0.21 345), oklch(0.7 0.2 20)); }
-.lp-gain span { font-size: 15px; color: var(--ink-2); }
+.lp-gain > span { font-size: 15px; color: var(--ink-2); }
 .impact { display: flex; flex-direction: column; }
 .impact-head { display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 10px;
   border-bottom: 1px solid oklch(0.74 0.11 55 / 0.2); }
