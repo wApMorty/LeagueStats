@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### 🎨 Style
+
+- **Écran Pool : la rangée des postes a un titre** — les 5 boutons Top, Jungle, Mid, ADC et Support qui désignent le pool d'un poste (SPEC-44) ressemblaient à la grille des champions juste en dessous. Ils sont maintenant précédés de « Utiliser pour le poste : ».
+
 ## [5.11.0] - 2026-10-28
 
 Un pool de champions par poste : désigne-en un pour chaque rôle sur l'écran Pool, et le coach de draft charge celui du poste qui t'est assigné, en évaluant blind pick, recommandations et bans sur ce poste. Aucune action requise : pas de migration Alembic, pas de scrape ; sans désignation, ton pool par défaut sert sur son propre rôle et le pool système sur les autres.

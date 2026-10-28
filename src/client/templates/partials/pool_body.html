@@ -20,7 +20,8 @@
             <button type="submit" class="btn-ghost">Dupliquer</button>
           </form>
         </div>
-        <div class="pool-grid" role="group" aria-label="Postes qui utilisent ce pool">
+        <p class="fine" id="pool-roles-label">Utiliser pour le poste :</p>
+        <div class="pool-grid" role="group" aria-labelledby="pool-roles-label">
           {% for r in v.roles %}
           {% set on = r.lane in s.roles_on %}
           <button type="button" class="chip-btn{{ ' is-on' if on }}" aria-pressed="{{ 'true' if on else 'false' }}"

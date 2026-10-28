@@ -148,6 +148,7 @@ def test_la_page_affiche_pool_par_defaut_et_le_poste_designe(web):
     post(web, "/pool/role?name=Meta Picks&arg=middle")
     page = web.get("/pool?nom=Meta%20Picks").text
     assert "Pool par défaut" in page
+    assert "Utiliser pour le poste :" in page
     assert "Mid : <b>Meta Picks</b>" in page
     assert "<b>All Top Champions</b> (défaut)" in page
     assert 'hx-post="/pool/role?name=Meta%20Picks&amp;arg=middle"' in page
