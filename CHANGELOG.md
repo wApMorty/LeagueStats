@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+## [5.11.0] - 2026-10-28
+
+Un pool de champions par poste : désigne-en un pour chaque rôle sur l'écran Pool, et le coach de draft charge celui du poste qui t'est assigné, en évaluant blind pick, recommandations et bans sur ce poste. Aucune action requise : pas de migration Alembic, pas de scrape ; sans désignation, ton pool par défaut sert sur son propre rôle et le pool système sur les autres.
+
 ### ✨ Feature
 
 - **Un pool par poste (SPEC-44)** — l'écran Pool permet de désigner un pool pour chaque poste (Top, Jungle, Mid, ADC, Support). Au début de chaque draft, le Live Coach charge le pool du poste assigné par le client. À défaut, il prend le pool par défaut s'il couvre ce poste, sinon le pool système du rôle (« All Support Champions »), avec un `[INFO]` en console. Dans une file sans poste (normale blind, ARAM), c'est le pool par défaut, comme avant. Le bouton « Utiliser ce pool » devient « Pool par défaut » ; cliqué pendant une draft, il vaut pour cette draft seulement. Corrige au passage un défaut : le rôle du pool passait avant le poste assigné, si bien qu'avec « Top playable » actif et un poste mid, le blind pick et les bans étaient calculés pour le top. Les bans précalculés d'un pool ne servent plus que sur la lane de son rôle déclaré. Le coach console garde les pools par poste et son pool de lancement en fin de session. Aucune action requise : pas de migration, `user_prefs.json` se complète à la première désignation.

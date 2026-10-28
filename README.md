@@ -15,7 +15,7 @@ débriefe à la fin.
 ### La draft, en direct
 
 Pendant le champion select, le coach lit la draft dans le client LoL et classe les champions de ta pool
-selon la victoire prédite face à la composition adverse : force de chaque champion sur sa lane,
+(un pool par poste, choisi selon le poste qui t'est assigné) selon la victoire prédite face à la composition adverse : force de chaque champion sur sa lane,
 duels et synergies, avec des poids calibrés sur des dizaines de milliers de parties classées. Il anticipe
 aussi les picks qui restent à jouer, et tient compte de ton niveau sur chaque champion, tiré de tes propres parties : un champion
 sur lequel tu performes mal ne passe en tête que si la draft le justifie vraiment. En phase de bans, il chiffre les menaces qui pèsent sur ta pool. Un clic suffit pour survoler ou
@@ -181,4 +181,4 @@ LeagueStats Coach n'est ni approuvé ni sponsorisé par Riot Games et ne reflèt
 Games ni de quiconque ayant participé à la production ou à la gestion de League of Legends. League of
 Legends et Riot Games sont des marques ou des marques déposées de Riot Games, Inc.
 
-**Version** : 5.10.0
+**Version** : 5.11.0
