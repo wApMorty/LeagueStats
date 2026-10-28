@@ -89,3 +89,26 @@ class TestBanAdvisorLaneWiring:
 
         monitor.assistant.db.get_pool_ban_recommendations.assert_not_called()
         monitor.assistant.get_ban_recommendations.assert_called_once()
+
+
+class TestPrecalculatedBansFollowTheirLane:
+    """SPEC-44 : les bans précalculés d'un pool ne servent que sur la lane de son rôle déclaré."""
+
+    STORED = [("Syndra", 9.0, -1.0, "Aatrox", 1)]
+
+    def test_top_pool_played_mid_recomputes_on_middle(self, monitor):
+        monitor.pool_lane, monitor.pool_declared_lane = "middle", "top"
+        monitor.assistant.db.get_pool_ban_recommendations.return_value = self.STORED
+
+        monitor.ban_advisor._recommendations(DraftState())
+
+        monitor.assistant.db.get_pool_ban_recommendations.assert_not_called()
+        kwargs = monitor.assistant.get_ban_recommendations.call_args.kwargs
+        assert kwargs["lane"] == "middle"
+
+    def test_mid_pool_played_mid_serves_precalculated_bans(self, monitor):
+        monitor.pool_lane, monitor.pool_declared_lane = "middle", "middle"
+        monitor.assistant.db.get_pool_ban_recommendations.return_value = self.STORED
+
+        assert monitor.ban_advisor._recommendations(DraftState()) == self.STORED
+        monitor.assistant.get_ban_recommendations.assert_not_called()

@@ -13,6 +13,7 @@ monitor itself (tests read/write them directly on the instance).
 
 import queue
 import threading
+from typing import Optional
 
 from ..coaching.goals import set_goal
 from ..coaching.report import review
@@ -75,7 +76,7 @@ class CommandListener:
                 self.handle_outcome_command(stripped)
                 continue
             if stripped.lower().startswith("pool "):
-                applied = self.handle_pool_command(stripped[5:].strip()) or applied
+                applied = self.handle_pool_command(stripped[5:].strip(), state) or applied
                 continue
             if stripped.lower().split()[:1] in (["bilan"], ["axe"]):
                 self.handle_coaching_command(stripped)  # SPEC-19, hors draft
@@ -84,10 +85,11 @@ class CommandListener:
                 applied = True
         return applied
 
-    def handle_pool_command(self, name: str) -> bool:
+    def handle_pool_command(self, name: str, state: Optional[DraftState] = None) -> bool:
         """Recharge le pool `name` et chauffe son cache (`pool <nom>`, déposé par l'écran Pool).
 
-        Best-effort : un pool disparu ou une erreur laisse le pool courant en place.
+        En draft, la lane jouée reste le poste assigné de `state` (SPEC-44) ; sans poste, c'est la
+        lane du rôle du pool. Best-effort : un pool disparu ou une erreur laisse le pool courant.
         """
         try:
             from ..pool_manager import PoolManager, pool_role_to_lane
@@ -98,7 +100,9 @@ class CommandListener:
                 return False
             self.m.current_pool = list(pool.champions)
             self.m.pool_name = pool.name
-            self.m.pool_lane = pool_role_to_lane(pool.role)
+            self.m.pool_declared_lane = pool_role_to_lane(pool.role)
+            position = state.ally_positions.get(state.local_player_cell_id) if state else None
+            self.m.pool_lane = position or self.m.pool_declared_lane
             self.m.assistant.warm_cache(self.m.current_pool)
             print(f"[OK] Pool rechargé : {pool.name} ({pool.size()} champions)")
             return True

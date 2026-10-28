@@ -68,13 +68,19 @@ class BanAdvisor:
     ) -> List[tuple]:
         """Les meilleurs bans disponibles pour la pool, pire menace d'abord.
 
-        Les bans précalculés en base ne servent que pour un pool à rôle déclaré :
-        c'est la seule lane pour laquelle ils ont été calculés.
+        Les bans précalculés en base ne servent que si la lane jouée est celle du
+        rôle déclaré du pool : c'est la seule pour laquelle ils ont été calculés
+        (un pool top servi au poste mid les recalcule à la volée, SPEC-44).
         """
         unavailable = self._unavailable_champions(state) if state else []
         unavailable_lower = {name.lower() for name in unavailable}
 
-        if getattr(self.m, "pool_name", None) and getattr(self.m, "pool_lane", None):
+        lane = getattr(self.m, "pool_lane", None)
+        if (
+            getattr(self.m, "pool_name", None)
+            and lane
+            and lane == getattr(self.m, "pool_declared_lane", None)
+        ):
             stored = self.m.assistant.db.get_pool_ban_recommendations(
                 self.m.pool_name, limit=_PRECALCULATED_LIMIT
             )

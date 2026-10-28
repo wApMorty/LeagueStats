@@ -216,3 +216,105 @@ class TestSelectChampionPoolInteractive:
         out = capsys.readouterr().out
         assert "[WARNING] Erreur de sélection de pool: boom" in out
         assert "Retour au sélecteur de pool legacy..." in out
+
+
+class TestSelectForPosition:
+    """``PoolSelector.select_for_position(lane)`` (SPEC-44) : pool du poste au premier tick."""
+
+    MID = ChampionPool("Mid Main", ["Ahri", "Zed"], role="custom", created_by="user")
+    TOP = ChampionPool("Top Main", ["Garen", "Darius"], role="top", created_by="user")
+    SUPPORT = ChampionPool("All Support Champions", ["Nami"], role="support", created_by="system")
+
+    @pytest.fixture
+    def manager(self):
+        pools = {p.name: p for p in (self.MID, self.TOP, self.SUPPORT)}
+        manager = Mock()
+        manager.get_pool.side_effect = pools.get
+        manager.get_all_pools.return_value = pools
+        with patch("src.pool_manager.PoolManager", return_value=manager):
+            yield manager
+
+    @staticmethod
+    def prefs(pools_by_role=None, pool_name="Top Main"):
+        from src.user_prefs import UserPrefs, save_user_prefs
+
+        save_user_prefs(UserPrefs(pool_name=pool_name, pools_by_role=pools_by_role or {}))
+
+    @pytest.fixture(autouse=True)
+    def client_mode(self, monitor):
+        """Live Coach du client : le pool par défaut vient des préférences."""
+        monitor.console_input = False
+
+    def test_designated_pool_of_the_position(self, monitor, manager, capsys):
+        self.prefs({"middle": "Mid Main"})
+
+        monitor.pool_selector.select_for_position("middle")
+
+        assert monitor.current_pool == ["Ahri", "Zed"]
+        assert (monitor.pool_name, monitor.pool_lane) == ("Mid Main", "middle")
+        assert monitor.pool_declared_lane is None
+        assert "[INFO] Poste middle : pool « Mid Main » (2 champions)" in capsys.readouterr().out
+
+    def test_default_pool_covers_its_own_role(self, monitor, manager):
+        self.prefs({"middle": "Mid Main"})
+
+        monitor.pool_selector.select_for_position("top")
+
+        assert (monitor.pool_name, monitor.pool_lane) == ("Top Main", "top")
+        assert monitor.pool_declared_lane == "top"
+
+    def test_system_pool_when_nothing_covers_the_position(self, monitor, manager, capsys):
+        self.prefs({"middle": "Supprimé"})
+
+        monitor.pool_selector.select_for_position("support")
+
+        assert (monitor.pool_name, monitor.pool_lane) == ("All Support Champions", "support")
+        out = capsys.readouterr().out
+        assert "[INFO] Poste support : aucun pool désigné, pool « All Support Champions »" in out
+
+    def test_no_position_takes_the_default_pool(self, monitor, manager):
+        self.prefs({"middle": "Mid Main"})
+
+        monitor.pool_selector.select_for_position(None)
+
+        assert (monitor.pool_name, monitor.pool_lane) == ("Top Main", "top")
+
+    def test_no_position_and_no_prefs_restores_the_launch_pool(self, monitor, manager):
+        monitor.launch_pool = (None, ["Legacy"], None)
+        monitor.current_pool = ["Ahri"]
+
+        monitor.pool_selector.select_for_position(None)
+
+        assert monitor.current_pool == ["Legacy"]
+        assert (monitor.pool_name, monitor.pool_lane) == (None, None)
+
+    def test_console_default_is_the_launch_pool_not_the_saved_one(self, monitor, manager):
+        monitor.console_input = True
+        monitor.launch_pool = ("Mid Main", ["Ahri", "Zed"], None)
+        self.prefs(pool_name="Top Main")
+
+        monitor.pool_selector.select_for_position(None)
+
+        assert monitor.pool_name == "Mid Main"
+
+    def test_cache_is_warmed_only_when_the_pool_changes(self, monitor, manager):
+        self.prefs({"middle": "Mid Main"})
+        monitor.pool_selector.select_for_position("middle")
+        monitor.pool_selector.select_for_position("middle")
+
+        monitor.assistant.warm_cache.assert_called_once_with(["Ahri", "Zed"])
+
+    def test_an_error_keeps_the_current_pool(self, monitor, capsys):
+        monitor.current_pool, monitor.pool_name, monitor.pool_lane = ["Ahri"], "Mid Main", "middle"
+
+        with patch("src.pool_manager.PoolManager", side_effect=Exception("boom")):
+            monitor.pool_selector.select_for_position("top")
+
+        assert (monitor.current_pool, monitor.pool_name, monitor.pool_lane) == (
+            ["Ahri"],
+            "Mid Main",
+            "middle",
+        )
+        assert "[ALERTE] Pool du poste non chargé, pool courant conservé : boom" in (
+            capsys.readouterr().out
+        )

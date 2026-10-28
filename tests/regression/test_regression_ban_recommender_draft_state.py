@@ -98,6 +98,7 @@ class TestBanAdvisorFiltersStalePrecalculatedBans:
         monitor.pool_name = "TestPool"
         monitor.current_pool = ["Aatrox"]
         monitor.pool_lane = "top"  # SPEC-18 : précalcul réservé aux pools à rôle
+        monitor.pool_declared_lane = "top"  # SPEC-44 : joué sur le rôle de ses bans précalculés
         monitor.last_ban_recommendation = None
         monitor.assistant.db.get_pool_ban_recommendations.return_value = precalculated
         monitor._is_player_ban_turn.return_value = True

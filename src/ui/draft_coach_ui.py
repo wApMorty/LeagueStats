@@ -1,9 +1,10 @@
 """UI for real-time draft coach (League Client integration)."""
 
+from dataclasses import replace
 from typing import Optional
 from ..draft_monitor import DraftMonitor
 from ..utils.console import clear_console
-from ..user_prefs import UserPrefs, save_user_prefs
+from ..user_prefs import UserPrefs, load_user_prefs, save_user_prefs
 
 
 def run_draft_coach(
@@ -60,13 +61,16 @@ def run_draft_coach(
             traceback.print_exc()
     finally:
         # SPEC-06 D2: mémorise les choix réellement utilisés (y compris la
-        # pool retombée en secours si le nom mémorisé n'existait plus).
+        # pool retombée en secours si le nom mémorisé n'existait plus). SPEC-44 :
+        # le pool de lancement, pas celui du dernier poste joué, et les pools
+        # par poste du fichier sont gardés.
         if monitor is not None:
             save_user_prefs(
-                UserPrefs(
+                replace(
+                    load_user_prefs() or UserPrefs(),
                     auto_hover=auto_hover,
                     auto_accept_queue=auto_accept_queue,
                     auto_ban_hover=auto_ban_hover,
-                    pool_name=monitor.pool_name,
+                    pool_name=monitor.launch_pool[0],
                 )
             )

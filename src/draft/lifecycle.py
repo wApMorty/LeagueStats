@@ -184,6 +184,14 @@ class MonitorLifecycle:
         # forces a redisplay even when the draft itself hasn't changed.
         commands_applied = self.m._apply_pending_commands(current_state)
 
+        # SPEC-44 : le pool du poste assigné, au premier tick de la draft, après les commandes (une
+        # commande `pool` déposée entre deux drafts ne l'emporte pas ; celles des ticks suivants, si).
+        if not self.m.has_resolved_pool:
+            self.m.has_resolved_pool = True
+            self.m.pool_selector.select_for_position(
+                current_state.ally_positions.get(current_state.local_player_cell_id)
+            )
+
         # Check for changes and provide recommendations (only if draft not complete)
         if self.m._has_draft_changed(current_state) or commands_applied:
             # Only show draft updates if we haven't completed the analysis yet
@@ -335,6 +343,7 @@ class MonitorLifecycle:
         """
         self.m.last_draft_state = DraftState()
         self.m.has_done_initial_hover = False
+        self.m.has_resolved_pool = False  # SPEC-44
         self.m.has_analyzed_final_draft = False
         self.m.last_recommendation = None
         self.m.last_ban_recommendation = None

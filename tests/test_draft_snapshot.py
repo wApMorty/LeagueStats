@@ -299,6 +299,7 @@ def test_bans_conseilles_structures_pendant_la_phase_de_bans(monitor):
 
 def test_bans_conseilles_ignores_les_bans_precalcules_indisponibles(monitor):
     monitor.pool_name, monitor.pool_lane = "Ma pool", "top"
+    monitor.pool_declared_lane = "top"  # SPEC-44 : bans précalculés sur leur lane
     monitor.assistant.db.get_pool_ban_recommendations.return_value = [
         ("Aatrox", 3.0, 1.0, "Garen", 5),  # déjà banni
         ("Zed", 2.0, 1.0, "Garen", 5),

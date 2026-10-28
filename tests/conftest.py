@@ -64,6 +64,16 @@ def _isolate_database_path(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "DATABASE_PATH", str(tmp_path / "isolated.db"))
 
 
+@pytest.fixture(autouse=True)
+def _isolate_user_data(monkeypatch, tmp_path):
+    """Pools et préférences sous tmp_path : la boucle de draft relit `user_prefs.json` et
+    `champion_pools.json` à chaque draft (SPEC-44), jamais ceux de @pj35 sous pytest."""
+    from src import pool_manager, user_prefs
+
+    monkeypatch.setattr(pool_manager, "get_user_data_path", lambda f: str(tmp_path / f))
+    monkeypatch.setattr(user_prefs, "get_user_data_path", lambda f: str(tmp_path / f))
+
+
 @pytest.fixture
 def temp_db(tmp_path):
     """

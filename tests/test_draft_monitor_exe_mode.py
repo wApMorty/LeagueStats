@@ -37,7 +37,7 @@ def draft_monitor(mock_lcu_client, mock_assistant):
             monitor = DraftMonitor(verbose=False)
             monitor.current_pool = ["Aatrox", "Darius", "Garen"]
             monitor.pool_name = "top"
-            monitor.pool_lane = "top"
+            monitor.pool_lane = monitor.pool_declared_lane = "top"
             return monitor
 
 

@@ -8,6 +8,9 @@ import pytest
 
 from src.pool_manager import PoolManager, ChampionPool
 
+# Capturée à l'import, avant la fixture autouse `_isolate_user_data` qui la redirige vers tmp_path.
+from src.pool_manager import get_user_data_path as REAL_GET_USER_DATA_PATH
+
 
 class TestPoolManagerBanRecalculation:
     """Tests for ban recalculation behavior in .exe vs dev mode."""
@@ -323,10 +326,11 @@ class TestPoolManagerBanRecalculation:
 class TestPoolsPathAndMigration:
     """Tests du chemin de champion_pools.json et de sa migration (SPEC-06 D1)."""
 
-    def test_dev_path_is_inside_repository(self):
+    def test_dev_path_is_inside_repository(self, monkeypatch):
         """En mode dev, le fichier de pools vit à la racine du dépôt, pas au-dessus."""
         from src import pool_manager
 
+        monkeypatch.setattr(pool_manager, "get_user_data_path", REAL_GET_USER_DATA_PATH)
         with patch.object(sys, "frozen", False, create=True):
             pools_path = pool_manager.get_user_pools_path()
 

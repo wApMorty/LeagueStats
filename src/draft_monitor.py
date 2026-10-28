@@ -6,9 +6,8 @@ import threading
 from typing import Dict, List, Optional, Set
 from .lcu_client import LCUClient
 from .assistant import Assistant
-from .utils.display import safe_print
 from .utils.console import clear_console
-from .constants import TOP_SOLOQ_POOL, CHAMPIONS_BY_ROLE
+from .constants import TOP_SOLOQ_POOL
 from .config_constants import analysis_config, draft_config
 from .coaching.capture import GameCapture
 from .coaching.post_game_watcher import PostGameWatcher
@@ -75,7 +74,12 @@ class DraftMonitor:
         self.verbose = verbose
         self.current_pool = TOP_SOLOQ_POOL  # Default pool
         self.pool_name = None  # Pool name for pre-calculated ban lookups
-        self.pool_lane = None  # SPEC-04: lane du rôle de current_pool, si mono-rôle
+        self.pool_lane = None  # SPEC-04: lane jouée (poste assigné, sinon rôle du pool)
+        # SPEC-44 : lane du rôle déclaré du pool, celle de ses bans précalculés.
+        self.pool_declared_lane = None
+        # SPEC-44 : pool choisi au lancement (nom, champions, lane), pool par défaut de secours.
+        self.launch_pool = (None, list(self.current_pool), None)
+        self.has_resolved_pool = False  # SPEC-44 : pool du poste chargé pour cette draft
         self.auto_select_pool = auto_select_pool
         # SPEC-06 D2: pool mémorisée d'une session précédente, réutilisée sans
         # re-poser la question si elle existe toujours.
@@ -185,22 +189,7 @@ class DraftMonitor:
         self._load_champion_mappings()
         self._load_lane_distributions()
 
-        # Pool selection
-        if not self.auto_select_pool:
-            if self.preselected_pool_name:
-                self.current_pool = self._select_champion_pool_by_name(self.preselected_pool_name)
-            else:
-                self.current_pool = self._select_champion_pool_interactive()
-        else:
-            # Auto-select top pool by default
-            self.pool_name = "All Top Champions"  # System pool name
-            self.pool_lane = "top"
-            self.current_pool = CHAMPIONS_BY_ROLE["top"]
-            safe_print(f"[OK] Pool utilisée : TOP ({', '.join(self.current_pool)})")
-
-        # Performance: Warm cache for selected pool (eliminates SQL queries during draft)
-        if self.current_pool:
-            self.assistant.warm_cache(self.current_pool)
+        self.pool_selector.select_at_launch()
 
         # Clear console before starting monitoring loop
         clear_console()
