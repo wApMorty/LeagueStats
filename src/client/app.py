@@ -482,26 +482,30 @@ def create_app(
 
     @app.post("/pool/{action}", response_class=HTMLResponse)
     async def pool_action(request: Request, action: str, name: str = "", arg: str = ""):
-        """Choisit, crée, duplique, supprime un pool ou y ajoute/retire un champion ; un refus s'affiche
-        dans le corps de l'écran (200), jamais en erreur. Un nom saisi arrive dans le corps du formulaire
-        htmx (lu à la main : `Form` demanderait python-multipart)."""
+        """Choisit le pool par défaut, désigne un pool pour un poste (`role`, `arg` = lane), crée, duplique,
+        supprime un pool ou y ajoute/retire un champion ; un refus s'affiche dans le corps de l'écran (200),
+        jamais en erreur. `actif` et `role` ne touchent qu'aux préférences (ni `champion_pools.json`, ni
+        bans effacés) ; `role` ne dépose aucune commande au Live Coach. Un nom saisi arrive dans le corps
+        du formulaire htmx (lu à la main : `Form` demanderait python-multipart)."""
         typed = parse_qs((await request.body()).decode("utf-8", "replace")).get("arg", [""])[0]
+
+        prefs_only = action in ("actif", "role")
 
         def work() -> dict:
             manager = PoolManager()
             names = champion_names(app.state.db_path)
             try:
                 notice, selected = edit_pool(manager, action, name, names, arg or typed)
-                if action != "actif" and not manager.save_custom_pools(recalculate_bans=False):
+                if not prefs_only and not manager.save_custom_pools(recalculate_bans=False):
                     raise Refusal("Pools non enregistrés")
             except Refusal as refusal:
                 notice, selected = str(refusal), name
             else:
-                if action != "actif":
+                if not prefs_only:
                     forget_bans(app.state.db_path, name)
                 # Le Live Coach recharge le pool actif dès sa prochaine draft, sans redémarrage.
                 active = active_pool_name(manager)
-                if commands is not None and active and active == name:
+                if action != "role" and commands is not None and active and active == name:
                     commands(f"pool {active}")
             return pools_view(manager, selected, names, notice)
 

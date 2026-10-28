@@ -1,7 +1,7 @@
 {#- Corps de l'écran Pool : remplacé tel quel par chaque action (htmx). Un refus arrive dans `v.notice`. -#}
 <div id="pool-body" hx-target="#pool-body" hx-select="#pool-body" hx-swap="outerHTML">
   {% if v.notice %}<p class="notice" role="status">{{ v.notice }}</p>{% endif %}
-  <p class="fine">{% if v.active %}Pool actif : <b>{{ v.active }}</b>{% else %}Aucun pool choisi : le Live Coach prend son pool par défaut.{% endif %}</p>
+  <p class="fine">Par défaut : <b>{{ v.active or "aucun" }}</b>{% for r in v.roles %} · {{ r.label }} : {% if r.pool is none %}<b>aucun</b>{% else %}<b>{{ r.pool }}</b>{% if r.source == "défaut" %} (défaut){% elif r.source == "système" %} (pool système){% endif %}{% endif %}{% endfor %}</p>
   <div class="cols">
     <div class="main">
       {% if v.selected %}
@@ -9,16 +9,23 @@
       <section class="panel">
         <div class="panel-head">
           <h2>{{ s.name }}</h2>
-          <span class="muted">{{ s.size }} champion{{ "s" if s.size > 1 }}{% if s.active %} · <span class="badge">Actif</span>{% endif %}</span>
+          <span class="muted">{{ s.size }} champion{{ "s" if s.size > 1 }}{% if s.active %} · <span class="badge">Défaut</span>{% endif %}{% for r in v.roles if r.lane in s.roles_on %} <span class="badge">{{ r.label }}</span>{% endfor %}</span>
         </div>
         {% if s.description %}<p class="muted">{{ s.description }}</p>{% endif %}
         <div class="pool-actions">
-          {% if not s.active %}<button type="button" class="btn-primary" hx-post="/pool/actif?name={{ s.name|urlencode }}">Utiliser ce pool</button>{% endif %}
+          {% if not s.active %}<button type="button" class="btn-primary" hx-post="/pool/actif?name={{ s.name|urlencode }}">Pool par défaut</button>{% endif %}
           {% if s.editable %}<button type="button" class="btn-ghost" hx-post="/pool/supprimer?name={{ s.name|urlencode }}" hx-confirm="Supprimer le pool « {{ s.name }} » ?">Supprimer</button>{% endif %}
           <form class="pool-new" hx-post="/pool/dupliquer?name={{ s.name|urlencode }}">
             <input name="arg" placeholder="Nom de la copie" aria-label="Nom de la copie" required>
             <button type="submit" class="btn-ghost">Dupliquer</button>
           </form>
+        </div>
+        <div class="pool-grid" role="group" aria-label="Postes qui utilisent ce pool">
+          {% for r in v.roles %}
+          {% set on = r.lane in s.roles_on %}
+          <button type="button" class="chip-btn{{ ' is-on' if on }}" aria-pressed="{{ 'true' if on else 'false' }}"
+                  hx-post="/pool/role?name={{ s.name|urlencode }}&amp;arg={{ r.lane }}">{{ r.label }}</button>
+          {% endfor %}
         </div>
         {% if not s.editable %}<p class="fine">Pool système : duplique-le pour choisir tes champions.</p>{% endif %}
         <div class="pool-grid" role="list">
@@ -43,7 +50,7 @@
           {% for p in v.pools %}
           <a class="friend{{ ' is-me' if p.open }}" role="listitem" href="/pool?nom={{ p.name|urlencode }}">
             <span class="friend-text"><b>{{ p.name }}</b><span class="muted">{{ p.size }} champion{{ "s" if p.size > 1 }}{% if p.system %} · système{% endif %}</span></span>
-            {% if p.active %}<span class="badge">Actif</span>{% endif %}
+            {% if p.active %}<span class="badge">Défaut</span>{% endif %}{% for l in p.roles %}<span class="badge">{{ l }}</span>{% endfor %}
           </a>
           {% endfor %}
         </div>

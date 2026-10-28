@@ -1,21 +1,33 @@
-"""Écran Pool : le pool actif du Live Coach et l'édition des pools perso.
+"""Écran Pool : le pool par défaut du Live Coach, la désignation d'un pool par poste et l'édition des
+pools perso.
 
 Les pools système (« All Top Champions », « Meta Picks ») se choisissent mais ne s'éditent pas : on les
-duplique. Le pool actif est mémorisé dans `user_prefs.json` ; un changement ou une édition du pool actif
-est aussi déposé chez le Live Coach (commande `pool <nom>`), qui le recharge dès sa prochaine draft. Les bans précalculés d'un pool édité sont effacés : sans eux, le Live Coach
-recalcule à la volée au lieu de servir une liste périmée.
+duplique. Le pool par défaut et les désignations par poste (`pools_by_role`) sont mémorisés dans
+`user_prefs.json`. Un changement ou une édition du pool par défaut est aussi déposé chez le Live Coach
+(commande `pool <nom>`), qui le recharge dès sa prochaine draft ; une désignation de poste n'y dépose
+rien, elle s'applique à la prochaine draft. Les bans précalculés d'un pool édité sont effacés : sans
+eux, le Live Coach recalcule à la volée au lieu de servir une liste périmée.
 """
 
 import sqlite3
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
-from ..pool_manager import PoolManager
-from ..user_prefs import load_user_prefs, save_pool_name
+from ..pool_manager import PoolManager, resolve_pool_for_lane
+from ..user_prefs import load_user_prefs, save_pool_name, save_role_pool
 from .db import read_only, writable
 from .draft_actions import Refusal
 
 SYSTEM_HINT = "Pool système : duplique-le pour le modifier"
+
+# Textes d'interface des postes (pas un réglage) ; l'ordre est celui de l'écran.
+ROLE_LABELS = {
+    "top": "Top",
+    "jungle": "Jungle",
+    "middle": "Mid",
+    "bottom": "ADC",
+    "support": "Support",
+}
 
 
 def champion_names(db_path: Union[str, Path]) -> List[str]:
@@ -41,8 +53,26 @@ def pools_view(
     names: List[str],
     notice: Optional[str] = None,
 ) -> dict:
-    """La liste des pools, le pool ouvert (le pool actif à défaut) et sa grille de champions."""
+    """La liste des pools, le pool ouvert (le pool par défaut à défaut) et sa grille de champions.
+
+    `roles` donne le pool résolu pour chaque poste (`ROLE_LABELS`, dans l'ordre de l'écran) ; le
+    détail ouvert ajoute `roles_on` (postes où il est désigné) et chaque entrée de `pools` ajoute
+    `roles` (libellés des postes qui le désignent).
+    """
     active = active_pool_name(manager)
+    prefs = load_user_prefs()
+    pools_by_role = prefs.pools_by_role if prefs else {}
+    roles = []
+    for lane, label in ROLE_LABELS.items():
+        pool, source = resolve_pool_for_lane(manager, lane, pools_by_role, active)
+        roles.append(
+            {
+                "lane": lane,
+                "label": label,
+                "pool": pool.name if pool else None,
+                "source": source,
+            }
+        )
     ordered = sorted(
         manager.get_all_pools().values(),
         key=lambda p: (p.created_by == "system", p.name.casefold()),
@@ -61,10 +91,14 @@ def pools_view(
             "active": pool.name == active,
             "size": len(members),
             "champions": [{"name": n, "on": n in members} for n in universe],
+            "roles_on": [
+                r["lane"] for r in roles if r["pool"] == pool.name and r["source"] == "poste"
+            ],
         }
     return {
         "notice": notice,
         "active": active,
+        "roles": roles,
         "selected": detail,
         "pools": [
             {
@@ -73,6 +107,11 @@ def pools_view(
                 "system": p.created_by == "system",
                 "active": p.name == active,
                 "open": bool(detail) and p.name == detail["name"],
+                "roles": [
+                    ROLE_LABELS[lane]
+                    for lane, name in pools_by_role.items()
+                    if name == p.name and lane in ROLE_LABELS
+                ],
             }
             for p in ordered
         ],
@@ -102,6 +141,17 @@ def edit(
         if not save_pool_name(name):
             raise Refusal("Préférences non enregistrées")
         return f"Pool actif : « {name} » (appliqué dès la prochaine draft)", name
+    if action == "role":
+        if arg not in ROLE_LABELS:
+            raise Refusal("Poste inconnu")
+        label = ROLE_LABELS[arg]
+        designated = load_user_prefs()
+        already = designated is not None and designated.pools_by_role.get(arg) == name
+        if not save_role_pool(arg, None if already else name):
+            raise Refusal("Préférences non enregistrées")
+        if already:
+            return f"Poste {label} : plus de pool désigné", name
+        return f"Pool « {name} » pour le poste {label} (appliqué dès la prochaine draft)", name
     if action == "dupliquer":
         if not arg or not manager.duplicate_pool(name, arg):
             raise Refusal("Nom de pool vide ou déjà pris")

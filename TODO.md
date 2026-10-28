@@ -391,7 +391,7 @@ Le pool par défaut couvre son propre rôle tant qu'aucun pool n'y est désigné
 |---|---|---|---|---|
 | 215 | `user_prefs` : `pools_by_role`, lecture tolérante, `save_role_pool` + tests | 2 | — || ✅ 2026-10-28 : `resolve_pool_for_lane` (poste, défaut, système) partagé par 216 et 217 ; 12 tests |
 | 216 | Live Coach : `select_for_position` au premier tick, `launch_pool_name`, `pool_declared_lane`, `handle_pool_command` garde le poste, bans précalculés seulement sur leur lane + tests | 5 | 215 || ✅ 2026-10-28 : `select_at_launch` (pool de lancement) et `select_for_position` ; pool par défaut lu dans les préférences pour le client, pool de lancement en console ; sauvegarde du coach console corrigée (gardait le pool du dernier poste, effaçait les pools par poste) ; 15 tests, dont la régression `test_regression_pool_per_position.py` |
-| 217 | Écran Pool : désignation par poste, en-tête, badges, « Pool par défaut » + tests | 3 | 215 | |
+| 217 | Écran Pool : désignation par poste, en-tête, badges, « Pool par défaut » + tests | 3 | 215 || ✅ 2026-10-28 : rangée de 5 postes sur le pool ouvert, en-tête « Par défaut · Top · … » avec la source de chaque poste, badges « Défaut » et postes ; 6 tests |
 | 218 | Clôture : critères, `CHANGELOG.md`, statut, README des specs, `TODO.md` | 1 | 216, 217 | |
 
 ### Lot SPEC-43, force intrinsèque et recalibrage sur `crawl.db` (✅ livrée le 2026-10-25, recette @pj35 à faire)
