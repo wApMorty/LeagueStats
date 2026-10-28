@@ -2,7 +2,7 @@ import json
 import os
 import shutil
 import sys
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Tuple
 from dataclasses import dataclass, asdict, field
 from .config import get_resource_path
 
@@ -473,3 +473,40 @@ def suggest_champions(partial: str, available_champions: Set[str], limit: int = 
             matches.append(champion)
 
     return sorted(matches)[:limit]
+
+
+def resolve_pool_for_lane(
+    manager: "PoolManager",
+    lane: Optional[str],
+    pools_by_role: Dict[str, str],
+    default_name: Optional[str],
+) -> Tuple[Optional[ChampionPool], str]:
+    """Pool à utiliser pour un poste, avec sa source.
+
+    Ordre : le pool désigné pour le poste (source "poste") ; sinon le pool par défaut s'il couvre
+    ce poste (source "défaut") ; sinon le premier pool système du poste (source "système").
+    `lane` None (poste inconnu) : le pool par défaut, source "défaut".
+
+    Returns:
+        (pool, source), source parmi "poste", "défaut", "système". Renvoie (None, "défaut")
+        si `lane` est None sans pool par défaut, et (None, "système") si aucun pool ne couvre
+        le poste.
+    """
+    default_pool = manager.get_pool(default_name) if default_name is not None else None
+    if lane is None:
+        return default_pool, "défaut"
+
+    designated_name = pools_by_role.get(lane)
+    if designated_name is not None:
+        designated = manager.get_pool(designated_name)
+        if designated is not None:
+            return designated, "poste"
+
+    if default_pool is not None and pool_role_to_lane(default_pool.role) == lane:
+        return default_pool, "défaut"
+
+    for pool in manager.get_all_pools().values():
+        if pool.created_by == "system" and pool_role_to_lane(pool.role) == lane:
+            return pool, "système"
+
+    return None, "système"

@@ -376,3 +376,80 @@ class TestPoolsPathAndMigration:
 
         assert migrate_legacy_pools_file(str(target), str(legacy)) is False
         assert not target.exists()
+
+
+class TestResolvePoolForLane:
+    """resolve_pool_for_lane : poste, défaut, système, et leurs replis (SPEC-44 §4.1, tâche 215)."""
+
+    @pytest.fixture
+    def manager(self, tmp_path):
+        """PoolManager sur un champion_pools.json sous tmp_path, avec un pool custom « Mon Mid »."""
+        pools_file = tmp_path / "champion_pools.json"
+        with patch("src.pool_manager.get_user_pools_path", return_value=str(pools_file)):
+            manager = PoolManager()
+        manager.create_pool("Mon Mid", ["Ahri", "Zed"], role="mid")
+        return manager
+
+    def test_designated_pool_is_source_poste(self, manager):
+        from src.pool_manager import resolve_pool_for_lane
+
+        pool, source = resolve_pool_for_lane(
+            manager, "middle", {"middle": "Mon Mid"}, "All Top Champions"
+        )
+
+        assert pool is manager.get_pool("Mon Mid")
+        assert source == "poste"
+
+    def test_default_pool_covering_lane_is_source_defaut(self, manager):
+        from src.pool_manager import resolve_pool_for_lane
+
+        pool, source = resolve_pool_for_lane(manager, "middle", {}, "Mon Mid")
+
+        assert pool is manager.get_pool("Mon Mid")
+        assert source == "défaut"
+
+    def test_system_pool_of_the_lane_when_nothing_designated(self, manager):
+        from src.pool_manager import resolve_pool_for_lane
+
+        pool, source = resolve_pool_for_lane(manager, "middle", {}, "All Top Champions")
+
+        assert pool.name == "All Mid Champions"
+        assert pool.created_by == "system"
+        assert source == "système"
+
+    def test_deleted_designated_pool_falls_back_to_default(self, manager):
+        from src.pool_manager import resolve_pool_for_lane
+
+        pool, source = resolve_pool_for_lane(manager, "middle", {"middle": "Supprimé"}, "Mon Mid")
+
+        assert pool is manager.get_pool("Mon Mid")
+        assert source == "défaut"
+
+    def test_deleted_designated_pool_falls_back_to_system(self, manager):
+        from src.pool_manager import resolve_pool_for_lane
+
+        pool, source = resolve_pool_for_lane(
+            manager, "middle", {"middle": "Supprimé"}, "All Top Champions"
+        )
+
+        assert pool.name == "All Mid Champions"
+        assert source == "système"
+
+    def test_no_lane_returns_default_pool(self, manager):
+        from src.pool_manager import resolve_pool_for_lane
+
+        pool, source = resolve_pool_for_lane(manager, None, {}, "Mon Mid")
+
+        assert pool is manager.get_pool("Mon Mid")
+        assert source == "défaut"
+
+    def test_no_lane_and_no_default_returns_none(self, manager):
+        from src.pool_manager import resolve_pool_for_lane
+
+        assert resolve_pool_for_lane(manager, None, {}, None) == (None, "défaut")
+
+    def test_lane_without_any_pool_returns_none_system(self, manager):
+        from src.pool_manager import resolve_pool_for_lane
+
+        # "mid" n'est pas une lane (c'est "middle") : aucun pool ne la couvre.
+        assert resolve_pool_for_lane(manager, "mid", {}, None) == (None, "système")

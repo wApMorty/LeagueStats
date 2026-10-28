@@ -389,7 +389,7 @@ Le pool par défaut couvre son propre rôle tant qu'aucun pool n'y est désigné
 
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
-| 215 | `user_prefs` : `pools_by_role`, lecture tolérante, `save_role_pool` + tests | 2 | — | |
+| 215 | `user_prefs` : `pools_by_role`, lecture tolérante, `save_role_pool` + tests | 2 | — || ✅ 2026-10-28 : `resolve_pool_for_lane` (poste, défaut, système) partagé par 216 et 217 ; 12 tests |
 | 216 | Live Coach : `select_for_position` au premier tick, `launch_pool_name`, `pool_declared_lane`, `handle_pool_command` garde le poste, bans précalculés seulement sur leur lane + tests | 5 | 215 | |
 | 217 | Écran Pool : désignation par poste, en-tête, badges, « Pool par défaut » + tests | 3 | 215 | |
 | 218 | Clôture : critères, `CHANGELOG.md`, statut, README des specs, `TODO.md` | 1 | 216, 217 | |

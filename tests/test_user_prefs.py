@@ -3,7 +3,7 @@
 import json
 from unittest.mock import patch
 
-from src.user_prefs import UserPrefs, load_user_prefs, save_user_prefs
+from src.user_prefs import UserPrefs, load_user_prefs, save_motion, save_role_pool, save_user_prefs
 
 
 class TestSaveLoadRoundTrip:
@@ -99,3 +99,122 @@ class TestSaveErrorHandling:
         with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
             with patch("builtins.open", side_effect=PermissionError("denied")):
                 assert save_user_prefs(UserPrefs()) is False
+
+
+class TestPoolsByRole:
+    """Désignation d'un pool par poste (SPEC-44 §4.1)."""
+
+    def test_pools_by_role_round_trip(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+        prefs = UserPrefs(pools_by_role={"middle": "Mid Pool", "top": "Top Pool"})
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            save_user_prefs(prefs)
+            loaded = load_user_prefs()
+
+        assert loaded == prefs
+
+    def test_file_without_key_gives_empty_dict(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+        prefs_file.write_text(
+            json.dumps({"auto_hover": True, "auto_accept_queue": False, "auto_ban_hover": False}),
+            encoding="utf-8",
+        )
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            loaded = load_user_prefs()
+
+        assert loaded is not None
+        assert loaded.pools_by_role == {}
+
+    def test_invalid_entries_are_filtered_without_losing_other_prefs(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+        prefs_file.write_text(
+            json.dumps(
+                {
+                    "auto_hover": True,
+                    "auto_accept_queue": False,
+                    "auto_ban_hover": False,
+                    "pool_name": "GRIND",
+                    "pools_by_role": {
+                        "middle": "GRIND",
+                        "bogus": "X",
+                        "top": 3,
+                        "jungle": None,
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            loaded = load_user_prefs()
+
+        assert loaded is not None
+        assert loaded.pools_by_role == {"middle": "GRIND"}
+        assert loaded.pool_name == "GRIND"
+        assert loaded.auto_hover is True
+
+    def test_non_dict_pools_by_role_becomes_empty(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+        prefs_file.write_text(
+            json.dumps(
+                {
+                    "auto_hover": False,
+                    "auto_accept_queue": False,
+                    "auto_ban_hover": False,
+                    "pools_by_role": ["middle", "GRIND"],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            loaded = load_user_prefs()
+
+        assert loaded is not None
+        assert loaded.pools_by_role == {}
+
+
+class TestSaveRolePool:
+    """save_role_pool désigne, retire, refuse une lane inconnue et garde le reste du fichier."""
+
+    def test_designates_and_keeps_other_designations(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            assert save_role_pool("middle", "GRIND") is True
+            assert save_role_pool("top", "Top Pool") is True
+
+        data = json.loads(prefs_file.read_text(encoding="utf-8"))
+        assert data["pools_by_role"] == {"middle": "GRIND", "top": "Top Pool"}
+
+    def test_none_removes_designation(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            save_role_pool("middle", "GRIND")
+            save_role_pool("top", "Top Pool")
+            assert save_role_pool("middle", None) is True
+
+        data = json.loads(prefs_file.read_text(encoding="utf-8"))
+        assert data["pools_by_role"] == {"top": "Top Pool"}
+
+    def test_unknown_lane_is_refused_without_writing(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            assert save_role_pool("mid", "GRIND") is False
+
+        assert not prefs_file.exists()
+
+    def test_keeps_motion_setting(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            save_motion("reduit")
+            save_role_pool("bottom", "ADC Pool")
+
+        data = json.loads(prefs_file.read_text(encoding="utf-8"))
+        assert data["motion"] == "reduit"
+        assert data["pools_by_role"] == {"bottom": "ADC Pool"}
