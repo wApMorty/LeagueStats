@@ -1,6 +1,6 @@
 # SPEC-44 — Un pool par poste
 
-**Statut** : 🟡 Rédigée le 2026-10-28, un arbitrage « à valider » en §2.
+**Statut** : 🟢 Rédigée et validée le 2026-10-28 (tous les arbitrages de §2).
 
 **Origine** : @pj35, 2026-10-28 — « J'aimerais pouvoir charger plusieurs champion pools car je joue
 plusieurs rôles. L'appli choisirait le bon pool en fonction du rôle sur lequel je tombe. »
@@ -51,7 +51,7 @@ et évalue tout (blind pick, recommandations, bans) sur ce poste.
 |---|---|
 | Choix du pool d'un poste | **Validé (@pj35, 2026-10-28)** : un pool désigné par poste sur l'écran Pool, mémorisé dans `user_prefs.json` (`pools_by_role`). N'importe quel pool convient, même `custom` : c'est le poste assigné qui fixe la lane. |
 | Poste sans pool désigné | **Validé (@pj35, 2026-10-28)** : le pool système du rôle (« All Support Champions »), avec un `[INFO]`. |
-| Poste sans pool désigné, mais le pool par défaut a ce rôle | **À valider** : le pool par défaut sert (ex. `Top playable` au top tant qu'aucun pool top n'est désigné). Sans cette règle, la configuration actuelle de @pj35 passerait à « All Top Champions » au top jusqu'à ce qu'il désigne ses pools. |
+| Poste sans pool désigné, mais le pool par défaut a ce rôle | **Validé (@pj35, 2026-10-28)** : le pool par défaut sert (ex. `Top playable` au top tant qu'aucun pool top n'est désigné). Sans cette règle, la configuration actuelle de @pj35 passerait à « All Top Champions » au top jusqu'à ce qu'il désigne ses pools. |
 | File sans poste assigné | **Validé (@pj35, 2026-10-28)** : le pool par défaut, c'est-à-dire le pool actif d'aujourd'hui (`pool_name`), relu à chaque draft. Comportement inchangé. |
 | Choix manuel pendant une draft | **Validé (@pj35, 2026-10-28)** : « Pool par défaut » cliqué pendant une draft remplace le pool du poste jusqu'à la fin de cette draft ; la règle par poste reprend à la suivante. |
 | Pool désigné supprimé | Traité comme non désigné : le nom reste dans `user_prefs.json` mais ne résout plus rien (même règle que `active_pool_name`). Pas de nettoyage. |
@@ -94,8 +94,8 @@ et évalue tout (blind pick, recommandations, bans) sur ce poste.
 - **`PoolSelector.select_for_position(lane: Optional[str]) -> None`** : appelée une fois par draft.
   1. Relit `load_user_prefs()` (une désignation faite dans le client sert dès la draft suivante, sans
      commande).
-  2. `lane` connue : le pool de `pools_by_role[lane]` s'il existe. Sinon, si la règle « à valider » de §2
-     est retenue, le pool par défaut quand sa lane déclarée vaut `lane`. Sinon le pool système du rôle :
+  2. `lane` connue : le pool de `pools_by_role[lane]` s'il existe. Sinon le pool par défaut quand sa lane
+     déclarée vaut `lane` (§2). Sinon le pool système du rôle :
      le pool `created_by == "system"` dont `pool_role_to_lane(role) == lane`.
   3. `lane` absente : le pool par défaut (`prefs.pool_name` s'il existe, sinon `launch_pool_name`).
   4. Pose `current_pool`, `pool_name`, `pool_declared_lane`, et `pool_lane = lane or pool_declared_lane`.
@@ -148,8 +148,8 @@ Aucune. Les libellés de poste sont des textes d'interface du gabarit et de `poo
   une lane inconnue et garde `motion`.
 - `tests/test_draft_monitor_pool_selection.py` : `select_for_position` sur un poste désigné, un poste non
   désigné (pool système), un pool désigné supprimé, l'absence de poste (pool par défaut, puis
-  `launch_pool_name` sans préférence), une exception (pool courant gardé). Si la règle à valider est
-  retenue : poste non désigné couvert par le pool par défaut.
+  `launch_pool_name` sans préférence), une exception (pool courant gardé), un poste non désigné couvert
+  par le pool par défaut (`Top playable` au top).
 - `tests/regression/` ou `tests/test_draft_monitor_lifecycle.py` : premier tick d'une draft mid avec un
   pool par défaut top, puis le hover initial résout la lane `middle` ; une commande `pool` déposée avant
   la draft est écrasée, une commande au 2e tick l'emporte et garde `pool_lane = "middle"` ; après
@@ -179,7 +179,8 @@ Tous hermétiques : `user_prefs.json` et `champion_pools.json` sous `tmp_path` (
    actuel de @pj35) se charge, avec `pools_by_role == {}`.
 3. Au premier tick d'une draft avec poste `middle` et `pools_by_role == {"middle": "Mid"}`, `current_pool`
    vaut les champions de `Mid` et `pool_lane == "middle"` avant le hover initial (test de 216).
-4. Poste désigné sur aucun pool existant, donc pool système du rôle et `[INFO]` en console (test de 216).
+4. Poste désigné sur aucun pool existant, donc pool système du rôle et `[INFO]` en console ; mais pool
+   par défaut si sa lane déclarée est ce poste (tests de 216).
 5. Draft sans poste : pool par défaut, comme avant SPEC-44 (test de 216).
 6. Une commande `pool <nom>` au 2e tick remplace le pool jusqu'à `reset_for_next_game`, et `pool_lane`
    garde le poste (test de 216).

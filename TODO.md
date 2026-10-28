@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-10-28 (SPEC-44 rédigée : un pool par poste, choisi selon le poste assigné en draft ; SPEC-43 livrée : force intrinsèque dans le moteur et K recalibrés sur crawl.db, `spec43-v1`, recette @pj35 à faire ; SPEC-42 close : maîtrise selon le matchup mesurée sur crawl.db, rien d'adopté ; SPEC-41 livrée : maîtrise personnelle dans le moteur de draft, mesurée sur crawl.db puis adoptée, recette @pj35 à faire ; SPEC-40 livrée : victoire immédiate sur les cartes de draft, comme le grimoire, recette @pj35 à faire ; SPEC-39 livrée : diagnostic complet et « Appliquer » sur l'écran Calibration, recette @pj35 à faire ; SPEC-38 livrée : trois pages de runes OneTricks au choix pendant la draft, recette @pj35 à faire ; SPEC-37 livrée : écran « Données » pour actualiser la base depuis le client, recette @pj35 à faire ; SPEC-36 livrée : morts sans contrepartie, axe et revue, recette @pj35 à faire ; SPEC-35 livrée : étude « Moneyball » du début de partie, aucune action adoptée ; SPEC-33 livrée : éclaireur et pastilles de forme en partie, terme de forme mesuré et refusé, recette @pj35 à faire, recette @pj35 à faire ; SPEC-32 livrée : classement MVP / ACE en post-game, recette @pj35 à faire ; SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette @pj35 à faire)
+**Mis à jour** : 2026-10-28 (SPEC-44 validée : un pool par poste, choisi selon le poste assigné en draft ; SPEC-43 livrée : force intrinsèque dans le moteur et K recalibrés sur crawl.db, `spec43-v1`, recette @pj35 à faire ; SPEC-42 close : maîtrise selon le matchup mesurée sur crawl.db, rien d'adopté ; SPEC-41 livrée : maîtrise personnelle dans le moteur de draft, mesurée sur crawl.db puis adoptée, recette @pj35 à faire ; SPEC-40 livrée : victoire immédiate sur les cartes de draft, comme le grimoire, recette @pj35 à faire ; SPEC-39 livrée : diagnostic complet et « Appliquer » sur l'écran Calibration, recette @pj35 à faire ; SPEC-38 livrée : trois pages de runes OneTricks au choix pendant la draft, recette @pj35 à faire ; SPEC-37 livrée : écran « Données » pour actualiser la base depuis le client, recette @pj35 à faire ; SPEC-36 livrée : morts sans contrepartie, axe et revue, recette @pj35 à faire ; SPEC-35 livrée : étude « Moneyball » du début de partie, aucune action adoptée ; SPEC-33 livrée : éclaireur et pastilles de forme en partie, terme de forme mesuré et refusé, recette @pj35 à faire, recette @pj35 à faire ; SPEC-32 livrée : classement MVP / ACE en post-game, recette @pj35 à faire ; SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette @pj35 à faire)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -377,15 +377,15 @@ pile réelle sur faux LCU (§3). Découpage en SPEC-34 §5 (tâches 163 à 170, 
 | 169 | Scènes « En partie » (courbe SVG), « Revue et coaching » et « Mosaïque » ; `hero.gif` dans le README | 5 | 167, 168 | ✅ 2026-10-16 : teaser de 30,0 s en 1 920 × 1 080 sans audio (12,2 Mo) ; `hero.gif` 960 × 540 à 10 i/s, 4,1 Mo, encodé par ffmpeg (palette optimisée ; l'encodeur GIF de Remotion donnait 10,3 Mo), fond figé dans la boucle |
 | 170 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure ; recette à l'œil de @pj35 | 3 | 169 | ✅ 2026-10-16 ; recette à l'œil (captures, GIF, `docs/presentation/video/out/teaser.mp4`) laissée à @pj35 |
 
-### Lot SPEC-44, un pool par poste (🟡 rédigée le 2026-10-28)
+### Lot SPEC-44, un pool par poste (🟢 validée le 2026-10-28)
 
 [SPEC-44](docs/specs/SPEC-44-un-pool-par-poste.md) : @pj35 joue plusieurs rôles, mais le Live Coach garde un
 seul pool par session, et le rôle de ce pool passe avant le poste assigné (avec « Top playable » et un poste
 mid, blind pick et bans calculés pour le top). Un pool désigné par poste sur l'écran Pool (`pools_by_role`
 dans `user_prefs.json`), chargé au premier tick de chaque draft ; pool système du rôle si aucun n'est
 désigné ; pool par défaut sans poste assigné ; « Pool par défaut » cliqué en draft vaut pour cette draft.
-Un arbitrage à valider (§2 : le pool par défaut couvre-t-il son propre rôle tant qu'aucun pool n'y est
-désigné ?). Découpage en SPEC-44 §5 (tâches 215 à 218, 11 pts) :
+Le pool par défaut couvre son propre rôle tant qu'aucun pool n'y est désigné. Arbitrages validés le
+2026-10-28. Découpage en SPEC-44 §5 (tâches 215 à 218, 11 pts) :
 
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
