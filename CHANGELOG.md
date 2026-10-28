@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### 🐛 Fix
+
+- **LP de l'écran post-game (SPEC-45)** — dans le gros « +19 LP » de la revue, le nombre sortait en petit et en gris, parce que le style de la ligne de rang s'appliquait aussi au compteur. Il reprend la taille et le dégradé du « + » et du « LP ». Quand les LP arrivent après l'ouverture de la revue (6 parties classées sur 199, de 21 s à 4 min de retard), l'encart apparaît maintenant de lui-même, sans recharger la page ni rejouer le sceau. Un delta nul (remake, défaite sans perte de LP) s'affiche « 0 LP » en couleur neutre, suivi de « · remake » pour un remake, au lieu de « +0 LP » en vert ; la liste des parties dit aussi « 0 LP ». Aucune action requise.
+
 ### 🎨 Style
 
 - **Écran Pool : la rangée des postes a un titre** — les 5 boutons Top, Jungle, Mid, ADC et Support qui désignent le pool d'un poste (SPEC-44) ressemblaient à la grille des champions juste en dessous. Ils sont maintenant précédés de « Utiliser pour le poste : ».
