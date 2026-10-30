@@ -48,6 +48,7 @@ src/
 │   ├── matchup_cache.py            # Cache mémoire pour les lookups en draft
 │   ├── probability.py               # logit/sigmoid (modèle log-odds, SPEC-05 B7)
 │   ├── mastery.py                    # Maîtrise personnelle par champion, terme du moteur de draft (SPEC-41)
+│   ├── strategy.py                   # Stratégies de draft : poids par terme, évaluateur pondéré (SPEC-46)
 │   ├── pool_statistics.py            # Statistiques de pool
 │   ├── team_analysis.py               # TeamAnalyzer (code non appelé par un menu)
 │   └── pool_value.py, trio_holistic.py, trio_counterpick.py,
@@ -97,6 +98,7 @@ src/
 │   ├── draft_swaps.py                             # Échanges d'ordre et de rôle (l'id lu dans la session)
 │   ├── ingame.py, en_partie.py                    # Écran « En partie » : fil de lecture de la Live Client API (sujet `ingame`), vue (courbe, face-à-face, build)
 │   ├── lobby.py, social.py                        # Lobby et file d'attente (écriture gardée par la phase), social en lecture seule
+│   ├── strategies.py                              # Écran Stratégies : choisir, dupliquer, régler les poids (SPEC-46)
 │   ├── templates/                                # Jinja : coque, un gabarit par écran, fragments htmx dans partials/
 │   └── static/                                    # style.css (jetons « Alchimie »), motion.js, un module JS par écran, fonts/
 │

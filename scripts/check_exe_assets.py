@@ -24,6 +24,7 @@ MODULES = (
     "src.client.en_partie",
     "src.client.draft_swaps",
     "src.client.classement",
+    "src.client.strategies",
     "src.winprob.scout",
     "src.winprob.form",
     "src.draft.phase_tracker",

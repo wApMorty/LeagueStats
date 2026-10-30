@@ -18,7 +18,7 @@ Pendant le champion select, le coach lit la draft dans le client LoL et classe l
 (un pool par poste, choisi selon le poste qui t'est assigné) selon la victoire prédite face à la composition adverse : force de chaque champion sur sa lane,
 duels et synergies, avec des poids calibrés sur des dizaines de milliers de parties classées. Il anticipe
 aussi les picks qui restent à jouer, et tient compte de ton niveau sur chaque champion, tiré de tes propres parties : un champion
-sur lequel tu performes mal ne passe en tête que si la draft le justifie vraiment. En phase de bans, il chiffre les menaces qui pèsent sur ta pool. Un clic suffit pour survoler ou
+sur lequel tu performes mal ne passe en tête que si la draft le justifie vraiment. Une stratégie règle le poids de chacun de ces critères : tu passes de l'une à l'autre d'un clic pendant la draft, et tu définis les tiennes sur l'écran Stratégies. En phase de bans, il chiffre les menaces qui pèsent sur ta pool. Un clic suffit pour survoler ou
 verrouiller. Au verrouillage, il écrit dans le client les runes, sorts et objets les plus joués par les
 one-tricks de ton champion, affinés contre ton adversaire direct. Tu peux aussi comparer les trois
 pages de runes les plus jouées et en choisir une d'un clic.
