@@ -12,8 +12,9 @@ le reste du fichier.
 import json
 import os
 from dataclasses import asdict, dataclass, field, replace
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+from .analysis.strategy import Strategy, parse_strategies, strategy_to_dict
 from .config_client import client_config
 from .config_constants import LCU_POSITION_TO_LANE
 from .pool_manager import get_user_data_path
@@ -21,6 +22,10 @@ from .pool_manager import get_user_data_path
 PREFS_FILENAME = "user_prefs.json"
 
 _KNOWN_LANES = frozenset(LCU_POSITION_TO_LANE.values())
+
+# Clés hors de `UserPrefs`, écrites par lecture brute : `save_user_prefs` les reporte, sinon
+# la fin de chaque draft coach les effacerait.
+_KEPT_KEYS = ("motion", "active_strategy", "strategies")
 
 
 @dataclass
@@ -115,13 +120,14 @@ def _write_raw(data: dict) -> bool:
 def save_user_prefs(prefs: UserPrefs) -> bool:
     """Sauvegarde les préférences. Best-effort : ne lève jamais d'exception.
 
-    Le réglage Motion du client (`motion`, voir `save_motion`) n'est pas un champ de `UserPrefs` :
-    il est reporté tel quel, sinon chaque fin de draft coach l'effacerait.
+    Les clés de `_KEPT_KEYS` (Motion, stratégies) ne sont pas des champs de `UserPrefs` :
+    elles sont reportées telles quelles, sinon chaque fin de draft coach les effacerait.
     """
     data = asdict(prefs)
-    motion = _read_raw().get("motion")
-    if motion is not None:
-        data["motion"] = motion
+    raw = _read_raw()
+    for key in _KEPT_KEYS:
+        if raw.get(key) is not None:
+            data[key] = raw[key]
     return _write_raw(data)
 
 
@@ -140,6 +146,27 @@ def save_motion(mode: str) -> bool:
     if mode not in client_config.MOTION_MODES:
         return False
     return _write_raw({**_read_raw(), "motion": mode})
+
+
+def load_strategies() -> Tuple[Optional[str], List[Strategy]]:
+    """Nom de la stratégie active (None si aucune choisie) et stratégies perso.
+
+    Une entrée invalide de `strategies` est écartée par `parse_strategies` ; un
+    `active_strategy` qui n'est pas une chaîne vaut None.
+    """
+    raw = _read_raw()
+    active = raw.get("active_strategy")
+    return (active if isinstance(active, str) else None), parse_strategies(raw.get("strategies"))
+
+
+def save_active_strategy(name: str) -> bool:
+    """Mémorise la stratégie active en gardant les autres clés du fichier."""
+    return _write_raw({**_read_raw(), "active_strategy": name})
+
+
+def save_strategies(strategies: Sequence[Strategy]) -> bool:
+    """Mémorise les stratégies perso en gardant les autres clés du fichier."""
+    return _write_raw({**_read_raw(), "strategies": [strategy_to_dict(s) for s in strategies]})
 
 
 def save_pool_name(name: str) -> bool:

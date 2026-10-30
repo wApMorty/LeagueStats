@@ -388,7 +388,7 @@ Découpage en SPEC-46 §5 (tâches 223 à 229, 22 pts) :
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
 | 223 | `src/analysis/strategy.py`, constantes, stratégies système, tests | 3 | — | ✅ 2026-10-30 : 34 tests ; à poids 1, `WeightedEvaluator` identique à `GameEvaluator` bit à bit |
-| 224 | Préférences : `load_strategies`, sauvegardes, clés préservées, tests | 2 | 223 | ⬜ |
+| 224 | Préférences : `load_strategies`, sauvegardes, clés préservées, tests | 2 | 223 | ✅ 2026-10-30 : 6 tests ; `active_strategy` et `strategies` hors de `UserPrefs`, reportées comme `motion` |
 | 225 | Moteur : `max_depth`, `set_strategy`, rechargement, commande `strategy`, `_calibrate`, départage, `parts`, survol de début de draft, test d'identité de Complet | 5 | 223, 224 | ⬜ |
 | 226 | Migration `predictions.strategy`, `insert_prediction`, `FinalDraftAnalyzer`, tests | 2 | 223 | ⬜ |
 | 227 | Snapshot, cartes, sélecteur de la rangée, `POST /strategies/active`, `draft.js`, CSS | 3 | 225 | ⬜ |

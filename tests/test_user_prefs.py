@@ -3,7 +3,19 @@
 import json
 from unittest.mock import patch
 
-from src.user_prefs import UserPrefs, load_user_prefs, save_motion, save_role_pool, save_user_prefs
+from src.analysis.strategy import Strategy
+from src.user_prefs import (
+    UserPrefs,
+    load_strategies,
+    load_user_prefs,
+    save_active_strategy,
+    save_motion,
+    save_role_pool,
+    save_strategies,
+    save_user_prefs,
+)
+
+GRIND = Strategy("Grind", force=2.0, duel=0.5, other=1.0, synergy=0.0, mastery=1.5, search=True)
 
 
 class TestSaveLoadRoundTrip:
@@ -218,3 +230,96 @@ class TestSaveRolePool:
         data = json.loads(prefs_file.read_text(encoding="utf-8"))
         assert data["motion"] == "reduit"
         assert data["pools_by_role"] == {"bottom": "ADC Pool"}
+
+
+class TestStrategies:
+    """Stratégies de draft (SPEC-46 §4.2) : lecture, écriture, clés préservées."""
+
+    def test_round_trip(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            assert save_strategies([GRIND]) is True
+            assert save_active_strategy("Grind") is True
+            active, strategies = load_strategies()
+
+        assert active == "Grind"
+        assert strategies == [GRIND]
+
+    def test_absent_file_gives_no_active_and_no_strategies(self, tmp_path):
+        prefs_file = tmp_path / "does_not_exist.json"
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            assert load_strategies() == (None, [])
+
+    def test_corrupted_entry_is_dropped_without_losing_others(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+        prefs_file.write_text(
+            json.dumps(
+                {
+                    "active_strategy": "Grind",
+                    "strategies": [
+                        {
+                            "name": "Trop lourd",
+                            "force": 9.0,
+                            "duel": 1,
+                            "other": 1,
+                            "synergy": 1,
+                            "mastery": 1,
+                        },
+                        {
+                            "name": "Grind",
+                            "force": 2.0,
+                            "duel": 0.5,
+                            "other": 1.0,
+                            "synergy": 0.0,
+                            "mastery": 1.5,
+                            "search": True,
+                        },
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            active, strategies = load_strategies()
+
+        assert active == "Grind"
+        assert [s.name for s in strategies] == ["Grind"]
+
+    def test_active_strategy_of_wrong_type_gives_none(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+        prefs_file.write_text(json.dumps({"active_strategy": 3}), encoding="utf-8")
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            assert load_strategies() == (None, [])
+
+    def test_save_user_prefs_keeps_strategies_and_motion(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            save_motion("reduit")
+            save_strategies([GRIND])
+            save_active_strategy("Grind")
+            save_user_prefs(UserPrefs(auto_hover=True))
+
+        data = json.loads(prefs_file.read_text(encoding="utf-8"))
+        assert data["motion"] == "reduit"
+        assert data["active_strategy"] == "Grind"
+        assert data["strategies"][0]["name"] == "Grind"
+        assert data["auto_hover"] is True
+
+    def test_save_role_pool_keeps_strategies_and_pools_by_role(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            save_active_strategy("Simple")
+            save_strategies([GRIND])
+            save_role_pool("middle", "GRIND")
+            save_role_pool("top", "Top Pool")
+
+        data = json.loads(prefs_file.read_text(encoding="utf-8"))
+        assert data["pools_by_role"] == {"middle": "GRIND", "top": "Top Pool"}
+        assert data["active_strategy"] == "Simple"
+        assert [s["name"] for s in data["strategies"]] == ["Grind"]
