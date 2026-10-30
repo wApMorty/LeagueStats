@@ -9,7 +9,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from src.config_constants import analysis_config
+from src.config_constants import analysis_config, draft_config
 from src.draft.final_analysis import FinalDraftAnalyzer, duel_cell, face_offs
 from src.models import Matchup
 
@@ -205,5 +205,6 @@ class TestCalibrationUnchanged:
             ally_lanes=LANES_BY_ID,
             predicted_probability=0.55,
             model_version=analysis_config.MODEL_VERSION,
+            strategy=draft_config.STRATEGY_DEFAULT,  # SPEC-46 : seul ajout, la probabilité ne bouge pas
         )
         assert monitor._last_prediction_id == 42
