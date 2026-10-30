@@ -392,7 +392,7 @@ Découpage en SPEC-46 §5 (tâches 223 à 229, 22 pts) :
 | 225 | Moteur : `max_depth`, `set_strategy`, rechargement, commande `strategy`, `_calibrate`, départage, `parts`, survol de début de draft, test d'identité de Complet | 5 | 223, 224 | ✅ 2026-10-30 : 25 tests ; sous Complet, classement identique à un `DraftSearch` direct ; défaut Simple, profondeur 1 et un nœud par candidat |
 | 226 | Migration `predictions.strategy`, `insert_prediction`, `FinalDraftAnalyzer`, tests | 2 | 223 | ✅ 2026-10-30 : 5 tests ; migration `a3f6c1d8b7e2` aller-retour sur une copie de `data/db.db` (293 prédictions gardées, `strategy` à NULL) ; `alembic upgrade head` requis côté @pj35 |
 | 227 | Snapshot, cartes, sélecteur de la rangée, `POST /strategies/active`, `draft.js`, CSS | 3 | 225 | ✅ 2026-10-30 : 15 tests ; ligne de décomposition sur les cartes, suite et profondeur réservées aux stratégies à recherche ; **rendu à voir par @pj35** |
-| 228 | Écran Stratégies : `strategies.py`, routes, gabarits, navigation, validation, tests | 5 | 224, 227 | ⬜ |
+| 228 | Écran Stratégies : `strategies.py`, routes, gabarits, navigation, validation, tests | 5 | 224, 227 | ✅ 2026-10-30 : 11 tests ; refus affichés sans écriture, stratégies système figées ; **rendu à voir par @pj35** |
 | 229 | Clôture : exe vérifié, `PROJECT_STRUCTURE.md`, README, `CHANGELOG.md`, statuts | 2 | 226, 228 | ⬜ |
 
 ### Lot SPEC-45, affichage des LP sur l'écran post-game (✅ livrée le 2026-10-28, recette @pj35 à faire)

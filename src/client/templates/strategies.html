@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Stratégies · LeagueStats{% endblock %}
+{% block page_class %} page-client page-strategies{% endblock %}
+{% block content %}
+<header class="page-head" data-rise="1">
+  <div class="page-titles">
+    <div class="kicker">Partie · la stratégie active sert à la draft</div>
+    <h1 data-spell="1">Stratégies</h1>
+  </div>
+</header>
+<div data-fade="1" data-delay="100">
+  {% include "partials/strategies_body.html" %}
+</div>
+{% endblock %}

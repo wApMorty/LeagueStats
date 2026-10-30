@@ -65,6 +65,7 @@ from .lobby import (
 from .lcu_status import LcuProbe
 from .collection import VIEWS, read_collection
 from .pools import active_pool_name, champion_names, edit as edit_pool, forget_bans, pools_view
+from .strategies import active_name as active_strategy_name, edit as edit_strategy, strategies_view
 from .historique import read_game, read_history
 from .profil import read_profile
 from .social import read_social
@@ -107,6 +108,7 @@ NAV = (
         (
             NavItem("draft", "Draft", "ᛟ", 55, "/draft"),
             NavItem("pool", "Pool", "ᚠ", 85, "/pool"),
+            NavItem("strategies", "Stratégies", "ᚾ", 125, "/strategies"),
             NavItem("en-partie", "En partie", "ᛊ", 165, "/en-partie"),
             NavItem("postgame", "Post-game", "ᛞ", 345, "/postgame"),
         ),
@@ -786,6 +788,40 @@ def create_app(
         if commands is not None:
             commands(f"strategy {active}")
         return Response(status_code=204)
+
+    @app.get("/strategies", response_class=HTMLResponse)
+    def strategies_page(request: Request, nom: Optional[str] = None):
+        return render(request, "strategies.html", v=strategies_view(nom))
+
+    @app.post("/strategies/{action}", response_class=HTMLResponse)
+    async def strategy_action(request: Request, action: str, name: str = ""):
+        """Écran Stratégies (SPEC-46 §4.6) : `actif`, `dupliquer`, `modifier`, `supprimer`. Un refus
+        s'affiche dans le corps de l'écran (200), sans écriture. Le Live Coach reçoit `strategy <nom>`
+        quand la stratégie active change, ou quand la sienne est modifiée ou supprimée. Déclarée après
+        `/strategies/active` (bascule de la draft), qui garde son chemin."""
+        form = {
+            key: values[0]
+            for key, values in parse_qs(
+                (await request.body()).decode("utf-8", "replace"), keep_blank_values=True
+            ).items()
+        }
+
+        def work() -> dict:
+            was_active = active_strategy_name()
+            try:
+                notice, selected = edit_strategy(action, name, form)
+            except Refusal as refusal:
+                notice, selected = str(refusal), name
+            else:
+                touches_active = action == "actif" or (
+                    action in ("modifier", "supprimer") and was_active.casefold() == name.casefold()
+                )
+                if commands is not None and touches_active:
+                    commands(f"strategy {active_strategy_name()}")
+            return strategies_view(selected, notice)
+
+        view = await in_thread(work)
+        return templates.TemplateResponse(request, "partials/strategies_body.html", {"v": view})
 
     @app.get("/assets/{kind}/{name:path}")
     def asset(kind: str, name: str):

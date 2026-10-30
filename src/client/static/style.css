@@ -1212,4 +1212,10 @@ a.chip-btn { display: inline-flex; align-items: center; text-decoration: none; }
 .pool-actions .pool-new { margin: 0; }
 .pool-new input { height: 34px; padding: 0 12px; border-radius: 17px; border: 1px solid var(--rule); background: transparent; color: var(--ink); }
 .pool-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.strat-form, .strat-weights { display: grid; gap: 10px; margin-top: 12px; }
+.strat-weight { display: flex; align-items: center; gap: 12px; }
+.strat-weight span { min-width: 9em; }
+.strat-weight input[type="range"] { flex: 1; }
+.strat-weight output { min-width: 3em; text-align: right; font-variant-numeric: tabular-nums; }
+.strat-search { display: flex; align-items: center; gap: 8px; }
 a.friend { text-decoration: none; color: inherit; }

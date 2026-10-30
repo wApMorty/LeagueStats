@@ -1,0 +1,58 @@
+{#- Corps de l'écran Stratégies : remplacé tel quel par chaque action (htmx). Un refus arrive dans `v.notice`. -#}
+<div id="strategies-body" hx-target="#strategies-body" hx-select="#strategies-body" hx-swap="outerHTML">
+  {% if v.notice %}<p class="notice" role="status">{{ v.notice }}</p>{% endif %}
+  <p class="fine">Active : <b>{{ v.active }}</b> · {{ v.count }} / {{ v.limits.max_count }} stratégies</p>
+  <div class="cols">
+    <div class="main">
+      {% set s = v.selected %}
+      <section class="panel">
+        <div class="panel-head">
+          <h2>{{ s.name }}</h2>
+          <span class="muted">{{ s.mode }}{% if s.active %} · <span class="badge">Active</span>{% endif %}{% if s.system %} · <span class="badge">Système</span>{% endif %}</span>
+        </div>
+        <p class="fine">{{ v.help }}</p>
+        <div class="pool-actions">
+          {% if not s.active %}<button type="button" class="btn-primary" hx-post="/strategies/actif?name={{ s.name|urlencode }}">Utiliser en draft</button>{% endif %}
+          {% if s.editable %}<button type="button" class="btn-ghost" hx-post="/strategies/supprimer?name={{ s.name|urlencode }}" hx-confirm="Supprimer la stratégie « {{ s.name }} » ?">Supprimer</button>{% endif %}
+          <form class="pool-new" hx-post="/strategies/dupliquer?name={{ s.name|urlencode }}">
+            <input name="nom" maxlength="{{ v.limits.name_max }}" placeholder="Nom de la copie" aria-label="Nom de la copie" required>
+            <button type="submit" class="btn-ghost">Dupliquer</button>
+          </form>
+        </div>
+        {% if s.editable %}
+        <form class="strat-form" hx-post="/strategies/modifier?name={{ s.name|urlencode }}">
+          {% for w in s.weights %}
+          <label class="strat-weight">
+            <span>{{ w.label }}</span>
+            <input type="range" name="{{ w.key }}" min="0" max="{{ v.limits.weight_max }}" step="{{ v.limits.weight_step }}" value="{{ w.value }}" oninput="this.nextElementSibling.value = this.value">
+            <output>{{ w.text }}</output>
+          </label>
+          {% endfor %}
+          <label class="strat-search"><input type="checkbox" name="search" value="1"{% if s.search %} checked{% endif %}> Recherche minimax</label>
+          <button type="submit" class="btn-primary">Enregistrer</button>
+        </form>
+        {% else %}
+        <div class="strat-weights">
+          {% for w in s.weights %}
+          <p class="strat-weight"><span>{{ w.label }}</span><output>{{ w.text }}</output></p>
+          {% endfor %}
+        </div>
+        <p class="fine">Stratégie système, en lecture seule. {{ "Calcul par recherche." if s.search else "Calcul immédiat." }}</p>
+        {% endif %}
+      </section>
+    </div>
+    <aside class="side">
+      <section class="panel">
+        <div class="panel-head"><h2>Mes stratégies</h2></div>
+        <div role="list" hx-target="#view" hx-select="#view">
+          {% for s in v.strategies %}
+          <a class="friend{{ ' is-me' if s.open }}" role="listitem" href="/strategies?nom={{ s.name|urlencode }}">
+            <span class="friend-text"><b>{{ s.name }}</b><span class="muted">{{ s.mode }}{% if s.system %} · système{% endif %}</span></span>
+            {% if s.active %}<span class="badge">Active</span>{% endif %}
+          </a>
+          {% endfor %}
+        </div>
+      </section>
+    </aside>
+  </div>
+</div>
