@@ -11,11 +11,18 @@
     event.detail.headers[meta("token-header")] = meta("session-token");
   });
 
-  // Braises : montantes en continu (0,35 par image) sauf en mode Réduit, qui coupe tout.
+  // Braises : montantes en continu (0,35 par image) sauf en mode Réduit, qui coupe tout, et sans focus :
+  // en pleine partie, le client ne dépense rien pour une fenêtre qu'on ne regarde pas.
   const EMBER_RATE = 0.35;
-  const syncEmbers = () => Motion.embers(Motion.opts().reduced ? 0 : EMBER_RATE);
+  const syncEmbers = () => {
+    const idle = !document.hasFocus();
+    Motion.embers(Motion.opts().reduced || idle ? 0 : EMBER_RATE);
+    Motion.idle(idle);
+  };
   syncEmbers();
   matchMedia("(prefers-reduced-motion: reduce)").addEventListener("change", syncEmbers);
+  addEventListener("focus", syncEmbers);
+  addEventListener("blur", syncEmbers);
 
   // Réglage Motion : appliqué tout de suite ; le `hx-post` du bouton le mémorise (user_prefs.json).
   document.addEventListener("click", (event) => {
@@ -34,6 +41,7 @@
   document.addEventListener("htmx:load", (event) => {
     Motion.intro(event.target, Motion.opts());
     Motion.ambient(event.target, Motion.opts());
+    if (root.hasAttribute("data-idle")) return; // `startTime` relancerait une animation figée
     event.target.getAnimations?.({ subtree: true }).forEach((animation) => {
       if (animation.animationName === "pulse") animation.startTime = 0;
     });

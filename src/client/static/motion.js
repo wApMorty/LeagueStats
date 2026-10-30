@@ -284,7 +284,26 @@
     el.addEventListener('pointerleave', () => { el.style.transition = 'transform 600ms cubic-bezier(.2,.8,.2,1)'; el.style.transform = ''; });
   }
 
+  // Une animation sans fin survit au remplacement de la page : le moteur la recalcule à chaque image et
+  // retient tout l'écran détaché. `ambient` annule donc celles dont la cible a quitté le document.
+  const loops = new Set();
+  const idling = () => document.documentElement.hasAttribute('data-idle');
+  function loop(el, frames, timing) {
+    const animation = el.animate(frames, { ...timing, iterations: Infinity });
+    if (idling()) animation.pause();
+    loops.add(animation);
+  }
+  function sweep() {
+    loops.forEach(a => { if (!a.effect?.target?.isConnected) { a.cancel(); loops.delete(a); } });
+  }
+  // Fenêtre sans focus : les animations sans fin se figent (`html[data-idle]` fige celles du CSS).
+  function idle(on) {
+    document.documentElement.toggleAttribute('data-idle', on);
+    loops.forEach(a => (on ? a.pause() : a.play()));
+  }
+
   function ambient(root, o = {}) {
+    sweep();
     if (!root) return;
     fixRings(root);
     const sp = Math.max(0.25, o.sp || 1);
@@ -293,12 +312,12 @@
       if (el.__spun) return;
       el.__spun = true;
       const s = +el.dataset.spin;
-      el.animate([{ transform: 'rotate(0deg)' }, { transform: `rotate(${s > 0 ? 360 : -360}deg)` }], { duration: (Math.abs(s) * 1000) / sp, iterations: Infinity });
+      loop(el, [{ transform: 'rotate(0deg)' }, { transform: `rotate(${s > 0 ? 360 : -360}deg)` }], { duration: (Math.abs(s) * 1000) / sp });
     });
     root.querySelectorAll('[data-glow]').forEach(el => {
       if (el.__glow) return;
       el.__glow = true;
-      el.animate([{ opacity: 0.3 }, { opacity: 1 }, { opacity: 0.3 }], { duration: +el.dataset.glow / sp, iterations: Infinity, easing: 'ease-in-out' });
+      loop(el, [{ opacity: 0.3 }, { opacity: 1 }, { opacity: 0.3 }], { duration: +el.dataset.glow / sp, easing: 'ease-in-out' });
     });
     root.querySelectorAll('[data-ink]').forEach(el => {
       if (el.__ink) return;
@@ -345,5 +364,5 @@
     return { sp: 1, reduced };
   }
 
-  window.Motion = { E, C, COMP, impact, trace, intro, ambient, seal, bloom, fixRings, burst, burstAt, converge, embers, flash, shake, spell, center, opts };
+  window.Motion = { E, C, COMP, impact, trace, intro, ambient, idle, seal, bloom, fixRings, burst, burstAt, converge, embers, flash, shake, spell, center, opts };
 })();

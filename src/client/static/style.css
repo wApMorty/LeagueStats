@@ -181,6 +181,9 @@ h1 { margin: 0 0 12px; font: 600 46px/1 var(--font-title); }
   :root[data-motion="systeme"] *::after {
     animation: none !important; transition: none !important; }
 }
+/* Fenêtre sans focus : rien ne tourne pour rien (`Motion.idle`). */
+:root[data-idle] *, :root[data-idle] *::before, :root[data-idle] *::after {
+  animation-play-state: paused !important; }
 
 /* Poignées de redimensionnement (les 4 côtés et les 4 coins) */
 .resize-handle { position: fixed; z-index: 100; }
