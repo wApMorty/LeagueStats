@@ -24,7 +24,8 @@ from ..pool_manager import PoolManager, get_user_data_path
 from ..coaching.goals import set_goal
 from ..coaching.grid import GRID
 from ..repositories.coaching import CoachingRepository
-from ..user_prefs import load_motion, save_motion
+from ..analysis.strategy import all_strategies
+from ..user_prefs import load_motion, load_strategies, save_active_strategy, save_motion
 from .assets import PLACEHOLDER, Assets
 from .data import (
     ROLE_ORDER,
@@ -768,6 +769,22 @@ def create_app(
             return JSONResponse({"detail": str(refusal)}, status_code=409)
         if commands is None or not commands(line):
             return JSONResponse({"detail": "Live Coach inactif"}, status_code=503)
+        return Response(status_code=204)
+
+    @app.post("/strategies/active")
+    def strategy_active(name: str):
+        """Choisit la stratégie active, mémorisée et déposée chez le Live Coach (bascule de la draft,
+        SPEC-46). Sans Live Coach, elle vaudra à sa prochaine draft. Nom inconnu : 409, sans écriture.
+        """
+        _, custom = load_strategies()
+        known = {s.name.casefold(): s.name for s in all_strategies(custom)}
+        active = known.get(name.casefold())
+        if active is None:
+            return JSONResponse({"detail": f"Stratégie inconnue : {name}"}, status_code=409)
+        if not save_active_strategy(active):
+            return JSONResponse({"detail": "Préférences non enregistrées"}, status_code=409)
+        if commands is not None:
+            commands(f"strategy {active}")
         return Response(status_code=204)
 
     @app.get("/assets/{kind}/{name:path}")

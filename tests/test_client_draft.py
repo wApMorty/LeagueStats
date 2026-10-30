@@ -16,6 +16,7 @@ from src.client.draft_actions import Refusal
 from src.client.draft_grimoire import grimoire_view, plain
 from src.config_client import client_config
 from src.draft.state import DraftState
+from src.user_prefs import load_strategies
 from src.draft.snapshot import (
     DraftSnapshot,
     SnapshotBan,
@@ -1733,3 +1734,115 @@ def test_sans_les_cles_de_maitrise_la_ligne_ne_change_pas(assets):
     for key in ("personal_points", "personal_games"):
         del snapshot["recommendations"][0][key]
     assert _first_line(snapshot, assets) == "Suite attendue : Alistar (Support)"
+
+
+# ---------- stratégies (SPEC-46 §4.5, tâche 227) ----------
+
+
+def _strategy_post(client, name, token=True):
+    headers = {client_config.TOKEN_HEADER: client.app.state.session_token} if token else {}
+    return client.post("/strategies/active", params={"name": name}, headers=headers)
+
+
+@pytest.fixture
+def strategy_client(temp_db, bus, assets):
+    """Client dont le Live Coach reçoit les lignes déposées dans `client.lines`."""
+    lines = []
+    app = create_app(
+        temp_db, bus=bus, assets=assets, commands=lambda line: lines.append(line) or True
+    )
+    client = TestClient(app, base_url=LOCAL)
+    client.lines = lines
+    return client
+
+
+def test_la_ligne_commence_par_la_decomposition(assets):
+    snapshot = pick_snapshot()
+    snapshot["recommendations"][0].update(
+        parts={"force": 0.4, "duel": 4.2, "other": 0.8, "synergy": -0.1},
+        personal_points=5.4,
+        personal_games=57,
+    )
+    assert _first_line(snapshot, assets) == (
+        "Force +0,4 · duel +4,2 · hors lane +0,8 · synergie −0,1 · "
+        "Suite attendue : Alistar (Support) · dont toi sur Aatrox : +5,4 pts (57 parties)"
+    )
+
+
+def test_une_strategie_immediate_n_a_ni_suite_ni_fin_de_draft(assets):
+    snapshot = pick_snapshot(
+        champions=[asdict(SnapshotChampion(266, "Aatrox", ["top"], 0.5027, None))]
+    )
+    rec = snapshot["recommendations"][0]
+    rec.update(depth=1, variation=[], parts={"duel": 4.2})
+    assert _first_line(snapshot, assets) == "Duel +4,2 · aucune partie sur Aatrox"
+
+
+def test_un_poids_de_maitrise_nul_retire_la_mention_d_un_champion_joue(assets):
+    snapshot = pick_snapshot()
+    snapshot["recommendations"][0].update(personal_points=0.0, personal_games=57)
+    assert _first_line(snapshot, assets) == "Suite attendue : Alistar (Support)"
+
+
+def test_la_profondeur_n_est_citee_que_pour_une_recherche(client, bus):
+    bus.publish("draft", pick_snapshot(depth=1))
+    assert "profondeur atteinte" not in client.get("/draft/stage").text
+    bus.publish("draft", pick_snapshot(depth=2))
+    assert "profondeur atteinte : 2" in client.get("/draft/stage").text
+
+
+def test_le_selecteur_marque_la_strategie_active(client, bus):
+    bus.publish("draft", pick_snapshot(strategy="Counter", strategies=["Simple", "Counter"]))
+
+    stage = client.get("/draft/stage").text
+
+    assert 'data-strategy="Simple" aria-pressed="false"' in stage
+    assert 'data-strategy="Counter" aria-pressed="true"' in stage
+
+
+def test_sans_noms_de_strategie_pas_de_selecteur(client, bus):
+    bus.publish("draft", pick_snapshot())
+    assert "d-strategies" not in client.get("/draft/stage").text
+
+
+def test_l_empreinte_de_la_rangee_change_avec_la_strategie(client, bus):
+    names = ["Simple", "Counter"]
+    bus.publish("draft", pick_snapshot(strategy="Simple", strategies=names))
+    before = client.get("/draft/stage").text
+    bus.publish("draft", pick_snapshot(strategy="Counter", strategies=names))
+    after = client.get("/draft/stage").text
+
+    head = re.compile(r'data-key="row-head" data-sig="([^"]+)"')
+    assert head.search(before).group(1) != head.search(after).group(1)
+
+
+def test_le_clic_du_selecteur_est_branche():
+    script = Path("src/client/static/draft.js").read_text(encoding="utf-8")
+    assert '"/strategies/active"' in script and "[data-strategy]" in script
+
+
+def test_basculer_memorise_et_previent_le_live_coach(strategy_client):
+    response = _strategy_post(strategy_client, "counter")
+
+    assert response.status_code == 204
+    assert load_strategies()[0] == "Counter"
+    assert strategy_client.lines == ["strategy Counter"]
+
+
+def test_basculer_sans_live_coach_memorise_quand_meme(client):
+    assert _strategy_post(client, "Méta").status_code == 204
+    assert load_strategies()[0] == "Méta"
+
+
+def test_une_strategie_inconnue_est_refusee_sans_ecriture(strategy_client):
+    response = _strategy_post(strategy_client, "Inconnue")
+
+    assert response.status_code == 409
+    assert "Stratégie inconnue" in response.json()["detail"]
+    assert load_strategies()[0] is None
+    assert strategy_client.lines == []
+
+
+def test_basculer_sans_jeton_est_refuse(strategy_client):
+    assert _strategy_post(strategy_client, "Counter", token=False).status_code == 403
+    assert load_strategies()[0] is None

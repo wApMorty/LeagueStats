@@ -445,6 +445,8 @@
         const [kind, action, cell] = swap.dataset.swap.split(":"); // l'id de l'échange reste côté serveur
         return post(`/draft/swap/${kind}/${action}`, { cell_id: cell });
       }
+      const strategy = event.target.closest("[data-strategy]");
+      if (strategy) return post("/strategies/active", { name: strategy.dataset.strategy });
       const skin = event.target.closest(".d-skin");
       if (skin) return pickSkin(skin);
       const pick = event.target.closest(".d-cards-pick .d-card");

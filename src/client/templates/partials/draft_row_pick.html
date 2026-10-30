@@ -1,11 +1,16 @@
 {#- Phase de picks : les recommandations du classement, « Verrouiller X » (libellé posé par draft.js
     d'après la sélection) ; une carte survolée = un survol dans le client. -#}
-<div class="d-row-head" data-key="row-head" data-sig="{{ [v.phase, v.rec_title, v.rec_sub]|sig }}">
+<div class="d-row-head" data-key="row-head" data-sig="{{ [v.phase, v.rec_title, v.rec_sub, v.strategies]|sig }}">
   <div class="d-row-titles">
     <span class="d-row-title">{{ v.rec_title }}</span>
     <span class="d-row-sub">{{ v.rec_sub }}</span>
   </div>
   <div class="d-row-actions">
+    {% if v.strategies %}
+    <div class="seg d-strategies" role="group" aria-label="Stratégie">
+      {% for s in v.strategies %}<button type="button" data-strategy="{{ s.name }}" aria-pressed="{{ 'true' if s.active else 'false' }}">{{ s.name }}</button>{% endfor %}
+    </div>
+    {% endif %}
     <button type="button" class="d-ghost" data-open-grid>
       <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5"/></svg>Tous les champions
     </button>

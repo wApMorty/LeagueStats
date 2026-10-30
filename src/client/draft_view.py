@@ -38,6 +38,9 @@ BAN_HUES = (
     "oklch(0.76 0.18 45)",
 )
 
+# Termes de la ligne d'une carte (SPEC-46), dans l'ordre d'affichage ; la maîtrise a sa propre mention.
+PART_LABELS = {"force": "force", "duel": "duel", "other": "hors lane", "synergy": "synergie"}
+
 PHASE_TITLES = {
     "ban": "Phase de bans — choisis ton ban",
     "pick_turn": "Phase de picks — à toi de jouer",
@@ -386,15 +389,27 @@ def _immediate(snapshot: Dict[str, Any]) -> Dict[int, float]:
 def _personal(rec: Dict[str, Any]) -> str:
     """La sous-ligne « dont toi sur X » : ma maîtrise du champion, ou l'absence de partie (SPEC-41 §4.4).
 
-    Vide quand le snapshot n'a pas le champ (snapshot d'avant SPEC-41).
+    Vide quand le snapshot n'a pas le champ (snapshot d'avant SPEC-41), ou quand la stratégie coupe la
+    maîtrise d'un champion joué (SPEC-46).
     """
     games = rec.get("personal_games")
     if games is None:
         return ""
     if games == 0:
-        return f" · aucune partie sur {rec['champion']}"
+        return f"aucune partie sur {rec['champion']}"
+    if not rec.get("personal_points"):
+        return ""
     count = f"{games} partie" + ("" if games == 1 else "s")
-    return f" · dont toi sur {rec['champion']} : {signed(rec['personal_points'])} pts ({count})"
+    return f"dont toi sur {rec['champion']} : {signed(rec['personal_points'])} pts ({count})"
+
+
+def _decomposition(rec: Dict[str, Any]) -> str:
+    """« Force +0,4 · duel +4,2 » : ce qui explique l'ordre quand il diverge du % (SPEC-46 §4.5)."""
+    parts = rec.get("parts") or {}
+    text = " · ".join(
+        f"{label} {signed(parts[key])}" for key, label in PART_LABELS.items() if key in parts
+    )
+    return text[:1].upper() + text[1:]
 
 
 def recommendations(snapshot: Dict[str, Any], champions: Champions) -> List[Dict[str, Any]]:
@@ -417,18 +432,21 @@ def recommendations(snapshot: Dict[str, Any], champions: Champions) -> List[Dict
             for step in rec["variation"]
         )
         now = immediate.get(rec["champion_id"])
+        searched = bool(variation) or rec["depth"] > 1  # une stratégie immédiate n'a pas de suite
         if now is None:
             win = fr(rec["win_probability"] * 100, 2) + " %"
             delta = rec["delta"]
-            line = f"Suite attendue : {variation}" if variation else "Suite attendue : —"
+            line = f"Suite attendue : {variation or '—'}" if searched else ""
         else:
             win = fr(now * 100, 2) + " %"
             delta = None if base is None else (now - base) * 100.0
             line = (
                 f"Fin de draft attendue {fr(rec['win_probability'] * 100, 2)} % · "
                 f"suite : {variation or '—'}"
+                if searched
+                else ""
             )
-        line += _personal(rec)
+        line = " · ".join(text for text in (_decomposition(rec), line, _personal(rec)) if text)
         cards.append(
             {
                 "champion_id": rec["champion_id"],
@@ -556,7 +574,7 @@ def stage_view(
     versus = snapshot.get("versus")
     skipped = snapshot["skipped"]
     parts = [f"Pool {snapshot['pool_name']}"] if snapshot.get("pool_name") else []
-    if snapshot["recommendations"]:
+    if snapshot["recommendations"] and snapshot["depth"] > 1:
         parts.append(f"profondeur atteinte : {snapshot['depth']} pick(s) anticipé(s)")
     if skipped:
         where = f" en {role}" if role else ""
@@ -585,6 +603,10 @@ def stage_view(
         "skipped": snapshot["skipped"],
         "depth": snapshot["depth"],
         "pool_name": snapshot.get("pool_name"),
+        "strategies": [
+            {"name": name, "active": name == snapshot.get("strategy")}
+            for name in snapshot.get("strategies") or []
+        ],
         "balance": {"base": base, "projected": projected},
         "state": state,
     }

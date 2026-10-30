@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from ..analysis.mastery import term_of
+from ..analysis.strategy import strategy_of
 from ..config_constants import draft_config
 from .search import SearchResult
 from .state import Cell, DraftState
@@ -79,6 +80,8 @@ class SnapshotRecommendation:
     variation: List[Dict[str, Optional[str]]] = field(default_factory=list)  # suite attendue
     personal_points: Optional[float] = None  # ma maîtrise de ce champion, en points (SPEC-41)
     personal_games: int = 0  # mes parties capturées sur ce champion (SPEC-41)
+    # Ce que chaque terme de la stratégie lui apporte, en points de victoire (SPEC-46).
+    parts: Dict[str, float] = field(default_factory=dict)
 
 
 @dataclass
@@ -145,6 +148,8 @@ class DraftSnapshot:
     pool: List[str] = field(default_factory=list)
     advice: Optional[str] = None
     loadout: Optional[Dict[str, Any]] = None
+    strategy: Optional[str] = None  # stratégie active (SPEC-46)
+    strategies: List[str] = field(default_factory=list)  # boutons du sélecteur
 
 
 @dataclass
@@ -238,6 +243,7 @@ def build_snapshot(
     games = analysis.games_by_champion
     mastery = term_of(monitor)
     ids = {n.lower(): i for i, n in monitor.champion_id_to_name.items()}
+    names = getattr(monitor, "strategy_names", None)
     ban_rows, gains = (
         monitor.ban_advisor.advice(state, draft_config.SNAPSHOT_BAN_COUNT, ids)
         if is_ban
@@ -277,6 +283,7 @@ def build_snapshot(
                 variation=[{"champion": c, "lane": lane} for c, lane in r.principal_variation],
                 personal_points=r.personal_points,
                 personal_games=mastery.games(r.champion),
+                parts=analysis.parts.get(r.champion, {}),
             )
             for r in results
         ],
@@ -295,4 +302,6 @@ def build_snapshot(
         pool=list(getattr(monitor, "current_pool", []) or []),
         advice=advice,
         loadout=monitor.loadout.state(),
+        strategy=strategy_of(monitor).name,
+        strategies=list(names) if isinstance(names, list) else [],
     )

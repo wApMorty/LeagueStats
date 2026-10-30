@@ -10,7 +10,7 @@ from src.client.bus import EventBus
 from src.config_constants import draft_config
 from src.draft.search import PickTurn, SearchResult
 from src.analysis.strategy import find_strategy
-from src.draft.snapshot import TOPIC
+from src.draft.snapshot import TOPIC, Analysis, build_snapshot
 from src.draft.state_parser import DraftStateParser
 from src.analysis.mastery import Mastery, MasteryTerm
 from src.draft_monitor import DraftMonitor, DraftState
@@ -429,3 +429,35 @@ def test_snapshot_reporte_ma_maitrise_et_mes_parties_par_candidat(monitor):
     first, second = payload["recommendations"]
     assert (first["personal_points"], first["personal_games"]) == (-2.8, 5)
     assert (second["personal_points"], second["personal_games"]) == (0.0, 0)
+
+
+# ---------- stratégie active (SPEC-46 §4.5, tâche 227) ----------
+
+
+def test_snapshot_porte_la_strategie_les_noms_et_la_decomposition(monitor):
+    ranked = [SearchResult("Aatrox", "top", 0.5731, [], 2)]
+    monitor.strategy_names = ["Simple", "Complet"]
+    with patch.object(monitor.search, "rank", return_value=ranked):
+        with patch.object(
+            monitor.recommender, "_parts", return_value={"Aatrox": {"force": 0.4, "duel": 4.2}}
+        ):
+            _, payload = snapshot_of(monitor, pick_state(), ranked)
+
+    assert payload["strategy"] == "Complet"
+    assert payload["strategies"] == ["Simple", "Complet"]
+    assert payload["recommendations"][0]["parts"] == {"force": 0.4, "duel": 4.2}
+
+
+def test_snapshot_d_un_monitor_simule_reste_serialisable():
+    """Un `strategy_names` qui n'est pas une liste (Mock) ne casse pas `asdict` du snapshot."""
+    monitor = Mock()
+    monitor.champion_id_to_name = {}
+    monitor.current_pool = []
+    monitor._is_ban_phase.return_value = False
+    monitor._is_player_turn.return_value = False
+    monitor.pool_name = None
+    monitor.loadout.state.return_value = None
+    snapshot = build_snapshot(monitor, DraftState(phase="BAN_PICK"), Analysis(), None)
+
+    assert asdict(snapshot)["strategies"] == []
+    assert snapshot.strategy == draft_config.STRATEGY_DEFAULT
