@@ -25,17 +25,22 @@ def _rows(players: int = 30, games: int = 12, seed: int = 0):
                     draft=rng.gauss(0.0, 0.2),
                     opponent=rng.choice(["Gangplank", "Malphite", "Sylas", None]),
                     lane=rng.gauss(0.0, 0.05),
+                    allies=tuple(
+                        (rng.choice(["Lulu", "Nami", "Vi", "Ahri"]), post)
+                        for post in ("jungle", "middle", "bottom", "support")
+                    ),
                 )
             )
     return rows
 
 
 def test_validation_croisee_sans_fuite_du_bloc_de_test(monkeypatch):
-    """Ni K, K₂ ni les normes d'un bloc ne voient un joueur de ce bloc ; chaque ligne est prédite une fois."""
+    """Ni K, K₂, K₃ ni les normes d'un bloc ne voient un joueur de ce bloc ; chaque ligne est prédite une fois."""
     rows = _rows()
     focal = {r.puuid for r in rows}
     seen = []  # (fonction, puuids vus) dans l'ordre des appels, un bloc après l'autre
     real_norms, real_k, real_k2 = study.champion_norms, study.estimate_k, study.estimate_k2
+    real_k3 = study.estimate_k3
 
     def spy_norms(train_rows):
         seen.append(("norms", {r.puuid for r in train_rows}))
@@ -49,15 +54,20 @@ def test_validation_croisee_sans_fuite_du_bloc_de_test(monkeypatch):
         seen.append(("k2", set(by_player)))
         return real_k2(by_player)
 
+    def spy_k3(by_player):
+        seen.append(("k3", set(by_player)))
+        return real_k3(by_player)
+
     monkeypatch.setattr(study, "champion_norms", spy_norms)
     monkeypatch.setattr(study, "estimate_k", spy_k)
     monkeypatch.setattr(study, "estimate_k2", spy_k2)
+    monkeypatch.setattr(study, "estimate_k3", spy_k3)
 
     pooled = study.cross_validate(rows, focal)
 
     assert pooled is not None
-    # une fois les normes, K de a à d, puis K₂ une fois
-    calls_per_fold = 1 + 4 + 1
+    # une fois les normes, K de a à d, puis K₂ et K₃ une fois
+    calls_per_fold = 1 + 4 + 1 + 1
     assert len(seen) == analysis_config.MASTERY_STUDY_FOLDS * calls_per_fold
     for fold in range(analysis_config.MASTERY_STUDY_FOLDS):
         test_players = {p for p in focal if study._fold(p) == fold}
@@ -69,7 +79,7 @@ def test_validation_croisee_sans_fuite_du_bloc_de_test(monkeypatch):
 
 
 def test_colonnes_par_variante():
-    """a à d : biais, draft, maîtrise ; e ajoute M × lane ; f ajoute D ; g ajoute les deux."""
+    """a à d : biais, draft, maîtrise ; e ajoute M × lane ; f ajoute D ; g ajoute les deux ; h ajoute S."""
     row = study.Row(
         puuid="p",
         game=0,
@@ -85,6 +95,27 @@ def test_colonnes_par_variante():
     assert study._columns("e", row, 3.0, 9.0) == pytest.approx([1.0, 0.5, 3.0, 0.6])
     assert study._columns("f", row, 3.0, 9.0) == [1.0, 0.5, 3.0, 9.0]
     assert study._columns("g", row, 3.0, 9.0) == pytest.approx([1.0, 0.5, 3.0, 0.6, 9.0])
+    assert study._columns("h", row, 3.0, 9.0) == [1.0, 0.5, 3.0, 9.0]
+
+
+def test_ecart_de_synergie_calcule_sans_la_partie():
+    """S somme, sur les alliés, l'écart rétréci de la case (champion, allié) à la moyenne du champion,
+    sans la partie prédite ; un allié sans autre partie dans sa case compte 0."""
+    lulu, vi = ("Lulu", "support"), ("Vi", "jungle")
+    games = [
+        ("Olaf", (lulu, vi), 10.0),
+        ("Olaf", (lulu,), 20.0),
+        ("Olaf", (), -30.0),
+    ]
+    k3 = 2.0
+
+    out = study.leave_one_out_ally_deviation(games, k3)
+
+    # partie 0 : Lulu a une autre partie (20) ; moyenne d'Olaf sans elle (20 − 30) / 2 = −5 ; Vi seule
+    assert out[0] == pytest.approx((20.0 - (-5.0)) * 1 / (1 + k3))
+    # partie 1 : Lulu a une autre partie (10) ; moyenne d'Olaf sans elle (10 − 30) / 2 = −10
+    assert out[1] == pytest.approx((10.0 - (-10.0)) * 1 / (1 + k3))
+    assert out[2] == 0.0  # aucun allié
 
 
 def test_vis_a_vis_de_lane_unique_ou_absent():
@@ -173,3 +204,9 @@ def test_lignes_de_partie_portent_le_vis_a_vis_et_son_duel(monkeypatch):
     assert by_champion["Gangplank"].lane == -0.25
     assert (("Olaf", "top"), ("Gangplank", "top")) in duels
     assert by_champion["C3"].opponent == "C8"  # milieu contre milieu
+    assert by_champion["Olaf"].allies == (
+        ("C2", "jungle"),
+        ("C3", "middle"),
+        ("C4", "bottom"),
+        ("C5", "support"),
+    )
