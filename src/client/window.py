@@ -140,9 +140,40 @@ def _closing_handler(window_obj: Any, should_close: ShouldClose) -> Callable[[],
     return on_closing
 
 
+def _without_response_listener() -> None:
+    """Retire l'écoute des réponses posée par pywebview : elle fait fuir le renderer WebView2.
+
+    `WebResourceResponseReceived` instrumente le réseau de la page et le flux sans fin `/events` y
+    laisse sa trace (`tests/regression/test_regression_client_fuite_webview2.py`). Le client n'utilise
+    pas `events.response_received`. Best-effort : rien ici n'empêche la fenêtre de s'ouvrir.
+    """
+    try:
+        # pylint: disable=import-outside-toplevel
+        from webview.platforms.edgechromium import EdgeChrome
+    except Exception:  # pylint: disable=broad-exception-caught
+        return  # autre moteur que WebView2
+    ready = EdgeChrome.on_webview_ready
+    if getattr(ready, "without_listener", False):
+        return
+
+    # ponytail: s'accroche à une méthode interne de pywebview 6.2, à retirer si l'abonnement y devient
+    # conditionnel à `events.response_received`.
+    def on_webview_ready(self: Any, sender: Any, args: Any) -> None:
+        ready(self, sender, args)
+        if args.IsSuccess:
+            try:
+                sender.CoreWebView2.WebResourceResponseReceived -= self.on_web_resource_response
+            except Exception as exc:  # pylint: disable=broad-exception-caught
+                print(f"[ALERTE] Écoute des réponses WebView2 non retirée : {exc}")
+
+    on_webview_ready.without_listener = True  # type: ignore[attr-defined]
+    EdgeChrome.on_webview_ready = on_webview_ready
+
+
 def _open(url: str, frameless: bool, should_close: Optional[ShouldClose] = None) -> None:
     import webview  # pylint: disable=import-outside-toplevel
 
+    _without_response_listener()
     api = WindowApi(frameless)
     try:  # sans identifiant propre, la barre des tâches montre le logo de `python.exe`
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(

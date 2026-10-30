@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### 🐛 Fix
+
+- **Le client ne fait plus ramer le PC quand il reste ouvert** — trois causes. Sans focus, il dessinait quand même ses braises et ses animations à chaque image : environ 50 % d'un cœur en continu, y compris en pleine partie. Elles se figent désormais dès que la fenêtre perd le focus et reprennent au retour. Les anneaux tournants de l'Accueil, de Rang, de Profil et de la draft restaient vivants après chaque changement de page, avec toute la page quittée : ils sont annulés. Enfin, une écoute réseau de pywebview, dont le client ne se sert pas, faisait monter la mémoire de la fenêtre de 4 à 7 Mo par minute : elle est retirée. Aucune action requise.
+
 ## [5.11.1] - 2026-10-28
 
 L'écran post-game affiche à nouveau les LP correctement : le nombre du gain ou de la perte reprend sa taille, l'encart apparaît même quand les LP arrivent après l'ouverture de la revue, et un remake s'affiche « 0 LP ». L'écran Pool titre la rangée des postes. Aucune action requise : pas de migration Alembic, pas de scrape.
