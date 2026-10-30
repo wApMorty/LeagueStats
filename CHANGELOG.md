@@ -4,6 +4,12 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+**Action requise** : `python -m alembic upgrade head`. Sans cette commande, les prédictions de fin de draft ne s'enregistrent plus.
+
+### ✨ Feature
+
+- **Stratégies de draft (SPEC-46)** — le classement de pick se règle maintenant par stratégie, avec un poids de 0 à 3 par critère (force, duel de lane, matchups hors lane, synergie, maîtrise) et un calcul immédiat ou par recherche. Quatre stratégies de base : Simple, Counter, Méta et Complet, le moteur d'avant. Tu passes de l'une à l'autre d'un clic dans la rangée des recommandations, et l'écran « Stratégies » permet d'en dupliquer une pour régler la tienne, 6 au plus. **Simple devient le défaut** : force, matchups et maîtrise, sans synergie ni recherche. Sur 180 positions rejouées depuis tes parties, elle garde le même n° 1 que le moteur complet dans 178 cas, sans les 2 s de recherche. La stratégie règle l'ordre des cartes et le survol automatique. Les % de victoire, la jauge, l'analyse finale et les prédictions restent ceux du modèle calibré : une carte classée 2ᵉ peut donc afficher un % plus haut que la 1ʳᵉ, et sa ligne détaille ce que chaque critère lui apporte. Les bans et les conseils d'échange ne changent pas.
+
 ### 🐛 Fix
 
 - **Le client ne fait plus ramer le PC quand il reste ouvert** — trois causes. Sans focus, il dessinait quand même ses braises et ses animations à chaque image : environ 50 % d'un cœur en continu, y compris en pleine partie. Elles se figent désormais dès que la fenêtre perd le focus et reprennent au retour. Les anneaux tournants de l'Accueil, de Rang, de Profil et de la draft restaient vivants après chaque changement de page, avec toute la page quittée : ils sont annulés. Enfin, une écoute réseau de pywebview, dont le client ne se sert pas, faisait monter la mémoire de la fenêtre de 4 à 7 Mo par minute : elle est retirée. Aucune action requise.

@@ -1,6 +1,6 @@
 # SPEC-46 — Stratégies de draft
 
-**Statut** : 🟢 Rédigée et validée par @pj35 le 2026-10-30, tous les arbitrages de §2 tranchés.
+**Statut** : ✅ Livrée le 2026-10-30, recette @pj35 à faire (`alembic upgrade head`, bascule en draft classée réelle).
 
 **Origine** : @pj35, 2026-10-30 — « J'ai l'impression qu'on a trop compliqué le moteur d'évaluation des
 drafts. Je pense qu'on devrait mettre une option visuelle pour switch entre plusieurs stratégies (et une
