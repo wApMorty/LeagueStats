@@ -24,6 +24,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 from ..analysis.game_eval import Placed
 from ..analysis.mastery import term_of, with_term
 from ..analysis.probability import sigmoid
+from ..analysis.strategy import strategy_of
 from ..coaching.goals import draft_reminder
 from ..config_constants import analysis_config, draft_config, scraping_config
 from ..utils.console import clear_console
@@ -340,6 +341,7 @@ class FinalDraftAnalyzer:
                 # n'emprunte plus. MODEL_VERSION seul, comme outcome_tracker.py
                 # l'utilisait déjà de son côté.
                 model_version=analysis_config.MODEL_VERSION,
+                strategy=strategy_of(self.m).name,  # SPEC-46
             )
         except Exception as e:
             print(f"[WARNING] Échec de l'enregistrement de la prédiction: {e}")

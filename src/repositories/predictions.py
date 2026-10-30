@@ -21,6 +21,7 @@ class PredictionsRepository:
         ally_lanes: Optional[Dict[int, str]],
         predicted_probability: float,
         model_version: str,
+        strategy: Optional[str] = None,
     ) -> Optional[int]:
         """Insert a prediction row (outcome NULL). Returns the new row id, or None on failure.
 
@@ -32,6 +33,7 @@ class PredictionsRepository:
                 champion whose lane is unknown). None stores NULL.
             predicted_probability: Our team's predicted win probability, in [0, 1].
             model_version: analysis_config.MODEL_VERSION at prediction time.
+            strategy: Nom de la stratégie active (SPEC-46) ; elle ne change pas la probabilité.
 
         Returns:
             The new row's id, or None if the insert failed (caller logs and
@@ -51,10 +53,10 @@ class PredictionsRepository:
                 """
                 INSERT INTO predictions
                 (created_utc, ally_champions, enemy_champions, ally_lanes,
-                 predicted_probability, model_version, outcome)
-                VALUES (datetime('now'), ?, ?, ?, ?, ?, NULL)
+                 predicted_probability, model_version, outcome, strategy)
+                VALUES (datetime('now'), ?, ?, ?, ?, ?, NULL, ?)
                 """,
-                (ally_csv, enemy_csv, lanes_csv, predicted_probability, model_version),
+                (ally_csv, enemy_csv, lanes_csv, predicted_probability, model_version, strategy),
             )
             self.db.connection.commit()
             return cursor.lastrowid

@@ -401,9 +401,15 @@ class Database:
         ally_lanes: Optional[Dict[int, str]],
         predicted_probability: float,
         model_version: str,
+        strategy: Optional[str] = None,
     ) -> Optional[int]:
         return self._predictions.insert_prediction(
-            ally_champions, enemy_champions, ally_lanes, predicted_probability, model_version
+            ally_champions,
+            enemy_champions,
+            ally_lanes,
+            predicted_probability,
+            model_version,
+            strategy,
         )
 
     def update_prediction_outcome(

@@ -7,6 +7,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from src.analysis.strategy import find_strategy
 from src.draft_monitor import DraftMonitor
 
 
@@ -35,6 +36,33 @@ class TestDatabaseInsertPrediction:
         assert row[3] == pytest.approx(0.62)
         assert row[4] == "b7-v1"
         assert row[5] is None  # outcome starts NULL
+
+    def test_insert_prediction_keeps_the_strategy(self, db):
+        prediction_id = db.insert_prediction(
+            ally_champions=[1, 2, 3, 4, 5],
+            enemy_champions=[6, 7, 8, 9, 10],
+            ally_lanes=None,
+            predicted_probability=0.5,
+            model_version="spec43-v1",
+            strategy="Counter",
+        )
+
+        cursor = db.connection.cursor()
+        cursor.execute("SELECT strategy FROM predictions WHERE id = ?", (prediction_id,))
+        assert cursor.fetchone()[0] == "Counter"
+
+    def test_insert_prediction_without_strategy_stores_null(self, db):
+        prediction_id = db.insert_prediction(
+            ally_champions=[1, 2, 3, 4, 5],
+            enemy_champions=[6, 7, 8, 9, 10],
+            ally_lanes=None,
+            predicted_probability=0.5,
+            model_version="spec43-v1",
+        )
+
+        cursor = db.connection.cursor()
+        cursor.execute("SELECT strategy FROM predictions WHERE id = ?", (prediction_id,))
+        assert cursor.fetchone()[0] is None
 
     def test_insert_prediction_without_lanes_stores_null(self, db):
         prediction_id = db.insert_prediction(
@@ -132,3 +160,19 @@ class TestDraftMonitorBestEffortLogging:
         monitor._calculate_final_scores(ally_ids, enemy_ids, ally_lanes={1: "top"})
 
         assert monitor._last_prediction_id == 42
+
+    def test_the_active_strategy_is_logged_without_changing_the_probability(self, monitor):
+        """SPEC-46 critère 5 : Simple et Counter écrivent la même probabilité calibrée."""
+        ally_ids, enemy_ids = self._wire_common_mocks(monitor)
+        monitor.assistant.db.insert_prediction.return_value = 42
+        logged = {}
+        for name in ("Simple", "Counter"):
+            monitor.set_strategy(find_strategy(name, ()))
+            monitor._calculate_final_scores(ally_ids, enemy_ids, ally_lanes={1: "top"})
+            logged[name] = monitor.assistant.db.insert_prediction.call_args.kwargs
+
+        assert logged["Simple"]["strategy"] == "Simple"
+        assert logged["Counter"]["strategy"] == "Counter"
+        assert (
+            logged["Simple"]["predicted_probability"] == logged["Counter"]["predicted_probability"]
+        )

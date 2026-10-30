@@ -143,7 +143,7 @@ def temp_db(tmp_path):
     """)
 
     # Predictions table (SPEC-05 B7 — migration 2551bbcc9eb8; game_id added
-    # by SPEC-08 — migration 13cbeb46785a)
+    # by SPEC-08 — migration 13cbeb46785a; strategy by SPEC-46 — migration a3f6c1d8b7e2)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS predictions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -154,7 +154,8 @@ def temp_db(tmp_path):
             predicted_probability REAL NOT NULL,
             model_version TEXT NOT NULL,
             outcome INTEGER,
-            game_id INTEGER
+            game_id INTEGER,
+            strategy TEXT
         )
     """)
     cursor.execute(
