@@ -1,6 +1,6 @@
 # SPEC-46 — Stratégies de draft
 
-**Statut** : 🟡 Rédigée le 2026-10-30, six arbitrages validés par @pj35, cinq « à valider » en §2.
+**Statut** : 🟢 Rédigée et validée par @pj35 le 2026-10-30, tous les arbitrages de §2 tranchés.
 
 **Origine** : @pj35, 2026-10-30 — « J'ai l'impression qu'on a trop compliqué le moteur d'évaluation des
 drafts. Je pense qu'on devrait mettre une option visuelle pour switch entre plusieurs stratégies (et une
@@ -85,11 +85,11 @@ mode de calcul, se bascule d'un clic en draft et se définit sur une page dédi�
 | Bascule | **Validé (@pj35, 2026-10-30)** : boutons segmentés dans la rangée des recommandations, qui reclassent aussitôt. Une stratégie active globale, mémorisée dans `user_prefs.json`, choisie aussi depuis la page. Pas de stratégie par poste : @pj35 joue top à 96 %. |
 | Journal | **Validé (@pj35, 2026-10-30)** : colonne `strategy` dans `predictions`, pour comparer les stratégies à l'usage. |
 | Stratégies de base | **Validé (@pj35, 2026-10-30)** : quatre stratégies système figées, dupliquées pour être modifiées, comme les pools système. |
-| Nombre de stratégies | **À valider** : 6 au plus, système comprises, noms de 14 caractères au plus, pour que les boutons tiennent dans la rangée. |
-| Départage | **À valider** : à score égal, la victoire calibrée départage (§1.3). |
-| Survol de début de draft | **À valider** : il suit la stratégie, avec ses poids de force et de maîtrise. Il répond à la même question que le classement. |
-| Bascule à mon tour | **À valider** : avec `auto_hover`, le nouveau n° 1 est survolé à mon tour, comme à un changement de draft ; jamais de verrouillage. |
-| Bans, conseils d'échange, grimoire | **À valider** : inchangés, calibrés. Le tri « recommandations » du grimoire suit l'ordre du classement, sans code de plus. |
+| Nombre de stratégies | **Validé (@pj35, 2026-10-30)** : 6 au plus, système comprises, noms de 14 caractères au plus, pour que les boutons tiennent dans la rangée. |
+| Départage | **Validé (@pj35, 2026-10-30)** : à score égal, la victoire calibrée départage (§1.3). |
+| Survol de début de draft | **Validé (@pj35, 2026-10-30)** : il suit la stratégie, avec ses poids de force et de maîtrise. Il répond à la même question que le classement. |
+| Bascule à mon tour | **Validé (@pj35, 2026-10-30)** : avec `auto_hover`, le nouveau n° 1 est survolé à mon tour, comme à un changement de draft ; jamais de verrouillage. |
+| Bans, conseils d'échange, grimoire | **Validé (@pj35, 2026-10-30)** : inchangés, calibrés. Le tri « recommandations » du grimoire suit l'ordre du classement, sans code de plus. |
 
 ## 3. Approches considérées
 
