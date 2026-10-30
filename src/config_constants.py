@@ -405,6 +405,23 @@ class DraftConfig:
     # support.
     SEARCH_TOP_N: int = 8
 
+    # ── SPEC-46 : stratégies de draft (src/analysis/strategy.py) ──
+
+    # Stratégie active quand aucune n'est choisie, et repli d'une stratégie inconnue.
+    STRATEGY_DEFAULT: str = "Simple"
+
+    # Poids maximal d'un terme. 0 coupe le terme, 1 garde la valeur calibrée.
+    STRATEGY_WEIGHT_MAX: float = 3.0
+
+    # Pas des curseurs de poids de l'écran Stratégies.
+    STRATEGY_WEIGHT_STEP: float = 0.25
+
+    # Nombre de stratégies, système comprises : les boutons de la rangée de draft doivent tenir.
+    STRATEGY_MAX_COUNT: int = 6
+
+    # Longueur maximale d'un nom de stratégie, pour la même raison.
+    STRATEGY_NAME_MAX: int = 14
+
     # ── SPEC-08 : boucle de mesure (résultat de partie automatique via LCU) ──
 
     # Fenêtre max entre la fin d'une draft et le début de la partie
