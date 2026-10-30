@@ -21,6 +21,7 @@ from .draft.tick_timer import TickTimer, open_journal
 from .analysis.game_eval import GameEvaluator
 from .analysis.mastery import MasteryTerm
 from .analysis.shrink import shrink_is_measured
+from .analysis.strategy import Strategy, WeightedEvaluator, all_strategies, find_strategy
 from .draft.search import CandidatePool, DraftSearch
 from .draft.state_parser import DraftStateParser
 from .draft.automation import HoverAutomation
@@ -34,6 +35,7 @@ from .draft.phase_tracker import PhaseTracker, lcu_phase_reader
 from .draft.loadout_import import LoadoutImporter
 from .draft.reality_check import RealityCheck
 from .draft.outcome_tracker import OutcomeTracker
+from .user_prefs import load_strategies
 
 
 class DraftMonitor:
@@ -112,6 +114,9 @@ class DraftMonitor:
             CandidatePool(self.assistant.db, draft_config.SEARCH_TOP_N, verbose=verbose),
             verbose=verbose,
         )
+        self.strategy: Strategy = find_strategy(None, ())
+        self.strategy_names: List[str] = []  # SPEC-46 : boutons du sélecteur de draft
+        self.load_strategy()
         self.state_parser = DraftStateParser(self.lcu, self._get_display_name, verbose=verbose)
         self.hover = HoverAutomation(self)
         self.pool_selector = PoolSelector(self)
@@ -347,6 +352,21 @@ class DraftMonitor:
     def _display_draft_state(self, state: DraftState):
         """Display current draft state in terminal."""
         display.display_draft_state(state, self._get_display_name, self._should_show_bans)
+
+    def set_strategy(self, strategy: Strategy) -> None:
+        """Applique `strategy` au classement ; `self.evaluator` reste le modèle calibré (SPEC-46)."""
+        self.strategy = strategy
+        self.search.evaluator = (
+            self.evaluator
+            if strategy.is_calibrated
+            else WeightedEvaluator(self.evaluator, strategy)
+        )
+
+    def load_strategy(self) -> None:
+        """La stratégie active et les noms du sélecteur, lus dans les préférences (SPEC-46)."""
+        active, custom = load_strategies()
+        self.strategy_names = [strategy.name for strategy in all_strategies(custom)]
+        self.set_strategy(find_strategy(active, custom))
 
     def _provide_recommendations(self, state: DraftState):
         """Provide coaching recommendations based on current draft."""

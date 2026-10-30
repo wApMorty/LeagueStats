@@ -13,6 +13,7 @@ from typing import List, Optional, Tuple
 
 from ..analysis.mastery import term_of
 from ..analysis.shrink import shrunk_lane_winrates
+from ..analysis.strategy import strategy_of
 from ..config_constants import draft_config
 from ..utils.console import clear_console
 from ..utils.display import format_games_count
@@ -143,14 +144,16 @@ class HoverAutomation:
             lane_winrates = (
                 shrunk_lane_winrates(self.m.assistant.db, player_lane) if eligible else {}
             )
-            # SPEC-41 : ma maîtrise du champion, en points de victoire comme le winrate de lane.
+            # SPEC-46 : force et maîtrise (SPEC-41) aux poids de la stratégie, à égalité le winrate.
             term = term_of(self.m)
+            strategy = strategy_of(self.m)
             scores = []
             for champion_name, total_games in eligible:
                 if champion_name in lane_winrates:
-                    scores.append(
-                        (champion_name, lane_winrates[champion_name] + term.points(champion_name))
-                    )
+                    placed = (champion_name, player_lane)
+                    score = strategy.force * self.m.evaluator.intrinsic_logit(placed)
+                    score += strategy.mastery * term.logit(champion_name)
+                    scores.append((champion_name, score, lane_winrates[champion_name]))
                 else:
                     skipped.append((champion_name, total_games))
 
@@ -163,13 +166,14 @@ class HoverAutomation:
 
             if scores:
                 # Sort by score and return best champion
-                scores.sort(key=lambda x: x[1], reverse=True)
+                scores.sort(key=lambda x: x[1:], reverse=True)
                 best_champion = scores[0][0]
                 if self.m.verbose:
                     personal = term.points(best_champion)
                     personal_tag = f", dont toi {personal:+.1f} pts" if personal else ""
+                    winrate = scores[0][2] + personal
                     print(
-                        f"  [OK] [INITIAL-HOVER] Meilleur de la pool : {best_champion} ({scores[0][1]:.1f}% de winrate lissé{personal_tag})"
+                        f"  [OK] [INITIAL-HOVER] Meilleur de la pool : {best_champion} ({winrate:.1f}% de winrate lissé{personal_tag})"
                     )
                 return best_champion
             else:

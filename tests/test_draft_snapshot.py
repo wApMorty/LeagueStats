@@ -9,6 +9,7 @@ import pytest
 from src.client.bus import EventBus
 from src.config_constants import draft_config
 from src.draft.search import PickTurn, SearchResult
+from src.analysis.strategy import find_strategy
 from src.draft.snapshot import TOPIC
 from src.draft.state_parser import DraftStateParser
 from src.analysis.mastery import Mastery, MasteryTerm
@@ -50,6 +51,9 @@ def monitor():
             monitor = DraftMonitor(verbose=False, auto_hover=False)
     monitor.current_pool = POOL
     monitor.champion_id_to_name = dict(IDS)
+    monitor.set_strategy(
+        find_strategy("Complet", ())
+    )  # SPEC-46 : `RANKED` porte des valeurs simulées
     return monitor
 
 
@@ -78,7 +82,7 @@ def pick_state():
 
 # Relevées sur le code d'avant la tâche 72, avec ces mêmes entrées.
 CONSOLE_AVEC_CLASSEMENT = (
-    "\n[PICKS] RECOMMANDATIONS DE COUNTERPICK :\n" + "-" * 50 + "\n"
+    "\n[PICKS] RECOMMANDATIONS DE COUNTERPICK (Complet) :\n" + "-" * 50 + "\n"
     "  [1st] Aatrox (top vs Tryndamere) 57.31% de victoire · 12 500 games"
     " → suite attendue : Fiora (top), Thresh (support)\n"
     "  [2nd] Darius (top vs Tryndamere) 52.10% de victoire · 840 games\n"
@@ -89,7 +93,7 @@ CONSOLE_AVEC_CLASSEMENT = (
     "\n[ADVICE] [PICK] C'est le moment de sécuriser votre champion !\n"
 )
 CONSOLE_SANS_TOUR = (
-    "\n[PICKS] RECOMMANDATIONS DE COUNTERPICK :\n" + "-" * 50 + "\n"
+    "\n[PICKS] RECOMMANDATIONS DE COUNTERPICK (Complet) :\n" + "-" * 50 + "\n"
     "  [DATA] Plus aucun pick à jouer de votre côté\n"
     "  [DATA] Sans données exploitables : Malphite (0 games)\n"
     "\n[ADVICE] [PLAN] Réfléchissez à la composition d'équipe et aux priorités de ban\n"

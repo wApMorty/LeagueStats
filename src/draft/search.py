@@ -61,6 +61,8 @@ class SearchResult:
     depth: int = 0
     # SPEC-41 : part de ma maîtrise du champion dans `win_probability`, en points de victoire à 50 %.
     personal_points: float = 0.0
+    # SPEC-46 : valeur qui a classé le candidat sous la stratégie ; `win_probability` reste calibrée.
+    score: Optional[float] = None
 
 
 def _no_term(_name: str) -> float:
@@ -237,12 +239,14 @@ class DraftSearch:
         player_lane: Optional[str] = None,
         budget_seconds: Optional[float] = None,
         personal: Callable[[str], float] = _no_term,
+        max_depth: Optional[int] = None,
     ) -> List[SearchResult]:
         """Classe les champions de ``pool`` pour notre prochain pick.
 
         ``remaining_turns[0]`` est notre propre tour — l'appelant écarte les
         tours qui le précèdent (cf. ``DraftRecommender``). ``personal(nom)`` est
         le log-odds de ma maîtrise du champion (SPEC-41), ajouté à mon seul pick.
+        ``max_depth`` plafonne la profondeur : 1 est le calcul immédiat d'une stratégie (SPEC-46).
 
         Returns:
             Un ``SearchResult`` par candidat jouable, du meilleur au pire.
@@ -268,7 +272,7 @@ class DraftSearch:
             return []
 
         results: List[SearchResult] = []
-        max_depth = min(len(remaining_turns), draft_config.SEARCH_MAX_DEPTH)
+        deepest = min(len(remaining_turns), max_depth or draft_config.SEARCH_MAX_DEPTH)
 
         # ponytail: effet pair/impair, l'équivalent draft du même biais aux
         # échecs. Si la recherche s'arrête après deux picks adverses et un
@@ -279,7 +283,7 @@ class DraftSearch:
         # atteinte pour que ce soit lisible. Corriger demanderait de ne
         # retenir que les profondeurs où les deux camps ont joué autant de
         # picks, donc de jeter du travail déjà fait.
-        for depth in range(1, max_depth + 1):
+        for depth in range(1, deepest + 1):
             try:
                 deeper = self._rank_at_depth(
                     depth,

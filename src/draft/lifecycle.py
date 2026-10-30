@@ -163,6 +163,7 @@ class MonitorLifecycle:
             return
         self.m._draft_episode = episode
         self._reload_mastery()
+        self._reload_strategy()
         self.m._reset_for_next_game()
         timer.draft_seen(tracker.since())
 
@@ -174,6 +175,15 @@ class MonitorLifecycle:
         except Exception as error:  # pylint: disable=broad-exception-caught
             if self.m.verbose:
                 print(f"[ALERTE] Maîtrise personnelle non rechargée ({error})")
+
+    def _reload_strategy(self) -> None:
+        """La stratégie active et ses poids, modifiés depuis la dernière draft (SPEC-46). Best-effort :
+        en cas d'erreur, la stratégie précédente reste en place et la draft continue."""
+        try:
+            self.m.load_strategy()
+        except Exception as error:  # pylint: disable=broad-exception-caught
+            if self.m.verbose:
+                print(f"[ALERTE] Stratégie non rechargée ({error})")
 
     def _handle_champ_select(self, champ_select_data: dict) -> None:
         """Traite une session de champ select : recommandations, runes, analyse finale."""

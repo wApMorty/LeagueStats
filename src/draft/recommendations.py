@@ -17,11 +17,12 @@ the monitor instance and counts calls — they must be invoked via
 self.m.<method>, not sibling methods here.
 """
 
-from dataclasses import asdict
-from typing import List, Optional, Sequence, Tuple
+from dataclasses import asdict, replace
+from typing import Dict, List, Optional, Sequence, Tuple
 
 from ..analysis.game_eval import Placed
-from ..analysis.mastery import term_of, with_term
+from ..analysis.mastery import term_of, to_win_points, with_term
+from ..analysis.strategy import Strategy, WeightedEvaluator, strategy_of
 from ..config_constants import draft_config, ui_config
 from ..utils.display import format_games_count
 from .search import PickTurn, SearchResult
@@ -140,7 +141,7 @@ class DraftRecommender:
             if i == 0:
                 top_recommendation = result.champion
 
-        if results:
+        if results and strategy_of(self.m).search:
             print(f"  [SEARCH] Profondeur atteinte : {results[0].depth} pick(s) anticipé(s)")
         return top_recommendation
 
@@ -222,7 +223,7 @@ class DraftRecommender:
     def _key(self, state: DraftState) -> tuple:
         """La signature de la draft et la build écrite : l'import du lock-in arrive après la publication
         du tick, c'est le tick suivant qui doit republier le snapshot qui la porte."""
-        return (self._signature(state), self.m.loadout.state())
+        return (self._signature(state), self.m.loadout.state(), strategy_of(self.m).name)
 
     def clear(self) -> None:
         """Fin du champ select : l'écran de draft repasse à l'état vide (publie `None` une seule fois)."""
@@ -298,6 +299,59 @@ class DraftRecommender:
         except Exception:  # pylint: disable=broad-exception-caught
             return []
 
+    def _calibrated(
+        self,
+        results: Sequence[SearchResult],
+        allies: List[Placed],
+        enemies: List[Placed],
+        turns: Sequence[PickTurn],
+        strategy: Strategy,
+    ) -> List[SearchResult]:
+        """Le classement de la stratégie, chaque candidat avec sa victoire du modèle calibré (SPEC-46).
+
+        `score` garde la valeur qui a classé, `win_probability` devient celle de mon pick et de sa
+        suite (`principal_variation[i]` joue `turns[i + 1]`). À score égal, la victoire départage : un
+        terme nul sur tout le pool rendrait sinon le premier du pool.
+        """
+        term = term_of(self.m)
+        ranked = []
+        for result in results:
+            probability = result.win_probability
+            if not strategy.is_calibrated:
+                ally_side = list(allies) + [(result.champion, result.lane)]
+                enemy_side = list(enemies)
+                for move, turn in zip(result.principal_variation, turns[1:]):
+                    (ally_side if turn.is_ally else enemy_side).append(move)
+                probability = with_term(
+                    self.m.evaluator.win_probability(ally_side, enemy_side),
+                    term.logit(result.champion),
+                )
+            ranked.append(
+                replace(result, win_probability=probability, score=result.win_probability)
+            )
+        ranked.sort(key=lambda r: (-r.score, -r.win_probability))
+        return ranked
+
+    def _parts(
+        self,
+        results: Sequence[SearchResult],
+        allies: List[Placed],
+        enemies: List[Placed],
+        strategy: Strategy,
+    ) -> Dict[str, Dict[str, float]]:
+        """Ce que chaque terme de la stratégie apporte à chaque candidat, en points de victoire."""
+        weighted = WeightedEvaluator(self.m.evaluator, strategy)
+        return {
+            result.champion: {
+                name: to_win_points(logit)
+                for name, logit in weighted.parts(
+                    (result.champion, result.lane), allies, enemies
+                ).items()
+                if getattr(strategy, name)
+            }
+            for result in results
+        }
+
     def _base_probability(self, allies: List[Placed], enemies: List[Placed]) -> Optional[float]:
         """Probabilité de victoire de la position actuelle, référence des écarts du classement."""
         try:
@@ -322,7 +376,8 @@ class DraftRecommender:
             return
 
         if enemy_picks:
-            print(f"\n[PICKS] RECOMMANDATIONS DE COUNTERPICK :")
+            strategy = strategy_of(self.m)
+            print(f"\n[PICKS] RECOMMANDATIONS DE COUNTERPICK ({strategy.name}) :")
             print("-" * 50)
 
             # SPEC-04 B4 §4.3 : notre lane (LCU) et celles inférées côté
@@ -354,8 +409,11 @@ class DraftRecommender:
                     remaining_turns=turns,
                     banned=banned,
                     player_lane=player_lane,
-                    personal=term_of(self.m).logit,
+                    personal=lambda name: strategy.mastery * term_of(self.m).logit(name),
+                    max_depth=None if strategy.search else 1,
                 )
+                results = self._calibrated(results, allies, enemies, turns, strategy)
+                analysis.parts = self._parts(results, allies, enemies, strategy)
 
             analysis.player_lane = player_lane
             analysis.direct_counter = direct_counter_name

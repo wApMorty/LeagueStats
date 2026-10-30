@@ -15,10 +15,12 @@ import queue
 import threading
 from typing import Optional
 
+from ..analysis.strategy import all_strategies, find_strategy
 from ..coaching.goals import set_goal
 from ..coaching.report import review
 from ..config_constants import scraping_config
 from ..repositories.coaching import CoachingRepository
+from ..user_prefs import load_strategies
 from . import calibration_notice
 from .state import DraftState
 
@@ -78,6 +80,9 @@ class CommandListener:
             if stripped.lower().startswith("pool "):
                 applied = self.handle_pool_command(stripped[5:].strip(), state) or applied
                 continue
+            if stripped.lower().startswith("strategy "):
+                applied = self.handle_strategy_command(stripped[9:].strip()) or applied
+                continue
             if stripped.lower().split()[:1] in (["bilan"], ["axe"]):
                 self.handle_coaching_command(stripped)  # SPEC-19, hors draft
                 continue
@@ -108,6 +113,24 @@ class CommandListener:
             return True
         except Exception as e:  # pylint: disable=broad-exception-caught
             print(f"[ALERTE] Rechargement du pool '{name}' impossible : {e}")
+            return False
+
+    def handle_strategy_command(self, name: str) -> bool:
+        """Applique la stratégie `name` (`strategy <nom>`, déposé par le client, SPEC-46) ; True si elle
+        l'est, pour que le classement soit recalculé. Best-effort : un nom inconnu ou une erreur laisse
+        la stratégie courante."""
+        try:
+            _, custom = load_strategies()
+            known = all_strategies(custom)
+            if name.casefold() not in {strategy.name.casefold() for strategy in known}:
+                print(f"[ALERTE] Stratégie '{name}' introuvable, stratégie courante conservée")
+                return False
+            self.m.strategy_names = [strategy.name for strategy in known]
+            self.m.set_strategy(find_strategy(name, custom))
+            print(f"[OK] Stratégie active : {self.m.strategy.name}")
+            return True
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            print(f"[ALERTE] Changement de stratégie impossible : {e}")
             return False
 
     def handle_correction_command(self, line: str, state: DraftState) -> bool:

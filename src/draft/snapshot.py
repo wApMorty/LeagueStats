@@ -160,6 +160,8 @@ class Analysis:
     candidates: Dict[int, float] = field(
         default_factory=dict
     )  # championId -> victoire si je le prends
+    # SPEC-46 : champion -> terme -> points de victoire sous la stratégie (termes de poids nul omis).
+    parts: Dict[str, Dict[str, float]] = field(default_factory=dict)
 
 
 def _is_acting(state: DraftState, cell_id: int) -> bool:

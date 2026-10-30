@@ -328,3 +328,34 @@ class TestPersonalTerm:
         malus = -(self._gap(search) - 0.01)
         results = self._rank(search, lambda name: malus if name == "Greedy" else 0.0)
         assert [r.champion for r in results] == ["Greedy", "Safe"]
+
+
+class TestMaxDepth:
+    """SPEC-46 : `max_depth=1` est le calcul immédiat, sans aucun nœud sous la racine."""
+
+    def test_le_plafond_a_un_ne_descend_pas_sous_la_racine(self, search):
+        results = search.rank(
+            allies=[],
+            enemies=ENEMIES,
+            pool=POOL,
+            remaining_turns=[OUR_TURN, PickTurn(is_ally=False)],
+            player_lane="top",
+            budget_seconds=5.0,
+            max_depth=1,
+        )
+
+        assert [r.depth for r in results] == [1] * len(POOL)
+        assert search.nodes == len(POOL)
+        assert all(r.principal_variation == [] for r in results)
+
+    def test_sans_plafond_la_recherche_descend(self, search):
+        results = search.rank(
+            allies=[],
+            enemies=ENEMIES,
+            pool=POOL,
+            remaining_turns=[OUR_TURN, PickTurn(is_ally=False)],
+            player_lane="top",
+            budget_seconds=5.0,
+        )
+
+        assert results[0].depth == 2

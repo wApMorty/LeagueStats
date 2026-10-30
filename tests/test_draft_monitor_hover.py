@@ -15,7 +15,8 @@ from unittest.mock import Mock, patch
 import pytest
 
 from src.analysis.mastery import Mastery, MasteryTerm
-from src.config_constants import draft_config
+from src.analysis.strategy import Strategy, find_strategy
+from src.config_constants import analysis_config, draft_config
 from src.draft_monitor import DraftMonitor
 
 POOL = ["Aatrox", "Darius", "Garen"]
@@ -25,7 +26,9 @@ CHAMPION_IDS = {1: "Aatrox", 2: "Darius", 3: "Garen"}
 @pytest.fixture
 def monitor():
     """DraftMonitor with mocked Assistant/LCUClient and a silent console."""
-    with patch("src.draft_monitor.Assistant", return_value=Mock()):
+    assistant = Mock()
+    assistant.db.get_lane_winrates.return_value = {}  # force nulle : le winrate de lane départage
+    with patch("src.draft_monitor.Assistant", return_value=assistant):
         with patch("src.draft_monitor.LCUClient", return_value=Mock()):
             monitor = DraftMonitor(verbose=False, auto_hover=True)
     monitor.current_pool = list(POOL)
@@ -267,3 +270,22 @@ class TestBlindPickMastery:
         assert monitor._get_best_champion_from_pool() == "Garen"
         points = monitor.mastery.points("Garen")
         assert f"de winrate lissé, dont toi {points:+.1f} pts)" in capsys.readouterr().out
+
+
+class TestBlindPickStrategy:
+    """SPEC-46 : le survol de début de draft suit les poids de force et de maîtrise."""
+
+    def test_sans_poids_de_maitrise_ma_maitrise_ne_compte_plus(self, monitor, lane_winrates):
+        monitor.assistant.get_matchups_for_draft.return_value = matchups(1000)
+        monitor.mastery = MasteryTerm({"Garen": Mastery("Garen", 10, -6.0, -3.0)})
+        monitor.set_strategy(find_strategy("Méta", ()))
+
+        assert monitor._get_best_champion_from_pool() == "Garen"
+
+    def test_le_poids_de_force_s_applique_a_la_force_de_lane(self, monitor, lane_winrates):
+        """Darius, le plus fort au sens du moteur, passe devant Garen (meilleur winrate lissé)."""
+        monitor.assistant.get_matchups_for_draft.return_value = matchups(1000)
+        monitor.evaluator._strength[analysis_config.ALL_LANES_KEY] = {"darius": 4.0}
+        monitor.set_strategy(Strategy("Force", force=3.0, mastery=0.0))
+
+        assert monitor._get_best_champion_from_pool() == "Darius"

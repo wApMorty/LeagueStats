@@ -12,12 +12,14 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from src.analysis.mastery import Mastery, MasteryTerm, with_term
+from src.analysis.mastery import Mastery, MasteryTerm, to_win_points, with_term
+from src.analysis.strategy import Strategy, WeightedEvaluator, find_strategy
 from src.draft.snapshot import Analysis
 from src.draft.state import Cell
-from src.draft.search import PickTurn, SearchResult
+from src.draft.search import CandidatePool, DraftSearch, PickTurn, SearchResult
 from src.draft_monitor import DraftMonitor, DraftState
 from src.models import Matchup
+from src.user_prefs import save_active_strategy, save_strategies
 
 POOL = ["Aatrox", "Darius", "Garen", "Sett"]
 CHAMPION_IDS = {266: "Aatrox", 122: "Darius", 86: "Garen", 875: "Sett", 64: "LeeSin"}
@@ -49,6 +51,8 @@ def monitor():
 
     monitor.current_pool = POOL
     monitor.champion_id_to_name = dict(CHAMPION_IDS)
+    # SPEC-46 : les `SearchResult` simulés portent leurs valeurs, que Complet garde telles quelles.
+    monitor.set_strategy(find_strategy("Complet", ()))
     return monitor
 
 
@@ -222,7 +226,8 @@ class TestMasteryReload:
 
         monitor._provide_recommendations(state)
 
-        assert monitor.search.rank.call_args.kwargs["personal"] == monitor.mastery.logit
+        personal = monitor.search.rank.call_args.kwargs["personal"]
+        assert personal("Darius") == monitor.mastery.logit("Darius")
 
 
 class TestGrimoireMastery:
@@ -269,3 +274,243 @@ def test_la_console_cite_ma_maitrise_du_champion(monitor, capsys):
     assert "Darius (top) 52.00% de victoire · toi -2.0 pts (5 parties)" in out
     assert "Garen (top) 51.00% de victoire" in out
     assert "· toi" not in out.split("Garen")[1]
+
+
+MY_TURN = PickTurn(is_ally=True, is_local_player=True, lane="top")
+ENEMY_TURN = PickTurn(is_ally=False)
+
+
+class TestStrategies:
+    """SPEC-46 : l'ordre suit la stratégie, les probabilités restent celles du modèle calibré."""
+
+    @pytest.fixture
+    def board(self, monitor):
+        """Aatrox gagne le duel de lane contre LeeSin, Garen a la meilleure force de lane."""
+        db = monitor.assistant.db
+        table = {("aatrox", "leesin"): (1.0, 100_000), ("fiora", "aatrox"): (6.0, 100_000)}
+        db.get_all_matchups_bulk.return_value = table
+        db.get_lane_winrates.return_value = {
+            "Aatrox": (50.0, 100_000),
+            "Darius": (50.0, 100_000),
+            "Garen": (56.0, 100_000),
+            "Sett": (50.0, 100_000),
+        }
+        db.get_lane_popularity.return_value = ["Fiora"]
+        monitor.search.candidates = CandidatePool(db, 8)
+        monitor.mastery = MasteryTerm({"Darius": Mastery("Darius", 40, 6.0, 3.0)})
+        return monitor
+
+    @staticmethod
+    def _state(*turns):
+        return DraftState(
+            phase="BAN_PICK",
+            enemy_picks=[64],
+            remaining_picks=list(turns),
+            inferred_roles={64: "top"},
+            ally_positions={0: "top"},
+            local_player_cell_id=0,
+        )
+
+    def _analysis(self, monitor, *turns):
+        analysis = Analysis()
+        monitor.recommender._provide(self._state(*turns), analysis)
+        return analysis
+
+    @pytest.mark.parametrize("name, depth", [("Simple", 1), ("Counter", 1), ("Complet", None)])
+    def test_seule_une_strategie_a_recherche_descend(self, monitor, state, name, depth):
+        monitor.set_strategy(find_strategy(name, ()))
+        monitor.search.rank = Mock(return_value=[])
+
+        monitor._provide_recommendations(state)
+
+        assert monitor.search.rank.call_args.kwargs["max_depth"] == depth
+
+    def test_le_poids_de_maitrise_s_applique_a_mon_terme(self, board, state):
+        board.set_strategy(find_strategy("Counter", ()))
+        board.search.rank = Mock(return_value=[])
+
+        board._provide_recommendations(state)
+
+        personal = board.search.rank.call_args.kwargs["personal"]
+        assert personal("Darius") == pytest.approx(0.25 * board.mastery.logit("Darius"))
+
+    def test_l_ordre_suit_la_strategie_et_le_pourcentage_reste_calibre(self, board):
+        """Sous une stratégie au seul duel, Aatrox passe devant Garen, mieux noté par le modèle."""
+        board.set_strategy(
+            Strategy("Duel", force=0.0, duel=3.0, other=0.0, synergy=0.0, mastery=0.0)
+        )
+
+        results = self._analysis(board, MY_TURN).results
+
+        assert results[0].champion == "Aatrox"
+        for result in results:
+            expected = with_term(
+                board.evaluator.win_probability([(result.champion, "top")], [("LeeSin", "top")]),
+                board.mastery.logit(result.champion),
+            )
+            assert result.win_probability == pytest.approx(expected)
+        garen = next(r for r in results if r.champion == "Garen")
+        assert garen.win_probability > results[0].win_probability
+        assert results[0].score > garen.score
+
+    def test_la_suite_de_la_recherche_entre_dans_la_victoire_calibree(self, board):
+        board.set_strategy(Strategy("Long", duel=2.0, search=True))
+
+        results = self._analysis(board, MY_TURN, ENEMY_TURN).results
+
+        aatrox = next(r for r in results if r.champion == "Aatrox")
+        assert aatrox.principal_variation == [("Fiora", "jungle")]
+        expected = board.evaluator.win_probability(
+            [("Aatrox", "top")], [("LeeSin", "top"), ("Fiora", "jungle")]
+        )
+        assert aatrox.win_probability == pytest.approx(expected)
+
+    def test_a_score_egal_la_victoire_calibree_departage(self, board):
+        """Tout le pool à égalité : le premier du pool ne gagne plus par défaut (SPEC-46 §1.3)."""
+        board.assistant.db.get_all_matchups_bulk.return_value = {}
+        board.set_strategy(
+            Strategy("Duel", force=0.0, duel=1.0, other=0.0, synergy=0.0, mastery=0.0)
+        )
+
+        results = self._analysis(board, MY_TURN).results
+
+        assert len({r.score for r in results}) == 1
+        assert results[0].champion == "Darius"  # sa maîtrise le place devant Garen, pas son rang
+
+    def test_complet_rend_le_classement_d_un_draft_search_direct(self, board):
+        direct = DraftSearch(board.evaluator, board.search.candidates)
+        expected = direct.rank(
+            allies=[],
+            enemies=[("LeeSin", "top")],
+            pool=POOL,
+            remaining_turns=[MY_TURN, ENEMY_TURN],
+            player_lane="top",
+            personal=board.mastery.logit,
+        )
+
+        results = self._analysis(board, MY_TURN, ENEMY_TURN).results
+
+        assert [
+            (r.champion, r.lane, r.win_probability, r.principal_variation, r.depth) for r in results
+        ] == [
+            (r.champion, r.lane, r.win_probability, r.principal_variation, r.depth)
+            for r in expected
+        ]
+
+    def test_parts_ne_garde_que_les_termes_de_poids_non_nul(self, board):
+        board.set_strategy(find_strategy("Simple", ()))
+
+        parts = self._analysis(board, MY_TURN).parts["Aatrox"]
+
+        assert set(parts) == {"force", "duel", "other"}
+        logit = WeightedEvaluator(board.evaluator, board.strategy).parts(
+            ("Aatrox", "top"), [], [("LeeSin", "top")]
+        )
+        assert parts["duel"] == pytest.approx(to_win_points(logit["duel"]))
+
+    def test_la_console_ne_cite_la_profondeur_que_pour_une_recherche(self, board, capsys):
+        board.set_strategy(find_strategy("Simple", ()))
+        self._analysis(board, MY_TURN)
+        output = capsys.readouterr().out
+        assert "RECOMMANDATIONS DE COUNTERPICK (Simple) :" in output
+        assert "Profondeur atteinte" not in output
+
+    def test_bascule_a_mon_tour_survole_le_nouveau_numero_un(self, board):
+        board.auto_hover = True
+        board.last_recommendation = "Darius"
+        board._is_player_turn = Mock(return_value=True)
+        board._enemy_picks_changed = Mock(return_value=False)
+        board._auto_hover_champion = Mock(return_value=True)
+        board.lcu.lock_champion = Mock()
+        board.set_strategy(
+            Strategy("Duel", force=0.0, duel=3.0, other=0.0, synergy=0.0, mastery=0.0)
+        )
+
+        self._analysis(board, MY_TURN)
+
+        board._auto_hover_champion.assert_called_once()
+        assert board._auto_hover_champion.call_args.args[0] == "Aatrox"
+        board.lcu.lock_champion.assert_not_called()
+
+    def test_bascule_hors_de_mon_tour_ne_survole_rien(self, board):
+        board.auto_hover = True
+        board.last_recommendation = "Darius"
+        board._is_player_turn = Mock(return_value=False)
+        board._enemy_picks_changed = Mock(return_value=False)
+        board._auto_hover_champion = Mock(return_value=True)
+        board.set_strategy(
+            Strategy("Duel", force=0.0, duel=3.0, other=0.0, synergy=0.0, mastery=0.0)
+        )
+
+        self._analysis(board, MY_TURN)
+
+        board._auto_hover_champion.assert_not_called()
+
+    def test_la_cle_de_publication_change_avec_la_strategie(self, board):
+        state = self._state(MY_TURN)
+        before = board.recommender._key(state)
+        board.set_strategy(find_strategy("Counter", ()))
+        assert board.recommender._key(state) != before
+
+
+class TestStrategyLoading:
+    """SPEC-46 §4.3 : préférences, commande `strategy <nom>`, rechargement à chaque draft."""
+
+    def test_le_monitor_part_sur_la_strategie_memorisee(self, monitor):
+        save_active_strategy("Counter")
+
+        monitor.load_strategy()
+
+        assert monitor.strategy.name == "Counter"
+        assert isinstance(monitor.search.evaluator, WeightedEvaluator)
+        assert monitor.strategy_names == ["Simple", "Counter", "Méta", "Complet"]
+
+    def test_sans_preference_la_strategie_par_defaut(self, monitor):
+        monitor.load_strategy()
+        assert monitor.strategy.name == "Simple"
+
+    def test_complet_garde_l_evaluateur_calibre(self, monitor):
+        monitor.set_strategy(find_strategy("Complet", ()))
+        assert monitor.search.evaluator is monitor.evaluator
+
+    def test_la_commande_applique_la_strategie_et_force_le_recalcul(self, monitor, state):
+        monitor._command_queue.put("strategy counter")
+
+        assert monitor.commands.apply_pending(state) is True
+        assert monitor.strategy.name == "Counter"
+
+    def test_la_commande_voit_une_strategie_perso_et_ses_noms(self, monitor, state):
+        save_strategies([Strategy("Vite", duel=2.0)])
+        monitor._command_queue.put("strategy Vite")
+
+        assert monitor.commands.apply_pending(state) is True
+        assert monitor.strategy.duel == 2.0
+        assert "Vite" in monitor.strategy_names
+
+    def test_un_nom_inconnu_laisse_la_strategie_courante(self, monitor, state, capsys):
+        monitor._command_queue.put("strategy Inconnue")
+
+        assert monitor.commands.apply_pending(state) is False
+        assert monitor.strategy.name == "Complet"
+        assert "[ALERTE] Stratégie 'Inconnue' introuvable" in capsys.readouterr().out
+
+    def test_une_erreur_de_la_commande_n_interrompt_rien(self, monitor, state, capsys):
+        monitor.set_strategy = Mock(side_effect=RuntimeError("panne"))
+        monitor._command_queue.put("strategy Counter")
+
+        assert monitor.commands.apply_pending(state) is False
+        assert "[ALERTE] Changement de stratégie impossible" in capsys.readouterr().out
+
+    def test_la_nouvelle_draft_relit_la_strategie(self, monitor):
+        save_active_strategy("Méta")
+
+        monitor.lifecycle._reload_strategy()
+
+        assert monitor.strategy.name == "Méta"
+
+    def test_une_erreur_de_relecture_garde_la_strategie(self, monitor):
+        monitor.load_strategy = Mock(side_effect=OSError("panne"))
+
+        monitor.lifecycle._reload_strategy()
+
+        assert monitor.strategy.name == "Complet"
