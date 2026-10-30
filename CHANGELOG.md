@@ -4,7 +4,11 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
-**Action requise** : `python -m alembic upgrade head`. Sans cette commande, les prédictions de fin de draft ne s'enregistrent plus.
+## [6.0.0] - 2026-10-30
+
+Le classement de draft se pilote par stratégies : tu choisis le poids de chaque critère, tu bascules d'un clic pendant la draft, et « Simple » remplace le moteur complet par défaut. Le client ne fait plus ramer le PC quand il reste ouvert.
+
+**Action requise** : `python -m alembic upgrade head`. Sans cette commande, les prédictions de fin de draft ne s'enregistrent plus. Pas de scrape.
 
 ### ✨ Feature
 
