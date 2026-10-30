@@ -353,6 +353,24 @@ class TestStrategies:
         assert garen.win_probability > results[0].win_probability
         assert results[0].score > garen.score
 
+    def test_counter_garde_la_victoire_calibree(self, board):
+        """Critère 5 : sous Counter, ni ses poids ni sa maîtrise à 0,25 ne touchent le %."""
+        board.set_strategy(find_strategy("Counter", ()))
+
+        results = self._analysis(board, MY_TURN).results
+
+        assert len(results) == len(POOL)
+        for result in results:
+            expected = with_term(
+                board.evaluator.win_probability([(result.champion, "top")], [("LeeSin", "top")]),
+                board.mastery.logit(result.champion),
+            )
+            assert result.win_probability == pytest.approx(expected)
+        darius = next(r for r in results if r.champion == "Darius")
+        assert darius.personal_points == pytest.approx(
+            to_win_points(0.25 * board.mastery.logit("Darius"))
+        )
+
     def test_la_suite_de_la_recherche_entre_dans_la_victoire_calibree(self, board):
         board.set_strategy(Strategy("Long", duel=2.0, search=True))
 
@@ -420,17 +438,16 @@ class TestStrategies:
         board.last_recommendation = "Darius"
         board._is_player_turn = Mock(return_value=True)
         board._enemy_picks_changed = Mock(return_value=False)
-        board._auto_hover_champion = Mock(return_value=True)
-        board.lcu.lock_champion = Mock()
+        board.lcu = Mock()  # faux LCU : seul le survol doit le toucher
+        board.lcu.hover_champion.return_value = True
         board.set_strategy(
             Strategy("Duel", force=0.0, duel=3.0, other=0.0, synergy=0.0, mastery=0.0)
         )
 
         self._analysis(board, MY_TURN)
 
-        board._auto_hover_champion.assert_called_once()
-        assert board._auto_hover_champion.call_args.args[0] == "Aatrox"
-        board.lcu.lock_champion.assert_not_called()
+        board.lcu.hover_champion.assert_called_once_with("Aatrox", action_type="pick")
+        assert [call[0] for call in board.lcu.method_calls] == ["hover_champion"]
 
     def test_bascule_hors_de_mon_tour_ne_survole_rien(self, board):
         board.auto_hover = True

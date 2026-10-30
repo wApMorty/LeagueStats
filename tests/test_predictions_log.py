@@ -165,14 +165,20 @@ class TestDraftMonitorBestEffortLogging:
         """SPEC-46 critère 5 : Simple et Counter écrivent la même probabilité calibrée."""
         ally_ids, enemy_ids = self._wire_common_mocks(monitor)
         monitor.assistant.db.insert_prediction.return_value = 42
+        # Un duel mesuré : Counter le pèse double, une fuite des poids changerait la probabilité.
+        monitor.assistant.db.get_all_matchups_bulk.return_value = {
+            ("ally1", "enemy6"): (4.0, 100_000)
+        }
+        lanes = {1: "top", 6: "top"}
         logged = {}
         for name in ("Simple", "Counter"):
             monitor.set_strategy(find_strategy(name, ()))
-            monitor._calculate_final_scores(ally_ids, enemy_ids, ally_lanes={1: "top"})
+            monitor._calculate_final_scores(ally_ids, enemy_ids, ally_lanes=lanes)
             logged[name] = monitor.assistant.db.insert_prediction.call_args.kwargs
 
         assert logged["Simple"]["strategy"] == "Simple"
         assert logged["Counter"]["strategy"] == "Counter"
+        assert logged["Simple"]["predicted_probability"] > 0.5
         assert (
             logged["Simple"]["predicted_probability"] == logged["Counter"]["predicted_probability"]
         )
