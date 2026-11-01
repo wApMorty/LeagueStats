@@ -11,7 +11,7 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### 📝 Docs
 
-- **Win chance : l'a priori de draft et la forme rejugés (ADR-004)** — sans le seuil de 0,002, la draft améliore nettement la win chance du début de partie : elle la déplace de 4 pts en moyenne, et l'écart se confirme à l'observé (41,7 et 57,4 % de victoires aux deux extrêmes). Son adoption est proposée, rien ne change encore dans le modèle. La forme par l'impact reste indétectable : seules 65 parties sont couvertes en ce début de patch. Mesure : `python scripts/rejudge_winchance_terms.py`, détail dans SPEC-33 §7.
+- **Win chance : l'a priori de draft et la forme rejugés (ADR-004)** — sans le seuil de 0,002, la draft améliore nettement la win chance du début de partie : elle la déplace de 4 pts en moyenne, et l'écart se confirme à l'observé (41,7 et 57,4 % de victoires aux deux extrêmes). Son adoption est validée (SPEC-47), rien ne change encore dans le modèle. La forme par l'impact reste indétectable : seules 65 parties sont couvertes en ce début de patch. Mesure : `python scripts/rejudge_winchance_terms.py`, détail dans SPEC-33 §7.
 - **Évaluation du modèle (ADR-004)** — les probabilités restent jugées au Brier et à la calibration, sans seuil fixe. Un terme de classement est jugé sur les décisions qu'il change, en points de winrate.
 
 ## [6.0.0] - 2026-10-30
