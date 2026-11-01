@@ -10,6 +10,7 @@ import pytest
 
 from src.analysis.game_eval import GameEvaluator
 from src.analysis.mastery import to_win_points
+from src.analysis.strategy import Strategy, WeightedEvaluator
 from src.draft.search import CandidatePool, DraftSearch, PickTurn
 
 GAMES = 10_000
@@ -115,9 +116,56 @@ class TestCounterpickTrap:
         assert len(results) == len(POOL)
         assert results == sorted(results, key=lambda r: -r.win_probability)
 
+    def test_la_pire_reponse_gagne_meme_loin_dans_la_popularite(self):
+        """Le vis-à-vis prend le pire pour moi, pas le plus joué."""
+        popularity = {**TRAP_POPULARITY, "top": ["Filler", "Punisher"]}
+        db = FakeDB(TRAP_MATCHUPS, popularity)
+        engine = DraftSearch(GameEvaluator(db), CandidatePool(db, top_n=8))
+
+        greedy = next(r for r in _rank(engine) if r.champion == "Greedy")
+
+        assert greedy.reply == ("Punisher", "top")
+
+    def test_le_terme_personnel_ne_porte_que_sur_mon_pick(self, search):
+        term = 0.2
+        greedy = next(r for r in _rank(search, personal=lambda _: term) if r.champion == "Greedy")
+        logit = search.evaluator.team_logit([("Greedy", "top")], ENEMIES + [("Punisher", "top")])
+        assert greedy.win_probability == pytest.approx(search.evaluator.probability(logit + term))
+        assert greedy.reply == ("Punisher", "top")
+
+    def test_win_lane_change_de_numero_un_en_anticipant(self):
+        """SPEC-48 critère 5 : sous les poids réels de WIN LANE, le classement diffère de l'immédiat."""
+        db = FakeDB(TRAP_MATCHUPS, TRAP_POPULARITY)
+        win_lane = Strategy("WIN LANE", 1.0, 3.0, 0.25, 0.0, 0.0, search=True)
+        engine = DraftSearch(
+            WeightedEvaluator(GameEvaluator(db), win_lane), CandidatePool(db, top_n=8)
+        )
+
+        assert _rank(engine, anticipate=False)[0].champion == "Greedy"
+        assert _rank(engine)[0].champion == "Safe"
+
 
 class TestWhenToAnticipate:
     """SPEC-48 §2 : stratégie à anticipation, poste connu, vis-à-vis non vu, tour ennemi à venir."""
+
+    def test_pas_de_reponse_sans_lane(self, search):
+        """Mes cinq postes sont pris et aucun poste assigné : je n'ai pas de vis-à-vis à anticiper."""
+        allies = [
+            ("A", "top"),
+            ("B", "jungle"),
+            ("C", "middle"),
+            ("D", "bottom"),
+            ("E", "support"),
+        ]
+        results = search.rank(
+            allies=allies,
+            enemies=ENEMIES,
+            pool=POOL,
+            remaining_turns=[OUR_TURN, THEIR_TURN],
+            anticipate=True,
+        )
+        assert [r.lane for r in results] == [None, None]
+        assert all(r.reply is None for r in results)
 
     def test_pas_de_reponse_si_le_vis_a_vis_est_vu(self, search):
         results = _rank(search, enemies=ENEMIES + [("Filler", "top")])
