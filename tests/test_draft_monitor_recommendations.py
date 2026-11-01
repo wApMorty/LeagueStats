@@ -103,18 +103,16 @@ def test_displayed_probability_is_the_searched_one(monitor, state, capsys):
     assert "Sett" not in output
 
 
-def test_principal_variation_is_displayed(monitor, state, capsys):
-    """La réponse adverse anticipée est montrée au joueur : c'est l'intérêt
-    d'une recherche par rapport à un score plat."""
-    ranked = [SearchResult("Aatrox", "top", 0.53, [("Fiora", "top")], depth=2)]
+def test_expected_reply_is_displayed(monitor, state, capsys):
+    """La réponse du vis-à-vis est montrée au joueur : c'est l'intérêt de l'anticipation."""
+    ranked = [SearchResult("Aatrox", "top", 0.53, reply=("Fiora", "top"))]
 
     with patch.object(monitor.search, "rank", return_value=ranked):
         monitor._provide_recommendations(state)
 
     output = capsys.readouterr().out
-    assert "suite attendue" in output
-    assert "Fiora (top)" in output
-    assert "Profondeur atteinte : 2" in output
+    assert " → réponse attendue : Fiora (top)" in output
+    assert "Profondeur" not in output
 
 
 def test_champion_without_data_is_listed_as_skipped_not_dropped(monitor, capsys):
@@ -463,12 +461,16 @@ class TestStrategies:
         )
         assert parts["duel"] == pytest.approx(to_win_points(logit["duel"]))
 
-    def test_la_console_ne_cite_la_profondeur_que_pour_une_recherche(self, board, capsys):
+    def test_la_console_ne_cite_la_reponse_que_sous_anticipation(self, board, capsys):
         board.set_strategy(find_strategy("Simple", ()))
-        self._analysis(board, MY_TURN)
+        self._unseen(board, MY_TURN, ENEMY_TURN)
         output = capsys.readouterr().out
         assert "RECOMMANDATIONS DE COUNTERPICK (Simple) :" in output
-        assert "Profondeur atteinte" not in output
+        assert "réponse attendue" not in output
+
+        board.set_strategy(find_strategy("Complet", ()))
+        self._unseen(board, MY_TURN, ENEMY_TURN)
+        assert "réponse attendue : Fiora (top)" in capsys.readouterr().out
 
     def test_bascule_a_mon_tour_survole_le_nouveau_numero_un(self, board):
         board.auto_hover = True

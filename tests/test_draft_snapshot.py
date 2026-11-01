@@ -58,9 +58,16 @@ def monitor():
 
 
 RANKED = [
-    SearchResult("Aatrox", "top", 0.5731, [("Fiora", "top"), ("Thresh", "support")], 2),
+    SearchResult(
+        "Aatrox",
+        "top",
+        0.5731,
+        [("Fiora", "top"), ("Thresh", "support")],
+        2,
+        reply=("Fiora", "top"),
+    ),
     SearchResult("Darius", "top", 0.5210, [], 2),
-    SearchResult("Garen", "top", 0.4890, [("Nasus", "top")], 2),
+    SearchResult("Garen", "top", 0.4890, [("Nasus", "top")], 2, reply=("Nasus", "top")),
     SearchResult("Sett", "top", 0.41, [], 2),
 ]
 
@@ -84,11 +91,10 @@ def pick_state():
 CONSOLE_AVEC_CLASSEMENT = (
     "\n[PICKS] RECOMMANDATIONS DE COUNTERPICK (Complet) :\n" + "-" * 50 + "\n"
     "  [1st] Aatrox (top vs Tryndamere) 57.31% de victoire · 12 500 games"
-    " → suite attendue : Fiora (top), Thresh (support)\n"
+    " → réponse attendue : Fiora (top)\n"
     "  [2nd] Darius (top vs Tryndamere) 52.10% de victoire · 840 games\n"
     "  [3rd] Garen (top vs Tryndamere) 48.90% de victoire · 840 games"
-    " → suite attendue : Nasus (top)\n"
-    "  [SEARCH] Profondeur atteinte : 2 pick(s) anticipé(s)\n"
+    " → réponse attendue : Nasus (top)\n"
     "  [DATA] Sans données exploitables en top : Malphite (0 games)\n"
     "\n[ADVICE] [PICK] C'est le moment de sécuriser votre champion !\n"
 )

@@ -1,10 +1,8 @@
 """Champion recommendations during pick/ban phases.
 
-SPEC-12 : le classement ne vient plus d'un score par delta calculé sur la
-draft telle qu'elle est, mais de ``src/draft/search.py`` — on déroule la fin de
-la draft en supposant que les deux camps jouent au mieux, et on affiche la
-probabilité de victoire de la position obtenue. Un pick qui ouvre un
-contre-pick évident n'est donc plus recommandé en aveugle.
+SPEC-12 : le classement vient de ``src/draft/search.py``. Une stratégie à
+anticipation y ajoute la réponse du vis-à-vis non vu (SPEC-48) : un pick qui
+ouvre un contre-pick évident n'est plus recommandé en aveugle.
 
 Back-reference to the monitor: touches ~9 different domains (verbose,
 current_pool, champion_id_to_name, assistant, search, auto_hover,
@@ -94,14 +92,12 @@ class DraftRecommender:
     # ---------- affichage ----------
 
     @staticmethod
-    def _format_variation(result: SearchResult) -> str:
-        """La suite supposée optimale, façon variante principale d'un moteur."""
-        if not result.principal_variation:
+    def _format_reply(result: SearchResult) -> str:
+        """La réponse attendue du vis-à-vis (SPEC-48), vide sans anticipation."""
+        if not result.reply:
             return ""
-        moves = ", ".join(
-            f"{name}{f' ({lane})' if lane else ''}" for name, lane in result.principal_variation
-        )
-        return f" → suite attendue : {moves}"
+        name, lane = result.reply
+        return f" → réponse attendue : {name}{f' ({lane})' if lane else ''}"
 
     def _print_results(
         self,
@@ -135,14 +131,12 @@ class DraftRecommender:
             print(
                 f"  {rank} {result.champion}{lane_tag} "
                 f"{result.win_probability * 100:.2f}% de victoire"
-                f"{volume_tag}{personal_tag}{self._format_variation(result)}"
+                f"{volume_tag}{personal_tag}{self._format_reply(result)}"
             )
 
             if i == 0:
                 top_recommendation = result.champion
 
-        if results and strategy_of(self.m).search:
-            print(f"  [SEARCH] Profondeur atteinte : {results[0].depth} pick(s) anticipé(s)")
         return top_recommendation
 
     # ---------- entrée principale ----------
