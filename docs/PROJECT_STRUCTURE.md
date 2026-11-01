@@ -81,6 +81,7 @@ src/
 │   ├── crawl.py                 # Collecte des parties dans data/crawl.db (crawl_games, crawl_frontier, crawl_histories)
 │   ├── state.py, model.py, train.py, retrain.py  # Variables d'état, logistique, entraînement et validation
 │   ├── impact.py, report.py, pending.py           # Impact ΔP par joueur, rapport d'après-partie
+│   ├── draft.py                                    # A priori de draft de la win chance (SPEC-33 §7)
 │   ├── live.py, overlay.py                         # Live Client API, overlay en jeu
 │   └── scout.py, form.py                            # Éclaireur : pool de threads, forme et impact des dix joueurs (SPEC-33)
 │

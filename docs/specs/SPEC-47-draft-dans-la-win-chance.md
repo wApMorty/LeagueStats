@@ -1,6 +1,7 @@
 # SPEC-47 — La draft dans la win chance en partie
 
-**Statut** : 🟡 Rédigée le 2026-11-01, à relire par @pj35 avant `/implement`.
+**Statut** : 🟡 Implémentée le 2026-11-01 sur la branche `claude/clever-jang-6d19f8`, à fusionner. Recette @pj35
+à faire.
 
 **Origine** : @pj35, 2026-10-19 : la courbe de win chance part toujours de ~50 % sans tenir compte de la draft.
 Terme écarté ce jour-là au seuil de 0,002, rejugé le 2026-11-01 sans seuil
@@ -175,4 +176,21 @@ par la draft, et l'impact d'un kill reste celui d'avant à poids égaux.
 
 ## 8. Mesures
 
-*À remplir par la tâche 235.*
+**Réentraînement du 2026-11-01** (`data/winprob_model.log`) : `wp-d819a71d` sur 16 224 parties 16.21, entrée `draft`
+présente. Sur les parties récentes, images après 10 min : Brier 0,1498 → 0,1488, écart max par décile 2,4 → 2,1 pts.
+Poids de la draft 1,24 à la première minute, 0,78 à 30 min. L'ancien modèle est gardé en
+`data/winprob_model.backup-20261101.json`. Le critère 8 reste ouvert : le Brier ≤ 10 min de ce modèle n'est pas
+relevé, et `adopt` ne regarde que les images après 10 min.
+
+**Écarts entre l'implémentation et le §4**, sans effet sur les critères :
+
+| §4 | Livré | Conséquence |
+|---|---|---|
+| `src/winprob/draft_term.py` | `src/winprob/draft.py` (`game_draft`, `recorded_draft`, `live_draft`, `reader`) | Tables gardées en mémoire tant que `db.db` ne change pas, au lieu d'ouvrir une `Database` à chaque lecture : le cache par `game_id` du §4.5 et son bench deviennent inutiles |
+| `DRAFT_INPUTS`, champ posé par `_Replay` | `MODEL_INPUTS`, et `expand` prend `draft` à 0 si absent | `state.py` et `live.py` ne changent pas, ΔP neutres de la même façon |
+| Noms via `resolve_champions` | `rawChampionName` direct | Vérifié sur `db.db` le 2026-11-01 : les noms en base sont les clés Riot (`MonkeyKing`, `Kaisa`), recherche en minuscules, donc `FiddleSticks` est trouvé. Logit en direct égal au calcul direct |
+| `game_teams` partagé avec `backtest_draft_model` | Sélection propre à `game_draft` | Deux lectures des postes à garder alignées |
+| `read_logit` | `Database.connect_read_only` (nouveau) | `connect` crée des index, cette lecture n'écrit rien (test) |
+
+`draft_reader` lève si `db.db` ne se lit pas : un réentraînement à draft nulle silencieuse donnerait un poids nul.
+Pas lu dans une partie réelle : la vérification de bout en bout du §6 reste la recette de @pj35.

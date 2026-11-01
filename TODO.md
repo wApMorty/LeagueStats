@@ -377,7 +377,7 @@ pile réelle sur faux LCU (§3). Découpage en SPEC-34 §5 (tâches 163 à 170, 
 | 169 | Scènes « En partie » (courbe SVG), « Revue et coaching » et « Mosaïque » ; `hero.gif` dans le README | 5 | 167, 168 | ✅ 2026-10-16 : teaser de 30,0 s en 1 920 × 1 080 sans audio (12,2 Mo) ; `hero.gif` 960 × 540 à 10 i/s, 4,1 Mo, encodé par ffmpeg (palette optimisée ; l'encodeur GIF de Remotion donnait 10,3 Mo), fond figé dans la boucle |
 | 170 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure ; recette à l'œil de @pj35 | 3 | 169 | ✅ 2026-10-16 ; recette à l'œil (captures, GIF, `docs/presentation/video/out/teaser.mp4`) laissée à @pj35 |
 
-### Lot SPEC-47, la draft dans la win chance en partie (🟡 rédigée le 2026-11-01, relecture @pj35 attendue)
+### Lot SPEC-47, la draft dans la win chance en partie (🟡 implémentée le 2026-11-01, recette @pj35 à faire)
 
 [SPEC-47](docs/specs/SPEC-47-draft-dans-la-win-chance.md) : la courbe part de ~50 % alors qu'à chaque extrême de draft
 le résultat observé s'en écarte de 7 à 8 pts. `draft` devient une variable du modèle, réentraîné sur le patch en
@@ -386,12 +386,12 @@ post-game suivent. Découpage en SPEC-47 §5 (tâches 230 à 235, 14 pts) :
 
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
-| 230 | `draft` dans l'état, `DRAFT_INPUTS`, tests dont neutralité des ΔP | 2 | — | ⏳ |
-| 231 | `src/winprob/draft_term.py`, `backtest_draft_model` branché dessus | 3 | 230 | ⏳ |
-| 232 | Entraînement et réentraînement avec la draft | 3 | 231 | ⏳ |
-| 233 | En partie, overlay et courbe post-game, bench d'ouverture | 3 | 231 | ⏳ |
-| 234 | `WINPROB_IMPACT_CONVENTION` à 3, doc, CHANGELOG, statuts | 1 | 232, 233 | ⏳ |
-| 235 | Réentraînement réel, mesures en SPEC-47 §8, par @pj35 ou sur son accord | 2 | 234 | ⏳ |
+| 230 | `draft` dans le modèle, `MODEL_INPUTS`, ΔP neutres | 2 | — | ✅ 2026-11-01 |
+| 231 | `src/winprob/draft.py` | 3 | 230 | ✅ 2026-11-01, `backtest_draft_model` garde sa sélection |
+| 232 | Entraînement et réentraînement avec la draft | 3 | 231 | ✅ 2026-11-01 |
+| 233 | En partie, overlay et courbe post-game | 3 | 231 | ✅ 2026-11-01, tables gardées en mémoire, bench sans objet |
+| 234 | `WINPROB_IMPACT_CONVENTION` à 3, doc, CHANGELOG, statuts | 1 | 232, 233 | ✅ 2026-11-01 |
+| 235 | Réentraînement réel, mesures en SPEC-47 §8 | 2 | 234 | ✅ 2026-11-01 : `wp-d819a71d`, Brier 0,1498 → 0,1488 après 10 min ; Brier ≤ 10 min non relevé |
 
 ### Lot SPEC-46, stratégies de draft (✅ livrée le 2026-10-30, recette @pj35 à faire)
 
@@ -776,8 +776,8 @@ encore mesurer la qualité.*
 - ❌ i18n, multi-plateforme
 - ✅ GUI lourde : **rouverte par @pj35 le 2026-10-04**, devenue le client de SPEC-21 (fenêtre `pywebview`, pas de Qt ni d'Electron)
 - ⏸️ Automatisation nocturne — **suspendue par choix**, mise à jour manuelle assumée
-- ✅ A priori de la draft dans la win chance en partie — **rejugé le 2026-11-01, adoption validée par @pj35, à
-  implémenter ([SPEC-47](docs/specs/SPEC-47-draft-dans-la-win-chance.md))**. Au premier étage d'ADR-004 (SPEC-33 §7), sur 15 383 parties 16.21 hors échantillon : Brier ≤ 10 min
+- ✅ A priori de la draft dans la win chance en partie — **rejugé puis adopté par @pj35 le 2026-11-01**, modèle
+  `wp-d819a71d` (`src/winprob/draft.py`). Au premier étage d'ADR-004 (SPEC-33 §7), sur 15 383 parties 16.21 hors échantillon : Brier ≤ 10 min
   0,23293 → 0,23057, **gain +0,00236, IC 90 % +0,00170 à +0,00299**, placebo nul, écart par décile 2,4 → 2,5 pts,
   AUC 0,640 → 0,653. La win chance bouge de 4,0 pts en moyenne (RMS 5,0, p90 8,3) sur les images ≤ 10 min. Quintiles
   extrêmes : 41,7 et 57,4 % observés, 42,5 et 57,3 avec le terme, ~50 sans. Le refus du 2026-10-19 (gain 0,0005 sur

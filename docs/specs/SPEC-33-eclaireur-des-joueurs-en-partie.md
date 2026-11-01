@@ -400,6 +400,11 @@ Placebo : le même terme, de signe tiré au hasard par partie.
 | `form_impact`, sous-ensemble couvert | 65 | 0,2488 → 0,2632 | −0,0144 (−0,0241 à −0,0055) | −0,0085 (−0,0149 à −0,0023) | sans valeur | sans valeur | **Indétectable** |
 | `form_impact`, toutes parties (sans forme = 0) | 15 650 | 0,23205 → 0,23181 | +0,00024 (+0,00001 à +0,00046) | +0,00002 (−0,00006 à +0,00010) | 2,6 → 2,7 pts | moyenne 0,95, RMS 1,7, p90 3,0, max 13,4 | **Remesurer** |
 
+**Décision (@pj35, 2026-11-01)** : a priori de draft adopté. Variable `draft` et son produit par le temps
+dans le modèle (`src/winprob/draft.py`, `MODEL_INPUTS`), modèle `wp-d819a71d` sur 16 224 parties : Brier
+0,1498 → 0,1488 et écart 2,4 → 2,1 pts sur les parties récentes, poids 1,24 à la première minute et 0,78 à
+30 min. La variable vaut 0 sans draft connue. `impact.py` ne la renseigne pas : un impact mesure un événement.
+
 Lecture, a priori de draft : `crawl.db` ne contient plus le patch 16.20 sur lequel K_MATCHUP, K_SYNERGY et
 K_INTRINSIC ont été ajustés, la mesure est donc hors échantillon. Le gain ne se compare pas au +0,0005 du
 2026-10-19 : ce logit-là précédait SPEC-43. AUC ≤ 10 min 0,640 → 0,653, écart max sur toutes les images
