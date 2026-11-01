@@ -151,6 +151,9 @@ class WinProbConfig:
     FORM_IMPACT_MIN_PLAYERS: int = 8
     FORM_IMPACT_MIN_GAMES: int = 5
     FORM_CV_FOLDS: int = 5
+    # Rejugement d'ADR-004 : blocs de parties consécutives du second bootstrap (un joueur enchaîne ses
+    # parties, le bootstrap par partie seul sous-estime l'incertitude).
+    FORM_TIME_BLOCKS: int = 50
     # Attente d'un commit de la collecte (écrivain du Live Coach) avant « database is locked ».
     FORM_DB_TIMEOUT_S: float = 60.0
 

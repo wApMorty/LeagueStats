@@ -132,6 +132,7 @@ scripts/
 ├── backtest_draft_model.py        # Backtest du modèle de draft sur crawl.db, passage obligé de tout changement (SPEC-43)
 ├── bench_scout.py, measure_scout_quartiles.py  # Banc de l'éclaireur, seuils de la pastille (SPEC-33)
 ├── measure_form_term.py           # Mesure du terme de forme dans la win chance (SPEC-33, refusé le 2026-10-21)
+├── rejudge_winchance_terms.py     # Rejuge form_impact et l'a priori de draft au premier étage d'ADR-004
 ├── monitor_crawl.py               # Suivi en direct de crawl.db : débit, couverture, verrou (SPEC-33)
 ├── measure_moneyball.py            # Étude « Moneyball » du début de partie (SPEC-35, rien d'adopté le 2026-10-20)
 ├── measure_mastery_term.py         # Étude du terme de maîtrise personnelle sur crawl.db (SPEC-41, adopté le 2026-10-21)
