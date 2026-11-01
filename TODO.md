@@ -385,7 +385,7 @@ garde le même n° 1 à 90 %, en moins de 0,1 ms en médiane. Découpage en SPEC
 
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
-| 236 | `DraftSearch.rank` à un pli, suppression de l'arbre, `tests/test_draft_search.py` | 5 | — | ⬜ |
+| 236 | `DraftSearch.rank` à un pli, suppression de l'arbre, `tests/test_draft_search.py` | 5 | — | ✅ 2026-11-01, `_provide` et `_calibrated` compris pour garder la suite verte |
 | 237 | `recommendations.py` : `anticipate`, `_calibrated`, console, tests | 3 | 236 | ⬜ |
 | 238 | Snapshot, cartes, grimoire, tests | 3 | 237 | ⬜ |
 | 239 | Écran Stratégies, constantes, `PickTurn.lane`, scripts supprimés | 2 | 236 | ⬜ |

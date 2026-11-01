@@ -1,10 +1,9 @@
-"""Tests de src/draft/search.py (SPEC-12).
+"""Tests de src/draft/search.py (SPEC-12, SPEC-48).
 
 Le test qui porte toute la feature est
-``TestCounterpickTrap::test_depth_two_avoids_what_depth_one_walks_into`` : à
-profondeur 1 le moteur choisit le pick le plus fort dans l'instant, à
-profondeur 2 il voit la réponse adverse et change d'avis. C'est exactement ce
-que le classement par delta ne pouvait pas faire.
+``TestCounterpickTrap::test_anticiper_evite_le_piege`` : sans anticipation le moteur
+choisit le pick le plus fort dans l'instant, avec elle il voit la réponse du vis-à-vis
+et change d'avis.
 """
 
 import pytest
@@ -30,13 +29,13 @@ class FakeDB:
         return {}
 
     def get_lane_winrates(self, lane):
-        """SPEC-43 : aucune force intrinsèque, la recherche est testée sur les seuls matchups."""
+        """SPEC-43 : aucune force intrinsèque, le classement est testé sur les seuls matchups."""
         return {}
 
     def get_meta(self, key):
         """SPEC-13 : lu par GameEvaluator pour le shrink mesuré. Vide ici, donc
-        repli sur CONFIDENCE_K — la recherche est testée sur son classement,
-        qu'un changement de shrink ne doit pas bouleverser."""
+        repli sur CONFIDENCE_K — le classement testé ne doit pas dépendre d'un
+        changement de shrink."""
         return None
 
     def get_lane_popularity(self, lane):
@@ -76,75 +75,95 @@ POOL = ["Greedy", "Safe"]
 ENEMIES = [("Jungler", "jungle")]
 
 
-class TestCounterpickTrap:
-    def test_depth_one_takes_the_greedy_pick(self, search):
-        """Sans lookahead, Greedy gagne : +10 contre le jungler ennemi."""
-        results = search.rank(
-            allies=[],
-            enemies=ENEMIES,
-            pool=POOL,
-            remaining_turns=[OUR_TURN],
-            player_lane="top",
-        )
-        assert [r.champion for r in results] == ["Greedy", "Safe"]
+def _rank(engine, turns=(OUR_TURN, THEIR_TURN), enemies=ENEMIES, pool=POOL, **kwargs):
+    kwargs.setdefault("player_lane", "top")
+    kwargs.setdefault("anticipate", True)
+    return engine.rank(allies=[], enemies=enemies, pool=pool, remaining_turns=list(turns), **kwargs)
 
-    def test_depth_two_avoids_what_depth_one_walks_into(self, search):
-        """Avec la réponse adverse, Greedy devient le pire choix."""
-        results = search.rank(
-            allies=[],
-            enemies=ENEMIES,
-            pool=POOL,
-            remaining_turns=[OUR_TURN, THEIR_TURN],
-            player_lane="top",
-        )
+
+class TestCounterpickTrap:
+    def test_sans_anticipation_greedy_gagne(self, search):
+        """Calcul immédiat : Greedy gagne, +10 contre le jungler ennemi, et rien d'anticipé."""
+        results = _rank(search, anticipate=False)
+        assert [r.champion for r in results] == ["Greedy", "Safe"]
+        assert all(r.reply is None for r in results)
+
+    def test_sans_anticipation_la_valeur_est_la_position_immediate(self, search):
+        evaluator = search.evaluator
+        result = next(r for r in _rank(search, anticipate=False) if r.champion == "Greedy")
+        expected = evaluator.win_probability([("Greedy", "top")], ENEMIES)
+        assert result.win_probability == pytest.approx(expected)
+
+    def test_anticiper_evite_le_piege(self, search):
+        """Avec la réponse du vis-à-vis, Greedy devient le pire choix."""
+        results = _rank(search)
 
         assert results[0].champion == "Safe"
         assert results[0].win_probability > 0.5
-        # Et le moteur nomme la punition qu'il a vue venir.
         greedy = next(r for r in results if r.champion == "Greedy")
         assert greedy.win_probability < 0.5
-        assert greedy.principal_variation[0][0] == "Punisher"
+        assert greedy.reply == ("Punisher", "top")
 
-    def test_principal_variation_reports_the_expected_answer(self, search):
-        results = search.rank(
-            allies=[],
-            enemies=ENEMIES,
-            pool=POOL,
-            remaining_turns=[OUR_TURN, THEIR_TURN],
-            player_lane="top",
-        )
-        best = results[0]
-        assert best.depth == 2
-        assert len(best.principal_variation) == 1
-        # Contre Safe, Punisher n'apporte rien : l'adversaire prend le meilleur
-        # champion de sa lane libre, pas le contre-pick devenu inutile.
-        assert best.principal_variation[0][1] == "top"
+    def test_la_valeur_compte_la_reponse(self, search):
+        evaluator = search.evaluator
+        greedy = next(r for r in _rank(search) if r.champion == "Greedy")
+        expected = evaluator.win_probability([("Greedy", "top")], ENEMIES + [("Punisher", "top")])
+        assert greedy.win_probability == pytest.approx(expected)
+
+    def test_chaque_candidat_est_classe(self, search):
+        results = _rank(search)
+        assert len(results) == len(POOL)
+        assert results == sorted(results, key=lambda r: -r.win_probability)
 
 
-class TestMoveGeneration:
+class TestWhenToAnticipate:
+    """SPEC-48 §2 : stratégie à anticipation, poste connu, vis-à-vis non vu, tour ennemi à venir."""
+
+    def test_pas_de_reponse_si_le_vis_a_vis_est_vu(self, search):
+        results = _rank(search, enemies=ENEMIES + [("Filler", "top")])
+        assert all(r.reply is None for r in results)
+
+    def test_un_ennemi_sans_lane_ne_compte_pas_comme_vu(self, search):
+        results = _rank(search, enemies=ENEMIES + [("Filler", None)])
+        assert any(r.reply is not None for r in results)
+
+    def test_pas_de_reponse_sans_tour_ennemi_restant(self, search):
+        results = _rank(search, turns=[OUR_TURN, PickTurn(is_ally=True)])
+        assert all(r.reply is None for r in results)
+
+    def test_un_tour_ennemi_derriere_un_allie_compte(self, search):
+        results = _rank(search, turns=[OUR_TURN, PickTurn(is_ally=True), THEIR_TURN])
+        assert all(r.reply is not None for r in results)
+
+    def test_pas_de_reponse_sans_candidat(self):
+        db = FakeDB(TRAP_MATCHUPS, {})
+        engine = DraftSearch(GameEvaluator(db), CandidatePool(db, top_n=8))
+        results = _rank(engine)
+        assert all(r.reply is None for r in results)
+        assert [r.champion for r in results] == ["Greedy", "Safe"]
+
+    def test_sans_poste_connu_la_premiere_lane_libre_sert(self, search):
+        results = _rank(search, player_lane=None)
+        assert {r.lane for r in results} == {"top"}
+        assert all(r.reply is not None for r in results)
+
+
+class TestCandidates:
     def test_banned_and_picked_champions_never_appear(self, search):
-        results = search.rank(
-            allies=[],
-            enemies=ENEMIES,
-            pool=POOL,
-            remaining_turns=[OUR_TURN],
-            banned=["Greedy"],
-            player_lane="top",
-        )
+        results = _rank(search, banned=["Greedy"], anticipate=False)
         assert [r.champion for r in results] == ["Safe"]
 
-    def test_our_pick_stays_in_our_pool(self, search):
-        results = search.rank(
-            allies=[],
-            enemies=ENEMIES,
-            pool=POOL,
-            remaining_turns=[OUR_TURN, THEIR_TURN],
-            player_lane="top",
-        )
-        assert {r.champion for r in results} == set(POOL)
+    def test_un_champion_banni_ne_repond_pas(self, search):
+        greedy = next(r for r in _rank(search, banned=["Punisher"]) if r.champion == "Greedy")
+        assert greedy.reply == ("Filler", "top")
 
-    def test_enemy_cannot_repick_a_champion_we_took(self, search):
-        """Le champion choisi à la racine sort du pool adverse dans la branche."""
+    def test_un_champion_pris_ne_repond_pas(self, search):
+        enemies = ENEMIES + [("Punisher", "middle")]
+        greedy = next(r for r in _rank(search, enemies=enemies) if r.champion == "Greedy")
+        assert greedy.reply == ("Filler", "top")
+
+    def test_enemy_cannot_repick_a_champion_we_took(self):
+        """Le candidat sort des réponses possibles."""
         db = FakeDB(
             {("mirror", "jungler"): (5.0, GAMES)},
             {
@@ -157,73 +176,13 @@ class TestMoveGeneration:
         )
         engine = DraftSearch(GameEvaluator(db), CandidatePool(db, top_n=8))
 
-        results = engine.rank(
-            allies=[],
-            enemies=ENEMIES,
-            pool=["Mirror"],
-            remaining_turns=[OUR_TURN, THEIR_TURN],
-            player_lane="top",
-        )
-        assert results[0].principal_variation[0][0] == "Filler"
+        assert _rank(engine, pool=["Mirror"])[0].reply == ("Filler", "top")
 
     def test_empty_pool_returns_nothing(self, search):
-        assert (
-            search.rank(
-                allies=[],
-                enemies=ENEMIES,
-                pool=[],
-                remaining_turns=[OUR_TURN],
-                player_lane="top",
-            )
-            == []
-        )
+        assert _rank(search, pool=[]) == []
 
     def test_no_remaining_turn_returns_nothing(self, search):
         assert search.rank(allies=[], enemies=ENEMIES, pool=POOL, remaining_turns=[]) == []
-
-
-class TestBudget:
-    def test_exhausted_budget_still_answers(self, search):
-        """Budget nul : l'approfondissement itératif rend la profondeur 1, pas
-        une exception et pas une liste vide."""
-        results = search.rank(
-            allies=[],
-            enemies=ENEMIES,
-            pool=POOL,
-            remaining_turns=[OUR_TURN, THEIR_TURN, OUR_TURN],
-            player_lane="top",
-            budget_seconds=0.0,
-        )
-        assert results
-        assert results[0].depth == 1
-
-    def test_budget_is_respected(self, search):
-        """Un pool large ne doit pas faire exploser la latence."""
-        import time
-
-        wide_pool = [f"Champ{i}" for i in range(40)]
-        started = time.monotonic()
-        search.rank(
-            allies=[],
-            enemies=ENEMIES,
-            pool=wide_pool,
-            remaining_turns=[OUR_TURN, THEIR_TURN] * 5,
-            player_lane="top",
-            budget_seconds=0.5,
-        )
-        # Marge large : on vérifie qu'il y a bien une coupure, pas sa précision.
-        assert time.monotonic() - started < 3.0
-
-    def test_deeper_search_keeps_every_candidate_ranked(self, search):
-        results = search.rank(
-            allies=[],
-            enemies=ENEMIES,
-            pool=POOL,
-            remaining_turns=[OUR_TURN, THEIR_TURN],
-            player_lane="top",
-        )
-        assert len(results) == len(POOL)
-        assert results == sorted(results, key=lambda r: -r.win_probability)
 
 
 class TestCandidatePool:
@@ -252,48 +211,16 @@ class TestCandidatePool:
             pool=["Safe"],
             remaining_turns=[OUR_TURN, THEIR_TURN],
             player_lane="top",
+            anticipate=True,
         )
-        assert results[0].principal_variation[0][0] == "Common"
-
-
-class TestAllyLane:
-    """SPEC-17 §4.2 : un allié à la lane connue ne joue que sur cette lane."""
-
-    LANES_DB = FakeDB(
-        {},
-        {
-            "top": ["Garen", "Darius"],
-            "jungle": ["LeeSin"],
-            "middle": ["Ahri"],
-            "bottom": ["Jinx"],
-            "support": ["Thresh", "Nautilus"],
-        },
-    )
-
-    def _moves(self, turn, team=()):
-        engine = DraftSearch(GameEvaluator(self.LANES_DB), CandidatePool(self.LANES_DB, top_n=8))
-        return engine._moves(turn, list(team), set(), [], None)
-
-    def test_known_lane_restricts_moves_to_it(self):
-        moves = self._moves(PickTurn(is_ally=True, lane="support"))
-        assert moves == [("Thresh", "support"), ("Nautilus", "support")]
-
-    def test_unknown_lane_keeps_every_free_lane(self):
-        lanes = {lane for _, lane in self._moves(PickTurn(is_ally=True))}
-        assert lanes == {"top", "jungle", "middle", "bottom", "support"}
-
-    def test_lane_already_taken_falls_back_to_free_lanes(self):
-        """Échange de rôles : la lane assignée est déjà occupée dans l'équipe."""
-        moves = self._moves(PickTurn(is_ally=True, lane="support"), [("Thresh", "support")])
-        lanes = {lane for _, lane in moves}
-        assert lanes == {"top", "jungle", "middle", "bottom"}
+        assert results[0].reply == ("Common", "top")
 
 
 class TestPersonalTerm:
     """SPEC-41 critère 5 : ma maîtrise ne fait reculer un pick que si elle dépasse son avance."""
 
     def _gap(self, search) -> float:
-        """Avance de Greedy sur Safe, en logit, sur la draft seule (profondeur 1)."""
+        """Avance de Greedy sur Safe, en logit, sur la draft seule."""
         greedy = search.evaluator.contribution(("Greedy", "top"), [], ENEMIES)
         safe = search.evaluator.contribution(("Safe", "top"), [], ENEMIES)
         return greedy - safe
@@ -306,7 +233,6 @@ class TestPersonalTerm:
             pool=POOL,
             remaining_turns=[OUR_TURN],
             player_lane="top",
-            budget_seconds=5.0,
             **kwargs,
         )
 
@@ -328,34 +254,3 @@ class TestPersonalTerm:
         malus = -(self._gap(search) - 0.01)
         results = self._rank(search, lambda name: malus if name == "Greedy" else 0.0)
         assert [r.champion for r in results] == ["Greedy", "Safe"]
-
-
-class TestMaxDepth:
-    """SPEC-46 : `max_depth=1` est le calcul immédiat, sans aucun nœud sous la racine."""
-
-    def test_le_plafond_a_un_ne_descend_pas_sous_la_racine(self, search):
-        results = search.rank(
-            allies=[],
-            enemies=ENEMIES,
-            pool=POOL,
-            remaining_turns=[OUR_TURN, PickTurn(is_ally=False)],
-            player_lane="top",
-            budget_seconds=5.0,
-            max_depth=1,
-        )
-
-        assert [r.depth for r in results] == [1] * len(POOL)
-        assert search.nodes == len(POOL)
-        assert all(r.principal_variation == [] for r in results)
-
-    def test_sans_plafond_la_recherche_descend(self, search):
-        results = search.rank(
-            allies=[],
-            enemies=ENEMIES,
-            pool=POOL,
-            remaining_turns=[OUR_TURN, PickTurn(is_ally=False)],
-            player_lane="top",
-            budget_seconds=5.0,
-        )
-
-        assert results[0].depth == 2

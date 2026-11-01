@@ -316,14 +316,24 @@ class TestStrategies:
         monitor.recommender._provide(self._state(*turns), analysis)
         return analysis
 
-    @pytest.mark.parametrize("name, depth", [("Simple", 1), ("Counter", 1), ("Complet", None)])
-    def test_seule_une_strategie_a_recherche_descend(self, monitor, state, name, depth):
+    def _unseen(self, monitor, *turns):
+        """Le même board, LeeSin en jungle : mon vis-à-vis n'est pas vu."""
+        state = self._state(*turns)
+        state.inferred_roles = {64: "jungle"}
+        analysis = Analysis()
+        monitor.recommender._provide(state, analysis)
+        return analysis
+
+    @pytest.mark.parametrize(
+        "name, anticipate", [("Simple", False), ("Counter", False), ("Complet", True)]
+    )
+    def test_seule_une_strategie_a_recherche_anticipe(self, monitor, state, name, anticipate):
         monitor.set_strategy(find_strategy(name, ()))
         monitor.search.rank = Mock(return_value=[])
 
         monitor._provide_recommendations(state)
 
-        assert monitor.search.rank.call_args.kwargs["max_depth"] == depth
+        assert monitor.search.rank.call_args.kwargs["anticipate"] is anticipate
 
     def test_le_poids_de_maitrise_s_applique_a_mon_terme(self, board, state):
         board.set_strategy(find_strategy("Counter", ()))
@@ -385,17 +395,31 @@ class TestStrategies:
             to_win_points(0.25 * board.mastery.logit("Darius"))
         )
 
-    def test_la_suite_de_la_recherche_entre_dans_la_victoire_calibree(self, board):
+    @pytest.mark.parametrize(
+        "strategy",
+        [
+            Strategy("Long", duel=2.0, search=True),
+            Strategy("WIN LANE", 1.0, 3.0, 0.25, 0.0, 0.0, search=True),
+        ],
+    )
+    def test_la_reponse_entre_dans_la_victoire_calibree(self, board, strategy):
+        board.set_strategy(strategy)
+
+        results = self._unseen(board, MY_TURN, ENEMY_TURN).results
+
+        aatrox = next(r for r in results if r.champion == "Aatrox")
+        assert aatrox.reply == ("Fiora", "top")
+        expected = board.evaluator.win_probability(
+            [("Aatrox", "top")], [("LeeSin", "jungle"), ("Fiora", "top")]
+        )
+        assert aatrox.win_probability == pytest.approx(expected)
+
+    def test_un_vis_a_vis_vu_ne_laisse_aucune_reponse(self, board):
         board.set_strategy(Strategy("Long", duel=2.0, search=True))
 
         results = self._analysis(board, MY_TURN, ENEMY_TURN).results
 
-        aatrox = next(r for r in results if r.champion == "Aatrox")
-        assert aatrox.principal_variation == [("Fiora", "jungle")]
-        expected = board.evaluator.win_probability(
-            [("Aatrox", "top")], [("LeeSin", "top"), ("Fiora", "jungle")]
-        )
-        assert aatrox.win_probability == pytest.approx(expected)
+        assert all(r.reply is None for r in results)
 
     def test_a_score_egal_la_victoire_calibree_departage(self, board):
         """Tout le pool à égalité : le premier du pool ne gagne plus par défaut (SPEC-46 §1.3)."""
@@ -413,20 +437,19 @@ class TestStrategies:
         direct = DraftSearch(board.evaluator, board.search.candidates)
         expected = direct.rank(
             allies=[],
-            enemies=[("LeeSin", "top")],
+            enemies=[("LeeSin", "jungle")],
             pool=POOL,
             remaining_turns=[MY_TURN, ENEMY_TURN],
             player_lane="top",
             personal=board.mastery.logit,
+            anticipate=True,
         )
 
-        results = self._analysis(board, MY_TURN, ENEMY_TURN).results
+        results = self._unseen(board, MY_TURN, ENEMY_TURN).results
 
-        assert [
-            (r.champion, r.lane, r.win_probability, r.principal_variation, r.depth) for r in results
-        ] == [
-            (r.champion, r.lane, r.win_probability, r.principal_variation, r.depth)
-            for r in expected
+        assert expected[0].reply is not None
+        assert [(r.champion, r.lane, r.win_probability, r.reply) for r in results] == [
+            (r.champion, r.lane, r.win_probability, r.reply) for r in expected
         ]
 
     def test_parts_ne_garde_que_les_termes_de_poids_non_nul(self, board):

@@ -304,13 +304,12 @@ class DraftRecommender:
         results: Sequence[SearchResult],
         allies: List[Placed],
         enemies: List[Placed],
-        turns: Sequence[PickTurn],
         strategy: Strategy,
     ) -> List[SearchResult]:
         """Le classement de la stratégie, chaque candidat avec sa victoire du modèle calibré (SPEC-46).
 
-        `score` garde la valeur qui a classé, `win_probability` devient celle de mon pick et de sa
-        suite (`principal_variation[i]` joue `turns[i + 1]`). À score égal, la victoire départage : un
+        `score` garde la valeur qui a classé, `win_probability` devient celle de mon pick et de la
+        réponse du vis-à-vis, si la stratégie l'anticipe. À score égal, la victoire départage : un
         terme nul sur tout le pool rendrait sinon le premier du pool. La correction de tirage (ADR-004)
         ne touche que `score`.
         """
@@ -321,9 +320,7 @@ class DraftRecommender:
             probability = result.win_probability
             if not strategy.is_calibrated:
                 ally_side = list(allies) + [(result.champion, result.lane)]
-                enemy_side = list(enemies)
-                for move, turn in zip(result.principal_variation, turns[1:]):
-                    (ally_side if turn.is_ally else enemy_side).append(move)
+                enemy_side = list(enemies) + ([result.reply] if result.reply else [])
                 probability = with_term(
                     self.m.evaluator.win_probability(ally_side, enemy_side),
                     term.logit(result.champion),
@@ -412,9 +409,9 @@ class DraftRecommender:
                     banned=banned,
                     player_lane=player_lane,
                     personal=lambda name: strategy.mastery * term_of(self.m).logit(name),
-                    max_depth=None if strategy.search else 1,
+                    anticipate=strategy.search,
                 )
-                results = self._calibrated(results, allies, enemies, turns, strategy)
+                results = self._calibrated(results, allies, enemies, strategy)
                 analysis.parts = self._parts(results, allies, enemies, strategy)
 
             analysis.player_lane = player_lane
