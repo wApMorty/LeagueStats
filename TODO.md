@@ -377,7 +377,7 @@ pile réelle sur faux LCU (§3). Découpage en SPEC-34 §5 (tâches 163 à 170, 
 | 169 | Scènes « En partie » (courbe SVG), « Revue et coaching » et « Mosaïque » ; `hero.gif` dans le README | 5 | 167, 168 | ✅ 2026-10-16 : teaser de 30,0 s en 1 920 × 1 080 sans audio (12,2 Mo) ; `hero.gif` 960 × 540 à 10 i/s, 4,1 Mo, encodé par ffmpeg (palette optimisée ; l'encodeur GIF de Remotion donnait 10,3 Mo), fond figé dans la boucle |
 | 170 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure ; recette à l'œil de @pj35 | 3 | 169 | ✅ 2026-10-16 ; recette à l'œil (captures, GIF, `docs/presentation/video/out/teaser.mp4`) laissée à @pj35 |
 
-### Lot SPEC-48, la réponse du vis-à-vis remplace le minimax (🟢 validée le 2026-11-01)
+### Lot SPEC-48, la réponse du vis-à-vis remplace le minimax (✅ livrée le 2026-11-01, recette @pj35 à faire)
 
 [SPEC-48](docs/specs/SPEC-48-reponse-du-vis-a-vis.md) : rejoué sur 219 parties, le minimax ne bat jamais le calcul immédiat
 avec maîtrise, mais WIN LANE, stratégie active, en dépend (24 à 35 % des n° 1). Une réponse à un pli du vis-à-vis non vu
@@ -389,7 +389,7 @@ garde le même n° 1 à 90 %, en moins de 0,1 ms en médiane. Découpage en SPEC
 | 237 | `recommendations.py` : `anticipate`, `_calibrated`, console, tests | 3 | 236 | ✅ 2026-11-01, console seule, le reste passé en 236 |
 | 238 | Snapshot, cartes, grimoire, tests | 3 | 237 | ✅ 2026-11-01, `SearchResult.depth` et `principal_variation` retirés |
 | 239 | Écran Stratégies, constantes, `PickTurn.lane`, scripts supprimés | 2 | 236 | ✅ 2026-11-01 |
-| 240 | Clôture : exe vérifié, `PROJECT_STRUCTURE.md`, README, `TODO.md` (reports SPEC-17 retirés), `CHANGELOG.md`, statuts | 2 | 238, 239 | ⬜ |
+| 240 | Clôture : exe vérifié, `PROJECT_STRUCTURE.md`, README, `TODO.md` (reports SPEC-17 retirés), `CHANGELOG.md`, statuts | 2 | 238, 239 | ✅ 2026-11-01 |
 
 ### Lot SPEC-47, la draft dans la win chance en partie (🟡 implémentée le 2026-11-01, recette @pj35 à faire)
 
@@ -662,8 +662,6 @@ rétréci. Le modèle de prédiction ne change pas (approche C, @pj35).
 
 | Tâche | Spec | Rouvrir quand |
 |---|---|---|
-| Recherche parallèle à la racine (`multiprocessing`, phase 2) | SPEC-17 §5 | Après le sprint 3, si le bench montre une profondeur < 5 en premier pick, ou si le premier pick reste mal conseillé à l'usage |
-| Recherche en tâche de fond pendant le chrono de pick (« pondering ») | SPEC-17 §7 | Après le sprint 3, si la profondeur reste le facteur limitant ; chantier d'UI (sortir `rank()` de la boucle du monitor) |
 | Modèle de win chance plus riche (arbre boosté, puis réseau de neurones), entraînement éventuellement dans un projet adjacent | SPEC-20 §13 | La logistique de la phase 2 est mesurée (Brier, calibration, coût de l'exclusion de l'or) et laisse une marge |
 | Moteur d'optimisation, phase A (shrinkage mesuré du WPA) | SPEC-16 §2 | Coachless donne son autorisation écrite : le spike (SPEC-15 §2.1.1, 2026-09-24) confirme un WPA par composant avec échantillons, mais les CGU interdisent l'accès direct à l'API |
 

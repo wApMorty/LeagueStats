@@ -136,7 +136,7 @@ LeagueStats/
 │   └── capture_screens.py # captures de ce README
 ├── src/
 │   ├── analysis/          # scoring, agrégation, tier lists
-│   ├── draft/             # Live Coach : draft, recherche, build
+│   ├── draft/             # Live Coach : draft, classement, build
 │   ├── coaching/          # coach de gameplay
 │   ├── winprob/           # win chance, éclaireur
 │   ├── client/            # client LeagueStats (FastAPI + fenêtre native)
