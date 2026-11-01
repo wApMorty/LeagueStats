@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Blindabilité · LeagueStats{% endblock %}
+{% block page_class %} page-coaching page-blindabilite{% endblock %}
+{% macro matrix(m, caption) %}
+<table class="role-matrix">
+  <caption class="sr-only">{{ caption }}</caption>
+  <thead><tr><th></th>{% for column in m.columns %}<th scope="col">{{ column }}</th>{% endfor %}</tr></thead>
+  <tbody>
+    {% for row in m.rows %}
+    <tr>
+      <th scope="row">{{ row.label }}</th>
+      {% for cell in row.cells %}
+      {% if cell %}<td class="tab {{ cell.tone }}" style="--a: {{ cell.alpha }}" title="{{ cell.title }}">{{ cell.text }}</td>{% else %}<td class="off"></td>{% endif %}
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endmacro %}
+{% block content %}
+<header class="page-head" data-rise="1">
+  <div class="page-titles">
+    <div class="kicker">Coaching · modèle de draft</div>
+    <h1 data-spell="1">Blindabilité</h1>
+  </div>
+</header>
+{% if v.empty %}
+<p class="empty">Pas encore assez de matchups : lance une mise à jour depuis l'écran Données.</p>
+{% else %}
+<section class="panel" data-fade="1" data-delay="100">
+  <div class="panel-head"><h2>Qui dépend de qui</h2><span class="muted">écart à la moyenne de la ligne</span></div>
+  <div class="role-matrices">
+    <div><h3>Adversaires</h3>{{ matrix(v.matchups, "Dépendance de chaque poste aux adversaires de chaque poste") }}</div>
+    {% if v.synergies %}<div><h3>Alliés</h3>{{ matrix(v.synergies, "Dépendance de chaque poste aux alliés de chaque poste") }}</div>{% endif %}
+  </div>
+  <p class="fine">Ligne : ton poste. Colonne : l'autre poste. Une case verte compte plus que la moyenne de ta ligne. Sa dispersion en points de winrate s'affiche au survol. Le signal des alliés est faible : n'y lis que les grandes cases, comme bot-support ou jungle-mid.</p>
+</section>
+<section class="panel" data-fade="1" data-delay="180">
+  <div class="panel-head">
+    <h2>Contre-piqué ou contre-pick</h2>
+    <nav class="chips" aria-label="Poste">
+      {% for lane in v.lanes %}
+      <a class="role-chip" style="--hue: 55" href="/blindabilite?poste={{ lane.key }}" {% if lane.on %}aria-current="true"{% endif %}>{{ lane.label }}</a>
+      {% endfor %}
+    </nav>
+  </div>
+  <div class="draw-chart" role="img" aria-label="Distribution des champions selon le winrate gagné ou perdu sur les adversaires rencontrés">
+    {% for column in v.histogram %}
+    <div class="draw-col {{ column.tone }}">
+      <div class="draw-stack">
+        {% for champion in column.champions %}
+        {% if champion.img %}<img src="{{ champion.img }}" alt="{{ champion.name }}" title="{{ champion.name }} {{ champion.value }} pp" loading="lazy">{% else %}<span title="{{ champion.name }} {{ champion.value }} pp">{{ champion.name[:2] }}</span>{% endif %}
+        {% endfor %}
+      </div>
+      <div class="draw-tick tab">{{ column.label }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  <p class="fine">Points de winrate gagnés ou perdus sur les adversaires réellement rencontrés, par rapport à ceux de la méta. À gauche, le champion se fait plutôt contrer ; à droite, il est plutôt pris en contre-pick.</p>
+</section>
+{% endif %}
+{% endblock %}

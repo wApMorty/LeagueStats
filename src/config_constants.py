@@ -163,6 +163,12 @@ class AnalysisConfig:
     # au-dessus, donc jamais atteint sur des données saines.
     SHRINK_MAX_SIGNAL_VARIANCE: float = 100.0
 
+    # Blindabilité (matrice des postes, tirage). Part des parties d'un champion sur un poste pour
+    # l'y ranger : 0,5 reproduit le mieux la matrice de MachineLoLing (0,96 de corrélation).
+    BLINDABILITY_MAIN_SHARE: float = 0.5
+    # Somme des `games` de ses lignes de matchups sur la lane, soit ~4,5 fois ses parties réelles.
+    BLINDABILITY_MIN_GAMES: int = 40000
+
     # SPEC-05 B7 : pente du logit autour de p=0.5 (d(logit)/dp = 4 à p=0.5,
     # donc 1 point de winrate ~= 0.04 en log-odds). Remplace le delta2 * 1.0
     # identité de l'ancien delta2_to_win_advantage.

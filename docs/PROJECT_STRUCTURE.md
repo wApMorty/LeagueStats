@@ -49,6 +49,7 @@ src/
 │   ├── probability.py               # logit/sigmoid (modèle log-odds, SPEC-05 B7)
 │   ├── mastery.py                    # Maîtrise personnelle par champion, terme du moteur de draft (SPEC-41)
 │   ├── strategy.py                   # Stratégies de draft : poids par terme, évaluateur pondéré (SPEC-46)
+│   ├── blindability.py               # Matrice des postes et tirage des champions, lus dans les tables de paires
 │   ├── pool_statistics.py            # Statistiques de pool
 │   ├── team_analysis.py               # TeamAnalyzer (code non appelé par un menu)
 │   └── pool_value.py, trio_holistic.py, trio_counterpick.py,
@@ -91,6 +92,7 @@ src/
 │   ├── lcu_proxy.py, lcu_status.py           # Liste blanche des appels au LCU, sonde « client ouvert »
 │   ├── charts.py                              # Graphiques SVG purs (courbes, sparklines, histogramme, fiabilité)
 │   ├── data.py, home.py, review.py             # Données des écrans du coaching : rang, progression, calibration ; accueil ; parties et post-game
+│   ├── blindabilite.py           # Écran Blindabilité : matrice des postes et distribution des tirages
 │   ├── donnees.py                # Écran Données : mise à jour de la base dans un fil, avancement par lane (SPEC-37)
 │   ├── classement.py                           # Classement des dix joueurs d'une partie par ΔP, MVP et ACE (SPEC-32)
 │   ├── draft_*.py, found.py, assets.py          # Draft interactive, partie trouvée, Data Dragon local

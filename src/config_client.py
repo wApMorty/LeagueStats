@@ -200,6 +200,7 @@ class ClientConfig:
     # Origines : POLL = une page toutes les ~12 s, 2 s montre chaque champion qui passe (log du
     # 2026-10-06, 90 pages à 5 fils en 1 079 s) ; ETA_MIN_PAGES = moins d'une page par fil, pas
     # d'estimation ; CLOSE_TIMEOUT = pages en cours (~60 s chacune) puis copie de la sauvegarde.
+    BLINDABILITE_BIN_PP: float = 0.05  # largeur d'une colonne de l'histogramme, en pp de winrate
     DONNEES_POLL_S: int = 2
     DONNEES_ETA_MIN_PAGES: int = 5
     DONNEES_CLOSE_TIMEOUT_S: float = 240.0

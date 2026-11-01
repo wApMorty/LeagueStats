@@ -24,6 +24,7 @@ from ..pool_manager import PoolManager, get_user_data_path
 from ..coaching.goals import set_goal
 from ..coaching.grid import GRID
 from ..repositories.coaching import CoachingRepository
+from ..analysis.blindability import compute_blindability
 from ..analysis.strategy import all_strategies
 from ..user_prefs import load_motion, load_strategies, save_active_strategy, save_motion
 from .assets import PLACEHOLDER, Assets
@@ -36,6 +37,7 @@ from .data import (
     rank_view,
 )
 from .db import read_only, writable
+from .blindabilite import blindabilite_view
 from .donnees import UpdateJob, donnees_view, last_scrape_lanes
 from .home import ORIGINS, REFERENCES, axes_view, empty_home, home_view
 from .draft_grimoire import grimoire_view
@@ -99,6 +101,7 @@ NAV = (
             NavItem("progression", "Progression", "ᛏ", 290, "/progression"),
             NavItem("parties", "Parties", "ᛗ", 85, "/parties"),
             NavItem("calibration", "Calibration", "ᛉ", 345, "/calibration"),
+            NavItem("blindabilite", "Blindabilité", "ᛒ", 120, "/blindabilite"),
             NavItem("donnees", "Données", "ᛚ", 205, "/donnees"),
         ),
     ),
@@ -348,6 +351,19 @@ def create_app(
             lambda repo: calibration_view(repo, version, phase_kind()), calibration_empty
         )
         return render(request, "calibration.html", v=view)
+
+    @app.get("/blindabilite", response_class=HTMLResponse)
+    def blindabilite(request: Request, poste: Optional[str] = None):
+        try:
+            with read_only(app.state.db_path) as db:
+                data = compute_blindability(db.connection)
+        except sqlite3.Error:
+            data = {}
+        return render(
+            request,
+            "blindabilite.html",
+            v=blindabilite_view(data, Champions(app.state.assets), poste),
+        )
 
     @app.post("/calibration/appliquer", response_class=HTMLResponse)
     def calibration_appliquer(request: Request):

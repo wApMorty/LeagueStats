@@ -21,6 +21,7 @@ ROUTES = [
     "/progression?role=support",
     "/parties",
     "/calibration",
+    "/blindabilite",
     "/postgame",
     "/accueil/axes",
 ]

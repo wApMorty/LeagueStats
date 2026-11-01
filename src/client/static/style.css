@@ -939,6 +939,26 @@ h2 { margin: 0; font: 600 24px/1 var(--font-title); }
 .calib-table td { padding: 7px 0; border-bottom: 1px solid oklch(0.74 0.11 55 / 0.07); }
 .calib-table .r { text-align: right; }
 
+/* Écran Blindabilité */
+.page-blindabilite .panel + .panel { margin-top: 18px; }
+.role-matrices { display: flex; flex-wrap: wrap; gap: 24px; margin-bottom: 12px; }
+.role-matrices > div { flex: 1 1 340px; min-width: 0; }
+.role-matrices h3 { margin: 0 0 8px; font-size: 15px; font-weight: 500; color: var(--muted-2); }
+.role-matrix { width: 100%; border-collapse: separate; border-spacing: 3px; font-size: 14px; }
+.role-matrix th { padding: 4px; font-size: 12px; font-weight: 400; color: var(--muted-2); }
+.role-matrix th[scope="row"] { text-align: right; }
+.role-matrix td { padding: 10px 2px; border-radius: 6px; text-align: center; }
+.role-matrix td.up { background: oklch(0.82 0.13 165 / calc(var(--a) * 0.6)); }
+.role-matrix td.down { background: oklch(0.72 0.21 345 / calc(var(--a) * 0.5)); }
+.draw-chart { display: flex; align-items: stretch; gap: 2px; margin-bottom: 12px; overflow-x: auto; }
+.draw-col { display: flex; flex: 1 0 36px; flex-direction: column; justify-content: flex-end; min-height: 240px; }
+.draw-col.up { background: linear-gradient(to top, oklch(0.82 0.13 165 / 0.1), transparent); }
+.draw-col.down { background: linear-gradient(to top, oklch(0.72 0.21 345 / 0.1), transparent); }
+.draw-stack { display: flex; flex-direction: column-reverse; align-items: center; gap: 2px; padding: 2px 0; }
+.draw-stack img, .draw-stack span { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 4px;
+  background: var(--surface-pop); font-size: 11px; }
+.draw-tick { height: 18px; font-size: 11px; text-align: center; white-space: nowrap; color: var(--muted-2); }
+
 /* Écran Données (SPEC-37 tâche 184) et bandeau de draft pendant une mise à jour */
 .donnees { display: flex; flex-direction: column; gap: 14px; max-width: 760px; }
 .donnees-lane { display: grid; grid-template-columns: 90px minmax(120px, 1fr) 64px auto auto;
