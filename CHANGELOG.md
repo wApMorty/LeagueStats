@@ -4,6 +4,15 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### ✨ Feature
+
+- **Écran Blindabilité** — nouvel écran dans Coaching, inspiré de la vidéo MachineLoLing sur la blindabilité. Une matrice montre de quels postes dépend chaque poste, côté adversaires et côté alliés : le top ne dépend presque que du top, le bot de son support. La distribution par poste montre qui se fait contrer et qui est pris en contre-pick. Tout se recalcule à l'ouverture de l'écran depuis les tables de paires. Le signal des alliés est faible : seules les grandes cases se lisent.
+- **Le classement de pick tient compte du tirage (ADR-004)** — la force d'un contre-pick est gonflée par les bons matchups qu'il choisit. Si tu vois ton adversaire de lane, ce gain est retiré, car le duel le compte déjà. Si tu ne le vois pas, seul un champion habitué au contre-pick perd ce gain ; un champion souvent contré le paie déjà dans sa force. Sur 211 de tes parties rejouées, le n° 1 change dans 0 à 4,3 % des positions, pour moins de 0,2 pt à chaque fois. L'ordre des cartes et le survol changent, pas les % affichés.
+
+### 📝 Docs
+
+- **Évaluation du modèle (ADR-004)** — les probabilités restent jugées au Brier et à la calibration, sans seuil fixe. Un terme de classement est jugé sur les décisions qu'il change, en points de winrate.
+
 ## [6.0.0] - 2026-10-30
 
 Le classement de draft se pilote par stratégies : tu choisis le poids de chaque critère, tu bascules d'un clic pendant la draft, et « Simple » remplace le moteur complet par défaut. Le client ne fait plus ramer le PC quand il reste ouvert.

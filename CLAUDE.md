@@ -19,6 +19,7 @@ python build_app.py                              # exe PyInstaller
 - SQLite seul, outil mono-utilisateur : pas de backend distant (Neon, FastAPI décommissionnés).
 - Cloudflare ne bloque plus : pas de Playwright. Détails dans `docs/ROADMAP_2026.md`.
 - Pas de mise à jour automatique nocturne : les mises à jour sont manuelles.
+- Évaluation du modèle : probabilités au Brier et à la calibration, classement de pick sur les décisions qu'il change (`docs/adr/ADR-004-evaluation-a-deux-etages.md`).
 
 ## Code
 
