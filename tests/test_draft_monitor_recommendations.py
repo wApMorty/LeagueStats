@@ -274,7 +274,7 @@ def test_la_console_cite_ma_maitrise_du_champion(monitor, capsys):
     assert "· toi" not in out.split("Garen")[1]
 
 
-MY_TURN = PickTurn(is_ally=True, is_local_player=True, lane="top")
+MY_TURN = PickTurn(is_ally=True, is_local_player=True)
 ENEMY_TURN = PickTurn(is_ally=False)
 
 

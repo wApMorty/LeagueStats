@@ -383,32 +383,18 @@ class DraftConfig:
     #
     # N'est PLUS demandé à l'utilisateur : le curseur interactif ne pilotait
     # que DraftMonitor, dont le DraftScorer n'avait plus d'appelant depuis
-    # SPEC-12 (le Live Coach passe par game_eval + la recherche, qui utilisent
+    # SPEC-12 (le Live Coach passe par game_eval et DraftSearch, qui utilisent
     # analysis_config.K_SYNERGY). Reste un réglage développeur sur le seul
     # chemin qui mélange encore les deux scores : Assistant.draft_scorer, servi
     # au Team Builder et à RecommendationEngine. La valeur 0.5 y est la seule
     # jamais utilisée, ce qui y réduit final_score à une addition.
 
-    # ── SPEC-12 : recherche minimax sur les picks restants (src/draft/search.py) ──
+    # ── SPEC-48 : réponse du vis-à-vis (src/draft/search.py) ──
 
-    # Budget temps d'une recherche, en secondes. L'approfondissement itératif
-    # rend le meilleur coup de la dernière profondeur TERMINÉE, donc ce budget
-    # borne la latence sans jamais borner la qualité par le haut. 2 s laisse le
-    # coach réactif pendant que la draft bouge (le chrono de pick fait ~30 s).
-    SEARCH_BUDGET_SECONDS: float = 2.0
-
-    # Profondeur maximale, en nombre de picks déroulés. 10 = draft entière ;
-    # la borne sert de garde-fou, le budget temps coupe bien avant en pratique.
-    SEARCH_MAX_DEPTH: int = 10
-
-    # Coups candidats retenus par lane libre pour les picks qui ne sont pas les
-    # nôtres : les N champions les plus joués de la lane (SPEC-17 §4.1). Au-delà,
-    # le facteur de branchement coûte de la profondeur ; en deçà, on rate des
-    # contre-picks réels. Calibré au bench (scripts/bench_search.py, 2 s,
-    # 2026-09-24) : 8 est le plus grand N qui atteint la fin de draft en B2
-    # (N=10 : B2 6/7 ; N=12 : B2 6/7, B1 4). Les 8 plus joués couvrent 27 %
-    # des games en top, 37 % en jungle, 34 % en mid, 56 % en bot, 42 % en
-    # support.
+    # Candidats de la réponse du vis-à-vis non vu : les N champions les plus joués
+    # de ma lane (SPEC-17 §4.1). 8 est la valeur mesurée en SPEC-48 §1.3 : même n° 1
+    # que le minimax retiré sur 90 % des positions. Les 8 plus joués couvrent 27 %
+    # des games en top, 37 % en jungle, 34 % en mid, 56 % en bot, 42 % en support.
     SEARCH_TOP_N: int = 8
 
     # ── SPEC-46 : stratégies de draft (src/analysis/strategy.py) ──

@@ -56,9 +56,7 @@ def snapshot_of(monitor, state):
     monitor.bus = bus
     monitor.champion_id_to_name = {}
     with bus.subscribe([TOPIC]) as subscription:
-        with patch.object(
-            monitor.search, "rank", return_value=[SearchResult("A", "top", 0.5, [], 1)]
-        ):
+        with patch.object(monitor.search, "rank", return_value=[SearchResult("A", "top", 0.5)]):
             monitor._provide_recommendations(state)
         return subscription.get(1)[1]
 

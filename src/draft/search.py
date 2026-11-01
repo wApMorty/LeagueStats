@@ -25,9 +25,6 @@ class PickTurn:
 
     is_ally: bool
     is_local_player: bool = False
-    # Lane assignée par la file (alliés seulement, SPEC-17 §4.2). None côté
-    # ennemi, dont l'assignedPosition est masquée, et en normal blind.
-    lane: Optional[str] = None
 
 
 @dataclass

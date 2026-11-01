@@ -34,7 +34,7 @@ def active_name() -> str:
 
 
 def _mode(strategy: Strategy) -> str:
-    return "Recherche" if strategy.search else "Immédiat"
+    return "Anticipation" if strategy.search else "Immédiat"
 
 
 def _limits() -> dict:

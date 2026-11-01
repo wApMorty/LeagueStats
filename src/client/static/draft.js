@@ -120,7 +120,7 @@
     ring.style.strokeDashoffset = (RING * (1 - Math.min(1, left / total))).toFixed(2);
   }
 
-  /** Probabilité à montrer : celle du champion sélectionné, sinon la fin de draft attendue. */
+  /** Probabilité à montrer : celle du champion sélectionné, sinon celle du n° 1 du classement. */
   function balanceTarget() {
     const state = ctx.state;
     const picked = ctx.sel != null ? state.win[String(ctx.sel)] : undefined;

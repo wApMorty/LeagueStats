@@ -146,8 +146,8 @@ class DraftStateParser:
                     Swap(kind, swap.get("id"), swap.get("cellId"), swap.get("state", ""))
                 )
 
-        # SPEC-12: picks encore à venir, dans l'ordre, pour la recherche
-        # minimax. L'ordre des action_set est celui de la draft (LCU), et une
+        # SPEC-12: picks encore à venir, dans l'ordre, pour le classement
+        # (SPEC-48 : un tour ennemi après le mien). L'ordre des action_set est celui de la draft (LCU), et une
         # action non complétée est un pick qui reste à jouer — y compris celui
         # en cours.
         ally_cell_ids = {player.get("cellId") for player in my_team}
@@ -160,8 +160,6 @@ class DraftStateParser:
                     PickTurn(
                         is_ally=actor_cell_id in ally_cell_ids,
                         is_local_player=actor_cell_id == state.local_player_cell_id,
-                        # SPEC-17 §4.2 : ally_positions ne connaît que nos alliés.
-                        lane=state.ally_positions.get(actor_cell_id),
                     )
                 )
 

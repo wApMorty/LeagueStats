@@ -57,6 +57,16 @@ def test_la_page_liste_les_strategies_systeme_et_sert_la_nav(web):
     assert 'href="/strategies"' in page.text
 
 
+def test_le_mode_a_recherche_s_appelle_anticipation(web):
+    system = web.get("/strategies", params={"nom": "Complet"}).text
+    assert "Anticipation" in system and "Anticipe le vis-à-vis." in system
+    assert "Recherche" not in system
+
+    post(web, "/strategies/dupliquer?name=Complet", data={"nom": "Mon complet"})
+    page = web.get("/strategies", params={"nom": "Mon complet"}).text
+    assert "Anticiper le vis-à-vis" in page and "Recherche minimax" not in page
+
+
 def test_dupliquer_un_systeme_garde_poids_et_recherche_sans_system(web):
     reply = post(web, "/strategies/dupliquer?name=Complet", data={"nom": "Mon complet"})
     assert "« Complet » dupliqué en « Mon complet »" in reply.text

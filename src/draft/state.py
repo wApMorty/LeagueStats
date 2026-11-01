@@ -68,10 +68,9 @@ class DraftState:
     role_confidence: Dict[int, float] = field(default_factory=dict)  # championId -> [0,1]
     # SPEC-04 B5: championId -> "lcu" | "inferred" | "user" (manual correction).
     role_source: Dict[int, str] = field(default_factory=dict)
-    # SPEC-12: les picks encore à venir, dans l'ordre de la draft, pour la
-    # recherche minimax. Vide hors phase de pick (ou si le payload LCU ne
-    # contient aucune action non complétée), ce qui ramène le coach au
-    # classement à profondeur 1.
+    # SPEC-12: les picks encore à venir, dans l'ordre de la draft, pour le
+    # classement. Vide hors phase de pick (ou si le payload LCU ne contient
+    # aucune action non complétée) : plus aucun pick à classer.
     remaining_picks: List[PickTurn] = field(default_factory=list)
     # SPEC-21 tâche 72 : les emplacements des deux équipes (le client les dessine), et le
     # temps restant de la phase en millisecondes si le LCU l'annonce.

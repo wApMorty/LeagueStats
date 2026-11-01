@@ -61,9 +61,8 @@ def test_ally_positions_empty_when_queue_does_not_assign_roles(monitor):
     assert state.ally_positions == {}
 
 
-def test_remaining_picks_carry_ally_lanes_only(monitor):
-    """SPEC-17 §4.2 : les tours alliés portent leur assignedPosition, les tours
-    ennemis None (le client la masque)."""
+def test_remaining_picks_keep_the_draft_order(monitor):
+    """Les tours restants gardent l'ordre de la draft, le camp et mon tour."""
     champ_select_data = {
         "timer": {"phase": "BAN_PICK"},
         "localPlayerCellId": 0,
@@ -81,10 +80,10 @@ def test_remaining_picks_carry_ally_lanes_only(monitor):
 
     state = monitor._parse_draft_state(champ_select_data)
 
-    assert [(t.is_ally, t.lane) for t in state.remaining_picks] == [
-        (True, "middle"),
-        (False, None),
-        (True, "support"),
+    assert [(t.is_ally, t.is_local_player) for t in state.remaining_picks] == [
+        (True, True),
+        (False, False),
+        (True, False),
     ]
 
 

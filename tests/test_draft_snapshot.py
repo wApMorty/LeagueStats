@@ -74,7 +74,7 @@ def pick_state():
         current_actor=1,
         ally_positions={1: "top"},
         inferred_roles={64: "jungle", 23: "top"},
-        remaining_picks=[PickTurn(True, True, "top"), PickTurn(False)],
+        remaining_picks=[PickTurn(True, True), PickTurn(False)],
     )
 
 
@@ -432,7 +432,7 @@ def test_snapshot_reporte_ma_maitrise_et_mes_parties_par_candidat(monitor):
 
 
 def test_snapshot_porte_la_strategie_les_noms_et_la_decomposition(monitor):
-    ranked = [SearchResult("Aatrox", "top", 0.5731, [], 2)]
+    ranked = [SearchResult("Aatrox", "top", 0.5731)]
     monitor.strategy_names = ["Simple", "Complet"]
     with patch.object(monitor.search, "rank", return_value=ranked):
         with patch.object(

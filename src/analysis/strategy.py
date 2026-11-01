@@ -2,7 +2,7 @@
 
 Une stratégie règle le poids de chaque terme de ``GameEvaluator`` (force, duel de
 lane, matchups hors lane, synergie, maîtrise) et le mode de calcul (immédiat ou
-recherche). Elle ne touche ni aux probabilités affichées ni au modèle calibré :
+anticipation du vis-à-vis). Elle ne touche ni aux probabilités affichées ni au modèle calibré :
 ``WeightedEvaluator`` applique les poids par-dessus les termes de ``GameEvaluator``,
 qui reste la référence.
 
@@ -32,7 +32,7 @@ class Strategy:
     other: float = 1.0  # matchups hors lane
     synergy: float = 1.0
     mastery: float = 1.0
-    search: bool = False  # False = calcul immédiat
+    search: bool = False  # False = calcul immédiat, True = réponse du vis-à-vis
     system: bool = False
 
     @property
@@ -158,9 +158,9 @@ def _same_lane(champion: Placed, enemy: Placed) -> bool:
 
 
 class WeightedEvaluator:
-    """L'interface de `GameEvaluator` dont la recherche a besoin, avec les poids d'une stratégie.
+    """L'interface de `GameEvaluator` dont `DraftSearch` a besoin, avec les poids d'une stratégie.
 
-    Les termes restent ceux de `GameEvaluator` ; seuls les poids changent. La recherche
+    Les termes restent ceux de `GameEvaluator` ; seuls les poids changent. `DraftSearch`
     appelle `contribution`, `team_logit` et `probability` comme sur `GameEvaluator`.
     """
 
@@ -210,7 +210,7 @@ class WeightedEvaluator:
         """Log-odds pondérés qu'ajoute `champion`, du point de vue de son camp.
 
         Même contrat que `GameEvaluator.contribution`. Sommé en ligne, sans passer par `parts`,
-        pour ne pas allouer un dict à chaque nœud de recherche. L'ordre des additions est celui
+        pour ne pas allouer un dict à chaque candidat. L'ordre des additions est celui
         de `GameEvaluator` : à poids 1, le résultat est identique bit à bit.
         """
         strategy = self.strategy

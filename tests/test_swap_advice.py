@@ -106,9 +106,7 @@ def publish(monitor, state):
     monitor.champion_id_to_name = {1: "Vi", 2: "Darius", 3: "Garen"}
     monitor.evaluator = FakeEvaluator()
     with bus.subscribe([TOPIC]) as subscription:
-        with patch.object(
-            monitor.search, "rank", return_value=[SearchResult("A", "top", 0.5, [], 1)]
-        ):
+        with patch.object(monitor.search, "rank", return_value=[SearchResult("A", "top", 0.5)]):
             monitor._provide_recommendations(state)
         return subscription.get(1)[1]
 

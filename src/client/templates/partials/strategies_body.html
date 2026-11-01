@@ -28,7 +28,7 @@
             <output>{{ w.text }}</output>
           </label>
           {% endfor %}
-          <label class="strat-search"><input type="checkbox" name="search" value="1"{% if s.search %} checked{% endif %}> Recherche minimax</label>
+          <label class="strat-search"><input type="checkbox" name="search" value="1"{% if s.search %} checked{% endif %}> Anticiper le vis-à-vis</label>
           <button type="submit" class="btn-primary">Enregistrer</button>
         </form>
         {% else %}
@@ -37,7 +37,7 @@
           <p class="strat-weight"><span>{{ w.label }}</span><output>{{ w.text }}</output></p>
           {% endfor %}
         </div>
-        <p class="fine">Stratégie système, en lecture seule. {{ "Calcul par recherche." if s.search else "Calcul immédiat." }}</p>
+        <p class="fine">Stratégie système, en lecture seule. {{ "Anticipe le vis-à-vis." if s.search else "Calcul immédiat." }}</p>
         {% endif %}
       </section>
     </div>
