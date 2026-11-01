@@ -311,9 +311,11 @@ class DraftRecommender:
 
         `score` garde la valeur qui a classé, `win_probability` devient celle de mon pick et de sa
         suite (`principal_variation[i]` joue `turns[i + 1]`). À score égal, la victoire départage : un
-        terme nul sur tout le pool rendrait sinon le premier du pool.
+        terme nul sur tout le pool rendrait sinon le premier du pool. La correction de tirage (ADR-004)
+        ne touche que `score`.
         """
         term = term_of(self.m)
+        weighted = WeightedEvaluator(self.m.evaluator, strategy)
         ranked = []
         for result in results:
             probability = result.win_probability
@@ -326,9 +328,9 @@ class DraftRecommender:
                     self.m.evaluator.win_probability(ally_side, enemy_side),
                     term.logit(result.champion),
                 )
-            ranked.append(
-                replace(result, win_probability=probability, score=result.win_probability)
-            )
+            correction = weighted.draw_correction((result.champion, result.lane), enemies)
+            score = with_term(result.win_probability, correction)
+            ranked.append(replace(result, win_probability=probability, score=score))
         ranked.sort(key=lambda r: (-r.score, -r.win_probability))
         return ranked
 

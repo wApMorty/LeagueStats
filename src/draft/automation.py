@@ -13,7 +13,7 @@ from typing import List, Optional, Tuple
 
 from ..analysis.mastery import term_of
 from ..analysis.shrink import shrunk_lane_winrates
-from ..analysis.strategy import strategy_of
+from ..analysis.strategy import WeightedEvaluator, strategy_of
 from ..config_constants import draft_config
 from ..utils.console import clear_console
 from ..utils.display import format_games_count
@@ -147,12 +147,14 @@ class HoverAutomation:
             # SPEC-46 : force et maîtrise (SPEC-41) aux poids de la stratégie, à égalité le winrate.
             term = term_of(self.m)
             strategy = strategy_of(self.m)
+            weighted = WeightedEvaluator(self.m.evaluator, strategy)
             scores = []
             for champion_name, total_games in eligible:
                 if champion_name in lane_winrates:
                     placed = (champion_name, player_lane)
                     score = strategy.force * self.m.evaluator.intrinsic_logit(placed)
                     score += strategy.mastery * term.logit(champion_name)
+                    score += weighted.draw_correction(placed, ())  # ADR-004 : vis-à-vis non vu
                     scores.append((champion_name, score, lane_winrates[champion_name]))
                 else:
                     skipped.append((champion_name, total_games))

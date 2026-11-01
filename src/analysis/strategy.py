@@ -14,9 +14,9 @@ import math
 from dataclasses import dataclass
 from typing import Any, Dict, List, Mapping, Optional, Sequence
 
-from ..config_constants import draft_config
+from ..config_constants import analysis_config, draft_config
 from .game_eval import GameEvaluator, Placed
-from .probability import sigmoid
+from .probability import sigmoid, winrate_points_to_logit
 
 # Termes pondérés, dans l'ordre de l'écran. La maîtrise est appliquée par le moteur, pas ici.
 WEIGHTS = ("force", "duel", "other", "synergy", "mastery")
@@ -191,6 +191,18 @@ class WeightedEvaluator:
             "other": strategy.other * other,
             "synergy": strategy.synergy * synergy,
         }
+
+    def draw_correction(self, champion: Placed, opposing_team: Sequence[Placed]) -> float:
+        """Log-odds à ajouter au score de classement de `champion`, jamais à ses probabilités (ADR-004).
+
+        La force contient déjà les adversaires que le champion rencontre d'habitude. Vis-à-vis vu : le
+        duel le compte aussi, on retire tout le tirage. Vis-à-vis non vu : un contre-pick perd le gain
+        qu'il ne tirera pas ; un champion souvent contré paie déjà ce prix dans sa force.
+        """
+        points = self.base.draw_points(champion)
+        if not any(_same_lane(champion, enemy) for enemy in opposing_team):
+            points = max(points, 0.0)
+        return -self.strategy.force * winrate_points_to_logit(points * analysis_config.K_INTRINSIC)
 
     def contribution(
         self, champion: Placed, own_team: Sequence[Placed], opposing_team: Sequence[Placed]

@@ -39,6 +39,7 @@ passer par SQL.
 from typing import Dict, Iterable, Optional, Sequence, Tuple
 
 from ..config_constants import analysis_config, role_inference_config
+from .blindability import draw_shifts
 from .probability import confidence, sigmoid, winrate_points_to_logit
 from .shrink import lane_strength, read_shrink_k
 
@@ -70,6 +71,7 @@ class GameEvaluator:
         self._matchups: Dict[str, PairTable] = {}
         self._synergies: Dict[str, PairTable] = {}
         self._strength: Dict[str, Dict[str, float]] = {}
+        self._draws: Optional[Dict[str, Dict[str, float]]] = None
         self._matchup_cache: Dict[Tuple[Placed, Placed], float] = {}
         self._synergy_cache: Dict[Tuple[Placed, Placed], float] = {}
         # SPEC-13 : demi-poids mesuré sur les données au dernier scrape, lu une
@@ -115,6 +117,7 @@ class GameEvaluator:
             self._matchup_table(lane)
             self._synergy_table(lane)
             self._strength_table(lane)
+        self._draw_table()
 
     def _strength_table(self, lane: Optional[str]) -> Dict[str, float]:
         """Force de chaque champion sur ``lane`` (SPEC-43), chargée à la première demande.
@@ -241,6 +244,25 @@ class GameEvaluator:
     def intrinsic_logit(self, champion: Placed) -> float:
         """Log-odds apporté à son camp par la force de ``champion``."""
         return winrate_points_to_logit(self.strength_points(champion) * analysis_config.K_INTRINSIC)
+
+    def _draw_table(self) -> Dict[str, Dict[str, float]]:
+        """Tirages par lane et nom en minuscules, lus une fois. Vide si la lecture échoue : le
+        classement perd sa correction, jamais la draft (Live Coach, best-effort)."""
+        if self._draws is None:
+            try:
+                self._draws = {
+                    lane: {name.lower(): value for name, value in draws.items()}
+                    for lane, draws in draw_shifts(self.db.connection).items()
+                }
+            except Exception:  # pylint: disable=broad-exception-caught
+                self._draws = {}
+        return self._draws
+
+    def draw_points(self, champion: Placed) -> float:
+        """Points de winrate que ``champion`` tire de ses adversaires habituels (ADR-004). 0.0 sans
+        mesure. Sert au classement seul : jamais au logit, qui reste calibré."""
+        name, lane = champion
+        return self._draw_table().get(lane, {}).get(name.lower(), 0.0)
 
     # ---------- composition ----------
 

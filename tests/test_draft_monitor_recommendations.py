@@ -353,6 +353,20 @@ class TestStrategies:
         assert garen.win_probability > results[0].win_probability
         assert results[0].score > garen.score
 
+    def test_le_tirage_change_l_ordre_sans_toucher_au_pourcentage(self, board):
+        """ADR-004 : le premier perd sa place, sa victoire affichée ne bouge pas d'un bit."""
+        board.set_strategy(find_strategy("Simple", ()))
+        before = self._analysis(board, MY_TURN).results
+        first = before[0]
+
+        board.evaluator._draws = {"top": {first.champion.lower(): 100.0}}
+        after = self._analysis(board, MY_TURN).results
+
+        assert after[0].champion != first.champion
+        assert {r.champion: r.win_probability for r in after} == {
+            r.champion: r.win_probability for r in before
+        }
+
     def test_counter_garde_la_victoire_calibree(self, board):
         """Critère 5 : sous Counter, ni ses poids ni sa maîtrise à 0,25 ne touchent le %."""
         board.set_strategy(find_strategy("Counter", ()))

@@ -4,6 +4,7 @@ Le point qui compte : à poids 1, `WeightedEvaluator` reproduit `GameEvaluator` 
 pour que la stratégie « Complet » garde le classement d'avant SPEC-46.
 """
 
+import sqlite3
 from unittest.mock import Mock
 
 import pytest
@@ -20,6 +21,7 @@ from src.analysis.strategy import (
     strategy_of,
     strategy_to_dict,
 )
+from src.config_constants import analysis_config as cfg
 from src.config_constants import draft_config
 
 
@@ -132,6 +134,50 @@ class TestWeightedEvaluator:
             )
         assert weighted.team_logit(ALLIES, ENEMIES) == base.team_logit(ALLIES, ENEMIES)
         assert weighted.probability(1.3) == base.probability(1.3)
+
+
+class TestDrawCorrection:
+    """ADR-004 : la force contient déjà le tirage, le classement le corrige selon le vis-à-vis."""
+
+    @pytest.fixture
+    def weighted(self, base):
+        base._draws = {"top": {"aatrox": 1.0, "garen": -1.0}}
+        return WeightedEvaluator(base, _strategy())
+
+    @staticmethod
+    def _points(logit):
+        return logit / (cfg.LOGIT_PER_WINRATE_POINT * cfg.K_INTRINSIC)
+
+    def test_vis_a_vis_vu_retire_tout_le_tirage(self, weighted):
+        seen = [("Darius", "top")]
+
+        assert self._points(weighted.draw_correction(("Aatrox", "top"), seen)) == pytest.approx(
+            -1.0
+        )
+        assert self._points(weighted.draw_correction(("Garen", "top"), seen)) == pytest.approx(1.0)
+
+    def test_vis_a_vis_non_vu_ne_retire_que_le_gain(self, weighted):
+        hidden = [("Darius", "jungle")]
+
+        assert self._points(weighted.draw_correction(("Aatrox", "top"), hidden)) == pytest.approx(
+            -1.0
+        )
+        assert weighted.draw_correction(("Garen", "top"), hidden) == 0.0
+
+    def test_champion_sans_mesure_ou_lane_inconnue(self, weighted):
+        assert weighted.draw_correction(("Teemo", "top"), ()) == 0.0
+        assert weighted.draw_correction(("Aatrox", None), ()) == 0.0
+
+    def test_le_poids_de_force_s_applique(self, base):
+        base._draws = {"top": {"aatrox": 1.0}}
+        double = WeightedEvaluator(base, _strategy(force=2.0))
+
+        assert self._points(double.draw_correction(("Aatrox", "top"), ())) == pytest.approx(-2.0)
+
+    def test_lecture_impossible_le_classement_perd_sa_correction_pas_la_draft(self, base):
+        base.db = Mock(connection=Mock(execute=Mock(side_effect=sqlite3.OperationalError("x"))))
+
+        assert base.draw_points(("Aatrox", "top")) == 0.0
 
 
 class TestStrategyFromDict:

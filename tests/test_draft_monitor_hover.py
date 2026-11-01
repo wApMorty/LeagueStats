@@ -289,3 +289,12 @@ class TestBlindPickStrategy:
         monitor.set_strategy(Strategy("Force", force=3.0, mastery=0.0))
 
         assert monitor._get_best_champion_from_pool() == "Darius"
+
+    def test_un_contre_pick_perd_son_tirage_au_survol(self, monitor, lane_winrates):
+        """ADR-004 : au survol, le vis-à-vis n'est pas vu. Darius ne tirera pas son gain habituel."""
+        monitor.assistant.get_matchups_for_draft.return_value = matchups(1000)
+        monitor.evaluator._strength[analysis_config.ALL_LANES_KEY] = {"darius": 4.0}
+        monitor.evaluator._draws = {None: {"darius": 100.0}}
+        monitor.set_strategy(Strategy("Force", force=3.0, mastery=0.0))
+
+        assert monitor._get_best_champion_from_pool() != "Darius"
