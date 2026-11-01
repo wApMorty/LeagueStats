@@ -377,7 +377,7 @@ pile réelle sur faux LCU (§3). Découpage en SPEC-34 §5 (tâches 163 à 170, 
 | 169 | Scènes « En partie » (courbe SVG), « Revue et coaching » et « Mosaïque » ; `hero.gif` dans le README | 5 | 167, 168 | ✅ 2026-10-16 : teaser de 30,0 s en 1 920 × 1 080 sans audio (12,2 Mo) ; `hero.gif` 960 × 540 à 10 i/s, 4,1 Mo, encodé par ffmpeg (palette optimisée ; l'encodeur GIF de Remotion donnait 10,3 Mo), fond figé dans la boucle |
 | 170 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure ; recette à l'œil de @pj35 | 3 | 169 | ✅ 2026-10-16 ; recette à l'œil (captures, GIF, `docs/presentation/video/out/teaser.mp4`) laissée à @pj35 |
 
-### Lot SPEC-48, la réponse du vis-à-vis remplace le minimax (🟡 rédigée le 2026-11-01, deux arbitrages à valider)
+### Lot SPEC-48, la réponse du vis-à-vis remplace le minimax (🟢 validée le 2026-11-01)
 
 [SPEC-48](docs/specs/SPEC-48-reponse-du-vis-a-vis.md) : rejoué sur 219 parties, le minimax ne bat jamais le calcul immédiat
 avec maîtrise, mais WIN LANE, stratégie active, en dépend (24 à 35 % des n° 1). Une réponse à un pli du vis-à-vis non vu

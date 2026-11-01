@@ -1,6 +1,6 @@
 # SPEC-48 — La réponse du vis-à-vis remplace le minimax
 
-**Statut** : 🟡 Rédigée le 2026-11-01, deux arbitrages « à valider » en §2.
+**Statut** : 🟢 Validée par @pj35 le 2026-11-01, tous les arbitrages de §2 tranchés.
 
 **Origine** : @pj35, 2026-11-01 — « Est-ce que tu crois qu'on pourrait déclarer une stratégie optimale qui
 s'appuierait sur nos matrices de matchups et de synergies ? », puis, après la comparaison, feu vert pour retirer le
@@ -91,8 +91,8 @@ Remplacer l'arbre par une anticipation à un pli, la réponse du vis-à-vis non 
 | Alliés et autres postes ennemis | Hors du calcul : leurs slots comptent pour 0, comme à profondeur 1. |
 | Probabilités | `GameEvaluator` ne change pas. `predictions` non plus. La jauge projetée lit la victoire calibrée de mon pick et de la réponse. |
 | Clé `search` | Conservée dans `Strategy` et `user_prefs.json` : pas de migration des stratégies perso, WIN LANE garde son mode. |
-| Complet | **À valider** : la stratégie système garde `search=True`, donc l'anticipation. |
-| Libellés | **À valider** : case « Anticiper le vis-à-vis », mode « Anticipation » à la place de « Recherche ». |
+| Complet | **Validé (@pj35, 2026-11-01)** : la stratégie système garde `search=True`, donc l'anticipation. |
+| Libellés | **Validé (@pj35, 2026-11-01)** : case « Anticiper le vis-à-vis », mode « Anticipation » à la place de « Recherche ». |
 
 Le terme relève d'ADR-004 : raison au §1.1, pas de dégradation puisque les probabilités restent calibrées, effet
 chiffré au §1.3.
