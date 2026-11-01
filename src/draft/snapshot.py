@@ -68,16 +68,15 @@ class SnapshotBan:
 
 @dataclass
 class SnapshotRecommendation:
-    """Un candidat du classement de pick, tel que la recherche l'a noté."""
+    """Un candidat du classement de pick, tel que `DraftSearch` l'a noté."""
 
     champion: str
     champion_id: Optional[int]
     lane: Optional[str]
     win_probability: float  # 0 à 1
     delta: Optional[float]  # points de victoire face à la position actuelle
-    depth: int
     games: Optional[int]
-    variation: List[Dict[str, Optional[str]]] = field(default_factory=list)  # suite attendue
+    reply: Optional[Dict[str, Optional[str]]] = None  # réponse attendue du vis-à-vis (SPEC-48)
     personal_points: Optional[float] = None  # ma maîtrise de ce champion, en points (SPEC-41)
     personal_games: int = 0  # mes parties capturées sur ce champion (SPEC-41)
     # Ce que chaque terme de la stratégie lui apporte, en points de victoire (SPEC-46).
@@ -136,9 +135,8 @@ class DraftSnapshot:
     enemy_bans: List[SnapshotBan] = field(default_factory=list)
     recommendations: List[SnapshotRecommendation] = field(default_factory=list)
     skipped: List[SnapshotSkipped] = field(default_factory=list)
-    depth: int = 0
     base_probability: Optional[float] = None  # position actuelle, côté allié (0 à 1)
-    # Fin de draft attendue si l'on joue le premier du classement (la position actuelle sans lui).
+    # Victoire si l'on joue le premier du classement, réponse comprise (la position actuelle sans lui).
     projected_probability: Optional[float] = None
     ban_advice: List[SnapshotBanAdvice] = field(default_factory=list)
     swaps: List[SnapshotSwap] = field(default_factory=list)
@@ -278,9 +276,8 @@ def build_snapshot(
                 lane=r.lane,
                 win_probability=r.win_probability,
                 delta=None if base is None else (r.win_probability - base) * 100.0,
-                depth=r.depth,
                 games=games.get(r.champion),
-                variation=[{"champion": c, "lane": lane} for c, lane in r.principal_variation],
+                reply={"champion": r.reply[0], "lane": r.reply[1]} if r.reply else None,
                 personal_points=r.personal_points,
                 personal_games=mastery.games(r.champion),
                 parts=analysis.parts.get(r.champion, {}),
@@ -291,7 +288,6 @@ def build_snapshot(
             SnapshotSkipped(champion, count, champion_id=ids.get(champion.lower()))
             for champion, count in analysis.skipped
         ],
-        depth=results[0].depth if results else 0,
         base_probability=base,
         projected_probability=results[0].win_probability if results else base,
         ban_advice=ban_rows,

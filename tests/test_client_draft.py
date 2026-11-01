@@ -110,14 +110,12 @@ def pick_snapshot(**overrides):
                 "top",
                 0.5482,
                 3.1,
-                2,
                 1200,
-                [{"champion": "Alistar", "lane": "support"}],
+                {"champion": "Alistar", "lane": "support"},
             ),
-            SnapshotRecommendation("Darius", 122, "top", 0.5307, 1.4, 2, 860, []),
+            SnapshotRecommendation("Darius", 122, "top", 0.5307, 1.4, 860),
         ],
         skipped=[SnapshotSkipped("Ambessa", 38, champion_id=None)],
-        depth=2,
         base_probability=0.517,
         projected_probability=0.5482,
         pool_name="GRIND",
@@ -476,14 +474,17 @@ def test_js_servi_sans_erreur_de_syntaxe():
 # ---------- phase de picks (tâche 88) ----------
 
 
-def test_recommandations_cartes_win_ecart_et_suite(client, bus):
+def test_recommandations_cartes_win_ecart_et_reponse(client, bus):
     bus.publish("draft", pick_snapshot(versus="Tryndamere"))
     html = client.get("/draft/stage").text
     assert "Recommandations · Top contre Tryndamere" in html
     assert html.count('class="d-card"') == 2
     assert "54,82 %" in html and "+3,1 pts" in html and "1,2k games" in html
     assert "53,07 %" in html and "860 games" in html
-    assert "Suite attendue : Alistar (Support)" in html and "Suite attendue : —" in html
+    assert (
+        "Réponse attendue : Alistar (Support), 54,82 %" in html
+        and "Réponse attendue : —" not in html
+    )
     assert 'data-champ="266"' in html and 'src="/assets/champion/Aatrox.png"' in html
     assert 'class="d-act d-act-lock" data-act="lock" disabled>' in html
 
@@ -497,11 +498,11 @@ def test_ecart_negatif_en_rose_avec_vrai_signe_moins(client, bus):
     assert '<div class="d-card-delta up">+3,1 pts</div>' in html
 
 
-def test_sous_titre_profondeur_et_champions_ecartes(client, bus):
+def test_sous_titre_pool_et_champions_ecartes(client, bus):
     bus.publish("draft", pick_snapshot(pool_name="GRIND"))
     html = client.get("/draft/stage").text
-    assert "Pool GRIND · profondeur atteinte : 2 pick(s) anticipé(s)" in html
-    assert "sans données exploitables en Top : Ambessa (38 games)" in html
+    assert "Pool GRIND · sans données exploitables en Top : Ambessa (38 games)" in html
+    assert "profondeur" not in html
 
 
 def test_sans_recommandation_le_message_remplace_les_cartes(client, bus):
@@ -609,13 +610,13 @@ def test_meta_des_tuiles_en_pick(client, bus):
     html = client.get("/draft/champions").text
     assert '<span class="g-meta g-tone-win">54,8 %</span>' in html
     assert (
-        'data-info="Victoire prédite 54,8 % · fin de draft attendue 54,8 % · 1,2k games · suite attendue : Alistar (Support)"'
+        'data-info="Victoire prédite 54,8 % · 1,2k games · réponse attendue : Alistar (Support)"'
         in html
     )
     assert "Pool GRIND uniquement" in html
 
 
-def test_barre_du_grimoire_affiche_victoire_immediate_et_fin_de_draft(assets):
+def test_barre_du_grimoire_affiche_victoire_immediate_et_reponse(assets):
     champions = [
         asdict(SnapshotChampion(266, "Aatrox", ["top"], 0.5027, None)),
         asdict(SnapshotChampion(122, "Darius", ["top"], 0.5390, None)),
@@ -624,7 +625,7 @@ def test_barre_du_grimoire_affiche_victoire_immediate_et_fin_de_draft(assets):
     view = grimoire_view(pick_snapshot(champions=champions), assets)
     aatrox = next(t for t in view["tiles"] if t["id"] == 266)
     assert aatrox["info"] == (
-        "Victoire prédite 50,3 % · fin de draft attendue 54,8 % · 1,2k games · suite attendue : Alistar (Support)"
+        "Victoire prédite 50,3 % · 1,2k games · réponse attendue : Alistar (Support)"
     )
 
 
@@ -637,7 +638,7 @@ def test_barre_du_grimoire_sans_victoire_immediate_garde_le_texte_d_aujourd_hui(
     view = grimoire_view(pick_snapshot(champions=champions), assets)
     aatrox = next(t for t in view["tiles"] if t["id"] == 266)
     assert aatrox["info"] == (
-        "Victoire prédite 54,8 % · 1,2k games · suite attendue : Alistar (Support)"
+        "Victoire prédite 54,8 % · 1,2k games · réponse attendue : Alistar (Support)"
     )
 
 
@@ -1713,7 +1714,7 @@ def test_sous_ligne_dont_toi_sur_le_champion(assets):
     snapshot = pick_snapshot()
     snapshot["recommendations"][0].update(personal_points=-2.8, personal_games=5)
     assert _first_line(snapshot, assets) == (
-        "Suite attendue : Alistar (Support) · dont toi sur Aatrox : −2,8 pts (5 parties)"
+        "Réponse attendue : Alistar (Support), 54,82 % · dont toi sur Aatrox : −2,8 pts (5 parties)"
     )
 
 
@@ -1733,7 +1734,7 @@ def test_sans_les_cles_de_maitrise_la_ligne_ne_change_pas(assets):
     snapshot = pick_snapshot()
     for key in ("personal_points", "personal_games"):
         del snapshot["recommendations"][0][key]
-    assert _first_line(snapshot, assets) == "Suite attendue : Alistar (Support)"
+    assert _first_line(snapshot, assets) == "Réponse attendue : Alistar (Support), 54,82 %"
 
 
 # ---------- stratégies (SPEC-46 §4.5, tâche 227) ----------
@@ -1765,30 +1766,23 @@ def test_la_ligne_commence_par_la_decomposition(assets):
     )
     assert _first_line(snapshot, assets) == (
         "Force +0,4 · duel +4,2 · hors lane +0,8 · synergie −0,1 · "
-        "Suite attendue : Alistar (Support) · dont toi sur Aatrox : +5,4 pts (57 parties)"
+        "Réponse attendue : Alistar (Support), 54,82 % · dont toi sur Aatrox : +5,4 pts (57 parties)"
     )
 
 
-def test_une_strategie_immediate_n_a_ni_suite_ni_fin_de_draft(assets):
+def test_une_strategie_immediate_n_a_pas_de_reponse(assets):
     snapshot = pick_snapshot(
         champions=[asdict(SnapshotChampion(266, "Aatrox", ["top"], 0.5027, None))]
     )
     rec = snapshot["recommendations"][0]
-    rec.update(depth=1, variation=[], parts={"duel": 4.2})
+    rec.update(reply=None, parts={"duel": 4.2})
     assert _first_line(snapshot, assets) == "Duel +4,2 · aucune partie sur Aatrox"
 
 
 def test_un_poids_de_maitrise_nul_retire_la_mention_d_un_champion_joue(assets):
     snapshot = pick_snapshot()
     snapshot["recommendations"][0].update(personal_points=0.0, personal_games=57)
-    assert _first_line(snapshot, assets) == "Suite attendue : Alistar (Support)"
-
-
-def test_la_profondeur_n_est_citee_que_pour_une_recherche(client, bus):
-    bus.publish("draft", pick_snapshot(depth=1))
-    assert "profondeur atteinte" not in client.get("/draft/stage").text
-    bus.publish("draft", pick_snapshot(depth=2))
-    assert "profondeur atteinte : 2" in client.get("/draft/stage").text
+    assert _first_line(snapshot, assets) == "Réponse attendue : Alistar (Support), 54,82 %"
 
 
 def test_le_selecteur_marque_la_strategie_active(client, bus):

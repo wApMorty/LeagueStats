@@ -9,7 +9,7 @@ de draft, pour la valeur de la carte et pour l'écart à la base. La tuile, elle
 Coach. Les deux valeurs n'étaient jamais rapprochées.
 
 Correctif : la carte affiche la victoire immédiate (`_immediate`) en gros chiffre, l'écart à la base sur cette
-valeur, et la fin de draft attendue en sous-ligne. Sans victoire immédiate pour le champion, les trois valeurs
+valeur, et la réponse attendue en sous-ligne. Sans victoire immédiate pour le champion, les trois valeurs
 d'avant restent.
 
 Prévention : ce test pose la même table pour la carte et la tuile et exige que le pourcentage du gros chiffre
@@ -55,12 +55,12 @@ def test_carte_et_tuile_donnent_la_meme_victoire_immediate(client, bus):
     aatrox = card(stage, 266)
     assert '<div class="d-card-big">50,27 %</div>' in aatrox
     assert '<div class="d-card-delta">−1,4 pts</div>' in aatrox
-    assert "Fin de draft attendue 54,82 % · suite : Alistar (Support)" in aatrox
+    assert "Réponse attendue : Alistar (Support), 54,82 %" in aatrox
 
     darius = card(stage, 122)
     assert '<div class="d-card-big">53,90 %</div>' in darius
     assert '<div class="d-card-delta up">+2,2 pts</div>' in darius
-    assert "Fin de draft attendue 53,07 % · suite : —" in darius
+    assert "Réponse attendue" not in darius
 
     assert stage.index('data-champ="266"') < stage.index('data-champ="122"')
 

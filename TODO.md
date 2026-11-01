@@ -387,7 +387,7 @@ garde le même n° 1 à 90 %, en moins de 0,1 ms en médiane. Découpage en SPEC
 |---|---|---|---|---|
 | 236 | `DraftSearch.rank` à un pli, suppression de l'arbre, `tests/test_draft_search.py` | 5 | — | ✅ 2026-11-01, `_provide` et `_calibrated` compris pour garder la suite verte |
 | 237 | `recommendations.py` : `anticipate`, `_calibrated`, console, tests | 3 | 236 | ✅ 2026-11-01, console seule, le reste passé en 236 |
-| 238 | Snapshot, cartes, grimoire, tests | 3 | 237 | ⬜ |
+| 238 | Snapshot, cartes, grimoire, tests | 3 | 237 | ✅ 2026-11-01, `SearchResult.depth` et `principal_variation` retirés |
 | 239 | Écran Stratégies, constantes, `PickTurn.lane`, scripts supprimés | 2 | 236 | ⬜ |
 | 240 | Clôture : exe vérifié, `PROJECT_STRUCTURE.md`, README, `TODO.md` (reports SPEC-17 retirés), `CHANGELOG.md`, statuts | 2 | 238, 239 | ⬜ |
 

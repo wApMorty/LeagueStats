@@ -85,10 +85,10 @@ def test_pool_is_scored_once_per_champion(monitor, state, capsys):
 def test_displayed_probability_is_the_searched_one(monitor, state, capsys):
     """Le chiffre affiché est la valeur rendue par la recherche, pas un recalcul."""
     ranked = [
-        SearchResult("Aatrox", "top", 0.5731, [("Fiora", "top")], depth=2),
-        SearchResult("Darius", "top", 0.5210, [], depth=2),
-        SearchResult("Garen", "top", 0.4890, [], depth=2),
-        SearchResult("Sett", "top", 0.4102, [], depth=2),
+        SearchResult("Aatrox", "top", 0.5731, reply=("Fiora", "top")),
+        SearchResult("Darius", "top", 0.5210),
+        SearchResult("Garen", "top", 0.4890),
+        SearchResult("Sett", "top", 0.4102),
     ]
 
     with patch.object(monitor.search, "rank", return_value=ranked):

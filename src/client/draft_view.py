@@ -412,40 +412,37 @@ def _decomposition(rec: Dict[str, Any]) -> str:
     return text[:1].upper() + text[1:]
 
 
+def reply_name(rec: Dict[str, Any]) -> str:
+    """« Darius (Top) » : la réponse attendue du vis-à-vis, vide sans anticipation (SPEC-48)."""
+    reply = rec.get("reply")
+    if not reply:
+        return ""
+    lane = reply["lane"]
+    return f"{reply['champion']} ({ROLE_LABELS.get(lane, lane)})" if lane else reply["champion"]
+
+
 def recommendations(snapshot: Dict[str, Any], champions: Champions) -> List[Dict[str, Any]]:
-    """Les cartes de pick : victoire immédiate, écart à la base, fin de draft attendue et suite.
+    """Les cartes de pick : victoire immédiate, écart à la base, réponse attendue du vis-à-vis.
 
     Le gros chiffre et l'écart sont la victoire immédiate (ce que je gagne si je le prends maintenant),
-    comme la tuile du grimoire ; la sous-ligne garde la fin de draft attendue (la recherche). Sans victoire
-    immédiate pour le champion, la carte garde la valeur de la recherche et son écart d'origine.
+    comme la tuile du grimoire ; la sous-ligne donne la réponse attendue et la victoire qui en résulte.
+    Sans victoire immédiate pour le champion, la carte garde la valeur du classement et son écart.
     """
     immediate = _immediate(snapshot)
     base = snapshot.get("base_probability")
     cards = []
     for index, rec in enumerate(snapshot["recommendations"][: client_config.DRAFT_REC_COUNT]):
-        variation = ", ".join(
-            (
-                f"{step['champion']} ({ROLE_LABELS.get(step['lane'], step['lane'])})"
-                if step["lane"]
-                else step["champion"]
-            )
-            for step in rec["variation"]
-        )
         now = immediate.get(rec["champion_id"])
-        searched = bool(variation) or rec["depth"] > 1  # une stratégie immédiate n'a pas de suite
         if now is None:
             win = fr(rec["win_probability"] * 100, 2) + " %"
             delta = rec["delta"]
-            line = f"Suite attendue : {variation or '—'}" if searched else ""
         else:
             win = fr(now * 100, 2) + " %"
             delta = None if base is None else (now - base) * 100.0
-            line = (
-                f"Fin de draft attendue {fr(rec['win_probability'] * 100, 2)} % · "
-                f"suite : {variation or '—'}"
-                if searched
-                else ""
-            )
+        reply = reply_name(rec)
+        line = (
+            f"Réponse attendue : {reply}, {fr(rec['win_probability'] * 100, 2)} %" if reply else ""
+        )
         line = " · ".join(text for text in (_decomposition(rec), line, _personal(rec)) if text)
         cards.append(
             {
@@ -542,7 +539,7 @@ def stage_view(
         for r in snapshot["recommendations"]
         if r["champion_id"]
     }
-    # La jauge lit l'immédiat de tout champion libre, repli sur la recherche.
+    # La jauge lit l'immédiat de tout champion libre, repli sur le classement.
     win.update({str(cid): p for cid, p in _immediate(snapshot).items()})
     names = {cid: champions.name(int(cid)) for cid in win}
     names.update({str(r["champion_id"]): r["name"] for r in recs + bans if r["champion_id"]})
@@ -574,8 +571,6 @@ def stage_view(
     versus = snapshot.get("versus")
     skipped = snapshot["skipped"]
     parts = [f"Pool {snapshot['pool_name']}"] if snapshot.get("pool_name") else []
-    if snapshot["recommendations"] and snapshot["depth"] > 1:
-        parts.append(f"profondeur atteinte : {snapshot['depth']} pick(s) anticipé(s)")
     if skipped:
         where = f" en {role}" if role else ""
         listed = ", ".join(
@@ -601,7 +596,6 @@ def stage_view(
         "recs": recs,
         "ban_cards": bans,
         "skipped": snapshot["skipped"],
-        "depth": snapshot["depth"],
         "pool_name": snapshot.get("pool_name"),
         "strategies": [
             {"name": name, "active": name == snapshot.get("strategy")}

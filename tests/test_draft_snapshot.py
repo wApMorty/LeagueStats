@@ -58,17 +58,10 @@ def monitor():
 
 
 RANKED = [
-    SearchResult(
-        "Aatrox",
-        "top",
-        0.5731,
-        [("Fiora", "top"), ("Thresh", "support")],
-        2,
-        reply=("Fiora", "top"),
-    ),
-    SearchResult("Darius", "top", 0.5210, [], 2),
-    SearchResult("Garen", "top", 0.4890, [("Nasus", "top")], 2, reply=("Nasus", "top")),
-    SearchResult("Sett", "top", 0.41, [], 2),
+    SearchResult("Aatrox", "top", 0.5731, reply=("Fiora", "top")),
+    SearchResult("Darius", "top", 0.5210),
+    SearchResult("Garen", "top", 0.4890, reply=("Nasus", "top")),
+    SearchResult("Sett", "top", 0.41),
 ]
 
 
@@ -146,17 +139,15 @@ def test_snapshot_publie_sur_le_bus_et_serialisable(monitor):
     assert payload == asdict(monitor.last_snapshot)
 
 
-def test_snapshot_classement_avec_ecarts_profondeur_et_suite(monitor):
+def test_snapshot_classement_avec_ecarts_et_reponse(monitor):
     _, payload = snapshot_of(monitor, pick_state(), RANKED)
     first = payload["recommendations"][0]
     assert first["champion"] == "Aatrox" and first["lane"] == "top"
     assert first["champion_id"] == 266
     assert first["win_probability"] == pytest.approx(0.5731)
-    assert first["games"] == 12500 and first["depth"] == 2
-    assert first["variation"] == [
-        {"champion": "Fiora", "lane": "top"},
-        {"champion": "Thresh", "lane": "support"},
-    ]
+    assert first["games"] == 12500
+    assert first["reply"] == {"champion": "Fiora", "lane": "top"}
+    assert payload["recommendations"][1]["reply"] is None
     base = payload["base_probability"]
     assert base is not None
     assert first["delta"] == pytest.approx((0.5731 - base) * 100)
@@ -169,7 +160,7 @@ def test_snapshot_classement_avec_ecarts_profondeur_et_suite(monitor):
     assert payload["skipped"] == [
         {"champion": "Malphite", "games": 0, "reason": "no_data", "champion_id": 54}
     ]
-    assert payload["depth"] == 2 and payload["pool"] == POOL
+    assert payload["pool"] == POOL
 
 
 def test_snapshot_phase_tour_et_equipes(monitor):
@@ -428,8 +419,8 @@ def test_le_parseur_tolere_un_timer_nul():
 def test_snapshot_reporte_ma_maitrise_et_mes_parties_par_candidat(monitor):
     monitor.mastery = MasteryTerm({"Aatrox": Mastery("Aatrox", 5, -2.8, -2.8)})
     ranked = [
-        SearchResult("Aatrox", "top", 0.5731, [], 2, personal_points=-2.8),
-        SearchResult("Darius", "top", 0.5210, [], 2),
+        SearchResult("Aatrox", "top", 0.5731, personal_points=-2.8),
+        SearchResult("Darius", "top", 0.5210),
     ]
     _, payload = snapshot_of(monitor, pick_state(), ranked)
     first, second = payload["recommendations"]

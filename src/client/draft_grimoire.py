@@ -8,7 +8,7 @@ alphabétique ; recherche, rôle et pool se filtrent côté navigateur (`champio
 import unicodedata
 from typing import Any, Dict, List, Optional, Set
 
-from .draft_view import Champions, ROLE_LABELS, fr, games_short, signed
+from .draft_view import Champions, ROLE_LABELS, fr, games_short, reply_name, signed
 
 # Teinte (H) de chaque puce de rôle (README du handoff).
 ROLE_HUES = (
@@ -69,18 +69,10 @@ def _info(
             return f"Gain estimé si banni : +{fr(gain)} pts"
         return "Hors des menaces identifiées pour ton pool"
     if rec:
-        steps = ", ".join(
-            (
-                f"{s['champion']} ({ROLE_LABELS.get(s['lane'], s['lane'])})"
-                if s["lane"]
-                else s["champion"]
-            )
-            for s in rec["variation"]
-        )
-        suite = f" · suite attendue : {steps}" if steps else ""
-        if win is not None:
-            return f"Victoire prédite {fr(win * 100)} % · fin de draft attendue {fr(rec['win_probability'] * 100)} % · {games_short(rec['games'])} games{suite}"
-        return f"Victoire prédite {fr(rec['win_probability'] * 100)} % · {games_short(rec['games'])} games{suite}"
+        shown = rec["win_probability"] if win is None else win
+        reply = reply_name(rec)
+        suite = f" · réponse attendue : {reply}" if reply else ""
+        return f"Victoire prédite {fr(shown * 100)} % · {games_short(rec['games'])} games{suite}"
     model = f" · victoire prédite {fr(win * 100)} % (modèle seul)" if win is not None else ""
     if in_pool:
         where = f" en {role}" if role else ""

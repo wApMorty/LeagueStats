@@ -11,7 +11,7 @@ calcul immédiat, et ce que WIN LANE en tirait tenait à la réponse du vis-à-v
 Convention de signe : tous les logits manipulés ici sont DU POINT DE VUE ALLIÉ.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Sequence, Set, Tuple
 
 from ..config_constants import scraping_config
@@ -37,15 +37,12 @@ class SearchResult:
     champion: str
     lane: Optional[str]
     win_probability: float
-    # Transition SPEC-48 : retirés avec l'affichage (tâche 238), `reply` les remplace.
-    principal_variation: List[Placed] = field(default_factory=list)
-    depth: int = 1
+    # SPEC-48 : réponse attendue du vis-à-vis, None sans anticipation.
+    reply: Optional[Placed] = None
     # SPEC-41 : part de ma maîtrise du champion dans `win_probability`, en points de victoire à 50 %.
     personal_points: float = 0.0
     # SPEC-46 : valeur qui a classé le candidat sous la stratégie ; `win_probability` reste calibrée.
     score: Optional[float] = None
-    # SPEC-48 : réponse attendue du vis-à-vis, None sans anticipation.
-    reply: Optional[Placed] = None
 
 
 def _no_term(_name: str) -> float:
@@ -175,10 +172,8 @@ class DraftSearch:
                     champion=name,
                     lane=lane,
                     win_probability=self.evaluator.probability(value),
-                    principal_variation=[reply] if reply else [],
-                    depth=2 if reply else 1,
-                    personal_points=to_win_points(term),
                     reply=reply,
+                    personal_points=to_win_points(term),
                 )
             )
 
