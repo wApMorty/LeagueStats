@@ -42,12 +42,13 @@ def _clock(ms: int) -> str:
 
 
 def curve_points(
-    model: WinModel, game: dict, timeline: dict, team: int
+    model: WinModel, game: dict, timeline: dict, team: int, draft: float = 0.0
 ) -> List[Tuple[float, float]]:
-    """`(minute, win chance de team)` à chaque image : les points de la courbe, avant son rendu."""
+    """`(minute, win chance de team)` à chaque image : les points de la courbe, avant son rendu.
+    `draft` : logit de draft de la partie (`draft.py`)."""
     points = []
     for state in frame_states(game, timeline):
-        probability = model.predict(state)
+        probability = model.predict({**state, "draft": draft})
         points.append((state["time_min"], probability if team == BLUE else 1 - probability))
     return points
 

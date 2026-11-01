@@ -10,7 +10,7 @@ de la partie et sa timeline donnent les noms, les postes et le libellé des év�
 import json
 from collections import defaultdict
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from markupsafe import Markup
 
@@ -398,9 +398,11 @@ def game_page(
     model: Optional[WinModel],
     now: datetime,
     review: bool = False,
+    draft_of: Optional[Callable[[dict, dict], float]] = None,
 ) -> Optional[dict]:
     """La page d'une partie capturée ; None si elle n'existe pas. `review` : la revue qui suit la
-    partie (`/postgame`), au lieu de la partie consultée plus tard."""
+    partie (`/postgame`), au lieu de la partie consultée plus tard. `draft_of` : logit de draft de
+    la partie, pour la courbe (`winprob/draft.py`) ; sans lui, elle part sans a priori."""
     record = repo.game_record(game_id)
     if record is None:
         return None
@@ -457,7 +459,8 @@ def game_page(
             "Modèle de win chance absent : lance `python -m src.winprob.retrain --force` pour l'entraîner."
         )
     else:
-        points = curve_points(model, game, timeline, me["teamId"])
+        draft = draft_of(game, roles) if draft_of else 0.0
+        points = curve_points(model, game, timeline, me["teamId"], draft)
         if not points:
             page["curve_note"] = "Courbe indisponible pour cette partie."
     rows = repo.impact_rows(game_id)

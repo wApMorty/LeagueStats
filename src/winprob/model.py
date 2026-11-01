@@ -18,6 +18,9 @@ from .state import FEATURES
 # `creepScore` de la Live Client API est arrondi à la dizaine et ignore une partie du jeu en
 # forêt (spike du 2026-10-02), et le modèle ne perd que 0,001 de Brier sans eux.
 INPUTS = tuple(name for name in FEATURES if name not in ("time_min", "cs"))
+# Le modèle de production ajoute l'a priori de draft (`draft.py`), absent de `FEATURES` : ce n'est
+# pas un état de partie, et `expand` le prend à 0 quand il n'est pas renseigné.
+MODEL_INPUTS = INPUTS + ("draft",)
 TIME_SCALE_MIN = 30.0
 
 
@@ -27,7 +30,7 @@ def _sigmoid(x: float) -> float:
 
 def expand(state: dict, inputs: Sequence[str] = INPUTS) -> List[float]:
     """Vecteur du modèle : variables, puis variables × temps."""
-    base = [state[name] for name in inputs]
+    base = [state.get("draft", 0.0) if name == "draft" else state[name] for name in inputs]
     t = state["time_min"] / TIME_SCALE_MIN
     return base + [value * t for value in base]
 

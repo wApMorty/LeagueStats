@@ -17,6 +17,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 from ..config_client import client_config
 from ..winprob import live
+from ..winprob.draft import RAW_CHAMPION_PREFIX
 from ..winprob.model import WinModel
 from ..winprob.overlay import Tracker
 from ..winprob.train import load_model as _load_model
@@ -33,8 +34,6 @@ OBJECTIVES = {
     "InhibKilled": "inhibitor",
 }
 _STRUCTURE_OWNER = {"TOrder": "ORDER", "TChaos": "CHAOS", "T1": "ORDER", "T2": "CHAOS"}
-# Format de l'API : `rawChampionName` vaut « game_character_displayname_<Nom> ».
-_RAW_CHAMPION_PREFIX = "game_character_displayname_"
 
 
 def _my_player(data: dict) -> Optional[dict]:
@@ -87,7 +86,7 @@ def roster_of(data: dict) -> List[Dict[str, str]]:
     return [
         {
             "champion": player.get("championName") or "",
-            "raw": (player.get("rawChampionName") or "").removeprefix(_RAW_CHAMPION_PREFIX),
+            "raw": (player.get("rawChampionName") or "").removeprefix(RAW_CHAMPION_PREFIX),
             "team": player.get("team") or "",
             "position": player.get("position") or "",
         }
@@ -121,10 +120,12 @@ class LiveGame:
         get_phase: Callable[[], Optional[str]],
         fetch: Callable[[], Optional[dict]] = live.fetch,
         model: Optional[WinModel] = None,
+        draft_of: Optional[Callable[[dict], Optional[float]]] = None,
     ) -> None:
         self._bus = bus
         self._get_phase = get_phase
         self._fetch = fetch
+        self._draft_of = draft_of
         self._model = model
         self._model_tried = model is not None
         self._tracker: Optional[Tracker] = None
@@ -191,7 +192,7 @@ class LiveGame:
         model = self._model_for_game()
         if model is not None:
             if self._tracker is None:
-                self._tracker = Tracker(model)
+                self._tracker = Tracker(model, self._draft_of)
             result = self._tracker.update(data)
             p, delta = result["p"], result["delta"]
             sample = client_config.INGAME_SAMPLE_S

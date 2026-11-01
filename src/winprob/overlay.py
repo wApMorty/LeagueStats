@@ -16,10 +16,11 @@ import queue
 import threading
 import time
 from collections import deque
-from typing import Deque, Optional, Tuple
+from typing import Callable, Deque, Optional, Tuple
 
 from ..config_winprob import winprob_config as cfg
 from . import live
+from .draft import live_draft
 from .model import WinModel
 from .train import model_path
 
@@ -31,12 +32,19 @@ WS_EX_LAYERED, WS_EX_TRANSPARENT, WS_EX_TOOLWINDOW = 0x80000, 0x20, 0x80
 class Tracker:
     """Win chance de l'équipe du joueur, et sa variation sur la dernière minute."""
 
-    def __init__(self, model: WinModel) -> None:
+    def __init__(
+        self, model: WinModel, draft_of: Optional[Callable[[dict], Optional[float]]] = None
+    ) -> None:
         self.model = model
+        self.draft_of = draft_of
+        self.draft: Optional[float] = None  # lu une fois, dès que les dix postes sont connus
         self.history: Deque[Tuple[float, float]] = deque()
 
     def update(self, data: dict) -> dict:
         state = live.state_from_live(data)
+        if self.draft is None and self.draft_of is not None:
+            self.draft = self.draft_of(data)
+        state["draft"] = self.draft or 0.0
         p = self.model.predict(state)
         active = data.get("activePlayer", {})
         mine = {active.get("summonerName"), active.get("riotId"), active.get("riotIdGameName")}
@@ -145,7 +153,7 @@ def main() -> None:
         "Overlay de win chance : le jeu doit être en mode fenêtré sans bordure (Ctrl+C pour quitter)."
     )
     messages, stop = queue.Queue(), threading.Event()
-    tracker = Tracker(WinModel.from_json(path.read_text(encoding="utf-8")))
+    tracker = Tracker(WinModel.from_json(path.read_text(encoding="utf-8")), live_draft)
     threading.Thread(target=poll, args=(tracker, messages, stop), daemon=True).start()
     try:
         Overlay(messages).root.mainloop()

@@ -15,6 +15,7 @@ from ..lcu_client import LCUClient
 from ..pool_manager import PoolManager
 from ..ui.checks import check_database, check_dependencies
 from ..user_prefs import UserPrefs, load_user_prefs
+from ..winprob.draft import live_draft
 from . import server, window
 from .bus import EventBus
 from .donnees import UpdateJob
@@ -153,7 +154,7 @@ def run_client(verbose: bool = False) -> bool:
         return False
     print(f"[INFO] Client LeagueStats sur {url}")
     events = LcuEvents(bus, LCUClient(verbose=verbose).find_lcu_credentials)
-    game = LiveGame(bus, _phase_source(bus, LCUClient(verbose=verbose)))
+    game = LiveGame(bus, _phase_source(bus, LCUClient(verbose=verbose)), draft_of=live_draft)
     try:
         events.start()
         game.start()

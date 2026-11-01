@@ -17,8 +17,8 @@ from typing import Dict, Optional
 
 from ..config_winprob import winprob_config as cfg
 from .crawl import _patch
-from .model import WinModel, evaluate, fit
-from .train import crawl_path, load, model_path
+from .model import MODEL_INPUTS, WinModel, evaluate, fit
+from .train import DraftOf, crawl_path, draft_reader, load, model_path
 
 
 def patch_counts(path: Optional[Path] = None) -> Dict[str, int]:
@@ -54,7 +54,12 @@ def adopt(champion: dict, challenger: dict) -> bool:
     )
 
 
-def retrain(force: bool = False, path: Optional[Path] = None, out: Optional[Path] = None) -> str:
+def retrain(
+    force: bool = False,
+    path: Optional[Path] = None,
+    out: Optional[Path] = None,
+    draft_of: Optional[DraftOf] = None,
+) -> str:
     """Réentraîne si un déclencheur est atteint ; renvoie la ligne de journal."""
     out = out or model_path()
     champion = WinModel.from_json(out.read_text(encoding="utf-8")) if out.exists() else None
@@ -62,8 +67,8 @@ def retrain(force: bool = False, path: Optional[Path] = None, out: Optional[Path
     reason = "manuel" if force else should_retrain(champion and champion.meta, counts)
     if reason is None:
         return "Pas de réentraînement : aucun déclencheur atteint"
-    (train_x, train_y), (val_x, val_y) = load(path)
-    challenger = fit(train_x, train_y)
+    (train_x, train_y), (val_x, val_y) = load(path, draft_of=draft_of)
+    challenger = fit(train_x, train_y, MODEL_INPUTS)
     new = evaluate(challenger, val_x, val_y)
     if champion:
         old = evaluate(champion, val_x, val_y)
@@ -90,4 +95,4 @@ def retrain(force: bool = False, path: Optional[Path] = None, out: Optional[Path
 
 
 if __name__ == "__main__":
-    print(retrain(force="--force" in sys.argv))
+    print(retrain(force="--force" in sys.argv, draft_of=draft_reader()))

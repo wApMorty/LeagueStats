@@ -291,7 +291,7 @@ class CoachingRepository:
 
     def save_impact(self, game_id: int, model_version: str, rows: Sequence[dict]) -> None:
         """Remplace les impacts de la partie par ceux de `rows` (sortie de `winprob.impact`), rangés
-        sous `model_version` suivi de la convention d'attribution courante (`+c2`)."""
+        sous `model_version` suivi de la convention d'attribution courante (`+c3`)."""
         model_version = f"{model_version}+c{winprob_config.WINPROB_IMPACT_CONVENTION}"
         cursor = self.db.connection.cursor()
         cursor.execute("DELETE FROM game_impact WHERE game_id = ?", (game_id,))

@@ -8,15 +8,16 @@ import random
 import sqlite3
 import sys
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple
 
 from ..config import config
 from ..config_winprob import winprob_config as cfg
 from .crawl import unpack
-from .model import INPUTS, WinModel, evaluate, fit, score
+from .model import MODEL_INPUTS, WinModel, evaluate, fit, score
 from .state import blue_win, frame_states
 
 Rows = Tuple[List[dict], List[int]]  # (états, victoire bleue)
+DraftOf = Callable[[dict], float]  # partie -> logit de draft (`draft.py`)
 
 
 def crawl_path() -> Path:
@@ -25,6 +26,15 @@ def crawl_path() -> Path:
 
 def model_path() -> Path:
     return Path(config.DATABASE_PATH).with_name(cfg.WINPROB_MODEL_FILENAME)
+
+
+def draft_reader() -> DraftOf:
+    """Logit de draft d'une partie, lu dans `db.db`. Lève si la base ne se lit pas : entraîner à draft
+    nulle sans le dire donnerait un poids nul. Import tardif : `draft.py` charge le coaching."""
+    from .draft import game_draft, reader
+
+    source = reader()
+    return lambda game: game_draft(game, source)
 
 
 def load_model() -> Optional[WinModel]:
@@ -36,11 +46,14 @@ def load_model() -> Optional[WinModel]:
         return None
 
 
-def games(path: Optional[Path] = None, seed: int = 0) -> List[Tuple[List[dict], int]]:
+def games(
+    path: Optional[Path] = None, seed: int = 0, draft_of: Optional[DraftOf] = None
+) -> List[Tuple[List[dict], int]]:
     """Parties lues, de la plus ancienne à la plus récente : (images tirées, victoire bleue).
 
     Les images sont tirées au hasard si elles dépassent `WINPROB_MAX_ROWS` ; les parties
-    sans timeline, sans issue ou de moins de 5 min (remakes) sont écartées.
+    sans timeline, sans issue ou de moins de 5 min (remakes) sont écartées. `draft_of` renseigne
+    la variable `draft` de chaque image ; sans lui, elle reste à 0.
     """
     db = sqlite3.connect(path or crawl_path())
     query = "FROM crawl_games WHERE length(raw) > 0"
@@ -54,6 +67,10 @@ def games(path: Optional[Path] = None, seed: int = 0) -> List[Tuple[List[dict], 
         win = blue_win(d["game"])
         if d["timeline"] and win is not None and d["game"].get("gameDuration", 0) >= 300:
             states = [s for s in frame_states(d["game"], d["timeline"]) if rng.random() < keep]
+            if draft_of is not None:
+                draft = draft_of(d["game"])
+                for state in states:
+                    state["draft"] = draft
             out.append((states, int(win)))
     return out
 
@@ -62,29 +79,33 @@ def _flatten(parts: List[Tuple[List[dict], int]]) -> Rows:
     return [s for states, _ in parts for s in states], [w for states, w in parts for _ in states]
 
 
-def load(path: Optional[Path] = None, seed: int = 0) -> Tuple[Rows, Rows]:
+def load(
+    path: Optional[Path] = None, seed: int = 0, draft_of: Optional[DraftOf] = None
+) -> Tuple[Rows, Rows]:
     """(entraînement, validation) : la validation prend les parties les plus récentes.
 
     Découpage par partie, jamais par image (SPEC-20 §4.3).
     """
-    parts = games(path, seed)
+    parts = games(path, seed, draft_of)
     cut = int(len(parts) * (1 - cfg.WINPROB_VALIDATION_FRACTION))
     return _flatten(parts[:cut]), _flatten(parts[cut:])
 
 
-def cross_validate(path: Optional[Path] = None, folds: int = 5) -> dict:
+def cross_validate(
+    path: Optional[Path] = None, folds: int = 5, draft_of: Optional[DraftOf] = None
+) -> dict:
     """Validation croisée par blocs contigus de parties (SPEC-20 §4.3), prédictions poolées.
 
     Chaque bloc est prédit par un modèle entraîné sur les autres ; le décile se mesure sur
     toutes les parties à la fois, où le bruit d'un bloc de ~1 000 parties (2 à 6 pts
     d'écart pour un même modèle) se dilue.
     """
-    parts = games(path)
+    parts = games(path, draft_of=draft_of)
     n, pooled = len(parts), []
     for k in range(folds):
         lo, hi = k * n // folds, (k + 1) * n // folds
         train_x, train_y = _flatten(parts[:lo] + parts[hi:])
-        model = fit(train_x, train_y)
+        model = fit(train_x, train_y, MODEL_INPUTS)
         pooled += [
             (model.predict(s), win, s["time_min"]) for states, win in parts[lo:hi] for s in states
         ]
@@ -92,9 +113,10 @@ def cross_validate(path: Optional[Path] = None, folds: int = 5) -> dict:
 
 
 def report(path: Optional[Path] = None, save: bool = False) -> WinModel:
-    (train_x, train_y), (val_x, val_y) = load(path)
-    model = fit(train_x, train_y)
-    with_gold = fit(train_x, train_y, INPUTS + ("gold",))
+    draft_of = None if path else draft_reader()
+    (train_x, train_y), (val_x, val_y) = load(path, draft_of=draft_of)
+    model = fit(train_x, train_y, MODEL_INPUTS)
+    with_gold = fit(train_x, train_y, MODEL_INPUTS + ("gold",))
     base = sum(val_y) / len(val_y)
     print(f"Entraînement {len(train_x)} images, validation {len(val_x)} images (parties récentes)")
     for label, m in (("sans l'or", model), ("avec l'or", with_gold)):
@@ -104,7 +126,7 @@ def report(path: Optional[Path] = None, save: bool = False) -> WinModel:
             f"  {'ACCEPTÉ' if r['accepted'] else 'REFUSÉ'}"
         )
     print(f"  Référence : taux de victoire bleue constant, Brier {base * (1 - base):.4f}")
-    cv = cross_validate(path)
+    cv = cross_validate(path, draft_of=draft_of)
     print(
         f"  Validation croisée à 5 blocs (poolée) : Brier {cv['brier']:.4f}  écart max par décile "
         f"{cv['max_gap'] * 100:.1f} pts  {'ACCEPTÉ' if cv['accepted'] else 'REFUSÉ'}"

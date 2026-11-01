@@ -105,9 +105,10 @@ class WinProbConfig:
     WINPROB_PRESENCE_RADIUS: float = 2500.0
 
     # Version de la façon d'attribuer l'impact aux joueurs (SPEC-22), rangée dans `model_version`
-    # sous la forme `wp-xxxxxxxx+c2` : une partie rangée sous une autre est recalculée par le
-    # rattrapage. 1 : événements seuls ; 2 : objectifs perdus, niveaux et récupération après mort.
-    WINPROB_IMPACT_CONVENTION: int = 2
+    # sous la forme `wp-xxxxxxxx+c3` : une partie rangée sous une autre est recalculée par le
+    # rattrapage. 1 : événements seuls ; 2 : objectifs perdus, niveaux et récupération après mort ;
+    # 3 : modèle à draft, impacts à draft nulle (SPEC-47).
+    WINPROB_IMPACT_CONVENTION: int = 3
 
     # Overlay en jeu (§6) : sondage de la Live Client API, position et taille de la fenêtre
     # (pixels depuis le coin haut gauche de l'écran), sondages sans réponse avant de conclure

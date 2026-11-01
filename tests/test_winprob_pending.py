@@ -7,6 +7,7 @@ from types import SimpleNamespace
 import pytest
 
 from src.coaching.capture import GameCapture
+from src.config_winprob import winprob_config as cfg
 from src.repositories.coaching import CoachingRepository
 from src.winprob.model import INPUTS, WinModel
 from src.winprob.pending import compute_pending
@@ -44,7 +45,9 @@ def test_pending_game_is_stored_once_with_its_report(db, tmp_path):
     [(game_id, lines)] = compute_pending(db, path)
     repo = CoachingRepository(db)
     assert game_id == 1 and lines[0].startswith("[DATA] Impact sur la win chance")
-    assert {r["model_version"] for r in repo.impact_rows(1)} == {f"{_model().version}+c2"}
+    assert {r["model_version"] for r in repo.impact_rows(1)} == {
+        f"{_model().version}+c{cfg.WINPROB_IMPACT_CONVENTION}"
+    }
     assert repo.impact_rows(1, participant_id=4)
     assert compute_pending(db, path) == []  # figé : jamais recalculé
 
@@ -84,7 +87,7 @@ def test_a_game_stored_under_an_older_convention_is_recomputed_once(db, tmp_path
     path = _model_file(tmp_path)
     assert [g for g, _ in compute_pending(db, path)] == [1]
     versions = {r["model_version"] for r in CoachingRepository(db).impact_rows(1)}
-    assert versions == {f"{_model().version}+c2"}
+    assert versions == {f"{_model().version}+c{cfg.WINPROB_IMPACT_CONVENTION}"}
     assert any(r["event_type"] == "levels" for r in CoachingRepository(db).impact_rows(1))
     assert compute_pending(db, path) == []
 

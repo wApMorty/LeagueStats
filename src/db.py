@@ -1,4 +1,5 @@
 import sqlite3
+from pathlib import Path
 from sqlite3 import Error
 from typing import Dict, List, Optional, Set, Tuple, Union
 
@@ -45,6 +46,16 @@ class Database:
                 pass
         except Error as e:
             print(f"The error '{e}' occurred")
+
+    def connect_read_only(self) -> None:
+        """Se connecte en `mode=ro` : aucune écriture, pas même les index de `connect`.
+
+        Raises:
+            sqlite3.OperationalError: base absente.
+        """
+        uri = f"{Path(self.path).resolve().as_uri()}?mode=ro"
+        self.connection = sqlite3.connect(uri, uri=True)
+        self._init_repositories()
 
     def _init_repositories(self) -> None:
         """(Re)initialise les repositories à partir de self.connection."""

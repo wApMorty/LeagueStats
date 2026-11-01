@@ -27,6 +27,7 @@ from ..repositories.coaching import CoachingRepository
 from ..analysis.blindability import compute_blindability
 from ..analysis.strategy import all_strategies
 from ..user_prefs import load_motion, load_strategies, save_active_strategy, save_motion
+from ..winprob.draft import recorded_draft
 from .assets import PLACEHOLDER, Assets
 from .data import (
     ROLE_ORDER,
@@ -446,11 +447,16 @@ def create_app(
         )
         return render(request, "parties.html", v=view)
 
+    def draft_of(game: dict, roles: dict) -> float:
+        """Logit de draft d'une partie, pour la courbe de win chance (best-effort)."""
+        return recorded_draft(game, app.state.db_path, roles)
+
     @app.get("/parties/{game_id}", response_class=HTMLResponse)
     def partie(request: Request, game_id: int):
         champions, now = Champions(app.state.assets), datetime.now(timezone.utc)
         page = coaching(
-            lambda repo: game_page(repo, game_id, champions, load_model(), now), lambda: None
+            lambda repo: game_page(repo, game_id, champions, load_model(), now, draft_of=draft_of),
+            lambda: None,
         )
         if page is None:
             return render(
@@ -623,7 +629,9 @@ def create_app(
         def latest(repo: CoachingRepository) -> Optional[dict]:
             game_id = repo.latest_game_id()
             return (
-                game_page(repo, game_id, champions, load_model(), now, review=True)
+                game_page(
+                    repo, game_id, champions, load_model(), now, review=True, draft_of=draft_of
+                )
                 if game_id
                 else None
             )
