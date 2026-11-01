@@ -354,7 +354,7 @@ Tous les arbitrages validés par @pj35 le 2026-10-13 (suite en partie à 2 threa
 | 158 | `crawl_histories` : forme brute rangée à chaque visite d'historique (aucune requête de plus) | 3 | 152, 153 | ✅ 2026-10-13 : 2 tests (visite de la collecte, éclaireur) |
 | 159 | `scripts/measure_form_term.py` : seuil figé, mesure du terme de forme une fois `crawl_histories` fournie | 5 | 158 | ✅ 2026-10-15 : script livré, 6 tests, essai `--force --limit 3000` en 113 s ; mesure faite le 2026-10-21 (92 689 parties) : `form_wr`, `form_kda` et `form_impact` refusés (meilleur gain +0,0013 < 0,002, SPEC-33 §7) |
 | 160 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure, exe, recette @pj35 | 2 | 157, 159 | ✅ 2026-10-21 ; exe : éclaireur et pastilles livrés depuis la 5.4.0 ; recette (pastilles en partie, forme de la session gameflow) laissée à @pj35 |
-| 161 | *Conditionnelle* : terme de forme dans le modèle si la tâche 159 l'adopte | 3 | 159 | ➖ sans objet : la tâche 159 refuse les trois variables (2026-10-21) |
+| 161 | *Conditionnelle* : terme de forme dans le modèle si la tâche 159 l'adopte | 3 | 159 | ⏸️ rejugé le 2026-11-01 sans le seuil de 0,002 (ADR-004) : `form_impact` indétectable sur 65 parties couvertes, +0,00024 (IC 90 % +0,00001 à +0,00046) sur toutes les parties. À remesurer avec `scripts/rejudge_winchance_terms.py` à ~4 800 parties couvertes, avant la purge du patch (SPEC-33 §7) ; `form_wr` et `form_kda` restent refusés |
 | 162 | Visites de couverture : après chaque partie lue, historique de ses joueurs non couverts (amendement du 2026-10-15) | 2 | 158 | ✅ 2026-10-15 : 2 tests ; couverture à suivre par `scripts/monitor_crawl.py` |
 
 ### Lot SPEC-34, vitrine : mode démo, captures, README et teaser (✅ livrée le 2026-10-16, recette @pj35 à faire)
@@ -760,12 +760,12 @@ encore mesurer la qualité.*
 - ❌ i18n, multi-plateforme
 - ✅ GUI lourde : **rouverte par @pj35 le 2026-10-04**, devenue le client de SPEC-21 (fenêtre `pywebview`, pas de Qt ni d'Electron)
 - ⏸️ Automatisation nocturne — **suspendue par choix**, mise à jour manuelle assumée
-- ❌ A priori de la draft dans la win chance en partie — **mesuré et écarté par @pj35 le 2026-10-19**. Logit de draft
-  (`GameEvaluator.team_logit`, postes par `participant_roles`) en variable du modèle de partie, avec son produit par le
-  temps, sur les 9 821 parties les plus récentes de `crawl.db` (validation croisée poolée à 5 blocs) : Brier ≤ 10 min
-  0,2336 → 0,2331 (**gain 0,0005**, seuil de SPEC-33 : 0,002), AUC 0,801 → 0,802. La draft seule : Brier 0,2494 contre
-  0,2500 pour une constante ; bien calibrée (quintile extrême : 55,4 % prédits, 54,0 % observés) mais faible (p10-p90
-  de 45 à 55 %). La courbe qui part de ~50 % est donc juste à ±5 pts près.
+- ❓ A priori de la draft dans la win chance en partie — **rejugé le 2026-11-01 : adoption proposée, décision de @pj35
+  attendue**. Au premier étage d'ADR-004 (SPEC-33 §7), sur 15 383 parties 16.21 hors échantillon : Brier ≤ 10 min
+  0,23293 → 0,23057, **gain +0,00236, IC 90 % +0,00170 à +0,00299**, placebo nul, écart par décile 2,4 → 2,5 pts,
+  AUC 0,640 → 0,653. La win chance bouge de 4,0 pts en moyenne (RMS 5,0, p90 8,3) sur les images ≤ 10 min. Quintiles
+  extrêmes : 41,7 et 57,4 % observés, 42,5 et 57,3 avec le terme, ~50 sans. Le refus du 2026-10-19 (gain 0,0005 sur
+  9 821 parties, seuil 0,002) portait sur le logit d'avant SPEC-43 et ne tient plus.
 - ❌ Draft au seul matchup 2v2 (Top/Mid contre leur lane et le jungle adverse, bot contre bot) — **mesuré le
   2026-10-20**, le poids actuel 2/1 reste. Spike hors `src/` sur 78 163 parties de `crawl.db` (solo/duo, 10 rôles
   connus), validation croisée poolée à 5 blocs, régression logistique sur le logit de `GameEvaluator` (paires sans

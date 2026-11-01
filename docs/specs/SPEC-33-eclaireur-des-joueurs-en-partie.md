@@ -387,6 +387,48 @@ Lecture : taux de victoire et KDA récents n'apportent rien (AUC 0,800 inchangé
 ces parties). Aucun terme de forme dans la win chance ; la tâche 161 est sans objet. La couverture du
 script reprend le calcul en mémoire de `scripts/monitor_crawl.py` (0,8 s contre 178 s par seuil en SQL).
 
+**Rejugement au premier étage d'[ADR-004](../adr/ADR-004-evaluation-a-deux-etages.md) (2026-11-01)** :
+`python scripts/rejudge_winchance_terms.py`, `crawl.db` en lecture seule. Plus de seuil de 0,002 : adoption
+si l'IC 90 % du gain de Brier ≤ 10 min exclut 0, calibration par décile à l'appui. 15 650 parties retenues,
+toutes du patch 16.21 (21 oct. au 1er nov.), ~317 000 images. IC : le plus large du bootstrap par
+partie et du bootstrap par blocs de temps (50 blocs de parties consécutives, un joueur enchaîne ses parties).
+Placebo : le même terme, de signe tiré au hasard par partie.
+
+| Terme | Parties | Brier ≤ 10 min | Gain (IC 90 %) | Placebo (IC 90 %) | Écart max ≤ 10 min | Ampleur ≤ 10 min (pts) | Proposition |
+|---|---|---|---|---|---|---|---|
+| A priori de draft | 15 383 | 0,23293 → 0,23057 | **+0,00236** (+0,00170 à +0,00299) | −0,00001 (−0,00003 à +0,00001) | 2,4 → 2,5 pts | moyenne 4,0, RMS 5,0, p90 8,3, max 21,6 | **Adopter** |
+| `form_impact`, sous-ensemble couvert | 65 | 0,2488 → 0,2632 | −0,0144 (−0,0241 à −0,0055) | −0,0085 (−0,0149 à −0,0023) | sans valeur | sans valeur | **Indétectable** |
+| `form_impact`, toutes parties (sans forme = 0) | 15 650 | 0,23205 → 0,23181 | +0,00024 (+0,00001 à +0,00046) | +0,00002 (−0,00006 à +0,00010) | 2,6 → 2,7 pts | moyenne 0,95, RMS 1,7, p90 3,0, max 13,4 | **Remesurer** |
+
+Lecture, a priori de draft : `crawl.db` ne contient plus le patch 16.20 sur lequel K_MATCHUP, K_SYNERGY et
+K_INTRINSIC ont été ajustés, la mesure est donc hors échantillon. Le gain ne se compare pas au +0,0005 du
+2026-10-19 : ce logit-là précédait SPEC-43. AUC ≤ 10 min 0,640 → 0,653, écart max sur toutes les images
+0,49 → 0,66 pt, sous les 5 pts de SPEC-20. Quintiles extrêmes du terme : observé 41,7 % et 57,4 %, prédit sans
+le terme 49,5 et 50,3, avec le terme 42,5 et 57,3. Sans la draft, la courbe se trompe donc de 7 à 8 pts sur le
+cinquième des images à chaque bout.
+
+Lecture, `form_impact` : le sous-ensemble couvert est celui de la production (au moins 8 joueurs à 5 parties
+d'impact), mais `crawl.db` n'en garde que 65 parties sur ce début de patch, contre 13 723 le 2026-10-21. Le
+gain détectable à 80 % y vaut 0,014, et le placebo perd lui aussi 0,0085 (27 poids sur 52 parties) : ces
+chiffres ne disent rien, le terme y est **indétectable**, et le +0,0013 n'est ni confirmé ni réfuté. Sur toutes
+les parties, le terme est non nul pour 9 311 d'entre elles et l'IC exclut 0 de justesse : le signal existe
+sans doute, petit (quintiles extrêmes 47,7 % et 52,6 % observés, 47,2 et 52,3 avec le terme). Mais cette
+variable n'est pas celle de la production : avec un joueur connu sur dix, le centrage donne 0, et l'éclaireur
+en lirait dix à 10 parties. Son coefficient ne se transporte pas. D'où remesurer plutôt qu'adopter : à gain
+réel de 0,0013, il faut ~4 800 parties couvertes pour 80 % de puissance (erreur-type ≈ √gain / √n, vérifié
+sur la draft), à relancer avant que la purge n'efface le patch.
+
+Biais de `form_impact` : le modèle en place (`winprob_model.json`, 7 782 parties 16.19, 2026-10-03) n'a vu
+aucune de ces parties (0 jouée avant son entraînement), le biais est donc absent de cette mesure. Pour chiffrer
+ce qu'il valait, le même terme a été mesuré avec un modèle réentraîné sur ces 15 650 parties : gain identique
+à moins de 0,00001 (+0,00024 dans les deux cas). Le biais annoncé le 2026-10-21 était donc négligeable : la
+logistique n'a qu'une vingtaine de poids. L'optimisme du +0,0013 ne suffit pas à l'écarter.
+
+Note : `metrics` de `measure_form_term.py` trie par (probabilité, issue). Sur des ex æquo (première image)
+les défaites passent devant, ce qui inventait 12 pts d'écart sur les images ≤ 10 min du modèle en place. Le
+script de rejugement mélange les ex æquo ; les écarts de ce tableau en sortent, ceux de la table du 2026-10-21
+non (toutes images, effet ~1 pt, décision inchangée).
+
 *Forme de la session gameflow (recette) : à remplir.*
 
 ## 8. Hors périmètre
