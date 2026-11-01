@@ -4,6 +4,12 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+## [6.1.0] - 2026-11-02
+
+Le classement anticipe la réponse de ton vis-à-vis en moins de 0,1 ms au lieu de dérouler toute la draft en 2 s, et il corrige la force d'un champion selon les adversaires qu'il rencontre d'habitude. La win chance en partie part désormais de la draft, et l'écran Blindabilité arrive dans Coaching.
+
+**Action requise** : aucune. Pas de migration, pas de scrape. La stratégie WIN LANE garde son réglage, mais son n° 1 peut changer : la recette en draft réelle reste à faire.
+
 ### ✨ Feature
 
 - **La réponse du vis-à-vis remplace le minimax (SPEC-48)** — une stratégie qui anticipe ne déroule plus toute la fin de draft. Si ton vis-à-vis n'est pas vu, chaque candidat est noté contre sa meilleure réponse parmi les 8 champions les plus joués de ta lane. Le calcul passe de 2 s à moins de 0,1 ms en médiane, et sous WIN LANE le n° 1 reste celui du minimax sur 90 % des positions rejouées. Les cartes et le grimoire affichent « Réponse attendue : X » à la place de la fin de draft et de la suite, et la profondeur disparaît. Sur l'écran Stratégies, le mode s'appelle désormais « Anticipation ». Les % de victoire calibrés et `predictions` ne changent pas ; la jauge projetée lit ton pick et cette réponse. Les bancs `bench_search.py` et `bench_swap_advice.py` sont retirés.

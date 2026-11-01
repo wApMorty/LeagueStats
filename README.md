@@ -16,8 +16,8 @@ débriefe à la fin.
 
 Pendant le champion select, le coach lit la draft dans le client LoL et classe les champions de ta pool
 (un pool par poste, choisi selon le poste qui t'est assigné) selon la victoire prédite face à la composition adverse : force de chaque champion sur sa lane,
-duels et synergies, avec des poids calibrés sur des dizaines de milliers de parties classées. Il anticipe
-aussi les picks qui restent à jouer, et tient compte de ton niveau sur chaque champion, tiré de tes propres parties : un champion
+duels et synergies, avec des poids calibrés sur des dizaines de milliers de parties classées. Il peut anticiper
+la réponse de ton vis-à-vis tant qu'il n'est pas posé, et tient compte de ton niveau sur chaque champion, tiré de tes propres parties : un champion
 sur lequel tu performes mal ne passe en tête que si la draft le justifie vraiment. Une stratégie règle le poids de chacun de ces critères : tu passes de l'une à l'autre d'un clic pendant la draft, et tu définis les tiennes sur l'écran Stratégies. En phase de bans, il chiffre les menaces qui pèsent sur ta pool. Un clic suffit pour survoler ou
 verrouiller. Au verrouillage, il écrit dans le client les runes, sorts et objets les plus joués par les
 one-tricks de ton champion, affinés contre ton adversaire direct. Tu peux aussi comparer les trois
@@ -181,4 +181,4 @@ LeagueStats Coach n'est ni approuvé ni sponsorisé par Riot Games et ne reflèt
 Games ni de quiconque ayant participé à la production ou à la gestion de League of Legends. League of
 Legends et Riot Games sont des marques ou des marques déposées de Riot Games, Inc.
 
-**Version** : 6.0.0
+**Version** : 6.1.0
