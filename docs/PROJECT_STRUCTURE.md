@@ -51,6 +51,7 @@ src/
 │   ├── strategy.py                   # Stratégies de draft : poids par terme, évaluateur pondéré (SPEC-46)
 │   ├── blindability.py               # Matrice des postes et tirage des champions, lus dans les tables de paires
 │   ├── pool_statistics.py            # Statistiques de pool
+│   ├── pool_swipe.py                 # Échanges qui améliorent un pool, sans maîtrise (SPEC-49)
 │   ├── team_analysis.py               # TeamAnalyzer (code non appelé par un menu)
 │   └── pool_value.py, trio_holistic.py, trio_counterpick.py,
 │       trio_tactics.py  # Team Builder (menu 5), valeur de pool SPEC-18
@@ -102,6 +103,7 @@ src/
 │   ├── ingame.py, en_partie.py                    # Écran « En partie » : fil de lecture de la Live Client API (sujet `ingame`), vue (courbe, face-à-face, build)
 │   ├── lobby.py, social.py                        # Lobby et file d'attente (écriture gardée par la phase), social en lecture seule
 │   ├── strategies.py                              # Écran Stratégies : choisir, dupliquer, régler les poids (SPEC-46)
+│   ├── pool_swipe.py                              # Écran Suggestions de pool : prendre ou passer chaque échange (SPEC-49)
 │   ├── templates/                                # Jinja : coque, un gabarit par écran, fragments htmx dans partials/
 │   └── static/                                    # style.css (jetons « Alchimie »), motion.js, un module JS par écran, fonts/
 │
