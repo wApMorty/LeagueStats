@@ -1232,6 +1232,25 @@ a.chip-btn { display: inline-flex; align-items: center; text-decoration: none; }
 .pool-actions .pool-new { margin: 0; }
 .pool-new input { height: 34px; padding: 0 12px; border-radius: 17px; border: 1px solid var(--rule); background: transparent; color: var(--ink); }
 .pool-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+/* Écran Suggestions de pool (SPEC-49) : une carte à glisser, boutons de repli sans JS. */
+.swipe-pool { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 0; padding: 0; list-style: none; font-size: 13px; color: var(--ink-2); }
+.swipe-pool li { display: flex; align-items: center; gap: 6px; }
+.swipe-pool img { width: 22px; height: 22px; border-radius: 50%; }
+.swipe-card { max-width: 460px; margin: 20px auto 0; text-align: center; touch-action: pan-y; cursor: grab; user-select: none;
+  transition: transform var(--d-normal) var(--ease-ressort); }
+.swipe-card.is-dragging { cursor: grabbing; transition: none; }
+.swipe-swap { display: flex; align-items: center; justify-content: center; gap: 18px; }
+.swipe-swap figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.swipe-swap img { width: 72px; height: 72px; border-radius: 50%; border: 2px solid var(--copper); }
+.swipe-swap figcaption { font: 600 20px/1.1 var(--font-title); }
+.swipe-swap > span { font-size: 13px; color: var(--muted); }
+.swipe-gain { margin: 16px 0 4px; font-size: 15px; }
+.swipe-gain b { font: 600 40px/1 var(--font-title); font-variant-numeric: tabular-nums; color: var(--mint); }
+.badge-noise { border-color: var(--gold); color: var(--gold); }
+.swipe-actions { display: flex; justify-content: center; gap: 16px; max-width: 460px; margin: 20px auto 0; }
+html[data-motion="reduit"] .swipe-card { transition: none; }
+@media (prefers-reduced-motion: reduce) { .swipe-card { transition: none; } }
 .strat-form, .strat-weights { display: grid; gap: 10px; margin-top: 12px; }
 .strat-weight { display: flex; align-items: center; gap: 12px; }
 .strat-weight span { min-width: 9em; }

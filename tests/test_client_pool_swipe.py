@@ -8,6 +8,10 @@ from fastapi.testclient import TestClient
 
 from src import pool_manager, user_prefs
 from src.client.app import create_app
+from src.client.bus import EventBus
+from src.client.donnees import UpdateJob
+from src.config_constants import pool_stats_config
+from src.pipeline import PipelineResult
 from src.config_client import client_config
 from src.pool_manager import PoolManager
 from tests.support_lcu_nav import make_assets
@@ -160,3 +164,29 @@ def test_ecritures_sans_jeton_refusees(web):
         assert post(web, path, token=False).status_code == 403
     assert saved(web)["Main"]["champions"] == ["Ahri"]
     assert not web.prefs_file.exists() or "pool_swipe" not in web.prefs_file.read_text("utf-8")
+
+
+def test_page_charge_le_script_et_pose_le_seuil_de_glisser(web):
+    designer_main_top(web)
+    page = web.get("/pool/suggestions?poste=top").text
+    assert '<script src="/static/pool_swipe.js" defer></script>' in page
+    assert f'data-drag="{pool_stats_config.POOL_SWIPE_DRAG_PX}"' in page
+
+
+def test_ecran_pool_lien_suggestions_pour_pool_perso_designe_seulement(web):
+    designer_main_top(web)
+    assert 'href="/pool/suggestions?poste=top"' in web.get("/pool?nom=Main").text
+    assert "/pool/suggestions" not in web.get("/pool?nom=All%20Top%20Champions").text
+
+
+def test_lien_suggestions_de_donnees_apres_un_run_ok(seeded_db, tmp_path):
+    bus = EventBus()
+    bus.publish("phase", {"kind": "closed"})
+    job = UpdateJob(run=lambda progress, stop: PipelineResult(status="ok"), clock=lambda: 0.0)
+    app = create_app(seeded_db, bus=bus, assets=make_assets(tmp_path), update_job=job)
+    web = TestClient(app, base_url=LOCAL, raise_server_exceptions=False)
+    assert 'href="/pool/suggestions"' not in web.get("/donnees").text
+    token = {client_config.TOKEN_HEADER: web.app.state.session_token}
+    assert web.post("/donnees/actualiser", headers=token).status_code == 200
+    assert job.cancel(5.0)
+    assert 'href="/pool/suggestions"' in web.get("/donnees").text

@@ -5,6 +5,7 @@
   </div>
   {% if not d.can_start %}<p class="muted">{{ d.reason }}</p>{% endif %}
   {% if d.outcome %}<p class="donnees-outcome donnees-{{ d.outcome.kind }}">{{ d.outcome.text }}</p>{% endif %}
+  {% if d.outcome and d.outcome.kind in ("ok", "partial") %}<p><a class="btn-ghost" href="/pool/suggestions">Voir les suggestions de pool</a></p>{% endif %}
   {% if d.running %}
   <p class="donnees-step">{{ d.step }}{% if d.elapsed %} · {{ d.elapsed }}{% endif %}{% if d.eta %} · {{ d.eta }}{% endif %}</p>
   {% for lane in d.lanes %}
