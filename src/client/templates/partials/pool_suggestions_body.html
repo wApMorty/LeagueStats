@@ -1,0 +1,47 @@
+{#- Corps de l'écran Suggestions : remplacé tel quel par chaque passe ou acceptation (htmx). Un refus arrive dans `v.notice`. -#}
+<div id="swipe-body" hx-target="#swipe-body" hx-select="#swipe-body" hx-swap="outerHTML">
+  {% if v.notice %}<p class="notice" role="status">{{ v.notice }}</p>{% endif %}
+  <div class="pool-grid" role="tablist" aria-label="Postes">
+    {% for t in v.tabs %}
+    <a role="tab" class="chip-btn{{ ' is-on' if t.on }}" aria-selected="{{ 'true' if t.on else 'false' }}" href="/pool/suggestions?poste={{ t.lane }}">{{ t.label }}</a>
+    {% endfor %}
+  </div>
+  {% if v.pool %}
+  <section class="panel">
+    <div class="panel-head">
+      <h2>{{ v.pool.name }}</h2>
+      <span class="muted">{{ v.pool.champions|length }} champion{{ "s" if v.pool.champions|length > 1 }}{% if not v.pool.editable %} · système{% endif %}</span>
+    </div>
+    <ul class="swipe-pool" aria-label="Champions du pool">
+      {% for c in v.pool.champions %}
+      <li>{% if c.img %}<img src="{{ c.img }}" alt="" loading="lazy">{% endif %}{{ c.name }}</li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+  {% if v.card %}
+  {% set c = v.card %}
+  <article class="panel swipe-card" data-incoming="{{ c.incoming.name }}" data-outgoing="{{ c.outgoing.name }}" data-drag="{{ v.drag_px }}">
+    <div class="swipe-swap">
+      <figure>{% if c.incoming.img %}<img src="{{ c.incoming.img }}" alt="">{% endif %}<figcaption>{{ c.incoming.name }}</figcaption></figure>
+      <span aria-hidden="true">remplace</span>
+      <figure>{% if c.outgoing.img %}<img src="{{ c.outgoing.img }}" alt="">{% endif %}<figcaption>{{ c.outgoing.name }}</figcaption></figure>
+    </div>
+    <p class="swipe-gain"><b>{{ c.gain }}</b> pts de winrate{% if c.below_noise %} <span class="badge badge-noise">sous le bruit</span>{% endif %}</p>
+    <p class="fine">contre-pick {{ c.counter_gain }} · blind {{ c.blind_gain }}</p>
+    {% if c.wins %}
+    <p class="fine">Gagne contre : {% for d in c.wins %}{{ d.name }} ({{ d.delta }}){{ ", " if not loop.last }}{% endfor %}</p>
+    {% endif %}
+    {% if c.losses %}
+    <p class="fine">Perd contre : {% for d in c.losses %}{{ d.name }} ({{ d.delta }}){{ ", " if not loop.last }}{% endfor %}</p>
+    {% endif %}
+    <p class="fine">{{ v.remaining }} carte{{ "s" if v.remaining > 1 }}</p>
+  </article>
+  <div class="swipe-actions">
+    <button type="button" class="btn-ghost" data-swipe="pass" hx-post="/pool/suggestions/passer?poste={{ v.lane }}&amp;entrant={{ c.incoming.name|urlencode }}">Passer</button>
+    <button type="button" class="btn-primary" data-swipe="take" hx-post="/pool/suggestions/accepter?poste={{ v.lane }}&amp;entrant={{ c.incoming.name|urlencode }}&amp;sortant={{ c.outgoing.name|urlencode }}">Prendre</button>
+  </div>
+  {% elif v.message %}
+  <p class="empty">{{ v.message }}</p>
+  {% endif %}
+</div>

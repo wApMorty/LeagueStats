@@ -68,6 +68,7 @@ from .lobby import (
 from .lcu_status import LcuProbe
 from .collection import VIEWS, read_collection
 from .pools import active_pool_name, champion_names, edit as edit_pool, forget_bans, pools_view
+from .pool_swipe import accept as accept_swipe, pass_card, swipe_view
 from .strategies import active_name as active_strategy_name, edit as edit_strategy, strategies_view
 from .historique import read_game, read_history
 from .profil import read_profile
@@ -513,6 +514,68 @@ def create_app(
     @app.get("/pool", response_class=HTMLResponse)
     def pool_page(request: Request, nom: Optional[str] = None):
         return render(request, "pool.html", v=pool_body(nom))
+
+    # Déclarées avant `/pool/{action}` : même si `{action}` ne capte pas les `/`, l'ordre reste la règle.
+    @app.get("/pool/suggestions", response_class=HTMLResponse)
+    async def pool_suggestions(request: Request, poste: Optional[str] = None):
+        """Écran Suggestions de pool (SPEC-49) : la pile d'échanges du poste demandé."""
+
+        def work():
+            view = swipe_view(PoolManager(), app.state.db_path, poste, Champions(app.state.assets))
+            return render(request, "pool_suggestions.html", v=view)
+
+        return await in_thread(work)
+
+    @app.post("/pool/suggestions/accepter", response_class=HTMLResponse)
+    async def pool_suggestions_accept(
+        request: Request, poste: str = "", entrant: str = "", sortant: str = ""
+    ):
+        """Remplace `sortant` par `entrant` dans le pool du poste, enregistré comme un édit de l'écran
+        Pool (bans effacés, `pool <nom>` déposé si c'est le pool par défaut). Un refus s'affiche dans le
+        corps de l'écran (200)."""
+
+        def work() -> dict:
+            manager = PoolManager()
+            try:
+                notice, pool_name = accept_swipe(
+                    manager, app.state.db_path, poste, entrant, sortant
+                )
+                if not manager.save_custom_pools(recalculate_bans=False):
+                    raise Refusal("Pools non enregistrés")
+            except Refusal as refusal:
+                notice = str(refusal)
+            else:
+                forget_bans(app.state.db_path, pool_name)
+                active = active_pool_name(manager)
+                if commands is not None and active and active == pool_name:
+                    commands(f"pool {active}")
+            return swipe_view(
+                PoolManager(), app.state.db_path, poste, Champions(app.state.assets), notice
+            )
+
+        view = await in_thread(work)
+        return templates.TemplateResponse(
+            request, "partials/pool_suggestions_body.html", {"v": view}
+        )
+
+    @app.post("/pool/suggestions/passer", response_class=HTMLResponse)
+    async def pool_suggestions_pass(request: Request, poste: str = "", entrant: str = ""):
+        """Passe `entrant` pour le poste jusqu'à la prochaine mise à jour des données ; sans écriture
+        dans les pools."""
+
+        def work() -> dict:
+            try:
+                notice = pass_card(app.state.db_path, poste, entrant)
+            except Refusal as refusal:
+                notice = str(refusal)
+            return swipe_view(
+                PoolManager(), app.state.db_path, poste, Champions(app.state.assets), notice
+            )
+
+        view = await in_thread(work)
+        return templates.TemplateResponse(
+            request, "partials/pool_suggestions_body.html", {"v": view}
+        )
 
     @app.post("/pool/{action}", response_class=HTMLResponse)
     async def pool_action(request: Request, action: str, name: str = "", arg: str = ""):
