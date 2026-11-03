@@ -7,6 +7,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src import pool_manager, user_prefs
+from src.analysis.pool_swipe import SwapCard
+from src.client import pool_swipe as client_pool_swipe
 from src.client.app import create_app
 from src.client.bus import EventBus
 from src.client.donnees import UpdateJob
@@ -190,3 +192,15 @@ def test_lien_suggestions_de_donnees_apres_un_run_ok(seeded_db, tmp_path):
     assert web.post("/donnees/actualiser", headers=token).status_code == 200
     assert job.cancel(5.0)
     assert 'href="/pool/suggestions"' in web.get("/donnees").text
+
+
+def test_accepter_garde_la_taille_et_la_place_du_sortant(web, monkeypatch):
+    """L'entrant prend la place du sortant au milieu du pool (pile figée pour choisir le sortant)."""
+    post(web, "/pool/creer", data={"arg": "Main"})
+    for champion in ("Zed", "Garen", "Ahri"):
+        post(web, f"/pool/ajouter?name=Main&arg={champion}")
+    post(web, "/pool/role?name=Main&arg=top")
+    card = SwapCard("top", "Darius", "Garen", 1.0, 0.5, 0.5, False, (), ())
+    monkeypatch.setattr(client_pool_swipe, "_stack", lambda *args: ([card], None))
+    post(web, "/pool/suggestions/accepter?poste=top&entrant=Darius&sortant=Garen")
+    assert saved(web)["Main"]["champions"] == ["Zed", "Darius", "Ahri"]

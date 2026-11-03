@@ -71,10 +71,16 @@
     swipe(card, event.key === "ArrowRight" ? "right" : "left");
   });
 
-  // Le remplacement de la carte (ou un échec) débloque le swipe suivant.
-  for (const name of ["htmx:afterSettle", "htmx:sendError", "htmx:responseError"]) {
+  // Le remplacement de la carte débloque le swipe suivant ; un échec remet aussi la carte en place.
+  document.addEventListener("htmx:afterSettle", () => {
+    busy = false;
+  });
+  for (const name of ["htmx:sendError", "htmx:responseError"]) {
     document.addEventListener(name, () => {
       busy = false;
+      const card = current();
+      card?.getAnimations?.().forEach((animation) => animation.cancel());
+      if (card) card.style.transform = "";
     });
   }
 })();
