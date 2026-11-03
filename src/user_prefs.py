@@ -25,7 +25,10 @@ _KNOWN_LANES = frozenset(LCU_POSITION_TO_LANE.values())
 
 # Clés hors de `UserPrefs`, écrites par lecture brute : `save_user_prefs` les reporte, sinon
 # la fin de chaque draft coach les effacerait.
-_KEPT_KEYS = ("motion", "active_strategy", "strategies")
+_KEPT_KEYS = ("motion", "active_strategy", "strategies", "pool_swipe")
+
+# Clé des passes de l'écran de suggestions de pool (SPEC-49), datée par version des données.
+SWIPE_KEY = "pool_swipe"
 
 
 @dataclass
@@ -120,8 +123,9 @@ def _write_raw(data: dict) -> bool:
 def save_user_prefs(prefs: UserPrefs) -> bool:
     """Sauvegarde les préférences. Best-effort : ne lève jamais d'exception.
 
-    Les clés de `_KEPT_KEYS` (Motion, stratégies) ne sont pas des champs de `UserPrefs` :
-    elles sont reportées telles quelles, sinon chaque fin de draft coach les effacerait.
+    Les clés de `_KEPT_KEYS` (Motion, stratégies, passes de pool) ne sont pas des champs de
+    `UserPrefs` : elles sont reportées telles quelles, sinon chaque fin de draft coach les
+    effacerait.
     """
     data = asdict(prefs)
     raw = _read_raw()
@@ -194,3 +198,38 @@ def save_role_pool(lane: str, name: Optional[str]) -> bool:
         pools_by_role[lane] = name
     prefs = load_user_prefs() or UserPrefs()
     return save_user_prefs(replace(prefs, pools_by_role=pools_by_role))
+
+
+def load_swipe_passes(version: str) -> Dict[str, List[str]]:
+    """Passes mémorisées par poste pour la version `version` des données (SPEC-49).
+
+    Renvoie {} si la clé est absente ou illisible, ou si elle a été écrite pour une autre
+    version : les passes repartent à zéro à chaque mise à jour des données. Ne garde que les
+    lanes connues et les noms de champion (chaînes).
+    """
+    raw = _read_raw().get(SWIPE_KEY)
+    if not isinstance(raw, dict) or raw.get("version") != version:
+        return {}
+    passed = raw.get("passed")
+    if not isinstance(passed, dict):
+        return {}
+    return {
+        lane: [champion for champion in champions if isinstance(champion, str)]
+        for lane, champions in passed.items()
+        if lane in _KNOWN_LANES and isinstance(champions, list)
+    }
+
+
+def save_swipe_pass(lane: str, champion: str, version: str) -> bool:
+    """Mémorise un champion passé pour le poste `lane` (SPEC-49), sans doublon sans casse.
+
+    Renvoie False sans rien écrire si `lane` n'est pas une lane connue ou si `champion` est vide.
+    Si `version` diffère de la version enregistrée, les anciennes passes sont effacées.
+    """
+    if lane not in _KNOWN_LANES or not champion:
+        return False
+    passes = load_swipe_passes(version)
+    lane_passes = passes.setdefault(lane, [])
+    if champion.casefold() not in {name.casefold() for name in lane_passes}:
+        lane_passes.append(champion)
+    return _write_raw({**_read_raw(), SWIPE_KEY: {"version": version, "passed": passes}})

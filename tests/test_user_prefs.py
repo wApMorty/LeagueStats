@@ -7,11 +7,13 @@ from src.analysis.strategy import Strategy
 from src.user_prefs import (
     UserPrefs,
     load_strategies,
+    load_swipe_passes,
     load_user_prefs,
     save_active_strategy,
     save_motion,
     save_role_pool,
     save_strategies,
+    save_swipe_pass,
     save_user_prefs,
 )
 
@@ -323,3 +325,106 @@ class TestStrategies:
         assert data["pools_by_role"] == {"middle": "GRIND", "top": "Top Pool"}
         assert data["active_strategy"] == "Simple"
         assert [s["name"] for s in data["strategies"]] == ["Grind"]
+
+
+class TestSwipePasses:
+    """Passes de l'écran de suggestions de pool (SPEC-49 §4.2) : par version, sans doublon."""
+
+    def test_pass_then_read_same_version(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            assert save_swipe_pass("top", "Gangplank", "2026-11-01") is True
+            passes = load_swipe_passes("2026-11-01")
+
+        assert passes == {"top": ["Gangplank"]}
+
+    def test_other_version_gives_empty_and_new_pass_clears_old_ones(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            save_swipe_pass("top", "Gangplank", "2026-11-01")
+            assert load_swipe_passes("2026-11-08") == {}
+            save_swipe_pass("middle", "Zoe", "2026-11-08")
+            old_version_passes = load_swipe_passes("2026-11-01")
+            new_version_passes = load_swipe_passes("2026-11-08")
+
+        assert old_version_passes == {}
+        assert new_version_passes == {"middle": ["Zoe"]}
+
+    def test_duplicate_ignored_case_insensitively(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            save_swipe_pass("top", "Gangplank", "v1")
+            save_swipe_pass("top", "GANGPLANK", "v1")
+            passes = load_swipe_passes("v1")
+
+        assert passes == {"top": ["Gangplank"]}
+
+    def test_unknown_lane_refused_without_writing(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            assert save_swipe_pass("mid", "Zoe", "v1") is False
+
+        assert not prefs_file.exists()
+
+    def test_empty_champion_refused_without_writing(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            assert save_swipe_pass("top", "", "v1") is False
+
+        assert not prefs_file.exists()
+
+    def test_neighbour_keys_survive_save_swipe_pass(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            save_motion("reduit")
+            save_role_pool("middle", "GRIND")
+            save_swipe_pass("top", "Gangplank", "v1")
+
+        data = json.loads(prefs_file.read_text(encoding="utf-8"))
+        assert data["motion"] == "reduit"
+        assert data["pools_by_role"] == {"middle": "GRIND"}
+        assert data["pool_swipe"] == {"version": "v1", "passed": {"top": ["Gangplank"]}}
+
+    def test_pool_swipe_survives_save_user_prefs(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            save_swipe_pass("top", "Gangplank", "v1")
+            save_user_prefs(UserPrefs(auto_hover=True))
+
+        data = json.loads(prefs_file.read_text(encoding="utf-8"))
+        assert data["pool_swipe"] == {"version": "v1", "passed": {"top": ["Gangplank"]}}
+        assert data["auto_hover"] is True
+
+    def test_corrupted_value_is_read_tolerantly(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            prefs_file.write_text(json.dumps({"pool_swipe": 3}), encoding="utf-8")
+            assert load_swipe_passes("v1") == {}
+
+            prefs_file.write_text(
+                json.dumps(
+                    {
+                        "pool_swipe": {
+                            "version": "v1",
+                            "passed": {
+                                "top": ["Gangplank", 7, None],
+                                "middle": "Zoe",
+                                "bogus": ["X"],
+                                "bottom": ["Jinx"],
+                            },
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+            passes = load_swipe_passes("v1")
+
+        assert passes == {"top": ["Gangplank"], "bottom": ["Jinx"]}
