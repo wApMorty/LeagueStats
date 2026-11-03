@@ -386,7 +386,7 @@ au top aujourd'hui, 20 cartes, Gangplank pour Olaf en tête (+0,26). Découpage 
 
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
-| 241 | `src/analysis/pool_swipe.py` (`SwapCard`, `pool_score`, `swap_cards`), constantes, `tests/test_pool_swipe.py` | 3 | — | |
+| 241 | `src/analysis/pool_swipe.py` (`SwapCard`, `pool_score`, `swap_cards`), constantes, `tests/test_pool_swipe.py` | 3 | — | ✅ Gangplank pour Olaf +0,26 en tête, 14 cartes au top |
 | 242 | `user_prefs` : clé `pool_swipe`, `load_swipe_passes`, `save_swipe_pass`, tests | 2 | — | ✅ |
 | 243 | `src/client/pool_swipe.py`, routes `GET`/`POST` des suggestions, `tests/test_client_pool_swipe.py` | 3 | 241, 242 | |
 | 244 | `pool_suggestions.html`, partiel, `pool_swipe.js`, styles, bouton sur l'écran Pool, lien sur l'écran Données | 3 | 243 | |

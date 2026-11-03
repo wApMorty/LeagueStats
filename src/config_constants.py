@@ -550,6 +550,17 @@ class PoolStatisticsConfig:
     MIN_GAMES_THRESHOLD: int = 40  # Minimum total games for sufficient data
     MIN_PICKRATE: float = 0.5  # Minimum pickrate % for matchup inclusion
 
+    # SPEC-49 : suggestions de pool à swiper.
+    # Sous 1 % des parties de la lane, des hors-rôle à petit échantillon dominent
+    # (Zoe, Kassadin, mesure 2026-11-03).
+    POOL_SWIPE_MIN_POPULARITY: float = 0.01
+    # Bruit entre deux scrapes sur la valeur d'un trio : 0,2 à 0,4 pt (mesure 2026-11-01).
+    POOL_SWIPE_NOISE_PT: float = 0.2
+    # Glisser minimal (px) qui vaut « prendre » ou « passer » ; à régler à la recette.
+    POOL_SWIPE_DRAG_PX: int = 80
+    # Duels affichés par carte, dans chaque sens (gagnés, perdus).
+    POOL_SWIPE_DUELS_SHOWN: int = 3
+
 
 @dataclass
 class SynergyConfig:
