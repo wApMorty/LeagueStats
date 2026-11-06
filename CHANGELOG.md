@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### 🔧 Chore
+
+- **Seuil de l'écran Blindabilité abaissé à 15 000 parties** (au lieu de 40 000) : l'écran et la correction de tirage du classement couvrent désormais les champions moins joués, comme Yorick ou Aurora au top (54 champions au lieu de 36). Leur tirage est plus bruité ; un champion peu joué à son poste principal peut sortir aberrant (Sylas top, +3,6).
+
 ## [6.2.0] - 2026-11-06
 
 Un nouvel écran Suggestions propose, après chaque mise à jour des données, des échanges qui améliorent ton pool sur chaque poste. Tu les prends ou tu les passes d'un glisser.
