@@ -2,6 +2,7 @@
 
 import json
 import sqlite3
+from datetime import date
 
 import pytest
 from fastapi.testclient import TestClient
@@ -12,6 +13,7 @@ from src.client import pool_swipe as client_pool_swipe
 from src.client.app import create_app
 from src.client.bus import EventBus
 from src.client.donnees import UpdateJob
+from src.client.draft_view import Champions
 from src.config_constants import pool_stats_config
 from src.pipeline import PipelineResult
 from src.config_client import client_config
@@ -204,3 +206,171 @@ def test_accepter_garde_la_taille_et_la_place_du_sortant(web, monkeypatch):
     monkeypatch.setattr(client_pool_swipe, "_stack", lambda *args: ([card], None))
     post(web, "/pool/suggestions/accepter?poste=top&entrant=Darius&sortant=Garen")
     assert saved(web)["Main"]["champions"] == ["Zed", "Darius", "Ahri"]
+
+
+@pytest.fixture(autouse=True)
+def cache_generateur_vide():
+    """Le cache du générateur est un dict de module : vidé avant et après chaque test."""
+    client_pool_swipe._GENERATED.clear()
+    yield
+    client_pool_swipe._GENERATED.clear()
+
+
+def vue(web, size=None, mode=None):
+    """Vue de l'écran pour le top (portraits factices, sous tmp_path)."""
+    champions = Champions(make_assets(web.pools_file.parent))
+    return client_pool_swipe.swipe_view(
+        PoolManager(), web.db, "top", champions, size=size, mode=mode
+    )
+
+
+def noms_generes(web, size=3, mode="actuel"):
+    generated = vue(web, size, mode)["generated"]
+    return [c["name"] for c in generated["champions"]] if generated else None
+
+
+def test_routes_generateur_declarees_avant_pool_action_et_gardees_par_jeton(web):
+    paths = [getattr(route, "path", None) for route in web.app.routes]
+    action = paths.index("/pool/{action}")
+    novelles = (
+        "/pool/suggestions/generer",
+        "/pool/suggestions/creer",
+        "/pool/suggestions/exclure",
+    )
+    for path in novelles:
+        assert paths.index(path) < action
+    designer_main_top(web)
+    for path in novelles:
+        assert post(web, path + "?poste=top", token=False).status_code == 403
+    assert not web.prefs_file.exists() or "pool_exclusions" not in web.prefs_file.read_text("utf-8")
+
+
+def test_generer_rend_le_pool_et_le_second_clic_ne_recalcule_pas(web, monkeypatch):
+    calls = []
+    original = client_pool_swipe.generate_pool
+
+    def counting(*args):
+        calls.append(args)
+        return original(*args)
+
+    monkeypatch.setattr(client_pool_swipe, "generate_pool", counting)
+    designer_main_top(web)
+    reply = post(web, "/pool/suggestions/generer?poste=top&taille=3&mode=actuel")
+    assert reply.status_code == 200
+    assert len(noms_generes(web)) == 3
+    assert len(calls) == 1
+    post(web, "/pool/suggestions/generer?poste=top&taille=3&mode=actuel")
+    assert len(calls) == 1
+
+
+def test_creer_ecrit_le_pool_genere_le_designe_au_top_et_suffixe_le_second(web):
+    designer_main_top(web)
+    post(web, "/pool/suggestions/generer?poste=top&taille=3&mode=actuel")
+    nom = f"TOP GÉNÉRÉ {date.today().isoformat()}"
+    reply = post(web, "/pool/suggestions/creer?poste=top&taille=3&mode=actuel")
+    assert reply.status_code == 200 and f"« {nom} » créé" in reply.text
+    assert len(saved(web)[nom]["champions"]) == 3
+    prefs = json.loads(web.prefs_file.read_text("utf-8"))
+    assert prefs["pools_by_role"]["top"] == nom
+
+    post(web, "/pool/suggestions/creer?poste=top&taille=3&mode=actuel")
+    assert f"{nom} (2)" in saved(web)
+
+
+def test_creer_sans_generation_possible_donne_une_notice(web):
+    designer_main_top(web)
+    for champion in ("Zed", "Darius", "Ahri"):
+        post(web, f"/pool/suggestions/exclure?poste=top&champion={champion}")
+    reply = post(web, "/pool/suggestions/creer?poste=top&taille=3&mode=actuel")
+    assert "Pas assez de champions" in reply.text
+    assert set(saved(web)) == {"Main"}
+
+
+def test_exclure_retire_le_champion_des_cartes_et_du_generateur(web):
+    designer_main_top(web)
+    reply = post(web, "/pool/suggestions/exclure?poste=top&champion=darius")
+    assert reply.status_code == 200 and "Darius exclu du générateur" in reply.text
+    assert 'data-incoming="Darius"' not in reply.text
+    assert vue(web)["exclusions"][0]["name"] == "Darius"
+
+    post(web, "/pool/suggestions/generer?poste=top&taille=3&mode=actuel")
+    assert "Darius" not in noms_generes(web)
+
+    accept = post(web, "/pool/suggestions/accepter?poste=top&entrant=Darius&sortant=Ahri")
+    assert "Suggestion périmée" in accept.text
+    assert saved(web)["Main"]["champions"] == ["Ahri"]
+
+    post(web, "/pool/suggestions/exclure?poste=top&champion=Darius&retirer=1")
+    assert 'data-incoming="Darius"' in web.get("/pool/suggestions?poste=top").text
+
+
+def test_exclus_restent_exclus_apres_une_mise_a_jour_des_donnees(web):
+    designer_main_top(web)
+    post(web, "/pool/suggestions/exclure?poste=top&champion=Darius")
+    with sqlite3.connect(web.db) as db:
+        db.execute(
+            "UPDATE db_meta SET value = '2026-11-03T10:00:00+00:00' WHERE key = 'last_scrape_utc'"
+        )
+    post(web, "/pool/suggestions/generer?poste=top&taille=3&mode=actuel")
+    assert "Darius" not in noms_generes(web)
+    assert 'data-incoming="Darius"' not in web.get("/pool/suggestions?poste=top").text
+
+
+def test_champion_inconnu_refuse_sans_ecriture(web):
+    designer_main_top(web)
+    reply = post(web, "/pool/suggestions/exclure?poste=top&champion=Yone")
+    assert "Champion inconnu" in reply.text
+    assert "pool_exclusions" not in web.prefs_file.read_text("utf-8")
+
+
+def test_taille_et_mode_invalides_ramenes_au_defaut(web):
+    designer_main_top(web)
+    reply = post(web, "/pool/suggestions/generer?poste=top&taille=9&mode=inconnu")
+    assert f"Pas assez de champions pour un pool de {pool_stats_config.POOL_GEN_DEFAULT_SIZE}" in (
+        reply.text
+    )
+    view = vue(web, size="9", mode="inconnu")
+    assert view["size"] == pool_stats_config.POOL_GEN_DEFAULT_SIZE
+    assert view["mode"] == "moyenne"
+    assert view["sizes"] == [3, 4, 5, 6]
+
+
+def test_generer_lit_le_corps_et_le_corps_l_emporte_sur_la_query(web):
+    designer_main_top(web)
+    reply = post(
+        web,
+        "/pool/suggestions/generer?poste=top&taille=4&mode=moyenne",
+        data={"poste": "top", "taille": "3", "mode": "actuel"},
+    )
+    assert reply.status_code == 200
+    assert len(noms_generes(web, size=3, mode="actuel")) == 3
+    assert noms_generes(web, size=4, mode="moyenne") is None
+
+
+def test_creer_lit_le_corps_taille_et_mode(web):
+    designer_main_top(web)
+    post(
+        web,
+        "/pool/suggestions/creer",
+        data={"poste": "top", "taille": "3", "mode": "actuel"},
+    )
+    nom = f"TOP GÉNÉRÉ {date.today().isoformat()}"
+    assert len(saved(web)[nom]["champions"]) == 3
+
+
+def test_exclure_lit_le_champion_et_le_retrait_dans_le_corps(web):
+    designer_main_top(web)
+    reply = post(
+        web,
+        "/pool/suggestions/exclure?poste=top&champion=Ahri",
+        data={"poste": "top", "champion": "Darius"},
+    )
+    assert "Darius exclu du générateur" in reply.text
+    assert vue(web)["exclusions"][0]["name"] == "Darius"
+    reply = post(
+        web,
+        "/pool/suggestions/exclure",
+        data={"poste": "top", "champion": "Darius", "retirer": "1"},
+    )
+    assert "Darius rétabli dans le générateur" in reply.text
+    assert vue(web)["exclusions"] == []

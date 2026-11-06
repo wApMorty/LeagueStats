@@ -26,7 +26,13 @@ from ..coaching.grid import GRID
 from ..repositories.coaching import CoachingRepository
 from ..analysis.blindability import compute_blindability
 from ..analysis.strategy import all_strategies
-from ..user_prefs import load_motion, load_strategies, save_active_strategy, save_motion
+from ..user_prefs import (
+    load_motion,
+    load_strategies,
+    save_active_strategy,
+    save_motion,
+    save_role_pool,
+)
 from ..winprob.draft import recorded_draft
 from .assets import PLACEHOLDER, Assets
 from .data import (
@@ -68,7 +74,14 @@ from .lobby import (
 from .lcu_status import LcuProbe
 from .collection import VIEWS, read_collection
 from .pools import active_pool_name, champion_names, edit as edit_pool, forget_bans, pools_view
-from .pool_swipe import accept as accept_swipe, pass_card, swipe_view
+from .pool_swipe import (
+    accept as accept_swipe,
+    create_generated,
+    exclude as exclude_champion,
+    pass_card,
+    require_generated,
+    swipe_view,
+)
 from .strategies import active_name as active_strategy_name, edit as edit_strategy, strategies_view
 from .historique import read_game, read_history
 from .profil import read_profile
@@ -215,6 +228,16 @@ def create_app(
     async def in_thread(function, *args, **kwargs):
         """`render` sonde le LCU (requête synchrone) : hors de la boucle d'événements."""
         return await anyio.to_thread.run_sync(lambda: function(*args, **kwargs))
+
+    async def form_fields(request: Request) -> dict:
+        """Champs d'une route POST : le corps form-urlencoded (htmx) l'emporte sur la query string.
+
+        Lu à la main, comme `pool_action` : `Form` demanderait python-multipart.
+        """
+        body = parse_qs((await request.body()).decode("utf-8", "replace"))
+        fields = dict(request.query_params)
+        fields.update({key: values[0] for key, values in body.items() if values})
+        return fields
 
     @app.middleware("http")
     async def guard(request: Request, call_next):
@@ -570,6 +593,109 @@ def create_app(
                 notice = str(refusal)
             return swipe_view(
                 PoolManager(), app.state.db_path, poste, Champions(app.state.assets), notice
+            )
+
+        view = await in_thread(work)
+        return templates.TemplateResponse(
+            request, "partials/pool_suggestions_body.html", {"v": view}
+        )
+
+    @app.post("/pool/suggestions/generer", response_class=HTMLResponse)
+    async def pool_suggestions_generate(request: Request):
+        """Calcule le pool généré du poste (SPEC-50), en cache ; sans écriture dans les pools. Un refus
+        (pas assez de champions, base illisible) s'affiche dans le corps de l'écran (200)."""
+        fields = await form_fields(request)
+        poste, taille, mode = (
+            fields.get("poste", ""),
+            fields.get("taille", ""),
+            fields.get("mode", ""),
+        )
+
+        def work() -> dict:
+            notice = None
+            try:
+                require_generated(app.state.db_path, poste, taille, mode)
+            except Refusal as refusal:
+                notice = str(refusal)
+            return swipe_view(
+                PoolManager(),
+                app.state.db_path,
+                poste,
+                Champions(app.state.assets),
+                notice,
+                size=taille,
+                mode=mode,
+            )
+
+        view = await in_thread(work)
+        return templates.TemplateResponse(
+            request, "partials/pool_suggestions_body.html", {"v": view}
+        )
+
+    @app.post("/pool/suggestions/creer", response_class=HTMLResponse)
+    async def pool_suggestions_create(request: Request):
+        """Crée le pool généré « <POSTE> GÉNÉRÉ <date> » au rôle du poste, l'enregistre puis le désigne
+        au poste ; la commande `pool <nom>` n'est pas déposée (le pool neuf n'est jamais le pool par
+        défaut). Un refus s'affiche dans le corps de l'écran (200)."""
+        fields = await form_fields(request)
+        poste, taille, mode = (
+            fields.get("poste", ""),
+            fields.get("taille", ""),
+            fields.get("mode", ""),
+        )
+
+        def work() -> dict:
+            manager = PoolManager()
+            notice = None
+            try:
+                name, notice = create_generated(manager, app.state.db_path, poste, taille, mode)
+                if not manager.save_custom_pools(recalculate_bans=False):
+                    raise Refusal("Pools non enregistrés")
+                if not save_role_pool(poste, name):
+                    raise Refusal("Préférences non enregistrées")
+            except Refusal as refusal:
+                notice = str(refusal)
+            return swipe_view(
+                PoolManager(),
+                app.state.db_path,
+                poste,
+                Champions(app.state.assets),
+                notice,
+                size=taille,
+                mode=mode,
+            )
+
+        view = await in_thread(work)
+        return templates.TemplateResponse(
+            request, "partials/pool_suggestions_body.html", {"v": view}
+        )
+
+    @app.post("/pool/suggestions/exclure", response_class=HTMLResponse)
+    async def pool_suggestions_exclude(request: Request):
+        """Exclut `champion` du générateur du poste (`retirer=1` le rétablit) : il disparaît des cartes
+        et du pool généré. Un refus s'affiche dans le corps de l'écran (200)."""
+        fields = await form_fields(request)
+        poste, taille, mode = (
+            fields.get("poste", ""),
+            fields.get("taille", ""),
+            fields.get("mode", ""),
+        )
+        champion, retirer = fields.get("champion", ""), fields.get("retirer", "0")
+
+        def work() -> dict:
+            notice = None
+            try:
+                notice = exclude_champion(app.state.db_path, poste, champion, retirer == "1")
+            except Refusal as refusal:
+                notice = str(refusal)
+            return swipe_view(
+                PoolManager(),
+                app.state.db_path,
+                poste,
+                Champions(app.state.assets),
+                notice,
+                size=taille,
+                mode=mode,
             )
 
         view = await in_thread(work)
