@@ -1,5 +1,7 @@
 """SPEC-51 tâche 254 : page Méta du poste (vue pure, route, redirection depuis /blindabilite)."""
 
+import re
+
 from fastapi.testclient import TestClient
 
 from src import user_prefs
@@ -214,3 +216,20 @@ def test_rendu_sans_sequence_sans_picks(temp_db, tmp_path, monkeypatch):
 
     assert 'class="pick-seq"' not in html
     assert 'id="meta-aside"' in html
+
+
+def test_route_marque_le_pool_designe_au_poste_dans_l_histogramme(temp_db, tmp_path, monkeypatch):
+    """Critère 3 : le pool résolu du poste (route) atteint l'histogramme (vue), sans casse."""
+    from src.pool_manager import PoolManager
+
+    manager = PoolManager()
+    manager.create_pool("Main", ["riven"], role="top")
+    assert manager.save_custom_pools(recalculate_bans=False)
+    assert user_prefs.save_role_pool("top", "Main")
+    data = {"matchups": _full(), "synergies": {}, "draws": {"top": {"Riven": 0.2, "Shen": -0.1}}}
+    monkeypatch.setattr(app_module, "compute_blindability", lambda connection: data)
+
+    html = _client(temp_db, tmp_path).get("/meta?poste=top").text
+
+    marked = re.findall(r'class="is-mine"[^>]*title="(\w+) ', html)
+    assert marked == ["Riven"]
