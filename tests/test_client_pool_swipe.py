@@ -374,3 +374,32 @@ def test_exclure_lit_le_champion_et_le_retrait_dans_le_corps(web):
     )
     assert "Darius rétabli dans le générateur" in reply.text
     assert vue(web)["exclusions"] == []
+
+
+def test_section_generer_presente_sans_generation(web):
+    designer_main_top(web)
+    page = web.get("/pool/suggestions?poste=top").text
+    assert "Générer un pool" in page
+    assert 'hx-post="/pool/suggestions/generer"' in page
+    assert 'name="taille"' in page and 'name="mode" value="moyenne"' in page
+    assert 'name="mode" value="actuel"' in page
+    assert 'class="htmx-indicator' in page and "Calcul…" in page
+    assert 'list="gen-champions"' in page and '<datalist id="gen-champions">' in page
+    assert "Créer le pool" not in page
+
+
+def test_resultat_generer_affiche_pool_et_creer(web):
+    designer_main_top(web)
+    reply = post(web, "/pool/suggestions/generer?poste=top&taille=3&mode=actuel")
+    assert all(f"<b>{name}</b>" in reply.text for name in noms_generes(web))
+    assert "Créer le pool" in reply.text
+    assert 'hx-post="/pool/suggestions/creer"' in reply.text
+    assert '<table class="gen-table">' in reply.text and 'scope="col"' in reply.text
+
+
+def test_puce_exclu_a_son_bouton_de_retablissement(web):
+    designer_main_top(web)
+    post(web, "/pool/suggestions/exclure?poste=top&champion=Darius")
+    page = web.get("/pool/suggestions?poste=top").text
+    assert 'aria-label="Rétablir Darius"' in page
+    assert "retirer=1" in page

@@ -392,7 +392,7 @@ Shen, Urgot (+1,66). Dépend du seuil Blindabilité à 15 000 (à commiter). Dé
 | 247 | `user_prefs` : clé `pool_exclusions`, `load_pool_exclusions`, `save_pool_exclusion`, tests | 2 | — || ✅ 2026-11-06 : 10 tests |
 | 248 | `distinct_snapshots`, `src/analysis/pool_generator.py`, constantes, tests (dont exhaustif) | 5 | 246 || ✅ 2026-11-06 : optimum exhaustif atteint sur la vraie base dans 40 configurations sur 40 ; top moyenne sans Gangplank ni Fiora +1,519 (Malphite, Pantheon, Riven, Shen, Urgot) ; 3 scrapes distincts ; test d'optimalité remplacé par l'optimalité locale (plan) |
 | 249 | Client : cartes sur `PoolScorer` et exclusions, `generate` en cache, routes `generer`, `creer`, `exclure`, tests | 3 | 247, 248 || ✅ 2026-11-06 : 11 tests ; champs lus dans le corps du formulaire comme `pool_action` ; pas de commande `pool` après création (plan) |
-| 250 | Section « Générer un pool » du partiel, styles, sans JS | 2 | 249 | |
+| 250 | Section « Générer un pool » du partiel, styles, sans JS | 2 | 249 || ✅ 2026-11-06 : 3 tests de rendu ; formulaires htmx, aucun JS ajouté |
 | 251 | Clôture : exe vérifié, `PROJECT_STRUCTURE.md`, `CHANGELOG.md`, statuts, README des specs, `TODO.md` | 1 | 250 | |
 
 ### Lot SPEC-49, suggestions de pool à swiper (✅ livrée le 2026-11-03, recette @pj35 à faire)
