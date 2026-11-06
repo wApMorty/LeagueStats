@@ -6,11 +6,13 @@ from unittest.mock import patch
 from src.analysis.strategy import Strategy
 from src.user_prefs import (
     UserPrefs,
+    load_meta_lane,
     load_pool_exclusions,
     load_strategies,
     load_swipe_passes,
     load_user_prefs,
     save_active_strategy,
+    save_meta_lane,
     save_motion,
     save_pool_exclusion,
     save_role_pool,
@@ -551,3 +553,72 @@ class TestPoolExclusions:
             exclusions = load_pool_exclusions()
 
         assert exclusions == {"top": ["Gangplank"]}
+
+
+class TestMetaLane:
+    """Poste mémorisé de la page Blindabilité (SPEC-51 §4.2)."""
+
+    def test_default_is_top_when_absent(self, tmp_path):
+        prefs_file = tmp_path / "does_not_exist.json"
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            assert load_meta_lane() == "top"
+
+    def test_round_trip(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            assert save_meta_lane("support") is True
+            assert load_meta_lane() == "support"
+
+    def test_unknown_lane_refused_without_writing(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            assert save_meta_lane("utility") is False
+            assert save_meta_lane("mid") is False
+
+        assert not prefs_file.exists()
+
+    def test_corrupted_value_reads_as_top(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            prefs_file.write_text(json.dumps({"meta_lane": 3}), encoding="utf-8")
+            assert load_meta_lane() == "top"
+
+            prefs_file.write_text(json.dumps({"meta_lane": "mid"}), encoding="utf-8")
+            assert load_meta_lane() == "top"
+
+            prefs_file.write_text(json.dumps({"meta_lane": ["jungle"]}), encoding="utf-8")
+            assert load_meta_lane() == "top"
+
+    def test_survives_save_user_prefs(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            save_meta_lane("jungle")
+            save_user_prefs(UserPrefs(auto_hover=True))
+            lane = load_meta_lane()
+
+        data = json.loads(prefs_file.read_text(encoding="utf-8"))
+        assert data["meta_lane"] == "jungle"
+        assert data["auto_hover"] is True
+        assert lane == "jungle"
+
+    def test_neighbour_keys_survive(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            save_motion("reduit")
+            save_role_pool("middle", "GRIND")
+            save_pool_exclusion("top", "Gangplank", True)
+            save_active_strategy("Grind")
+            save_meta_lane("bottom")
+
+        data = json.loads(prefs_file.read_text(encoding="utf-8"))
+        assert data["meta_lane"] == "bottom"
+        assert data["motion"] == "reduit"
+        assert data["pools_by_role"] == {"middle": "GRIND"}
+        assert data["pool_exclusions"] == {"top": ["Gangplank"]}
+        assert data["active_strategy"] == "Grind"

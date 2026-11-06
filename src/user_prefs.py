@@ -29,9 +29,19 @@ SWIPE_KEY = "pool_swipe"
 # Clé des champions exclus par poste du générateur de pools (SPEC-50 §4.4).
 EXCLUSIONS_KEY = "pool_exclusions"
 
+# Clé du poste mémorisé de la page Blindabilité (SPEC-51 §4.2).
+META_LANE_KEY = "meta_lane"
+
 # Clés hors de `UserPrefs`, écrites par lecture brute : `save_user_prefs` les reporte, sinon
 # la fin de chaque draft coach les effacerait.
-_KEPT_KEYS = ("motion", "active_strategy", "strategies", SWIPE_KEY, EXCLUSIONS_KEY)
+_KEPT_KEYS = (
+    "motion",
+    "active_strategy",
+    "strategies",
+    SWIPE_KEY,
+    EXCLUSIONS_KEY,
+    META_LANE_KEY,
+)
 
 
 @dataclass
@@ -276,3 +286,22 @@ def save_pool_exclusion(lane: str, champion: str, excluded: bool) -> bool:
     else:
         exclusions.pop(lane, None)
     return _write_raw({**_read_raw(), EXCLUSIONS_KEY: exclusions})
+
+
+def load_meta_lane() -> str:
+    """Poste mémorisé pour la page Blindabilité (SPEC-51 §4.2).
+
+    Renvoie "top" si la clé est absente, n'est pas une chaîne ou n'est pas une lane connue.
+    """
+    lane = _read_raw().get(META_LANE_KEY)
+    return lane if isinstance(lane, str) and lane in _KNOWN_LANES else "top"
+
+
+def save_meta_lane(lane: str) -> bool:
+    """Mémorise le poste de la page Blindabilité en gardant les autres clés du fichier.
+
+    Renvoie False sans rien écrire si `lane` n'est pas une lane connue.
+    """
+    if lane not in _KNOWN_LANES:
+        return False
+    return _write_raw({**_read_raw(), META_LANE_KEY: lane})
