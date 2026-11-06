@@ -23,12 +23,15 @@ PREFS_FILENAME = "user_prefs.json"
 
 _KNOWN_LANES = frozenset(LCU_POSITION_TO_LANE.values())
 
-# Clés hors de `UserPrefs`, écrites par lecture brute : `save_user_prefs` les reporte, sinon
-# la fin de chaque draft coach les effacerait.
-_KEPT_KEYS = ("motion", "active_strategy", "strategies", "pool_swipe")
-
 # Clé des passes de l'écran de suggestions de pool (SPEC-49), datée par version des données.
 SWIPE_KEY = "pool_swipe"
+
+# Clé des champions exclus par poste du générateur de pools (SPEC-50 §4.4).
+EXCLUSIONS_KEY = "pool_exclusions"
+
+# Clés hors de `UserPrefs`, écrites par lecture brute : `save_user_prefs` les reporte, sinon
+# la fin de chaque draft coach les effacerait.
+_KEPT_KEYS = ("motion", "active_strategy", "strategies", SWIPE_KEY, EXCLUSIONS_KEY)
 
 
 @dataclass
@@ -233,3 +236,43 @@ def save_swipe_pass(lane: str, champion: str, version: str) -> bool:
     if champion.casefold() not in {name.casefold() for name in lane_passes}:
         lane_passes.append(champion)
     return _write_raw({**_read_raw(), SWIPE_KEY: {"version": version, "passed": passes}})
+
+
+def load_pool_exclusions() -> Dict[str, List[str]]:
+    """Champions exclus par poste pour le générateur de pools (SPEC-50 §4.4).
+
+    Renvoie {} si la clé est absente ou n'est pas un objet. Ne garde que les lanes connues et
+    les noms de champion (chaînes).
+    """
+    raw = _read_raw().get(EXCLUSIONS_KEY)
+    if not isinstance(raw, dict):
+        return {}
+    return {
+        lane: [champion for champion in champions if isinstance(champion, str)]
+        for lane, champions in raw.items()
+        if lane in _KNOWN_LANES and isinstance(champions, list)
+    }
+
+
+def save_pool_exclusion(lane: str, champion: str, excluded: bool) -> bool:
+    """Exclut (`excluded=True`) ou rétablit `champion` pour le poste `lane` (SPEC-50 §4.4).
+
+    Sans doublon ni distinction de casse. Renvoie False sans rien écrire si `lane` n'est pas une
+    lane connue ou si `champion` est vide ; retirer un champion absent renvoie True sans changer
+    les exclusions. Un poste vidé disparaît du dict.
+    """
+    if lane not in _KNOWN_LANES or not champion:
+        return False
+    exclusions = load_pool_exclusions()
+    lane_exclusions = exclusions.get(lane, [])
+    key = champion.casefold()
+    if excluded:
+        if key not in {name.casefold() for name in lane_exclusions}:
+            lane_exclusions.append(champion)
+    else:
+        lane_exclusions = [name for name in lane_exclusions if name.casefold() != key]
+    if lane_exclusions:
+        exclusions[lane] = lane_exclusions
+    else:
+        exclusions.pop(lane, None)
+    return _write_raw({**_read_raw(), EXCLUSIONS_KEY: exclusions})

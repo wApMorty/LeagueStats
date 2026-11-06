@@ -389,7 +389,7 @@ Shen, Urgot (+1,66). Dépend du seuil Blindabilité à 15 000 (à commiter). Dé
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
 | 246 | `PoolScorer` (tirage, blind exposé), `pool_score` et `swap_cards` dessus, `excluded`, `POOL_BLIND_DRAWS`, tests | 3 | — | |
-| 247 | `user_prefs` : clé `pool_exclusions`, `load_pool_exclusions`, `save_pool_exclusion`, tests | 2 | — | |
+| 247 | `user_prefs` : clé `pool_exclusions`, `load_pool_exclusions`, `save_pool_exclusion`, tests | 2 | — || ✅ 2026-11-06 : 10 tests |
 | 248 | `distinct_snapshots`, `src/analysis/pool_generator.py`, constantes, tests (dont exhaustif) | 5 | 246 | |
 | 249 | Client : cartes sur `PoolScorer` et exclusions, `generate` en cache, routes `generer`, `creer`, `exclure`, tests | 3 | 247, 248 | |
 | 250 | Section « Générer un pool » du partiel, styles, sans JS | 2 | 249 | |

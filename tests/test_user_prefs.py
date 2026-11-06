@@ -6,11 +6,13 @@ from unittest.mock import patch
 from src.analysis.strategy import Strategy
 from src.user_prefs import (
     UserPrefs,
+    load_pool_exclusions,
     load_strategies,
     load_swipe_passes,
     load_user_prefs,
     save_active_strategy,
     save_motion,
+    save_pool_exclusion,
     save_role_pool,
     save_strategies,
     save_swipe_pass,
@@ -428,3 +430,124 @@ class TestSwipePasses:
             passes = load_swipe_passes("v1")
 
         assert passes == {"top": ["Gangplank"], "bottom": ["Jinx"]}
+
+
+class TestPoolExclusions:
+    """Champions exclus par poste du générateur de pools (SPEC-50 §4.4)."""
+
+    def test_add_then_load(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            assert save_pool_exclusion("top", "Gangplank", True) is True
+            assert save_pool_exclusion("top", "Fiora", True) is True
+            exclusions = load_pool_exclusions()
+
+        assert exclusions == {"top": ["Gangplank", "Fiora"]}
+
+    def test_duplicate_ignored_case_insensitively(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            save_pool_exclusion("top", "Gangplank", True)
+            save_pool_exclusion("top", "GANGPLANK", True)
+            exclusions = load_pool_exclusions()
+
+        assert exclusions == {"top": ["Gangplank"]}
+
+    def test_removal_is_case_insensitive(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            save_pool_exclusion("top", "Gangplank", True)
+            save_pool_exclusion("top", "Fiora", True)
+            assert save_pool_exclusion("top", "gangplank", False) is True
+            exclusions = load_pool_exclusions()
+
+        assert exclusions == {"top": ["Fiora"]}
+
+    def test_removing_absent_champion_returns_true_without_change(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            save_pool_exclusion("top", "Fiora", True)
+            before = json.loads(prefs_file.read_text(encoding="utf-8"))
+            assert save_pool_exclusion("top", "Gangplank", False) is True
+            after = json.loads(prefs_file.read_text(encoding="utf-8"))
+
+        assert after == before
+        assert load_pool_exclusions() == {"top": ["Fiora"]}
+
+    def test_unknown_lane_refused_without_writing(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            assert save_pool_exclusion("mid", "Zoe", True) is False
+
+        assert not prefs_file.exists()
+
+    def test_empty_champion_refused_without_writing(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            assert save_pool_exclusion("top", "", True) is False
+
+        assert not prefs_file.exists()
+
+    def test_emptied_lane_disappears_from_dict(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            save_pool_exclusion("top", "Fiora", True)
+            save_pool_exclusion("middle", "Zoe", True)
+            save_pool_exclusion("top", "Fiora", False)
+            data = json.loads(prefs_file.read_text(encoding="utf-8"))
+
+        assert data["pool_exclusions"] == {"middle": ["Zoe"]}
+
+    def test_neighbour_keys_survive(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            save_motion("reduit")
+            save_role_pool("middle", "GRIND")
+            save_pool_exclusion("top", "Gangplank", True)
+
+        data = json.loads(prefs_file.read_text(encoding="utf-8"))
+        assert data["motion"] == "reduit"
+        assert data["pools_by_role"] == {"middle": "GRIND"}
+        assert data["pool_exclusions"] == {"top": ["Gangplank"]}
+
+    def test_pool_exclusions_survive_save_user_prefs(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            save_pool_exclusion("top", "Gangplank", True)
+            save_user_prefs(UserPrefs(auto_hover=True))
+
+        data = json.loads(prefs_file.read_text(encoding="utf-8"))
+        assert data["pool_exclusions"] == {"top": ["Gangplank"]}
+        assert data["auto_hover"] is True
+
+    def test_corrupted_value_is_read_as_empty(self, tmp_path):
+        prefs_file = tmp_path / "user_prefs.json"
+
+        with patch("src.user_prefs.get_user_prefs_path", return_value=str(prefs_file)):
+            prefs_file.write_text(json.dumps({"pool_exclusions": ["Gangplank"]}), encoding="utf-8")
+            assert load_pool_exclusions() == {}
+
+            prefs_file.write_text(
+                json.dumps(
+                    {
+                        "pool_exclusions": {
+                            "top": ["Gangplank", 7, None],
+                            "middle": "Zoe",
+                            "bogus": ["X"],
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+            exclusions = load_pool_exclusions()
+
+        assert exclusions == {"top": ["Gangplank"]}
