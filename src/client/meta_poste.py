@@ -86,16 +86,25 @@ def _histogram(
         return []
     pool = {name.casefold() for name in pool_champions}
     step = client_config.BLINDABILITE_BIN_PP
+    bound = round(client_config.BLINDABILITE_MAX_PP / step)
     reach = max(1, math.ceil(max(abs(value) for value in draws.values()) / step - 0.5))
+    clipped = reach > bound
+    reach = min(reach, bound)
     bins: Dict[int, List[dict]] = {index: [] for index in range(-reach, reach + 1)}
     for name, value in sorted(draws.items(), key=lambda item: abs(item[1])):
         portrait = champions.by_name(name) or {"img": None, "name": name}
-        bins[round(value / step)].append(
+        bins[max(-reach, min(reach, round(value / step)))].append(
             {**portrait, "value": signed(value, 2), "mine": name.casefold() in pool}
         )
+
+    def label(index: int) -> str:
+        if clipped and abs(index) == reach:  # colonne du bord : elle reçoit tout ce qui dépasse
+            return ("≥ " if index > 0 else "≤ ") + signed(index * step, 2)
+        return signed(index * step, 2) if index % 2 == 0 else ""
+
     return [
         {
-            "label": signed(index * step, 2) if index % 2 == 0 else "",
+            "label": label(index),
             "tone": "up" if index > 0 else "down" if index < 0 else "",
             "champions": column,
         }

@@ -966,11 +966,11 @@ h2 { margin: 0; font: 600 24px/1 var(--font-title); }
 .role-matrix td.up { background: oklch(0.82 0.13 165 / calc(var(--a) * 0.6)); }
 .role-matrix td.down { background: oklch(0.72 0.21 345 / calc(var(--a) * 0.5)); }
 .draw-chart { display: flex; align-items: stretch; gap: 2px; margin-bottom: 12px; overflow-x: auto; }
-.draw-col { display: flex; flex: 1 0 36px; flex-direction: column; justify-content: flex-end; min-height: 240px; }
+.draw-col { display: flex; flex: 1 0 28px; flex-direction: column; justify-content: flex-end; min-height: 240px; }
 .draw-col.up { background: linear-gradient(to top, oklch(0.82 0.13 165 / 0.1), transparent); }
 .draw-col.down { background: linear-gradient(to top, oklch(0.72 0.21 345 / 0.1), transparent); }
 .draw-stack { display: flex; flex-direction: column-reverse; align-items: center; gap: 2px; padding: 2px 0; }
-.draw-stack img, .draw-stack span { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 4px;
+.draw-stack img, .draw-stack span { display: grid; width: 26px; height: 26px; place-items: center; border-radius: 4px;
   background: var(--surface-pop); font-size: 11px; }
 .draw-tick { height: 18px; font-size: 11px; text-align: center; white-space: nowrap; color: var(--muted-2); }
 

@@ -200,7 +200,11 @@ class ClientConfig:
     # Origines : POLL = une page toutes les ~12 s, 2 s montre chaque champion qui passe (log du
     # 2026-10-06, 90 pages à 5 fils en 1 079 s) ; ETA_MIN_PAGES = moins d'une page par fil, pas
     # d'estimation ; CLOSE_TIMEOUT = pages en cours (~60 s chacune) puis copie de la sauvegarde.
-    BLINDABILITE_BIN_PP: float = 0.05  # largeur d'une colonne de l'histogramme, en pp de winrate
+    # Histogramme des tirages (Méta du poste) : colonnes de 0,1 pp sur ±1 pp, soit 21 colonnes qui
+    # tiennent dans la colonne principale (655 px à 1 440 px de large, 2026-11-06). Une valeur
+    # au-delà (Sylas top +3,58 pp) va dans la colonne du bord.
+    BLINDABILITE_BIN_PP: float = 0.1  # largeur d'une colonne de l'histogramme, en pp de winrate
+    BLINDABILITE_MAX_PP: float = 1.0  # borne de l'axe, en pp de winrate
     DONNEES_POLL_S: int = 2
     DONNEES_ETA_MIN_PAGES: int = 5
     DONNEES_CLOSE_TIMEOUT_S: float = 240.0
