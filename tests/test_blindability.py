@@ -11,7 +11,7 @@ import pytest
 
 from src.analysis.blindability import compute_blindability
 from src.analysis.shrink import noise_variance
-from src.client.blindabilite import blindabilite_view
+from src.client.meta_poste import meta_view
 from src.config_client import client_config
 from src.config_constants import analysis_config
 
@@ -120,7 +120,7 @@ def test_base_sans_paires():
 def test_vue_lignes_centrees_sur_zero_et_cases_absentes():
     data = {"matchups": {"top": {"top": 3.0, "jungle": 1.0}}, "synergies": {}, "draws": {}}
 
-    view = blindabilite_view(data, _champions(), None)
+    view = meta_view(data, _champions(), None, (), [])
 
     first = view["matchups"]["rows"][0]["cells"]
     assert [cell and cell["text"] for cell in first] == ["+50 %", "−50 %", None, None, None]
@@ -132,16 +132,16 @@ def test_vue_lignes_centrees_sur_zero_et_cases_absentes():
 def test_vue_ligne_sans_signal_ne_divise_pas_par_zero():
     data = {"matchups": {"top": {"top": 0.0, "jungle": 0.0}}}
 
-    cells = blindabilite_view(data, _champions(), None)["matchups"]["rows"][0]["cells"]
+    cells = meta_view(data, _champions(), None, (), [])["matchups"]["rows"][0]["cells"]
 
     assert cells[0]["text"] == "—"
 
 
 def test_vue_histogramme_range_chaque_champion_dans_sa_colonne():
     step = client_config.BLINDABILITE_BIN_PP
-    data = {"matchups": {"top": {"top": 1.0}}, "draws": {"middle": {"Yasuo": -2 * step, "Ahri": 0}}}
+    data = {"matchups": {"top": {"top": 1.0}}, "draws": {"top": {"Yasuo": -2 * step, "Ahri": 0}}}
 
-    columns = blindabilite_view(data, _champions(), "inconnu")["histogram"]
+    columns = meta_view(data, _champions(), "inconnu", (), [])["histogram"]
 
     assert len(columns) == 5  # symétrique : −2 à +2 colonnes
     assert [c["name"] for c in columns[0]["champions"]] == ["Yasuo"]
@@ -150,7 +150,7 @@ def test_vue_histogramme_range_chaque_champion_dans_sa_colonne():
 
 
 def test_vue_vide_sans_donnees():
-    view = blindabilite_view({}, _champions(), "top")
+    view = meta_view({}, _champions(), "top", (), [])
 
     assert view["empty"]
     assert next(lane for lane in view["lanes"] if lane["on"])["key"] == "top"

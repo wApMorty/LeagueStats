@@ -10,23 +10,32 @@ from urllib.parse import parse_qs, urlsplit
 
 import anyio
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sse_starlette.sse import EventSourceResponse
 
 from ..config import get_resource_path
 from ..config_client import client_config
-from ..config_constants import analysis_config
+from ..config_constants import analysis_config, scraping_config
 from ..data_freshness import get_freshness_info
 from ..draft import calibration_notice
-from ..pool_manager import PoolManager, get_user_data_path
+from ..pool_manager import PoolManager, get_user_data_path, resolve_pool_for_lane
 from ..coaching.goals import set_goal
 from ..coaching.grid import GRID
 from ..repositories.coaching import CoachingRepository
 from ..analysis.blindability import compute_blindability
+from ..analysis.pick_order import pick_order
 from ..analysis.strategy import all_strategies
-from ..user_prefs import load_motion, load_strategies, save_active_strategy, save_motion
+from ..user_prefs import (
+    load_meta_lane,
+    load_motion,
+    load_strategies,
+    load_user_prefs,
+    save_active_strategy,
+    save_meta_lane,
+    save_motion,
+)
 from ..winprob.draft import recorded_draft
 from .assets import PLACEHOLDER, Assets
 from .data import (
@@ -38,7 +47,7 @@ from .data import (
     rank_view,
 )
 from .db import read_only, writable
-from .blindabilite import blindabilite_view
+from .meta_poste import meta_view
 from .donnees import UpdateJob, donnees_view, last_scrape_lanes
 from .home import ORIGINS, REFERENCES, axes_view, empty_home, home_view
 from .draft_grimoire import grimoire_view
@@ -103,7 +112,7 @@ NAV = (
             NavItem("progression", "Progression", "ᛏ", 290, "/progression"),
             NavItem("parties", "Parties", "ᛗ", 85, "/parties"),
             NavItem("calibration", "Calibration", "ᛉ", 345, "/calibration"),
-            NavItem("blindabilite", "Blindabilité", "ᛒ", 120, "/blindabilite"),
+            NavItem("meta", "Méta du poste", "ᛒ", 120, "/meta"),
             NavItem("donnees", "Données", "ᛚ", 205, "/donnees"),
         ),
     ),
@@ -354,17 +363,38 @@ def create_app(
         )
         return render(request, "calibration.html", v=view)
 
-    @app.get("/blindabilite", response_class=HTMLResponse)
-    def blindabilite(request: Request, poste: Optional[str] = None):
+    @app.get("/blindabilite")
+    def blindabilite(poste: Optional[str] = None):
+        """Ancienne adresse de la page (SPEC-51) : redirection vers `/meta`, avec le poste s'il est valide."""
+        target = f"/meta?poste={poste}" if poste in scraping_config.LANES else "/meta"
+        return RedirectResponse(target, status_code=303)
+
+    def meta_pool(lane: str) -> Tuple[str, ...]:
+        """Champions du pool résolu pour le poste, comme sur l'écran Pool ; vide sans pool."""
+        manager = PoolManager()
+        prefs = load_user_prefs()
+        pools_by_role = prefs.pools_by_role if prefs else {}
+        pool, _ = resolve_pool_for_lane(manager, lane, pools_by_role, active_pool_name(manager))
+        return tuple(pool.champions) if pool else ()
+
+    @app.get("/meta", response_class=HTMLResponse)
+    def meta(request: Request, poste: Optional[str] = None):
+        """Méta du poste (SPEC-51 §4.3) : un poste valide est mémorisé, sinon le poste mémorisé est lu."""
+        if poste in scraping_config.LANES:
+            save_meta_lane(poste)
+            lane = poste
+        else:
+            lane = load_meta_lane()
         try:
             with read_only(app.state.db_path) as db:
                 data = compute_blindability(db.connection)
         except sqlite3.Error:
             data = {}
+        picks = pick_order(data.get("matchups", {}), data.get("synergies", {}))
         return render(
             request,
-            "blindabilite.html",
-            v=blindabilite_view(data, Champions(app.state.assets), poste),
+            "meta_poste.html",
+            v=meta_view(data, Champions(app.state.assets), lane, meta_pool(lane), picks),
         )
 
     @app.post("/calibration/appliquer", response_class=HTMLResponse)
