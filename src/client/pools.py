@@ -31,11 +31,11 @@ ROLE_LABELS = {
 
 
 def champion_names(db_path: Union[str, Path]) -> List[str]:
-    """Les champions connus de la base, ordre alphabétique ; vide si la base est absente."""
+    """Les champions connus de la base, ordre alphabétique ; vide si la base est absente ou corrompue."""
     try:
         with read_only(db_path) as db:
             rows = db.connection.execute("SELECT name FROM champions ORDER BY name").fetchall()
-    except sqlite3.OperationalError:
+    except sqlite3.Error:
         return []
     return [row[0] for row in rows]
 
