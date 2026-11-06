@@ -10,7 +10,8 @@ import sqlite3
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
-from ..analysis.pool_swipe import SwapCard, swap_cards
+from ..analysis.blindability import draw_shifts
+from ..analysis.pool_swipe import PoolScorer, SwapCard, swap_cards
 from ..analysis.pool_value import PoolEvaluator
 from ..config_constants import pool_stats_config
 from ..data_freshness import get_freshness_info
@@ -51,7 +52,8 @@ def _stack(
     db = Database(str(db_path))
     try:
         db.connect_read_only()
-        return swap_cards(PoolEvaluator(db, lane), list(champions), passed), None
+        scorer = PoolScorer(PoolEvaluator(db, lane), draw_shifts(db.connection).get(lane, {}))
+        return swap_cards(scorer, list(champions), passed), None
     except sqlite3.Error:
         return [], "Base de données indisponible"
     finally:

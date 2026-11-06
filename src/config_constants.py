@@ -561,6 +561,9 @@ class PoolStatisticsConfig:
     POOL_SWIPE_DRAG_PX: int = 80
     # Duels affichés par carte, dans chaque sens (gagnés, perdus).
     POOL_SWIPE_DUELS_SHOWN: int = 3
+    # Tirages du blind : le pire duel sur 7 adversaires tirés selon la popularité
+    # (mesure Blindabilité du 2026-11-01).
+    POOL_BLIND_DRAWS: int = 7
 
 
 @dataclass
