@@ -565,6 +565,14 @@ class PoolStatisticsConfig:
     # (mesure Blindabilité du 2026-11-01).
     POOL_BLIND_DRAWS: int = 7
 
+    # SPEC-50 : générateur de pools (taille proposée par défaut et bornes, arbitrage du 2026-11-06).
+    POOL_GEN_DEFAULT_SIZE: int = 5
+    POOL_GEN_MIN_SIZE: int = 3
+    POOL_GEN_MAX_SIZE: int = 6
+    # Adversaires listés dans le tableau des counters, à partir de 3 % des parties de la lane
+    # (tableau des counters du 2026-11-06).
+    POOL_GEN_COUNTERS_MIN_POPULARITY: float = 0.03
+
 
 @dataclass
 class SynergyConfig:

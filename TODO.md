@@ -390,7 +390,7 @@ Shen, Urgot (+1,66). Dépend du seuil Blindabilité à 15 000 (à commiter). Dé
 |---|---|---|---|---|
 | 246 | `PoolScorer` (tirage, blind exposé), `pool_score` et `swap_cards` dessus, `excluded`, `POOL_BLIND_DRAWS`, tests | 3 | — || ✅ 2026-11-06 : sur la base du 1er nov., QUINTET TOP +1,605, blind Urgot +1,05 ; `_stack` branché dès 246 (plan) |
 | 247 | `user_prefs` : clé `pool_exclusions`, `load_pool_exclusions`, `save_pool_exclusion`, tests | 2 | — || ✅ 2026-11-06 : 10 tests |
-| 248 | `distinct_snapshots`, `src/analysis/pool_generator.py`, constantes, tests (dont exhaustif) | 5 | 246 | |
+| 248 | `distinct_snapshots`, `src/analysis/pool_generator.py`, constantes, tests (dont exhaustif) | 5 | 246 || ✅ 2026-11-06 : optimum exhaustif atteint sur la vraie base dans 40 configurations sur 40 ; top moyenne sans Gangplank ni Fiora +1,519 (Malphite, Pantheon, Riven, Shen, Urgot) ; 3 scrapes distincts ; test d'optimalité remplacé par l'optimalité locale (plan) |
 | 249 | Client : cartes sur `PoolScorer` et exclusions, `generate` en cache, routes `generer`, `creer`, `exclure`, tests | 3 | 247, 248 | |
 | 250 | Section « Générer un pool » du partiel, styles, sans JS | 2 | 249 | |
 | 251 | Clôture : exe vérifié, `PROJECT_STRUCTURE.md`, `CHANGELOG.md`, statuts, README des specs, `TODO.md` | 1 | 250 | |
