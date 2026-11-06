@@ -74,6 +74,15 @@ def _isolate_user_data(monkeypatch, tmp_path):
     monkeypatch.setattr(user_prefs, "get_user_data_path", lambda f: str(tmp_path / f))
 
 
+@pytest.fixture(autouse=True)
+def _reset_lcu_scan_cache(monkeypatch):
+    """Un parcours des processus vide est mémorisé pour tout le processus : un test ne doit pas
+    hériter de celui d'un autre."""
+    from src import lcu_client
+
+    monkeypatch.setattr(lcu_client, "_process_scan_absent_until", 0.0)
+
+
 @pytest.fixture
 def temp_db(tmp_path):
     """

@@ -299,6 +299,10 @@ class DraftConfig:
 
     # Polling and interaction
     POLL_INTERVAL: float = 1.0  # Check draft state every N seconds
+    # Sans lockfile, chercher le client LoL parcourt tous les processus (1 s de CPU, 2026-11-06) :
+    # un parcours vide est gardé pour tout le processus pendant ce délai. Le lockfile reste lu à
+    # chaque appel, donc une installation standard est vue dès le lancement de League.
+    LCU_PROCESS_SCAN_ABSENT_TTL_S: float = 30.0
     # Sondages « hors champ select » de suite avant de vider l'écran de draft : un appel LCU qui
     # échoue (délai, 5xx) répond comme une sortie de draft, et rien ne redessine l'écran ensuite.
     CHAMP_SELECT_EXIT_TICKS: int = 3

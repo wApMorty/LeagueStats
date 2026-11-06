@@ -10,13 +10,18 @@ from requests.adapters import HTTPAdapter
 from typing import Any, Callable, Dict, Optional
 from dataclasses import dataclass
 
-from .config_constants import LCU_POSITION_TO_LANE
+from .config_constants import LCU_POSITION_TO_LANE, draft_config
 from .lcu_match_history import _MatchHistoryMixin
 
 # Disable SSL warnings since LCU uses self-signed certificates
 import urllib3
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+
+# Fin (time.monotonic) du délai pendant lequel un parcours des processus vide n'est pas refait,
+# partagé par tous les LCUClient du processus (`find_lcu_credentials`).
+_process_scan_absent_until: float = 0.0
 
 
 @dataclass
@@ -82,10 +87,14 @@ class LCUClient(_MatchHistoryMixin):
         if credentials:
             return credentials
 
-        # Method 2: Try process list approach
+        # Method 2: Try process list approach (1 s de CPU : un parcours vide est partagé un moment)
+        global _process_scan_absent_until  # pylint: disable=global-statement
+        if time.monotonic() < _process_scan_absent_until:
+            return None
         credentials = self._find_credentials_process()
         if credentials:
             return credentials
+        _process_scan_absent_until = time.monotonic() + draft_config.LCU_PROCESS_SCAN_ABSENT_TTL_S
 
         return None
 
