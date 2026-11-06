@@ -4,6 +4,12 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+## [6.2.0] - 2026-11-06
+
+Un nouvel écran Suggestions propose, après chaque mise à jour des données, des échanges qui améliorent ton pool sur chaque poste. Tu les prends ou tu les passes d'un glisser.
+
+**Action requise** : aucune. Pas de migration, pas de scrape.
+
 ### ✨ Feature
 
 - **Suggestions de pool à swiper (SPEC-49)** : un nouvel écran propose, pour chaque poste, des cartes « prends X à la place de Y » qui améliorent ton pool sur les données du moment. Les candidats sont les champions joués dans au moins 1 % des parties de la lane. Le gain se compose pour moitié du contre-pick et pour moitié du blind, sans tenir compte de la maîtrise. Les cartes dont le gain reste sous le bruit d'un scrape (0,2 pt) portent la marque « sous le bruit ». Tu glisses la carte, tu utilises les flèches ou tu cliques sur Prendre ou Passer. Prendre modifie le pool et efface ses bans ; un champion passé revient à la mise à jour suivante des données. L'écran s'ouvre depuis le bouton Suggestions de l'écran Pool, ou depuis l'écran Données après une mise à jour. Au top, sur les données du 2 novembre, la meilleure carte propose Gangplank à la place d'Olaf (+0,26), sur 14 cartes.

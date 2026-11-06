@@ -21,7 +21,8 @@ la réponse de ton vis-à-vis tant qu'il n'est pas posé, et tient compte de ton
 sur lequel tu performes mal ne passe en tête que si la draft le justifie vraiment. Une stratégie règle le poids de chacun de ces critères : tu passes de l'une à l'autre d'un clic pendant la draft, et tu définis les tiennes sur l'écran Stratégies. En phase de bans, il chiffre les menaces qui pèsent sur ta pool. Un clic suffit pour survoler ou
 verrouiller. Au verrouillage, il écrit dans le client les runes, sorts et objets les plus joués par les
 one-tricks de ton champion, affinés contre ton adversaire direct. Tu peux aussi comparer les trois
-pages de runes les plus jouées et en choisir une d'un clic.
+pages de runes les plus jouées et en choisir une d'un clic. Après chaque mise à jour des données, l'écran
+Suggestions te propose des échanges qui améliorent ton pool, poste par poste : tu les prends ou tu les passes d'un glisser.
 
 | Bans | Verrouillage, runes et build |
 |---|---|
@@ -181,4 +182,4 @@ LeagueStats Coach n'est ni approuvé ni sponsorisé par Riot Games et ne reflèt
 Games ni de quiconque ayant participé à la production ou à la gestion de League of Legends. League of
 Legends et Riot Games sont des marques ou des marques déposées de Riot Games, Inc.
 
-**Version** : 6.1.0
+**Version** : 6.2.0
