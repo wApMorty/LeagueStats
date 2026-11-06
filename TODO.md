@@ -387,7 +387,7 @@ SPEC-51 §5 (tâches 252 à 257, 16 pts) :
 
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
-| 252 | `src/analysis/pick_order.py`, `tests/test_pick_order.py` | 3 | — | |
+| 252 | `src/analysis/pick_order.py`, `tests/test_pick_order.py` | 3 | — | ✅ 2026-11-06 : 11 tests ; sur la base du 1er nov. : B jungle, R jungle, R mid, B mid, B bot, R bot, R support, B top, B support, R top (critère 2) |
 | 253 | `user_prefs` : `meta_lane`, `load_meta_lane`, `save_meta_lane`, tests | 1 | — | ✅ 2026-11-06 : 6 tests |
 | 254 | `meta_poste.py` (renomme `blindabilite.py`), `GET /meta`, redirections, `NAV`, tests | 3 | 252, 253 | |
 | 255 | Panneau latéral : reprise de `d6e5956` en `aside_view`, routes `/meta/*`, suppression de l'écran Suggestions, liens, tests | 5 | 254 | |
