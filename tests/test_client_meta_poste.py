@@ -162,3 +162,55 @@ def test_base_absente_page_vide_sans_500(tmp_path):
     assert response.status_code == 200
     assert "Pas encore assez de matchups" in response.text
     assert not (tmp_path / "absente.db").exists()
+
+
+def test_rendu_puces_de_poste_et_aside(temp_db, tmp_path, monkeypatch):
+    monkeypatch.setattr(app_module, "compute_blindability", lambda connection: _data())
+    client = _client(temp_db, tmp_path)
+
+    html = client.get("/meta?poste=jungle").text
+
+    assert html.count('class="role-chip"') == 5
+    assert 'href="/meta?poste=jungle" aria-current="true"' in html
+    assert html.count('aria-current="true"') == 1
+    assert 'id="meta-aside"' in html
+    assert 'class="meta-grid"' in html
+    assert "page-blindabilite" not in html
+    assert "Cases entourées : ton poste." in html
+    assert "Anneau : ton pool." in html
+
+
+def test_rendu_sequence_de_pick_deux_lignes_avec_surbrillance(temp_db, tmp_path, monkeypatch):
+    monkeypatch.setattr(app_module, "compute_blindability", lambda connection: _data())
+    # Vue construite à la main : séquence BRRBBRRBBR, poste choisi « top » aux slots 8 et 10.
+    sides = "BRRBBRRBBR"
+    picks = [
+        Pick(
+            slot=slot,
+            side="blue" if side == "B" else "red",
+            lane="top" if slot in (8, 10) else "middle",
+        )
+        for slot, side in enumerate(sides, start=1)
+    ]
+    monkeypatch.setattr(app_module, "pick_order", lambda matchups, synergies: picks)
+    client = _client(temp_db, tmp_path)
+
+    html = client.get("/meta?poste=top").text
+
+    blue, red = html.split('<span class="pick-side">Rouge</span>')
+    assert html.count('<ol class="pick-order">') == 2
+    assert '<li class="is-mine">8. Top</li>' in blue
+    assert "10. Top" not in blue
+    assert '<li class="is-mine">10. Top</li>' in red
+    assert html.count('<li class="is-mine">') == 2
+
+
+def test_rendu_sans_sequence_sans_picks(temp_db, tmp_path, monkeypatch):
+    monkeypatch.setattr(app_module, "compute_blindability", lambda connection: _data())
+    monkeypatch.setattr(app_module, "pick_order", lambda matchups, synergies: [])
+    client = _client(temp_db, tmp_path)
+
+    html = client.get("/meta?poste=top").text
+
+    assert 'class="pick-seq"' not in html
+    assert 'id="meta-aside"' in html

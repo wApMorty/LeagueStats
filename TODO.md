@@ -391,7 +391,7 @@ SPEC-51 §5 (tâches 252 à 257, 16 pts) :
 | 253 | `user_prefs` : `meta_lane`, `load_meta_lane`, `save_meta_lane`, tests | 1 | — | ✅ 2026-11-06 : 6 tests |
 | 254 | `meta_poste.py` (renomme `blindabilite.py`), `GET /meta`, redirections, `NAV`, tests | 3 | 252, 253 | ✅ 2026-11-06 : 12 tests ; `tests/test_blindability.py` adapté (décision du plan) |
 | 255 | Panneau latéral : reprise de `d6e5956` en `aside_view`, routes `/meta/*`, suppression de l'écran Suggestions, liens, tests | 5 | 254 | ✅ 2026-11-06 : sur copies de `data/`, top sans Gangplank ni Fiora, moyenne, 5 : Urgot, Shen, Riven, Malphite, Pantheon (critère 6) ; `/pool/suggestions` et `/blindabilite` en 303 |
-| 256 | `meta_poste.html`, `partials/meta_aside.html`, styles (grille, surbrillance, séquence) | 3 | 255 | |
+| 256 | `meta_poste.html`, `partials/meta_aside.html`, styles (grille, surbrillance, séquence) | 3 | 255 | ✅ 2026-11-06 : 3 tests de rendu ; relu dans le navigateur intégré à 1 440 px (deux colonnes, cases entourées, séquence) |
 | 257 | Clôture : exe vérifié, `PROJECT_STRUCTURE.md`, `CHANGELOG.md`, statuts SPEC-49, SPEC-50 et SPEC-51, README des specs, `TODO.md` | 1 | 256 | |
 
 ### Lot SPEC-50, générateur de pools (🟡 moteur livré le 2026-11-06 ; interface retirée, reprise par SPEC-51)
