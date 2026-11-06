@@ -1,6 +1,6 @@
 # SPEC-51 — Méta du poste : la page Blindabilité réarrangée autour d'un rôle
 
-**Statut** : 🟡 Rédigée le 2026-11-06, arbitrages validés par @pj35 le même jour (§2).
+**Statut** : ✅ Livrée le 2026-11-06, recette @pj35 à faire. Arbitrages validés par @pj35 le même jour (§2). Écarts : `tests/test_blindability.py` adapté en 254 (il importait l'ancien module) ; à la relecture dans le navigateur, le graphe des tirages débordait de la colonne (145 colonnes au top à cause de Sylas, +3,58 pp) : axe borné à ±1 pp, colonnes de 0,1 pp, valeurs au-delà dans la colonne du bord (choix de @pj35, correctif avec son test de régression) ; « Blue / Red » s'affiche « Bleu / Rouge ».
 
 **Origine** : @pj35, 2026-11-06 — « Je veux réarranger la page Blindabilité : on choisit un rôle tout en haut,
 il affiche le graphe concerné en bas comme actuellement, met en surbrillance les cases qui me concernent dans les

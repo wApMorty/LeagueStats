@@ -1,6 +1,6 @@
 # SPEC-50 — Générateur de pools sur l'écran Suggestions
 
-**Statut** : 🟡 À réviser. Moteur livré le 2026-11-06 (tâches 246 à 248 : `PoolScorer`, `generate_pool`, exclusions dans `user_prefs`, `distinct_snapshots`) ; les cartes d'échange utilisent le nouveau score. L'interface sur l'écran Suggestions (tâches 249 et 250) a été retirée par `git revert` le même jour à la demande de @pj35 : elle sera portée sur une page Blindabilité réarrangée (choix du rôle en haut, cases du rôle en surbrillance dans les matrices, suggestions de pool sur le côté) : voir [SPEC-51](SPEC-51-meta-du-poste.md).
+**Statut** : ✅ Livrée le 2026-11-06 avec [SPEC-51](SPEC-51-meta-du-poste.md), recette @pj35 à faire. Moteur livré par les tâches 246 à 248 (`PoolScorer`, `generate_pool`, exclusions dans `user_prefs`, `distinct_snapshots`) ; l'interface d'abord posée sur l'écran Suggestions (tâches 249 et 250) a été retirée par `git revert` à la demande de @pj35, puis reprise dans le panneau de la page Méta du poste (SPEC-51, tâche 255).
 `BLINDABILITY_MIN_GAMES` à 15 000 (modifié le 2026-11-06, à commiter avant la tâche 246).
 
 **Origine** : @pj35, 2026-11-06 — « J'aimerais qu'on automatise cette méthode pour la génération de pools […]

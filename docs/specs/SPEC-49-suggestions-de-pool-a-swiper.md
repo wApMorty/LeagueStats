@@ -1,6 +1,6 @@
 # SPEC-49 — Suggestions de pool à swiper
 
-**Statut** : ✅ Livrée le 2026-11-03, recette @pj35 à faire. Les arbitrages de §2 ont été validés le 2026-11-03, au lancement de l'implémentation. Deux écarts : les comptes de cartes ne s'affichent que pour le poste ouvert (calculer les cinq postes prend 0,5 à 0,7 s), et `pool_swipe.js` est chargé par `base.html` comme les autres scripts d'écran.
+**Statut** : ✅ Livrée le 2026-11-03, recette @pj35 à faire. Les arbitrages de §2 ont été validés le 2026-11-03, au lancement de l'implémentation. Deux écarts : les comptes de cartes ne s'affichent que pour le poste ouvert (calculer les cinq postes prend 0,5 à 0,7 s), et `pool_swipe.js` est chargé par `base.html` comme les autres scripts d'écran. Le 2026-11-06, l'écran est remplacé par le panneau de la page Méta du poste ([SPEC-51](SPEC-51-meta-du-poste.md)) ; les cartes et leurs routes y passent sous `/meta/`.
 
 **Origine** : @pj35, 2026-11-03 — « Je pense au contraire qu'il serait intéressant de proposer une mise à jour du
 pool à chaque mise à jour des données », puis « retire la maîtrise de l'équation, et fais un écran un peu interactif

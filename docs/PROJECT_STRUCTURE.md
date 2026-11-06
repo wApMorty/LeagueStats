@@ -50,6 +50,7 @@ src/
 │   ├── mastery.py                    # Maîtrise personnelle par champion, terme du moteur de draft (SPEC-41)
 │   ├── strategy.py                   # Stratégies de draft : poids par terme, évaluateur pondéré (SPEC-46)
 │   ├── blindability.py               # Matrice des postes et tirage des champions, lus dans les tables de paires
+│   ├── pick_order.py                 # Séquence de pick conseillée sur les matrices des postes (SPEC-51)
 │   ├── pool_statistics.py            # Statistiques de pool
 │   ├── pool_generator.py             # Pool de N qui maximise ½ blind + ½ counter, sur un ou plusieurs scrapes (SPEC-50)
 │   ├── pool_swipe.py                 # Échanges qui améliorent un pool, sans maîtrise ; PoolScorer net du tirage (SPEC-49, SPEC-50)
@@ -95,7 +96,7 @@ src/
 │   ├── lcu_proxy.py, lcu_status.py           # Liste blanche des appels au LCU, sonde « client ouvert »
 │   ├── charts.py                              # Graphiques SVG purs (courbes, sparklines, histogramme, fiabilité)
 │   ├── data.py, home.py, review.py             # Données des écrans du coaching : rang, progression, calibration ; accueil ; parties et post-game
-│   ├── blindabilite.py           # Écran Blindabilité : matrice des postes et distribution des tirages
+│   ├── meta_poste.py             # Méta du poste : matrices, séquence de pick, tirages, pool du poste (SPEC-51)
 │   ├── donnees.py                # Écran Données : mise à jour de la base dans un fil, avancement par lane (SPEC-37)
 │   ├── classement.py                           # Classement des dix joueurs d'une partie par ΔP, MVP et ACE (SPEC-32)
 │   ├── draft_*.py, found.py, assets.py          # Draft interactive, partie trouvée, Data Dragon local
@@ -104,7 +105,7 @@ src/
 │   ├── ingame.py, en_partie.py                    # Écran « En partie » : fil de lecture de la Live Client API (sujet `ingame`), vue (courbe, face-à-face, build)
 │   ├── lobby.py, social.py                        # Lobby et file d'attente (écriture gardée par la phase), social en lecture seule
 │   ├── strategies.py                              # Écran Stratégies : choisir, dupliquer, régler les poids (SPEC-46)
-│   ├── pool_swipe.py                              # Écran Suggestions de pool : prendre ou passer chaque échange (SPEC-49)
+│   ├── pool_swipe.py                              # Panneau de la Méta du poste : générateur et cartes d'échange (SPEC-49 à 51)
 │   ├── templates/                                # Jinja : coque, un gabarit par écran, fragments htmx dans partials/
 │   └── static/                                    # style.css (jetons « Alchimie »), motion.js, un module JS par écran, fonts/
 │

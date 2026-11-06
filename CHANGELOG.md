@@ -7,10 +7,11 @@ All notable changes to LeagueStats Coach will be documented in this file.
 ### 🐛 Fix
 
 - **Client lent, voire écran noir, quand League est fermé** : chaque recherche du client LoL parcourait tous les processus de Windows (1 s de CPU), relancée par quatre parties du client toutes les 3 à 30 s ; le client consommait jusqu'à 93 % d'un cœur et ses pages mettaient 7 à 11 s. Un parcours qui ne trouve rien est désormais gardé 30 s pour tout le client (environ 3 % d'un cœur) ; le `lockfile` reste lu à chaque fois, donc League est vu dès son lancement.
-- **Écrans Pool et Suggestions sur une base corrompue** : un `db.db` présent mais illisible faisait tomber les deux écrans en erreur 500 ; ils s'ouvrent désormais, sans liste de champions, comme sur une base absente.
+- **Écrans Pool et Méta du poste sur une base corrompue** : un `db.db` présent mais illisible faisait tomber les deux écrans en erreur 500 ; ils s'ouvrent désormais, sans liste de champions, comme sur une base absente.
 
 ### ✨ Feature
 
+- **Méta du poste remplace Blindabilité et Suggestions (SPEC-51)** : la page s'ouvre sur un poste, le dernier choisi. Ses cases sont entourées dans les matrices Adversaires et Alliés, et la séquence des 10 picks conseillée par les matrices s'affiche, avec les picks de ce poste en surbrillance : au top, blue le pique en 8 et red en 10. Le graphe des tirages montre ton pool d'un anneau, sur un axe de −1 à +1 pp. Sur le côté, le générateur de pools de SPEC-50 (3 à 6 champions, moyenne des scrapes ou scrape actuel, champions exclus par poste, « Créer le pool » qui l'enregistre et le désigne au poste), puis les cartes d'échange à prendre ou passer. L'écran Suggestions disparaît : `/pool/suggestions` et `/blindabilite` redirigent vers `/meta`, et les liens des écrans Pool et Données y mènent.
 - **Cartes d'échange : blind exposé au counter et forces nettes du tirage (SPEC-50)** : les suggestions de SPEC-49 jugent désormais le blind sur le pire duel attendu et retirent le tirage de la force ; leurs gains changent.
 
 ### 🔧 Chore
