@@ -11,8 +11,7 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Feature
 
-- **Générateur de pools sur l'écran Suggestions (SPEC-50)** : pour le poste ouvert, « Générer » propose le pool de 3 à 6 champions (5 par défaut) qui maximise ½ blind + ½ counter. Le blind compte le pire duel attendu quand l'adversaire contre-pick, et les forces sont nettes du tirage (la part de winrate qu'un champion doit au fait d'être pris en counter). Le calcul porte sur la moyenne des scrapes distincts des sauvegardes, ou sur le scrape actuel seul (utile en début de patch). Les champions exclus (« trop durs à jouer ») restent écartés par poste jusqu'à leur retrait, du générateur comme des cartes d'échange. « Créer le pool » l'enregistre sous « TOP GÉNÉRÉ <date> » et le désigne au poste. Au top, sur les données du 1er novembre : Gangplank, Malphite, Riven, Shen, Urgot (+1,66).
-- **Cartes d'échange au même score** : les suggestions de SPEC-49 jugent désormais le blind sur le pire duel attendu et retirent le tirage de la force ; leurs gains changent.
+- **Cartes d'échange : blind exposé au counter et forces nettes du tirage (SPEC-50)** : les suggestions de SPEC-49 jugent désormais le blind sur le pire duel attendu et retirent le tirage de la force ; leurs gains changent.
 
 ### 🔧 Chore
 

@@ -1,6 +1,6 @@
 # SPEC-50 — Générateur de pools sur l'écran Suggestions
 
-**Statut** : ✅ Livrée le 2026-11-06, recette @pj35 à faire. Arbitrages validés par @pj35 le même jour (§2). Écarts : `_stack` passe au nouveau score dès la tâche 246 (changement de signature de `swap_cards`) ; le test d'optimalité aléatoire de §4.8 est remplacé par l'optimalité locale et un cas construit, car glouton + échanges manque l'optimum sur 4 valeurs aléatoires sur 25, alors qu'il l'atteint dans les 40 configurations réelles vérifiées (5 postes, 2 modes, tailles 3 à 6) ; critère 2 au bot tenu à l'égalité près (Aphelios et Sivir ont le même J, l'ordre alphabétique retient Aphelios) ; pas de commande `pool` après « Créer » (pool neuf, jamais le pool par défaut) ; les routes lisent le corps du formulaire comme `pool_action` ; « sans JS » s'entend sans JS ajouté, l'écran reste en htmx.
+**Statut** : 🟡 À réviser. Moteur livré le 2026-11-06 (tâches 246 à 248 : `PoolScorer`, `generate_pool`, exclusions dans `user_prefs`, `distinct_snapshots`) ; les cartes d'échange utilisent le nouveau score. L'interface sur l'écran Suggestions (tâches 249 et 250) a été retirée par `git revert` le même jour à la demande de @pj35 : elle sera portée sur une page Blindabilité réarrangée (choix du rôle en haut, cases du rôle en surbrillance dans les matrices, suggestions de pool sur le côté), à spécifier.
 `BLINDABILITY_MIN_GAMES` à 15 000 (modifié le 2026-11-06, à commiter avant la tâche 246).
 
 **Origine** : @pj35, 2026-11-06 — « J'aimerais qu'on automatise cette méthode pour la génération de pools […]

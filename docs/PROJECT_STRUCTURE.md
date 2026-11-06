@@ -104,7 +104,7 @@ src/
 │   ├── ingame.py, en_partie.py                    # Écran « En partie » : fil de lecture de la Live Client API (sujet `ingame`), vue (courbe, face-à-face, build)
 │   ├── lobby.py, social.py                        # Lobby et file d'attente (écriture gardée par la phase), social en lecture seule
 │   ├── strategies.py                              # Écran Stratégies : choisir, dupliquer, régler les poids (SPEC-46)
-│   ├── pool_swipe.py                              # Écran Suggestions de pool : prendre ou passer chaque échange, générer un pool (SPEC-49, SPEC-50)
+│   ├── pool_swipe.py                              # Écran Suggestions de pool : prendre ou passer chaque échange (SPEC-49)
 │   ├── templates/                                # Jinja : coque, un gabarit par écran, fragments htmx dans partials/
 │   └── static/                                    # style.css (jetons « Alchimie »), motion.js, un module JS par écran, fonts/
 │
