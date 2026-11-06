@@ -24,6 +24,9 @@
     <h1 data-spell="1">Méta du poste</h1>
   </div>
 </header>
+<aside id="meta-aside" aria-label="Pool du poste et générateur">
+  {% with v = v.aside %}{% include "partials/meta_aside.html" %}{% endwith %}
+</aside>
 {% if v.empty %}
 <p class="empty">Pas encore assez de matchups : lance une mise à jour depuis l'écran Données.</p>
 {% else %}

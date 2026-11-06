@@ -1,4 +1,4 @@
-"""Régression client : une base corrompue fait tomber les écrans Pool et Suggestions en erreur 500.
+"""Régression client : une base corrompue fait tomber les écrans Pool et Méta du poste en erreur 500.
 
 Symptôme (spec-verifier, SPEC-50, 2026-11-06) : avec un `db.db` présent mais illisible (« file is not
 a database »), l'écran Suggestions renvoie une 500 au lieu du message « Base de données indisponible ».
@@ -46,7 +46,7 @@ def test_champion_names_d_une_base_corrompue_est_vide(corrupt_db):
     assert champion_names(corrupt_db) == []
 
 
-@pytest.mark.parametrize("path", ["/pool", "/pool/suggestions"])
+@pytest.mark.parametrize("path", ["/pool", "/meta"])
 def test_les_ecrans_de_pool_s_ouvrent_sur_une_base_corrompue(web, path):
     response = web.get(path)
 

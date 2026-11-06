@@ -35,6 +35,7 @@ from ..user_prefs import (
     save_active_strategy,
     save_meta_lane,
     save_motion,
+    save_role_pool,
 )
 from ..winprob.draft import recorded_draft
 from .assets import PLACEHOLDER, Assets
@@ -77,7 +78,14 @@ from .lobby import (
 from .lcu_status import LcuProbe
 from .collection import VIEWS, read_collection
 from .pools import active_pool_name, champion_names, edit as edit_pool, forget_bans, pools_view
-from .pool_swipe import accept as accept_swipe, pass_card, swipe_view
+from .pool_swipe import (
+    accept as accept_swipe,
+    aside_view,
+    create_generated,
+    exclude as exclude_champion,
+    pass_card,
+    require_generated,
+)
 from .strategies import active_name as active_strategy_name, edit as edit_strategy, strategies_view
 from .historique import read_game, read_history
 from .profil import read_profile
@@ -224,6 +232,16 @@ def create_app(
     async def in_thread(function, *args, **kwargs):
         """`render` sonde le LCU (requête synchrone) : hors de la boucle d'événements."""
         return await anyio.to_thread.run_sync(lambda: function(*args, **kwargs))
+
+    async def form_fields(request: Request) -> dict:
+        """Champs d'une route POST : le corps form-urlencoded (htmx) l'emporte sur la query string.
+
+        Lu à la main, comme `pool_action` : `Form` demanderait python-multipart.
+        """
+        body = parse_qs((await request.body()).decode("utf-8", "replace"))
+        fields = dict(request.query_params)
+        fields.update({key: values[0] for key, values in body.items() if values})
+        return fields
 
     @app.middleware("http")
     async def guard(request: Request, call_next):
@@ -391,11 +409,10 @@ def create_app(
         except sqlite3.Error:
             data = {}
         picks = pick_order(data.get("matchups", {}), data.get("synergies", {}))
-        return render(
-            request,
-            "meta_poste.html",
-            v=meta_view(data, Champions(app.state.assets), lane, meta_pool(lane), picks),
-        )
+        champions = Champions(app.state.assets)
+        view = meta_view(data, champions, lane, meta_pool(lane), picks)
+        view["aside"] = aside_view(PoolManager(), app.state.db_path, lane, champions)
+        return render(request, "meta_poste.html", v=view)
 
     @app.post("/calibration/appliquer", response_class=HTMLResponse)
     def calibration_appliquer(request: Request):
@@ -545,24 +562,122 @@ def create_app(
     def pool_page(request: Request, nom: Optional[str] = None):
         return render(request, "pool.html", v=pool_body(nom))
 
-    # Déclarées avant `/pool/{action}` : même si `{action}` ne capte pas les `/`, l'ordre reste la règle.
-    @app.get("/pool/suggestions", response_class=HTMLResponse)
-    async def pool_suggestions(request: Request, poste: Optional[str] = None):
-        """Écran Suggestions de pool (SPEC-49) : la pile d'échanges du poste demandé."""
+    # Déclarée avant `/pool/{action}` : même si `{action}` ne capte pas les `/`, l'ordre reste la règle.
+    @app.get("/pool/suggestions")
+    def pool_suggestions(poste: Optional[str] = None):
+        """Ancienne adresse de l'écran Suggestions (SPEC-49, SPEC-50) : redirection vers `/meta` (SPEC-51),
+        avec le poste s'il est valide."""
+        target = f"/meta?poste={poste}" if poste in scraping_config.LANES else "/meta"
+        return RedirectResponse(target, status_code=303)
 
-        def work():
-            view = swipe_view(PoolManager(), app.state.db_path, poste, Champions(app.state.assets))
-            return render(request, "pool_suggestions.html", v=view)
+    @app.post("/meta/generer", response_class=HTMLResponse)
+    async def meta_generate(request: Request):
+        """Calcule le pool généré du poste (SPEC-50), en cache ; sans écriture dans les pools. Un refus
+        (pas assez de champions, base illisible) s'affiche dans le panneau (200)."""
+        fields = await form_fields(request)
+        poste, taille, mode = (
+            fields.get("poste", ""),
+            fields.get("taille", ""),
+            fields.get("mode", ""),
+        )
 
-        return await in_thread(work)
+        def work() -> dict:
+            notice = None
+            try:
+                require_generated(app.state.db_path, poste, taille, mode)
+            except Refusal as refusal:
+                notice = str(refusal)
+            return aside_view(
+                PoolManager(),
+                app.state.db_path,
+                poste,
+                Champions(app.state.assets),
+                notice,
+                size=taille,
+                mode=mode,
+            )
 
-    @app.post("/pool/suggestions/accepter", response_class=HTMLResponse)
-    async def pool_suggestions_accept(
-        request: Request, poste: str = "", entrant: str = "", sortant: str = ""
-    ):
+        view = await in_thread(work)
+        return templates.TemplateResponse(request, "partials/meta_aside.html", {"v": view})
+
+    @app.post("/meta/creer", response_class=HTMLResponse)
+    async def meta_create(request: Request):
+        """Crée le pool généré « <POSTE> GÉNÉRÉ <date> » au rôle du poste, l'enregistre puis le désigne
+        au poste ; la commande `pool <nom>` n'est pas déposée (le pool neuf n'est jamais le pool par
+        défaut). Un refus s'affiche dans le panneau (200)."""
+        fields = await form_fields(request)
+        poste, taille, mode = (
+            fields.get("poste", ""),
+            fields.get("taille", ""),
+            fields.get("mode", ""),
+        )
+
+        def work() -> dict:
+            manager = PoolManager()
+            notice = None
+            try:
+                name, notice = create_generated(manager, app.state.db_path, poste, taille, mode)
+                if not manager.save_custom_pools(recalculate_bans=False):
+                    raise Refusal("Pools non enregistrés")
+                if not save_role_pool(poste, name):
+                    raise Refusal("Préférences non enregistrées")
+            except Refusal as refusal:
+                notice = str(refusal)
+            return aside_view(
+                PoolManager(),
+                app.state.db_path,
+                poste,
+                Champions(app.state.assets),
+                notice,
+                size=taille,
+                mode=mode,
+            )
+
+        view = await in_thread(work)
+        return templates.TemplateResponse(request, "partials/meta_aside.html", {"v": view})
+
+    @app.post("/meta/exclure", response_class=HTMLResponse)
+    async def meta_exclude(request: Request):
+        """Exclut `champion` du générateur du poste (`retirer=1` le rétablit) : il disparaît des cartes
+        et du pool généré. Un refus s'affiche dans le panneau (200)."""
+        fields = await form_fields(request)
+        poste, taille, mode = (
+            fields.get("poste", ""),
+            fields.get("taille", ""),
+            fields.get("mode", ""),
+        )
+        champion, retirer = fields.get("champion", ""), fields.get("retirer", "0")
+
+        def work() -> dict:
+            notice = None
+            try:
+                notice = exclude_champion(app.state.db_path, poste, champion, retirer == "1")
+            except Refusal as refusal:
+                notice = str(refusal)
+            return aside_view(
+                PoolManager(),
+                app.state.db_path,
+                poste,
+                Champions(app.state.assets),
+                notice,
+                size=taille,
+                mode=mode,
+            )
+
+        view = await in_thread(work)
+        return templates.TemplateResponse(request, "partials/meta_aside.html", {"v": view})
+
+    @app.post("/meta/prendre", response_class=HTMLResponse)
+    async def meta_take(request: Request):
         """Remplace `sortant` par `entrant` dans le pool du poste, enregistré comme un édit de l'écran
         Pool (bans effacés, `pool <nom>` déposé si c'est le pool par défaut). Un refus s'affiche dans le
-        corps de l'écran (200)."""
+        panneau (200)."""
+        fields = await form_fields(request)
+        poste, entrant, sortant = (
+            fields.get("poste", ""),
+            fields.get("entrant", ""),
+            fields.get("sortant", ""),
+        )
 
         def work() -> dict:
             manager = PoolManager()
@@ -579,33 +694,31 @@ def create_app(
                 active = active_pool_name(manager)
                 if commands is not None and active and active == pool_name:
                     commands(f"pool {active}")
-            return swipe_view(
+            return aside_view(
                 PoolManager(), app.state.db_path, poste, Champions(app.state.assets), notice
             )
 
         view = await in_thread(work)
-        return templates.TemplateResponse(
-            request, "partials/pool_suggestions_body.html", {"v": view}
-        )
+        return templates.TemplateResponse(request, "partials/meta_aside.html", {"v": view})
 
-    @app.post("/pool/suggestions/passer", response_class=HTMLResponse)
-    async def pool_suggestions_pass(request: Request, poste: str = "", entrant: str = ""):
+    @app.post("/meta/passer", response_class=HTMLResponse)
+    async def meta_pass(request: Request):
         """Passe `entrant` pour le poste jusqu'à la prochaine mise à jour des données ; sans écriture
         dans les pools."""
+        fields = await form_fields(request)
+        poste, entrant = fields.get("poste", ""), fields.get("entrant", "")
 
         def work() -> dict:
             try:
                 notice = pass_card(app.state.db_path, poste, entrant)
             except Refusal as refusal:
                 notice = str(refusal)
-            return swipe_view(
+            return aside_view(
                 PoolManager(), app.state.db_path, poste, Champions(app.state.assets), notice
             )
 
         view = await in_thread(work)
-        return templates.TemplateResponse(
-            request, "partials/pool_suggestions_body.html", {"v": view}
-        )
+        return templates.TemplateResponse(request, "partials/meta_aside.html", {"v": view})
 
     @app.post("/pool/{action}", response_class=HTMLResponse)
     async def pool_action(request: Request, action: str, name: str = "", arg: str = ""):

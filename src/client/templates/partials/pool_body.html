@@ -15,7 +15,7 @@
         <div class="pool-actions">
           {% if not s.active %}<button type="button" class="btn-primary" hx-post="/pool/actif?name={{ s.name|urlencode }}">Pool par défaut</button>{% endif %}
           {% set lane = s.roles_on[0] if s.roles_on else (v.roles|selectattr("pool", "equalto", s.name)|map(attribute="lane")|first) %}
-          {% if s.editable and lane %}<a class="btn-ghost" href="/pool/suggestions?poste={{ lane }}">Suggestions</a>{% endif %}
+          {% if s.editable and lane %}<a class="btn-ghost" href="/meta?poste={{ lane }}">Méta du poste</a>{% endif %}
           {% if s.editable %}<button type="button" class="btn-ghost" hx-post="/pool/supprimer?name={{ s.name|urlencode }}" hx-confirm="Supprimer le pool « {{ s.name }} » ?">Supprimer</button>{% endif %}
           <form class="pool-new" hx-post="/pool/dupliquer?name={{ s.name|urlencode }}">
             <input name="arg" placeholder="Nom de la copie" aria-label="Nom de la copie" required>
