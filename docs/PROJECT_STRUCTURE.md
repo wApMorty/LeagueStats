@@ -23,7 +23,7 @@ LeagueStats/
 src/
 ├── assistant.py             # Coordinateur : délègue à analysis/*, draft/scoring.py
 ├── db.py                    # Couche base de données SQLite (requêtes paramétrées)
-├── db_backup.py             # Sauvegarde/restauration avant les étapes destructives du pipeline
+├── db_backup.py             # Sauvegarde/restauration avant les étapes destructives du pipeline ; scrapes distincts des sauvegardes (SPEC-50)
 ├── pipeline.py               # Orchestrateur unique : scrape → contrôle complétude → recalcul → notif ; verrou data/update.lock
 ├── progress.py               # Rappel de progression et arrêt du pipeline (écran Données, SPEC-37)
 ├── draft_monitor.py          # Façade du Live Coach (intégration LCU), délègue à draft/
@@ -51,7 +51,8 @@ src/
 │   ├── strategy.py                   # Stratégies de draft : poids par terme, évaluateur pondéré (SPEC-46)
 │   ├── blindability.py               # Matrice des postes et tirage des champions, lus dans les tables de paires
 │   ├── pool_statistics.py            # Statistiques de pool
-│   ├── pool_swipe.py                 # Échanges qui améliorent un pool, sans maîtrise (SPEC-49)
+│   ├── pool_generator.py             # Pool de N qui maximise ½ blind + ½ counter, sur un ou plusieurs scrapes (SPEC-50)
+│   ├── pool_swipe.py                 # Échanges qui améliorent un pool, sans maîtrise ; PoolScorer net du tirage (SPEC-49, SPEC-50)
 │   ├── team_analysis.py               # TeamAnalyzer (code non appelé par un menu)
 │   └── pool_value.py, trio_holistic.py, trio_counterpick.py,
 │       trio_tactics.py  # Team Builder (menu 5), valeur de pool SPEC-18
@@ -103,7 +104,7 @@ src/
 │   ├── ingame.py, en_partie.py                    # Écran « En partie » : fil de lecture de la Live Client API (sujet `ingame`), vue (courbe, face-à-face, build)
 │   ├── lobby.py, social.py                        # Lobby et file d'attente (écriture gardée par la phase), social en lecture seule
 │   ├── strategies.py                              # Écran Stratégies : choisir, dupliquer, régler les poids (SPEC-46)
-│   ├── pool_swipe.py                              # Écran Suggestions de pool : prendre ou passer chaque échange (SPEC-49)
+│   ├── pool_swipe.py                              # Écran Suggestions de pool : prendre ou passer chaque échange, générer un pool (SPEC-49, SPEC-50)
 │   ├── templates/                                # Jinja : coque, un gabarit par écran, fragments htmx dans partials/
 │   └── static/                                    # style.css (jetons « Alchimie »), motion.js, un module JS par écran, fonts/
 │
