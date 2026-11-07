@@ -7,6 +7,7 @@ All notable changes to LeagueStats Coach will be documented in this file.
 ### 🐛 Fix
 
 - **Client lent, voire écran noir, quand League est fermé** : chaque recherche du client LoL parcourait tous les processus de Windows (1 s de CPU), relancée par quatre parties du client toutes les 3 à 30 s ; le client consommait jusqu'à 93 % d'un cœur et ses pages mettaient 7 à 11 s. Un parcours qui ne trouve rien est désormais gardé 30 s pour tout le client (environ 3 % d'un cœur) ; le `lockfile` reste lu à chaque fois, donc League est vu dès son lancement.
+- **Écran Données vidé au clic** : un clic sur un ELO du scrape, sur « Actualiser » ou le rafraîchissement pendant un run faisait disparaître le panneau, qui héritait du filtre `hx-select="#view"` de la page. Le panneau a désormais le sien et se remplace correctement.
 - **Écrans Pool et Méta du poste sur une base corrompue** : un `db.db` présent mais illisible faisait tomber les deux écrans en erreur 500 ; ils s'ouvrent désormais, sans liste de champions, comme sur une base absente.
 
 ### ✨ Feature
