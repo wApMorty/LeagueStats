@@ -1,6 +1,6 @@
 # SPEC-52 — Suivi du rang par compte
 
-**Statut** : 🟡 Rédigée le 2026-11-07, arbitrages validés par @pj35 le 2026-11-07 (§2), relecture attendue avant `/implement`.
+**Statut** : ✅ Livrée le 2026-11-07 (tâches 258 à 261), `alembic upgrade head` et recette @pj35 à faire. Arbitrages validés par @pj35 le 2026-11-07 (§2).
 
 **Origine** : @pj35, 2026-11-07 — « On a un problème de suivi de l'ELO en multi-comptes. J'ai joué sur un smurf
 et le coach a l'air de croire que j'ai perdu 1000 LP dans la journée. »

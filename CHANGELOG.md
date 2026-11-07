@@ -4,8 +4,11 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+**Action requise** : `python -m alembic upgrade head` (colonne `rank_snapshots.puuid`, SPEC-52). Sans cette commande, les photos de rang ne s'enregistrent plus et l'écran Rang reste vide. Pas de scrape.
+
 ### 🐛 Fix
 
+- **Rang mêlé entre deux comptes (SPEC-52)** : une journée sur un smurf (Or I) faisait croire à −952 LP sur la courbe du compte principal (Diamant IV), car les photos de rang ne portaient pas le compte. Chaque photo porte désormais son `puuid` ; la migration rattache l'historique (photo liée à une partie → compte de la partie, photo de démarrage → compte au total victoires + défaites le plus proche, paire solo/flexible de la même seconde), 427 photos sur 427 sur la base du 7 novembre. Les écrans Rang et Accueil et le bilan console ne montrent que le compte connecté, à défaut le dernier compte vu. Les parties du smurf restent dans les métriques de gameplay et la maîtrise.
 - **Client lent, voire écran noir, quand League est fermé** : chaque recherche du client LoL parcourait tous les processus de Windows (1 s de CPU), relancée par quatre parties du client toutes les 3 à 30 s ; le client consommait jusqu'à 93 % d'un cœur et ses pages mettaient 7 à 11 s. Un parcours qui ne trouve rien est désormais gardé 30 s pour tout le client (environ 3 % d'un cœur) ; le `lockfile` reste lu à chaque fois, donc League est vu dès son lancement.
 - **Écran Données vidé au clic** : un clic sur un ELO du scrape, sur « Actualiser » ou le rafraîchissement pendant un run faisait disparaître le panneau, qui héritait du filtre `hx-select="#view"` de la page. Le panneau a désormais le sien et se remplace correctement.
 - **Écrans Pool et Méta du poste sur une base corrompue** : un `db.db` présent mais illisible faisait tomber les deux écrans en erreur 500 ; ils s'ouvrent désormais, sans liste de champions, comme sur une base absente.
