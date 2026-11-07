@@ -2,13 +2,15 @@
 
 import re
 import sqlite3
+from unittest.mock import Mock
 
 import pytest
 from fastapi.testclient import TestClient
 
 from src.client.app import create_app
-from src.client.data import rank_view, scale_label, tier_name
+from src.client.data import SUMMONER, current_puuid, rank_view, scale_label, tier_name
 from src.coaching.progression import lp_scale
+from src.repositories.coaching import CoachingRepository
 
 LOCAL = "http://127.0.0.1"
 SOLO, FLEX = "RANKED_SOLO_5x5", "RANKED_FLEX_SR"
@@ -31,14 +33,15 @@ def snap(day, queue=SOLO, tier="EMERALD", division="II", lp=47, wins=62, losses=
     return row
 
 
-def insert(db, rows):
+def insert(db, rows, puuid="main"):
     for r in rows:
         db.connection.execute(
             "INSERT INTO rank_snapshots (captured_utc, queue, tier, division, lp, wins, losses, "
-            "lp_delta, game_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "lp_delta, game_id, puuid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             tuple(
                 r[k] for k in "captured queue tier division lp wins losses lp_delta game_id".split()
-            ),
+            )
+            + (puuid,),
         )
     db.connection.commit()
 
@@ -201,3 +204,58 @@ def test_la_consultation_n_ecrit_pas_dans_la_base(db, temp_db):
 def test_entree_de_navigation_active(temp_db):
     page = client(temp_db).get("/rang").text
     assert '<a class="nav-item" href="/rang"' in page
+
+
+def test_la_route_suit_le_compte_connecte(db, temp_db, monkeypatch):
+    insert(db, two_queues(), puuid="main")
+    insert(
+        db,
+        [snap(1, tier="GOLD", division="I", lp=35), snap(2, tier="GOLD", division="I", lp=65)],
+        puuid="smurf",
+    )
+    monkeypatch.setattr("src.client.app.current_puuid", lambda proxy: "smurf")
+    page = client(temp_db).get("/rang").text
+    assert page.count('class="ch-line"') == 1 and "Or I" in page
+    assert "Émeraude" not in page
+
+
+# ---------- compte ----------
+
+
+def test_rank_history_et_snapshots_ne_lisent_que_le_compte_demande(db):
+    insert(db, [snap(1, lp=10)], puuid="main")
+    insert(db, [snap(2, lp=99)], puuid="smurf")
+    repo = CoachingRepository(db)
+    assert [s["lp"] for s in repo.rank_history("smurf")] == [99]
+    assert [s[4] for s in repo.rank_snapshots("main")] == [10]
+    assert repo.rank_history(None) == [] and repo.rank_snapshots(None) == []
+
+
+def test_rank_account_est_le_puuid_de_la_derniere_photo_rattachee(db):
+    repo = CoachingRepository(db)
+    assert repo.rank_account() is None
+    insert(db, [snap(1)], puuid="main")
+    insert(db, [snap(2)], puuid="smurf")
+    db.connection.execute(
+        "INSERT INTO rank_snapshots (captured_utc, queue, tier, lp) "
+        "VALUES ('2026-10-03 12:00:00', 'RANKED_SOLO_5x5', 'GOLD', 1)"
+    )
+    db.connection.commit()
+    assert repo.rank_account() == "smurf"  # la photo sans compte ne compte pas
+
+
+@pytest.mark.parametrize(
+    "summoner, expected",
+    [({"puuid": "main"}, "main"), (None, None), ({"puuid": ""}, None), ({}, None)],
+)
+def test_current_puuid_lit_le_compte_connecte(summoner, expected):
+    proxy = Mock()
+    proxy.get.return_value = summoner
+    assert current_puuid(proxy) == expected
+    proxy.get.assert_called_once_with(SUMMONER)
+
+
+def test_current_puuid_sur_erreur_du_proxy_est_none():
+    proxy = Mock()
+    proxy.get.side_effect = ConnectionError("LCU injoignable")
+    assert current_puuid(proxy) is None

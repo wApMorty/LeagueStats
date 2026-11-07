@@ -259,12 +259,16 @@ def _review(repo: CoachingRepository, role: Optional[str]) -> Optional[dict]:
 
 
 def home_view(
-    repo: CoachingRepository, champions: Champions, now: datetime, notice: Optional[str] = None
+    repo: CoachingRepository,
+    champions: Champions,
+    now: datetime,
+    notice: Optional[str] = None,
+    puuid: Optional[str] = None,
 ) -> dict:
-    """L'accueil du coaching."""
+    """L'accueil du coaching ; la carte Rang est celle du compte `puuid` (sinon du dernier vu)."""
     role = main_role(repo)
     count, latest = repo.capture_stats()
-    history = repo.rank_history()
+    history = repo.rank_history(puuid or repo.rank_account())
     return {
         "kicker": f"Coaching · rôle principal {ROLE_LABELS[role]}" if role else "Coaching",
         "status": (

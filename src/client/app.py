@@ -45,6 +45,7 @@ from .data import (
     ROLE_ORDER,
     calibration_empty,
     calibration_view,
+    current_puuid,
     default_role,
     progression_view,
     rank_view,
@@ -318,7 +319,8 @@ def create_app(
     @app.get("/", response_class=HTMLResponse)
     def accueil(request: Request):
         champions, now = Champions(app.state.assets), datetime.now(timezone.utc)
-        view = coaching(lambda repo: home_view(repo, champions, now), empty_home)
+        puuid = current_puuid(proxy)
+        view = coaching(lambda repo: home_view(repo, champions, now, puuid=puuid), empty_home)
         return render(request, "accueil.html", v=view)
 
     def axes_fragment(request: Request, notice: Optional[str] = None) -> HTMLResponse:
@@ -358,7 +360,11 @@ def create_app(
 
     @app.get("/rang", response_class=HTMLResponse)
     def rang(request: Request):
-        view = coaching(lambda repo: rank_view(repo.rank_history()), lambda: rank_view([]))
+        puuid = current_puuid(proxy)
+        view = coaching(
+            lambda repo: rank_view(repo.rank_history(puuid or repo.rank_account())),
+            lambda: rank_view([]),
+        )
         return render(request, "rang.html", v=view)
 
     @app.get("/progression", response_class=HTMLResponse)

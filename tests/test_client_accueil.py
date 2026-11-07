@@ -217,8 +217,8 @@ def test_colonne_laterale_rang_parties_et_bilan(db, temp_db, assets):
     capture(db, game_id=101, pid=6, created="2026-10-05 12:00:00")
     for i, lp in enumerate((10, 40, 70)):
         db.connection.execute(
-            "INSERT INTO rank_snapshots (captured_utc, queue, tier, division, lp, wins, losses) "
-            "VALUES (?, 'RANKED_SOLO_5x5', 'EMERALD', 'II', ?, 5, 4)",
+            "INSERT INTO rank_snapshots (captured_utc, queue, tier, division, lp, wins, losses, "
+            "puuid) VALUES (?, 'RANKED_SOLO_5x5', 'EMERALD', 'II', ?, 5, 4, 'main')",
             (f"2026-10-0{i + 1} 12:00:00", lp),
         )
     db.connection.commit()
@@ -232,6 +232,24 @@ def test_colonne_laterale_rang_parties_et_bilan(db, temp_db, assets):
     assert [r["label"] for r in view["review"]["strong"]] == ["CS @10"]
     assert [r["label"] for r in view["review"]["weak"]] == ["Morts en solo"]
     assert view["review"]["strong"][0]["z"] == "+0,8 σ"
+
+
+def test_la_carte_rang_suit_le_compte_demande(db, assets):
+    db.connection.execute(
+        "INSERT INTO rank_snapshots (captured_utc, queue, tier, division, lp, wins, losses, puuid) "
+        "VALUES ('2026-10-01 12:00:00', 'RANKED_SOLO_5x5', 'GOLD', 'I', 35, 5, 4, 'smurf')"
+    )
+    # le principal est vu en dernier : c'est le compte par défaut
+    for i, lp in enumerate((10, 40, 70)):
+        db.connection.execute(
+            "INSERT INTO rank_snapshots (captured_utc, queue, tier, division, lp, wins, losses, "
+            "puuid) VALUES (?, 'RANKED_SOLO_5x5', 'EMERALD', 'II', ?, 5, 4, 'main')",
+            (f"2026-10-0{i + 2} 12:00:00", lp),
+        )
+    db.connection.commit()
+    repo = CoachingRepository(db)
+    assert home_view(repo, Champions(assets), NOW, puuid="smurf")["rank"]["tier"] == "Or I"
+    assert home_view(repo, Champions(assets), NOW)["rank"]["tier"] == "Émeraude II"
 
 
 def test_etat_de_la_base_frais_ou_vide(db, assets):

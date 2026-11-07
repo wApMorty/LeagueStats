@@ -206,6 +206,24 @@ class TestReview:
         assert "faiblesse Morts avant 14 min : 10/10 parties" in text
         assert "Nouvel axe de travail" in text
 
+    def test_review_lp_only_for_the_last_account_seen(self, db):
+        _store_history(db, "deaths_before_14", [3] * 10, z=-1.5)
+        db.connection.executemany(
+            "INSERT INTO rank_snapshots (captured_utc, queue, tier, division, lp, puuid) "
+            "VALUES (?, 'RANKED_SOLO_5x5', ?, ?, ?, ?)",
+            [
+                ("2026-10-01 12:00:00", "DIAMOND", "IV", 87, "main"),
+                ("2026-10-02 12:00:00", "GOLD", "I", 35, "smurf"),
+                ("2026-10-03 12:00:00", "GOLD", "I", 65, "smurf"),
+            ],
+        )
+        db.connection.commit()
+
+        text = "\n".join(report.review(db))
+
+        assert "GOLD I 35 -> GOLD I 65 (+30 LP depuis le 2026-10-02)" in text
+        assert "DIAMOND" not in text
+
 
 class TestLiveCoachCommands:
     def _listener(self, db):

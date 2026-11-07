@@ -83,7 +83,7 @@ def review(db) -> List[str]:
         "=" * 80,
     ]
 
-    changes = lp_changes(repo.rank_snapshots())
+    changes = lp_changes(repo.rank_snapshots(repo.rank_account()))
     for queue, (first, last, delta) in changes.items():
         lines.append(
             f"  LP {queue} : {first[1]} {first[2] or ''} {first[3]} -> "

@@ -135,8 +135,18 @@ class CoachingRepository:
         )
         return dict(rows)
 
-    def rank_history(self) -> List[dict]:
-        """Photos de classement complètes (V/D, variation de LP, partie), de la plus ancienne à la plus récente."""
+    def rank_account(self) -> Optional[str]:
+        """Le puuid du compte de la photo la plus récente rattachée à un compte (SPEC-52)."""
+        rows = self._rows(
+            "SELECT puuid FROM rank_snapshots WHERE puuid IS NOT NULL ORDER BY id DESC LIMIT 1"
+        )
+        return rows[0][0] if rows else None
+
+    def rank_history(self, puuid: Optional[str]) -> List[dict]:
+        """Photos de classement complètes (V/D, variation de LP, partie) d'un compte, de la plus
+        ancienne à la plus récente ; liste vide sans compte."""
+        if puuid is None:
+            return []
         keys = (
             "captured",
             "queue",
@@ -150,14 +160,20 @@ class CoachingRepository:
         )
         rows = self._rows(
             "SELECT captured_utc, queue, tier, division, lp, wins, losses, lp_delta, game_id "
-            "FROM rank_snapshots ORDER BY id"
+            "FROM rank_snapshots WHERE puuid = ? ORDER BY id",
+            (puuid,),
         )
         return [dict(zip(keys, row)) for row in rows]
 
-    def rank_snapshots(self) -> List[tuple]:
-        """(captured_utc, queue, tier, division, lp), de la plus ancienne à la plus récente."""
+    def rank_snapshots(self, puuid: Optional[str]) -> List[tuple]:
+        """(captured_utc, queue, tier, division, lp) d'un compte, de la plus ancienne à la plus
+        récente ; liste vide sans compte."""
+        if puuid is None:
+            return []
         return self._rows(
-            "SELECT captured_utc, queue, tier, division, lp FROM rank_snapshots ORDER BY id"
+            "SELECT captured_utc, queue, tier, division, lp FROM rank_snapshots "
+            "WHERE puuid = ? ORDER BY id",
+            (puuid,),
         )
 
     def capture_stats(self) -> Tuple[int, Optional[str]]:

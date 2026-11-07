@@ -32,6 +32,8 @@ from .charts import (
 )
 from .draft_view import ROLE_LABELS, fr, signed
 
+SUMMONER = "/lol-summoner/v1/current-summoner"  # lecture déjà autorisée par lcu_proxy.READS
+
 FR_MONTHS = (
     "janv.",
     "févr.",
@@ -203,11 +205,22 @@ def _queue_card(queue: str, photos: List[dict]) -> dict:
     return card
 
 
+def current_puuid(proxy) -> Optional[str]:
+    """Le puuid du compte connecté au client (SPEC-52) ; None client fermé ou sur toute erreur."""
+    try:
+        summoner = proxy.get(SUMMONER)
+    except Exception:  # pylint: disable=broad-exception-caught
+        return None
+    puuid = summoner.get("puuid") if isinstance(summoner, dict) else None
+    return puuid if isinstance(puuid, str) and puuid else None
+
+
 def rank_view(history: List[dict]) -> dict:
     """L'écran Rang : courbes par file, histogramme des LP par partie, cartes par file.
 
-    `history` : `CoachingRepository.rank_history()`. Une file sous `RANK_MIN_PHOTOS` photos n'a pas de
-    courbe (l'ignorance reste visible) ; la courbe omet les photos qui répètent leur voisine.
+    `history` : `CoachingRepository.rank_history(puuid)`, les photos d'un seul compte. Une file sous
+    `RANK_MIN_PHOTOS` photos n'a pas de courbe (l'ignorance reste visible) ; la courbe omet les photos
+    qui répètent leur voisine.
     """
     cfg = client_config
     by_queue = {q: [s for s in history if s["queue"] == q] for q in cfg.RANK_QUEUE_NAMES}
