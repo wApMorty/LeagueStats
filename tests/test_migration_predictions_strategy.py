@@ -51,7 +51,7 @@ def _columns(path):
 def test_la_colonne_est_ajoutee_et_les_lignes_existantes_restent_nulles(base):
     path, config = base
 
-    command.upgrade(config, "head")
+    command.upgrade(config, "a3f6c1d8b7e2")
 
     assert "strategy" in _columns(path)
     with sqlite3.connect(str(path)) as conn:
@@ -60,7 +60,7 @@ def test_la_colonne_est_ajoutee_et_les_lignes_existantes_restent_nulles(base):
 
 def test_le_downgrade_retire_la_colonne_et_garde_les_lignes(base):
     path, config = base
-    command.upgrade(config, "head")
+    command.upgrade(config, "a3f6c1d8b7e2")
 
     command.downgrade(config, "-1")
 
