@@ -3,6 +3,13 @@
     <button type="button" hx-post="/donnees/actualiser" hx-target="#donnees-etat" hx-swap="outerHTML"
             {% if not d.can_start %}disabled title="{{ d.reason }}"{% endif %}>Actualiser</button>
   </div>
+  <div class="donnees-tier" role="group" aria-label="ELO du scrape">
+    <span class="muted">ELO du scrape</span>
+    {% for value, label in d.tiers.items() %}
+    <button type="button" class="chip-btn{% if value == d.tier %} is-on{% endif %}" aria-pressed="{{ 'true' if value == d.tier else 'false' }}"
+            hx-post="/donnees/elo?tier={{ value }}" hx-target="#donnees-etat" hx-swap="outerHTML"{% if d.running %} disabled{% endif %}>{{ label }}</button>
+    {% endfor %}
+  </div>
   {% if not d.can_start %}<p class="muted">{{ d.reason }}</p>{% endif %}
   {% if d.outcome %}<p class="donnees-outcome donnees-{{ d.outcome.kind }}">{{ d.outcome.text }}</p>{% endif %}
   {% if d.outcome and d.outcome.kind in ("ok", "partial") %}<p><a class="btn-ghost" href="/meta">Voir la méta du poste</a></p>{% endif %}

@@ -425,6 +425,19 @@ class TestRunPipeline:
 
         assert result.status == "ok"
 
+    def test_scrape_tier_from_prefs_applied_to_urls(self, monkeypatch):
+        """L'ELO choisi sur l'écran Données devient le `tier=` des URLs du run."""
+        from src.config import config
+        from src.user_prefs import save_scrape_tier
+
+        monkeypatch.setattr(config, "LOLALYTICS_TIER", "master_plus")  # rendu après le test
+        assert save_scrape_tier("diamond_plus")
+
+        result, _mocks = self._run(monkeypatch)
+
+        assert result.status == "ok"
+        assert config.LOLALYTICS_TIER == "diamond_plus"
+
     def test_lock_is_released_after_ok_and_failed_runs(self, monkeypatch):
         import src.pipeline as module
 

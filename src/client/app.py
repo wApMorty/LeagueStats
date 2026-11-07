@@ -30,12 +30,14 @@ from ..analysis.strategy import all_strategies
 from ..user_prefs import (
     load_meta_lane,
     load_motion,
+    load_scrape_tier,
     load_strategies,
     load_user_prefs,
     save_active_strategy,
     save_meta_lane,
     save_motion,
     save_role_pool,
+    save_scrape_tier,
 )
 from ..winprob.draft import recorded_draft
 from .assets import PLACEHOLDER, Assets
@@ -452,13 +454,14 @@ def create_app(
         except sqlite3.Error:
             last_lanes = {}
         phase_kind = (bus.latest("phase") or {}).get("kind", "closed") if bus else "closed"
-        return donnees_view(
+        view = donnees_view(
             app.state.update_job.snapshot(),
             get_freshness_info(str(app.state.db_path)),
             last_lanes,
             phase_kind,
             datetime.now(timezone.utc),
         )
+        return {**view, "tier": load_scrape_tier(), "tiers": client_config.SCRAPE_TIERS}
 
     def donnees_fragment(request: Request, status_code: int = 200):
         """L'état de l'écran Données, rechargé par htmx (sondage pendant un run, réponse au lancement)."""
@@ -484,6 +487,17 @@ def create_app(
             return donnees_fragment(request, 409)
         if app.state.update_job.start() is not None:
             return donnees_fragment(request, 409)
+        return donnees_fragment(request)
+
+    @app.post("/donnees/elo", response_class=HTMLResponse)
+    def donnees_elo(request: Request, tier: str):
+        """Mémorise l'ELO du prochain scrape ; 409 pendant un run, 400 si inconnu, 500 si non écrit."""
+        if app.state.update_job.running:
+            return donnees_fragment(request, 409)
+        if tier not in client_config.SCRAPE_TIERS:
+            return donnees_fragment(request, 400)
+        if not save_scrape_tier(tier):
+            return donnees_fragment(request, 500)
         return donnees_fragment(request)
 
     @app.get("/parties", response_class=HTMLResponse)

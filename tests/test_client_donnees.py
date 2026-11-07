@@ -20,6 +20,7 @@ from src.client.donnees import UpdateJob, donnees_view, last_scrape_lanes
 from src.config_client import client_config
 from src.data_freshness import FreshnessInfo
 from src.pipeline import PipelineResult
+from src.user_prefs import load_scrape_tier
 
 WAIT_S = 5.0
 LOCAL = "http://127.0.0.1"
@@ -369,6 +370,39 @@ def test_post_sans_jeton_refuse(temp_db, tmp_path):
     assert web.post("/donnees/actualiser").status_code == 403
     _end(job)
     assert calls == []
+
+
+def test_elo_du_scrape_choisi_et_memorise(temp_db, tmp_path):
+    web = _web(temp_db, tmp_path, _quick_job())
+    page = web.get("/donnees").text
+    assert re.search(r'is-on" aria-pressed="true"\s+hx-post="/donnees/elo\?tier=master_plus"', page)
+
+    response = web.post("/donnees/elo?tier=diamond_plus", headers=_token(web))
+    assert response.status_code == 200
+    assert re.search(
+        r'aria-pressed="true"\s+hx-post="/donnees/elo\?tier=diamond_plus"', response.text
+    )
+    assert load_scrape_tier() == "diamond_plus"
+
+    assert web.post("/donnees/elo?tier=fer", headers=_token(web)).status_code == 400
+    assert web.post("/donnees/elo?tier=gold_plus").status_code == 403
+    assert load_scrape_tier() == "diamond_plus"
+
+
+def test_elo_du_scrape_fige_pendant_un_run(temp_db, tmp_path):
+    release = threading.Event()
+
+    def run(progress, stop):
+        release.wait(WAIT_S)
+        return PipelineResult(status="ok")
+
+    job = UpdateJob(run=run, clock=_Clock())
+    web = _web(temp_db, tmp_path, job)
+    job.start()
+    assert web.post("/donnees/elo?tier=gold_plus", headers=_token(web)).status_code == 409
+    release.set()
+    _end(job)
+    assert load_scrape_tier() == "master_plus"
 
 
 def test_bandeau_du_draft_pendant_un_run_seulement(temp_db, tmp_path):

@@ -208,6 +208,22 @@ class ClientConfig:
     DONNEES_POLL_S: int = 2
     DONNEES_ETA_MIN_PAGES: int = 5
     DONNEES_CLOSE_TIMEOUT_S: float = 240.0
+    # ELO du scrape, choisi sur l'écran Données : valeur du paramètre `tier=` de lolalytics ->
+    # libellé. Les seuils de games (`AnalysisConfig`) sont calés sur Master+ : un tier plus étroit
+    # (Challenger) peut faire échouer la complétude, un tier plus large ne fait que les dépasser.
+    SCRAPE_TIERS: Dict[str, str] = field(
+        default_factory=lambda: {
+            "all": "Tous les rangs",
+            "gold_plus": "Or+",
+            "platinum_plus": "Platine+",
+            "emerald_plus": "Émeraude+",
+            "diamond_plus": "Diamant+",
+            "d2_plus": "Diamant 2+",
+            "master_plus": "Maître+",
+            "grandmaster_plus": "Grand Maître+",
+            "challenger": "Challenger",
+        }
+    )
 
     # Banc `/_motion` (critère 11) : budget par image (60 Hz) et durée d'une scène.
     MOTION_BUDGET_MS: float = 16.7

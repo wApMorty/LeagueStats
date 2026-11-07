@@ -980,6 +980,7 @@ h2 { margin: 0; font: 600 24px/1 var(--font-title); }
   gap: 6px 12px; align-items: center; font-size: 14px; }
 .donnees progress { width: 100%; accent-color: var(--copper); }
 .donnees-failed { color: var(--rose); }
+.donnees-tier { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .donnees-outcome { margin: 0; }
 .donnees-last h2 { font-size: 14px; font-weight: 400; margin: 0 0 6px; }
 .donnees-last p { margin: 2px 0; font-size: 14px; }

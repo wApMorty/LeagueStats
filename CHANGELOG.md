@@ -12,6 +12,7 @@ All notable changes to LeagueStats Coach will be documented in this file.
 ### ✨ Feature
 
 - **Méta du poste remplace Blindabilité et Suggestions (SPEC-51)** : la page s'ouvre sur un poste, le dernier choisi. Ses cases sont entourées dans les matrices Adversaires et Alliés, et la séquence des 10 picks conseillée par les matrices s'affiche, avec les picks de ce poste en surbrillance : au top, blue le pique en 8 et red en 10. Le graphe des tirages montre ton pool d'un anneau, sur un axe de −1 à +1 pp. Sur le côté, le générateur de pools de SPEC-50 (3 à 6 champions, moyenne des scrapes ou scrape actuel, champions exclus par poste, « Créer le pool » qui l'enregistre et le désigne au poste), puis les cartes d'échange à prendre ou passer. L'écran Suggestions disparaît : `/pool/suggestions` et `/blindabilite` redirigent vers `/meta`, et les liens des écrans Pool et Données y mènent.
+- **ELO du scrape réglable sur l'écran Données** : une rangée de choix (Tous les rangs, Or+ … Maître+, Grand Maître+, Challenger) fixe le `tier=` lolalytics du prochain scrape, mémorisé dans `user_prefs.json` et suivi aussi par `scripts/update_all.py`. Défaut inchangé : Maître+. Les seuils de games restent calés sur Maître+ : un tier plus étroit peut bloquer la complétude.
 - **Cartes d'échange : blind exposé au counter et forces nettes du tirage (SPEC-50)** : les suggestions de SPEC-49 jugent désormais le blind sur le pire duel attendu et retirent le tirage de la force ; leurs gains changent.
 
 ### 🔧 Chore

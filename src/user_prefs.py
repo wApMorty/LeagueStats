@@ -15,6 +15,7 @@ from dataclasses import asdict, dataclass, field, replace
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from .analysis.strategy import Strategy, parse_strategies, strategy_to_dict
+from .config import config
 from .config_client import client_config
 from .config_constants import LCU_POSITION_TO_LANE
 from .pool_manager import get_user_data_path
@@ -32,6 +33,9 @@ EXCLUSIONS_KEY = "pool_exclusions"
 # Clé du poste mémorisé de la page Blindabilité (SPEC-51 §4.2).
 META_LANE_KEY = "meta_lane"
 
+# Clé de l'ELO du scrape, choisi sur l'écran Données.
+SCRAPE_TIER_KEY = "scrape_tier"
+
 # Clés hors de `UserPrefs`, écrites par lecture brute : `save_user_prefs` les reporte, sinon
 # la fin de chaque draft coach les effacerait.
 _KEPT_KEYS = (
@@ -41,6 +45,7 @@ _KEPT_KEYS = (
     SWIPE_KEY,
     EXCLUSIONS_KEY,
     META_LANE_KEY,
+    SCRAPE_TIER_KEY,
 )
 
 
@@ -305,3 +310,16 @@ def save_meta_lane(lane: str) -> bool:
     if lane not in _KNOWN_LANES:
         return False
     return _write_raw({**_read_raw(), META_LANE_KEY: lane})
+
+
+def load_scrape_tier() -> str:
+    """ELO du scrape (paramètre `tier=` de lolalytics) ; `config.LOLALYTICS_TIER` si absent ou inconnu."""
+    tier = _read_raw().get(SCRAPE_TIER_KEY)
+    return tier if tier in client_config.SCRAPE_TIERS else config.LOLALYTICS_TIER
+
+
+def save_scrape_tier(tier: str) -> bool:
+    """Mémorise l'ELO du scrape ; False sans rien écrire si `tier` n'est pas proposé."""
+    if tier not in client_config.SCRAPE_TIERS:
+        return False
+    return _write_raw({**_read_raw(), SCRAPE_TIER_KEY: tier})

@@ -45,6 +45,7 @@ from .multilane import group_champions_by_lane, scrape_all_multilane
 from .notifications import Notifier
 from .parallel_parser import ParallelParser
 from .progress import PipelineCancelled, Progress, emit
+from .user_prefs import load_scrape_tier
 
 logger = logging.getLogger("update_all")
 
@@ -277,13 +278,16 @@ def run_pipeline(
     log_file = _setup_logging()
     notifier = Notifier()
     resolved_patch = patch or config.CURRENT_PATCH
+    # ELO choisi sur l'écran Données, lu par les URLs du scrape, de la découverte et de la réparation.
+    config.LOLALYTICS_TIER = load_scrape_tier()
 
     logger.info("=" * 80)
     logger.info(
-        "Pipeline starting — champions=%s, patch=%s, matchups=%s, synergies=%s, "
+        "Pipeline starting — champions=%s, patch=%s, tier=%s, matchups=%s, synergies=%s, "
         "recompute_only=%s (log: %s)",
         "all" if champions is None else f"{len(champions)} (pool)",
         resolved_patch,
+        config.LOLALYTICS_TIER,
         include_matchups,
         include_synergies,
         recompute_only,
