@@ -197,12 +197,17 @@ def temp_db(tmp_path):
             wins INTEGER,
             losses INTEGER,
             lp_delta INTEGER,
-            game_id INTEGER
+            game_id INTEGER,
+            puuid TEXT
         )
     """)
     cursor.execute(
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_rank_snapshots_game_id "
         "ON rank_snapshots(game_id) WHERE game_id IS NOT NULL"
+    )
+    # SPEC-52 — migration b52d1e7c9a40
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_rank_snapshots_puuid ON rank_snapshots(puuid, id)"
     )
 
     # SPEC-19 phases 2 à 4 — migration a4d2e9c7b813
