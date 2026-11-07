@@ -4,7 +4,11 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
-**Action requise** : `python -m alembic upgrade head` (colonne `rank_snapshots.puuid`, SPEC-52). Sans cette commande, les photos de rang ne s'enregistrent plus et l'écran Rang reste vide. Pas de scrape.
+## [7.0.0] - 2026-11-07
+
+Le suivi du rang distingue enfin tes comptes : jouer sur un smurf ne fait plus plonger la courbe du principal. La page Méta du poste remplace Blindabilité et Suggestions, avec le générateur de pools ; l'ELO du scrape se règle sur l'écran Données, et le client ne rame plus quand League est fermé.
+
+**Action requise** : `python -m alembic upgrade head` (colonne `rank_snapshots.puuid`, SPEC-52 ; elle applique aussi la colonne `predictions.strategy` de 6.0.0 si ce n'est pas fait). Sans cette commande, les photos de rang ne s'enregistrent plus et l'écran Rang reste vide. Pas de scrape.
 
 ### 🐛 Fix
 
