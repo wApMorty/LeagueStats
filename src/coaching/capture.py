@@ -90,7 +90,9 @@ class GameCapture:
         with self._lock:
             pending = dict(self._lp_by_game)
         for game_id, note in pending.items():
-            inserted = ranked.snapshot_after_game(note, self.m.assistant.db)
+            inserted = ranked.snapshot_after_game(
+                note, self.m.assistant.db, self._account_of(game_id)
+            )
             with self._lock:
                 self._lp_by_game.pop(game_id, None)
             if inserted:
@@ -180,6 +182,17 @@ class GameCapture:
         clean = {key: value for key, value in block.items() if key not in EOG_SECRET_KEYS}
         with self._lock:
             self._eog_by_game[block["gameId"]] = json.dumps(clean)
+
+    def _account_of(self, game_id: int) -> Optional[str]:
+        """Le compte d'une partie (SPEC-52) : le joueur de son écran de fin mis de côté, à défaut le
+        compte connecté, à défaut None. Ne lève jamais : la photo s'écrit même sans compte."""
+        try:
+            with self._lock:
+                raw = self._eog_by_game.get(game_id)
+            puuid = (json.loads(raw).get("localPlayer") or {}).get("puuid") if raw else None
+            return puuid or ranked.current_puuid(self.m.lcu)
+        except Exception:  # pylint: disable=broad-exception-caught
+            return None
 
     def remember_lp_notification(self, lcu=None) -> None:
         """Met de côté la notification de LP de la partie classée qui vient de finir."""

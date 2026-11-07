@@ -388,7 +388,7 @@ périmètre). Découpage en SPEC-52 §5 (tâches 258 à 261, 9 pts) :
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
 | 258 | Migration `rank_snapshots.puuid` et rattachement de l'historique, `tests/conftest.py`, tests de migration | 3 | — | ✅ 2026-11-07 : 5 tests ; copie de `data/db.db` : 427 photos sur 427 rattachées, smurf 11 photos toutes en GOLD, montée-descente-montée propre |
-| 259 | Écriture du puuid : `insert_rank_snapshot`, `snapshot_current`, `snapshot_after_game`, `GameCapture`, tests | 2 | 258 | |
+| 259 | Écriture du puuid : `insert_rank_snapshot`, `snapshot_current`, `snapshot_after_game`, `GameCapture`, tests | 2 | 258 | ✅ 2026-11-07 : 7 tests ; écran de fin d'abord, puis compte connecté, puis NULL ; démarrage sans compte : aucune photo |
 | 260 | Lecture par compte : `rank_account`, `rank_history`, `rank_snapshots`, `current_puuid`, Rang, Accueil, bilan console, test de régression | 3 | 258 | |
 | 261 | Clôture : `CHANGELOG.md`, statuts, README des specs, `TODO.md` ; `alembic upgrade head` et recette @pj35 | 1 | 259, 260 | |
 

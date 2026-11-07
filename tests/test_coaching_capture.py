@@ -19,6 +19,7 @@ from src.coaching.capture import GameCapture
 
 FIXTURES = Path(__file__).parent / "fixtures" / "spike_gameplay"
 GAME_ID = 7998195590
+MAIN = "main-puuid"
 
 
 def _fixture(name):
@@ -48,6 +49,7 @@ def lcu():
     lcu.get_game_detail.return_value = GAME
     lcu.get_game_timeline.return_value = TIMELINE
     lcu.get_end_of_game_block.return_value = None
+    lcu._make_request.return_value = {"puuid": MAIN}  # current-summoner
     return lcu
 
 
@@ -157,11 +159,65 @@ class TestRankSnapshots:
 
         assert ranked.snapshot_current(lcu, db) == 2
         assert _rows(
-            db, "SELECT queue, tier, division, lp, lp_delta, game_id FROM rank_snapshots"
+            db, "SELECT queue, tier, division, lp, lp_delta, game_id, puuid FROM rank_snapshots"
         ) == [
-            ("RANKED_SOLO_5x5", "DIAMOND", "II", 38, None, None),
-            ("RANKED_FLEX_SR", "EMERALD", "I", 75, None, None),
+            ("RANKED_SOLO_5x5", "DIAMOND", "II", 38, None, None, MAIN),
+            ("RANKED_FLEX_SR", "EMERALD", "I", 75, None, None, MAIN),
         ]
+
+    @pytest.mark.parametrize("summoner", [None, {}, {"puuid": ""}])
+    def test_no_startup_snapshot_without_a_known_account(self, db, lcu, summoner):
+        """SPEC-52 : une photo sans compte ne s'afficherait nulle part."""
+        lcu.get_ranked_stats.return_value = _fixture("current-ranked-stats.json")
+        lcu._make_request.return_value = summoner
+
+        assert ranked.snapshot_current(lcu, db) == 0
+        assert _rows(db, "SELECT COUNT(*) FROM rank_snapshots") == [(0,)]
+
+    def test_after_game_snapshot_takes_the_account_of_the_end_of_game_screen(self, db, lcu):
+        """SPEC-52 : le joueur de l'écran de fin prime sur le compte connecté."""
+        lcu.get_end_of_game_block.return_value = _fixture("eog_stats_block.json")
+        lcu.get_lp_change_notification.return_value = _fixture(
+            "current-lp-change-notification.json"
+        )
+        capture = _capture(db, lcu)
+
+        capture.read_transients()
+        capture.write_lp_snapshots()
+
+        assert _rows(db, "SELECT game_id, puuid FROM rank_snapshots") == [(GAME_ID, "anon-4")]
+
+    def test_after_game_snapshot_falls_back_on_the_connected_account(self, db, lcu):
+        lcu.get_lp_change_notification.return_value = _fixture(
+            "current-lp-change-notification.json"
+        )
+        capture = _capture(db, lcu)
+
+        capture.read_transients()
+        capture.write_lp_snapshots()
+
+        assert _rows(db, "SELECT game_id, puuid FROM rank_snapshots") == [(GAME_ID, MAIN)]
+
+    def test_account_lookup_failure_still_writes_the_snapshot(self, db, lcu):
+        """SPEC-52 critère 6 : un LCU qui lève ne remonte pas, la photo s'écrit sans compte."""
+        lcu.get_lp_change_notification.return_value = _fixture(
+            "current-lp-change-notification.json"
+        )
+        capture = _capture(db, lcu)
+        capture.read_transients()
+        lcu._make_request.side_effect = RuntimeError("client fermé")
+
+        capture.write_lp_snapshots()
+
+        assert _rows(db, "SELECT game_id, puuid FROM rank_snapshots") == [(GAME_ID, None)]
+
+    def test_startup_account_failure_never_raises(self, db, lcu):
+        lcu.get_ranked_stats.return_value = _fixture("current-ranked-stats.json")
+        lcu._make_request.side_effect = RuntimeError("client fermé")
+
+        _capture(db, lcu).on_startup()  # ne lève pas
+
+        assert _rows(db, "SELECT COUNT(*) FROM rank_snapshots") == [(0,)]
 
     def test_after_game_snapshot_carries_the_lp_delta_once(self, db, lcu, capsys):
         note = _fixture("current-lp-change-notification.json")

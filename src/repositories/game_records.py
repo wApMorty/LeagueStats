@@ -78,16 +78,17 @@ class GameRecordsRepository:
         losses: Optional[int],
         lp_delta: Optional[int] = None,
         game_id: Optional[int] = None,
+        puuid: Optional[str] = None,
     ) -> bool:
-        """Insère une photo de classement. False si la partie en a déjà une."""
+        """Insère une photo de classement du compte `puuid`. False si la partie en a déjà une."""
         cursor = self.db.connection.cursor()
         cursor.execute(
             """
             INSERT OR IGNORE INTO rank_snapshots
-            (captured_utc, queue, tier, division, lp, wins, losses, lp_delta, game_id)
-            VALUES (datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?)
+            (captured_utc, queue, tier, division, lp, wins, losses, lp_delta, game_id, puuid)
+            VALUES (datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (queue, tier, division, lp, wins, losses, lp_delta, game_id),
+            (queue, tier, division, lp, wins, losses, lp_delta, game_id, puuid),
         )
         self.db.connection.commit()
         return cursor.rowcount > 0
