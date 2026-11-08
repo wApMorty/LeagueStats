@@ -53,6 +53,7 @@ def test_les_modules_tiers_du_client_sont_declares_dans_requirements():
     }
     provided_by = {  # nom du module -> paquet qui le fournit
         "webview": "pywebview",
+        "System": "pywebview",  # .NET par pythonnet, dépendance de pywebview sous Windows
         "sse_starlette": "sse_starlette",
         "markupsafe": "jinja2",  # dépendance de Jinja2
         "anyio": "fastapi",  # dépendance de Starlette, donc de FastAPI

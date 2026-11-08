@@ -22,6 +22,8 @@ ShouldClose = Callable[[Confirm], bool]  # garde : True ferme la fenêtre
 
 _MONITOR_DEFAULTTONEAREST = 2
 _BASE_DPI = 96
+_WM_NCLBUTTONDOWN = 0xA1
+_HTCAPTION = 2
 
 
 def scaled(rect: Rect, scale: float) -> Rect:
@@ -115,6 +117,26 @@ class WindowApi:
 
     def close(self) -> None:
         self._window.destroy()
+
+    def drag(self) -> None:
+        """Déplacement par la boucle native de Windows, que voient Komorebi et l'ancrage.
+
+        Le glisser de pywebview enchaîne des `move()` invisibles pour les gestionnaires de fenêtres.
+        Appelé sur appui dans la barre de titre ; best-effort : un échec laisse la fenêtre en place.
+        """
+        try:
+            from System import Func, Type  # pylint: disable=import-outside-toplevel
+
+            form = self._window.native
+
+            def start() -> None:  # sur le fil de la fenêtre, qui tient la capture de la souris
+                user32 = ctypes.windll.user32
+                user32.ReleaseCapture()
+                user32.SendMessageW(form.Handle.ToInt32(), _WM_NCLBUTTONDOWN, _HTCAPTION, 0)
+
+            form.Invoke(Func[Type](start))
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            print(f"[ALERTE] Déplacement natif de la fenêtre impossible : {exc}")
 
     def resize(self, width: float, height: float, fix_east: bool, fix_south: bool) -> None:
         """Taille voulue, bord opposé à la poignée tenu fixe (est pour la gauche, sud pour le haut)."""

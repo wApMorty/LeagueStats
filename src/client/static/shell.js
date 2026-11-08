@@ -59,7 +59,13 @@
     document.getElementById("tb-min").onclick = () => api.minimize();
     document.getElementById("tb-max").onclick = () => api.toggle_maximize();
     document.getElementById("tb-close").onclick = () => api.close();
-    document.getElementById("titlebar-drag").ondblclick = () => api.toggle_maximize();
+    // Déplacement natif (vu par Komorebi) ; la boucle de Windows avale le relâché, donc le double
+    // clic se lit au second appui plutôt que par `dblclick`.
+    document.getElementById("titlebar-drag").addEventListener("mousedown", (event) => {
+      if (event.button !== 0) return;
+      if (event.detail === 2) api.toggle_maximize();
+      else api.drag();
+    });
 
     // Une poignée tient le bord opposé fixe : est pour la gauche, sud pour le haut. Le pointeur
     // est capturé pour que le glissement continue hors de la fenêtre.

@@ -65,7 +65,6 @@ def test_accueil_est_la_coque(temp_db):
     assert html.count('aria-current="page"') == 1 and 'href="/" style' in html
     assert html.count('class="resize-handle"') == 8  # 4 côtés, 4 coins
     assert all(f'id="{i}"' in html for i in ("tb-min", "tb-max", "tb-close", "titlebar-drag"))
-    assert "pywebview-drag-region" in html
 
 
 def test_page_porte_le_jeton_de_session(temp_db):

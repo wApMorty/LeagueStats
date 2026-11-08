@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### 🐛 Fix
+
+- **Déplacement du client sous Komorebi** : glisser la barre de titre passe par la boucle de déplacement de Windows. Un gestionnaire de fenêtres comme Komorebi voit donc le déplacement et remet la fenêtre à sa tuile (ou l'échange) au relâché, au lieu de la laisser là où on la lâche. Le double clic sur la barre agrandit toujours.
+
 ## [8.0.0] - 2026-11-08
 
 La draft devient catégorique : par défaut, la stratégie Arbre joue l'arbre de décision de ton pool, le meilleur counter contre ton vis-à-vis s'il est posé, sinon le meilleur blind. La stratégie système « Méta » disparaît. L'écran de draft dit aussi quelle place de pick viser pour ton poste tant que l'ordre peut s'échanger.
