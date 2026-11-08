@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 from ..analysis.blindability import draw_shifts
 from ..analysis.pool_generator import GeneratedPool, generate_pool, mean_score
 from ..analysis.pool_swipe import PoolScorer, SwapCard, swap_cards
+from ..analysis.pool_tree import PoolTree, build_tree
 from ..analysis.pool_value import PoolEvaluator
 from ..config_constants import pool_stats_config
 from ..data_freshness import get_freshness_info
@@ -35,6 +36,7 @@ from ..user_prefs import (
 from .data import date_fr
 from .draft_actions import Refusal
 from .draft_view import Champions, fr, signed
+from .pool_tree import data_version, portrait, tree_payload
 from .pools import ROLE_LABELS, active_pool_name, champion_names
 
 DEFAULT_LANE = "top"
@@ -44,12 +46,6 @@ MODES = (MODE_SNAPSHOTS, MODE_CURRENT)
 DB_UNAVAILABLE = "Base de données indisponible"
 # Résultat du générateur par clé : (pool généré ou None, score moyen du pool du poste ou None).
 _GENERATED: Dict[tuple, Tuple[Optional[GeneratedPool], Optional[float]]] = {}
-
-
-def data_version(db_path: Union[str, Path]) -> str:
-    """Version des données (date du dernier scrape, ISO) ; « inconnue » si la base ne la donne pas."""
-    last_update = get_freshness_info(str(db_path)).last_update
-    return last_update.isoformat() if last_update else "inconnue"
 
 
 def _lane(lane: Optional[str]) -> str:
@@ -87,29 +83,28 @@ def _stack(
     champions: Sequence[str],
     passed: Sequence[str],
     excluded: Sequence[str],
-) -> Tuple[List[SwapCard], Optional[str]]:
-    """Pile d'échanges du pool sur le poste ; (pile, message) avec un message si la base est illisible."""
+    cards: bool = True,
+) -> Tuple[List[SwapCard], Optional[PoolTree], Optional[str]]:
+    """Pile d'échanges et arbre du pool sur le poste, sur un seul `PoolScorer` ; `cards` à False :
+    arbre seul. Renvoie (pile, arbre, message) ; message et arbre None si la base est illisible.
+    """
     db = Database(str(db_path))
     try:
         db.connect_read_only()
         scorer = PoolScorer(PoolEvaluator(db, lane), draw_shifts(db.connection).get(lane, {}))
-        return swap_cards(scorer, list(champions), passed, excluded), None
+        stack = swap_cards(scorer, list(champions), passed, excluded) if cards else []
+        return stack, build_tree(scorer, list(champions)), None
     except sqlite3.Error:
-        return [], DB_UNAVAILABLE
+        return [], None, DB_UNAVAILABLE
     finally:
         db.close()
-
-
-def _portrait(champions: Champions, name: str) -> Dict[str, Any]:
-    """Nom et portrait d'un champion (portrait absent : `img` None)."""
-    return {"name": name, "img": (champions.by_name(name) or {}).get("img")}
 
 
 def _card_view(card: SwapCard, champions: Champions) -> Dict[str, Any]:
     """Une carte prête pour le gabarit : valeurs formatées, duels en texte."""
     return {
-        "incoming": _portrait(champions, card.incoming),
-        "outgoing": _portrait(champions, card.outgoing),
+        "incoming": portrait(champions, card.incoming),
+        "outgoing": portrait(champions, card.outgoing),
         "gain": signed(card.gain, 2),
         "counter_gain": signed(card.counter_gain, 2),
         "blind_gain": signed(card.blind_gain, 2),
@@ -245,13 +240,13 @@ def require_generated(
 def _generated_view(
     generated: GeneratedPool, current: Optional[float], champions: Champions
 ) -> Dict[str, Any]:
-    """Le pool généré prêt pour le gabarit : valeurs formatées, portraits, counters."""
+    """Le pool généré prêt pour le gabarit : valeurs formatées, portraits, arbre du pool."""
     blind = dict(generated.blind)
     share = dict(generated.counter_share)
     return {
         "champions": [
             {
-                **_portrait(champions, name),
+                **portrait(champions, name),
                 "blind": signed(blind[name], 2),
                 "counter_share": fr(share[name] * 100, 0) + " %",
             }
@@ -260,15 +255,7 @@ def _generated_view(
         "score": signed(generated.score, 2),
         "per_scrape": [signed(score, 2) for score in generated.per_scrape],
         "gap": signed(generated.score - current, 2) if current is not None else None,
-        "counters": [
-            {
-                "enemy": _portrait(champions, enemy),
-                "popularity": fr(popularity * 100, 1) + " %",
-                "counter": _portrait(champions, counter),
-                "value": signed(value, 2),
-            }
-            for enemy, popularity, counter, value in generated.counters
-        ],
+        "tree": tree_payload(generated.tree, champions),
         "candidates": generated.candidates,
     }
 
@@ -298,14 +285,17 @@ def aside_view(
     excluded = load_pool_exclusions().get(lane, [])
 
     cards: List[SwapCard] = []
+    tree: Optional[PoolTree] = None
     message = None
     shown_notice = notice
     if pool is None:
         message = "Aucun pool pour ce poste"
     elif pool.created_by == "system":
         message = "Pool système : duplique-le sur l'écran Pool pour recevoir des suggestions"
+        _, tree, stack_error = _stack(db_path, lane, pool.champions, [], excluded, False)
+        shown_notice = shown_notice or stack_error
     else:
-        cards, stack_error = _stack(
+        cards, tree, stack_error = _stack(
             db_path,
             lane,
             pool.champions,
@@ -326,7 +316,7 @@ def aside_view(
         "pool": (
             {
                 "name": pool.name,
-                "champions": [_portrait(champions, name) for name in pool.champions],
+                "champions": [portrait(champions, name) for name in pool.champions],
                 "editable": pool.created_by == "user",
             }
             if pool is not None
@@ -337,13 +327,14 @@ def aside_view(
         "message": message,
         "version_label": version_label,
         "notice": shown_notice,
+        "tree": tree_payload(tree, champions) if tree is not None else None,
         "drag_px": pool_stats_config.POOL_SWIPE_DRAG_PX,
         "sizes": list(
             range(pool_stats_config.POOL_GEN_MIN_SIZE, pool_stats_config.POOL_GEN_MAX_SIZE + 1)
         ),
         "size": size,
         "mode": mode,
-        "exclusions": [_portrait(champions, name) for name in excluded],
+        "exclusions": [portrait(champions, name) for name in excluded],
         "champion_names": champion_names(db_path),
         "generated": generated,
     }
@@ -373,7 +364,7 @@ def accept(
         raise Refusal("Pool système : duplique-le sur l'écran Pool pour recevoir des suggestions")
     passed = load_swipe_passes(data_version(db_path)).get(lane, [])
     excluded = load_pool_exclusions().get(lane, [])
-    cards, stack_error = _stack(db_path, lane, pool.champions, passed, excluded)
+    cards, _, stack_error = _stack(db_path, lane, pool.champions, passed, excluded)
     if stack_error is not None:
         raise Refusal(stack_error)
     card = next(

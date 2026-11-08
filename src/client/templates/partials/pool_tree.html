@@ -1,0 +1,35 @@
+{#- Arbre de décision du pool (SPEC-54) : sans JS, inclus par l'écran Pool, la Méta du poste et sa route. `t` = tree_payload, `message` si l'arbre manque. -#}
+{% if t and t.blind %}
+<div class="pool-tree">
+  <h3 class="gen-sous-titre">Arbre de décision</h3>
+  <p class="fine">Matrices du scrape actuel, sans maîtrise.</p>
+  <p class="fine">Vis-à-vis inconnu, dans l'ordre du blind :</p>
+  <ul class="gen-champs" aria-label="Ordre de pick vis-à-vis inconnu">
+    {% for c in t.blind %}
+    <li>{% if c.img %}<img src="{{ c.img }}" alt="">{% endif %}<span><b>{{ c.name }}</b><span class="fine">blind {{ c.value }}</span></span></li>
+    {% endfor %}
+  </ul>
+  {% if t.rows %}
+  <table class="gen-table">
+    <caption class="fine">Vis-à-vis · popularité · choix · repli</caption>
+    <thead>
+      <tr><th scope="col">Vis-à-vis</th><th scope="col">Popularité</th><th scope="col">Choix</th><th scope="col">Repli</th></tr>
+    </thead>
+    <tbody>
+      {% for r in t.rows %}
+      <tr>
+        <td>{% if r.enemy.img %}<img src="{{ r.enemy.img }}" alt="">{% endif %}{{ r.enemy.name }}</td>
+        <td>{{ r.popularity }}</td>
+        <td>{% if r.choice.img %}<img src="{{ r.choice.img }}" alt="">{% endif %}{{ r.choice.name }} <span class="fine">{{ r.value }}</span></td>
+        <td>{% if r.fallback %}{% if r.fallback.img %}<img src="{{ r.fallback.img }}" alt="">{% endif %}{{ r.fallback.name }} <span class="fine">{{ r.fallback_value }}</span>{% else %}—{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="fine">Aucun adversaire au-dessus du seuil de popularité.</p>
+  {% endif %}
+</div>
+{% elif message %}
+<p class="empty">{{ message }}</p>
+{% endif %}

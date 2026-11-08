@@ -574,9 +574,6 @@ class PoolStatisticsConfig:
     POOL_GEN_DEFAULT_SIZE: int = 5
     POOL_GEN_MIN_SIZE: int = 3
     POOL_GEN_MAX_SIZE: int = 6
-    # Adversaires listés dans le tableau des counters, à partir de 3 % des parties de la lane
-    # (tableau des counters du 2026-11-06).
-    POOL_GEN_COUNTERS_MIN_POPULARITY: float = 0.03
     # Résultats du générateur gardés en mémoire par le client ; au-delà, le cache est vidé.
     POOL_GEN_CACHE_MAX: int = 32
 

@@ -42,6 +42,10 @@
           {% endfor %}
         </div>
       </section>
+      {#- L'arbre arrive après l'écran (hx-trigger load) : il surcharge le hx-select hérité de #pool-body. -#}
+      <section class="panel" hx-get="/pool/arbre?nom={{ s.name|urlencode }}" hx-trigger="load" hx-target="this" hx-select="unset">
+        <p class="fine" role="status">Calcul de l'arbre…</p>
+      </section>
       {% else %}
       <p class="empty">Aucun pool.</p>
       {% endif %}

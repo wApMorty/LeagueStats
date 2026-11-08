@@ -12,6 +12,7 @@ from typing import Collection, List, Optional, Sequence, Tuple
 
 from ..config_constants import pool_stats_config
 from .pool_swipe import PoolScorer, pool_score
+from .pool_tree import PoolTree, build_tree
 
 # Gain minimal d'un échange pour être appliqué : sous ce seuil, l'échange est considéré nul.
 _SWAP_EPSILON = 1e-12
@@ -27,7 +28,7 @@ class GeneratedPool:
     per_scrape: Tuple[float, ...]  # J de chaque scrape, du plus récent au plus ancien
     blind: Tuple[Tuple[str, float], ...]  # blind de chaque champion (scrape le plus récent)
     counter_share: Tuple[Tuple[str, float], ...]  # part de popularité où il est le meilleur counter
-    counters: Tuple[Tuple[str, float, str, float], ...]  # (adversaire, popularité, counter, value')
+    tree: PoolTree  # arbre du pool sur le scrape le plus récent
     candidates: int
 
 
@@ -94,8 +95,8 @@ def generate_pool(
 ) -> Optional[GeneratedPool]:
     """Meilleur pool de ``size`` champions pour le score moyen sur ``scorers``.
 
-    ``scorers[0]`` est le scrape le plus récent : il donne l'ordre, les blinds, les parts et les
-    counters. Renvoie ``None`` sans scorer, si ``size`` < 1 ou s'il y a moins de ``size``
+    ``scorers[0]`` est le scrape le plus récent : il donne l'ordre, les blinds, les parts et l'arbre.
+    Renvoie ``None`` sans scorer, si ``size`` < 1 ou s'il y a moins de ``size``
     candidats.
     """
     if not scorers or size < 1:
@@ -129,12 +130,6 @@ def generate_pool(
     share = {champion: 0.0 for champion in champions}
     for _, popularity, counter, _ in rows:
         share[counter] += popularity
-    counters = tuple(
-        sorted(
-            (row for row in rows if row[1] >= pool_stats_config.POOL_GEN_COUNTERS_MIN_POPULARITY),
-            key=lambda row: -row[1],
-        )
-    )
     return GeneratedPool(
         lane=recent.lane,
         champions=tuple(champions),
@@ -142,6 +137,6 @@ def generate_pool(
         per_scrape=per_scrape,
         blind=tuple((c, recent.blind(c)) for c in champions),
         counter_share=tuple((c, share[c]) for c in champions),
-        counters=counters,
+        tree=build_tree(recent, champions),
         candidates=len(candidates),
     )

@@ -248,7 +248,7 @@ def test_accepter_garde_la_taille_et_la_place_du_sortant(web, monkeypatch):
         post(web, f"/pool/ajouter?name=Main&arg={champion}")
     post(web, "/pool/role?name=Main&arg=top")
     card = SwapCard("top", "Darius", "Garen", 1.0, 0.5, 0.5, False, (), ())
-    monkeypatch.setattr(client_pool_swipe, "_stack", lambda *args: ([card], None))
+    monkeypatch.setattr(client_pool_swipe, "_stack", lambda *args: ([card], None, None))
     post(web, "/meta/prendre?poste=top&entrant=Darius&sortant=Garen")
     assert saved(web)["Main"]["champions"] == ["Zed", "Darius", "Ahri"]
 
@@ -418,3 +418,30 @@ def test_puce_exclu_a_son_bouton_de_retablissement(web):
     page = web.get("/meta?poste=top").text
     assert 'aria-label="Rétablir Darius"' in page
     assert "retirer=1" in page
+
+
+def test_aside_expose_l_arbre_du_pool_utilisateur_et_du_pool_systeme(web):
+    designer_main_top(web)
+    user = vue(web)
+    assert user["tree"] is not None
+    assert [c["name"] for c in user["tree"]["blind"]] == ["Ahri"]
+    page = web.get("/meta?poste=top").text
+    assert "Arbre de décision" in page and "Matrices du scrape actuel, sans maîtrise." in page
+    post(web, "/pool/supprimer?name=Main")
+    system = vue(web)
+    assert system["pool"]["editable"] is False and system["tree"] is not None
+    assert system["card"] is None
+
+
+def test_pool_genere_expose_un_arbre_et_plus_de_counters(web):
+    designer_main_top(web)
+    post(web, "/meta/generer?poste=top&taille=3&mode=actuel")
+    generated = vue(web, 3, "actuel")["generated"]
+    assert generated is not None
+    assert "counters" not in generated
+    assert {row["enemy"]["name"] for row in generated["tree"]["rows"]} <= {
+        "Garen",
+        "Zed",
+        "Darius",
+        "Ahri",
+    }

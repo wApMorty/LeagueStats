@@ -393,7 +393,7 @@ se lit sur l'écran Pool, la Méta du poste et la carte de draft. Rejoué sur 24
 | 268 | Stratégie système Arbre, Méta retirée, `STRATEGY_DEFAULT`, tests existants mis à jour | 2 | — || ✅ 2026-11-08 : 5 tests ajoutés, 6 tests recalés, suite 3365 verte |
 | 269 | Live Coach : `pool_tree` en cache, ordre de l'arbre dans `_provide`, console, survol de début de draft, tests | 5 | 267, 268, SPEC-53 || ✅ 2026-11-08 : 13 tests (9 classement, 4 survol) |
 | 270 | Snapshot et cartes de draft (`tree`, `tree_value`, lignes), tests | 3 | 269 || ✅ 2026-11-08 : 10 tests |
-| 271 | Client : `pool_tree.py`, partiel, route `/pool/arbre`, Méta du poste (`counters` retiré), écran Stratégies, tests | 5 | 267, 268 | |
+| 271 | Client : `pool_tree.py`, partiel, route `/pool/arbre`, Méta du poste (`counters` retiré), écran Stratégies, tests | 5 | 267, 268 || ✅ 2026-11-08 : `portrait` et `data_version` déplacés dans `src/client/pool_tree.py` (import circulaire évité) |
 | 272 | Clôture : exe vérifié, `PROJECT_STRUCTURE.md`, `CHANGELOG.md`, statut, README des specs, `TODO.md`, stratégie active de @pj35 sur Arbre | 2 | 270, 271 | |
 
 ### Lot SPEC-53, rappel de place en draft (✅ livrée le 2026-11-08, `--recompute-only` et recette @pj35 à faire)

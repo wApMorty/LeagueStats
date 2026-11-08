@@ -187,3 +187,19 @@ def test_bornes_du_gabarit_lues_de_draft_config(web, monkeypatch):
     page = web.get("/strategies?nom=Perso").text
     assert 'max="5.0"' in page and 'step="0.5"' in page
     assert 'maxlength="9"' in page and "/ 8 stratégies" in page
+
+
+def test_arbre_se_lit_sans_poids_ni_duplicata(web):
+    page = web.get("/strategies", params={"nom": "Arbre"}).text
+    assert "Arbre · " in page
+    assert "Vis-à-vis vu : le meilleur counter du pool contre lui." in page
+    assert 'hx-post="/strategies/dupliquer?name=Arbre"' not in page
+    assert 'type="range"' not in page
+
+
+def test_arbre_refuse_la_copie_sans_ecriture(web):
+    before = snapshot(web)
+    reply = post(web, "/strategies/dupliquer?name=Arbre", data={"nom": "Copie"})
+    assert reply.status_code == 200
+    assert "La stratégie Arbre ne se duplique pas" in reply.text
+    assert snapshot(web) == before

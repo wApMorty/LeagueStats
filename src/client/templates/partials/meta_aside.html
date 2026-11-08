@@ -56,24 +56,7 @@
       </ul>
       <p class="gen-score"><b>{{ g.score }}</b> score moyen{% if g.gap is not none %} · écart avec le pool du poste : {{ g.gap }}{% endif %}</p>
       <p class="fine">Par scrape, du plus récent au plus ancien : {% for s in g.per_scrape %}{{ s }}{{ ", " if not loop.last }}{% endfor %}</p>
-      {% if g.counters %}
-      <table class="gen-table">
-        <caption class="fine">Counters des adversaires les plus joués</caption>
-        <thead>
-          <tr><th scope="col">Adversaire</th><th scope="col">Popularité</th><th scope="col">Counter</th><th scope="col">Valeur</th></tr>
-        </thead>
-        <tbody>
-          {% for k in g.counters %}
-          <tr>
-            <td>{% if k.enemy.img %}<img src="{{ k.enemy.img }}" alt="">{% endif %}{{ k.enemy.name }}</td>
-            <td>{{ k.popularity }}</td>
-            <td>{% if k.counter.img %}<img src="{{ k.counter.img }}" alt="">{% endif %}{{ k.counter.name }}</td>
-            <td>{{ k.value }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% endif %}
+      {% with t = g.tree %}{% include "partials/pool_tree.html" %}{% endwith %}
       <form class="gen-form" hx-post="/meta/creer">
         <input type="hidden" name="poste" value="{{ v.lane }}">
         <input type="hidden" name="taille" value="{{ v.size }}">
@@ -95,6 +78,7 @@
         <li>{% if c.img %}<img src="{{ c.img }}" alt="" loading="lazy">{% endif %}{{ c.name }}</li>
         {% endfor %}
       </ul>
+      {% if v.tree %}{% with t = v.tree %}{% include "partials/pool_tree.html" %}{% endwith %}{% endif %}
     </section>
     {% endif %}
     {% if v.card %}

@@ -15,6 +15,7 @@ from .draft_actions import Refusal
 from .draft_view import fr
 
 SYSTEM_HINT = "Stratégie système : duplique-la pour la modifier"
+TREE_HINT = "La stratégie Arbre ne se duplique pas"
 
 # Textes d'interface des termes (pas un réglage) ; l'ordre est celui de l'écran.
 TERM_LABELS = {
@@ -34,6 +35,8 @@ def active_name() -> str:
 
 
 def _mode(strategy: Strategy) -> str:
+    if strategy.tree:
+        return "Arbre"
     return "Anticipation" if strategy.search else "Immédiat"
 
 
@@ -76,6 +79,7 @@ def strategies_view(selected: Optional[str], notice: Optional[str] = None) -> di
             "editable": not chosen.system,
             "active": chosen.name == active.name,
             "search": chosen.search,
+            "tree": chosen.tree,
             "mode": _mode(chosen),
             "weights": weights,
         },
@@ -134,6 +138,8 @@ def edit(action: str, name: str, form: Dict[str, str]) -> Tuple[str, Optional[st
         raise Refusal("Stratégie inconnue")
 
     if action == "dupliquer":
+        if current.tree:
+            raise Refusal(TREE_HINT)
         if len(everything) >= draft_config.STRATEGY_MAX_COUNT:
             raise Refusal(
                 f"{draft_config.STRATEGY_MAX_COUNT} stratégies au plus : "

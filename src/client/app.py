@@ -82,6 +82,7 @@ from .lcu_status import LcuProbe
 from .collection import VIEWS, read_collection
 from .pools import active_pool_name, champion_names, edit as edit_pool, forget_bans, pools_view
 from .pool_swipe import (
+    DB_UNAVAILABLE,
     accept as accept_swipe,
     aside_view,
     create_generated,
@@ -89,6 +90,7 @@ from .pool_swipe import (
     pass_card,
     require_generated,
 )
+from .pool_tree import pool_lane, tree_view
 from .strategies import active_name as active_strategy_name, edit as edit_strategy, strategies_view
 from .historique import read_game, read_history
 from .profil import read_profile
@@ -589,6 +591,31 @@ def create_app(
         avec le poste s'il est valide."""
         target = f"/meta?poste={poste}" if poste in scraping_config.LANES else "/meta"
         return RedirectResponse(target, status_code=303)
+
+    @app.get("/pool/arbre", response_class=HTMLResponse)
+    async def pool_tree_fragment(request: Request, nom: str = ""):
+        """Arbre de décision du pool `nom` (SPEC-54), chargé après l'écran Pool. Pool inconnu : 404.
+        Sans poste pour le pool, ou base illisible, le fragment l'explique à la place de l'arbre."""
+
+        def work() -> Optional[dict]:
+            manager = PoolManager()
+            pool = manager.get_pool(nom)
+            if pool is None:
+                return None
+            lane = pool_lane(pool, app.state.db_path)
+            tree = tree_view(app.state.db_path, lane, pool.champions, Champions(app.state.assets))
+            if tree is None:
+                if lane is None:
+                    return {"t": None, "message": "Aucun poste pour ce pool"}
+                if not pool.champions:
+                    return {"t": None, "message": "Pool vide"}
+                return {"t": None, "message": DB_UNAVAILABLE}
+            return {"t": tree, "message": None}
+
+        view = await in_thread(work)
+        if view is None:
+            return Response(status_code=404)
+        return templates.TemplateResponse(request, "partials/pool_tree.html", view)
 
     @app.post("/meta/generer", response_class=HTMLResponse)
     async def meta_generate(request: Request):

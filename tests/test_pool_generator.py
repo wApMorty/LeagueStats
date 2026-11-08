@@ -217,7 +217,7 @@ def test_counter_share_sums_to_one_and_is_per_champion():
     assert sum(shares.values()) == pytest.approx(1.0)
 
 
-def test_counters_keep_only_enemies_above_threshold_sorted_by_popularity():
+def test_tree_blind_suit_l_ordre_du_pool_et_une_table_par_adversaire():
     names = ["Big", "Mid", "Small", "Tiny"]
     popularity = [0.5, 0.3, 0.19, 0.01]
     values = {n: [1.0, 1.0, 1.0, 1.0] for n in names}
@@ -226,9 +226,7 @@ def test_counters_keep_only_enemies_above_threshold_sorted_by_popularity():
     result = generate_pool([scorer], 3, excluded=())
 
     assert result is not None
-    enemies = [row[0] for row in result.counters]
-    assert enemies == ["Big", "Mid", "Small"]
-    assert all(
-        row[1] >= pool_stats_config.POOL_GEN_COUNTERS_MIN_POPULARITY for row in result.counters
-    )
-    assert all(row[2] in result.champions for row in result.counters)
+    assert [choice.champion for choice in result.tree.blind] == list(result.champions)
+    assert [enemy for enemy, _, _ in result.tree.counters] == names
+    for _, _, table in result.tree.counters:
+        assert {choice.champion for choice in table} == set(result.champions)
