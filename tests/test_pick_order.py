@@ -4,13 +4,14 @@ Les matrices sont fabriquées à la main ou tirées avec une graine fixe. L'opti
 une recherche exhaustive sans mémoïsation, indépendante de la programmation dynamique du module.
 """
 
+import json
 import math
 import random
 from typing import Dict, FrozenSet, List, Tuple
 
 import pytest
 
-from src.analysis.pick_order import PICK_SEQUENCE, Pick, pick_order
+from src.analysis.pick_order import PICK_SEQUENCE, Pick, from_meta, pick_order, to_meta
 from src.config_constants import scraping_config
 
 LANES = scraping_config.LANES
@@ -160,3 +161,47 @@ def test_valeur_de_la_ligne_egale_l_optimum_exhaustif(seed: int):
     assert _line_value(line, matchups, synergies) == pytest.approx(
         _optimum(matchups, synergies), abs=1e-9
     )
+
+
+def _valid_meta() -> List:
+    """Forme JSON d'une ligne valide, pour la modifier champ par champ."""
+    return json.loads(to_meta(pick_order(_uniform(0.0), _uniform(0.0))))
+
+
+def test_aller_retour_meta_rend_la_meme_ligne():
+    line = pick_order(_random_matrix(random.Random(4)), _random_matrix(random.Random(5)))
+
+    assert from_meta(to_meta(line)) == line
+    assert [p.slot for p in from_meta(to_meta(line))] == list(range(1, 11))
+
+
+@pytest.mark.parametrize("value", [None, "", "[[", "pas du json"])
+def test_from_meta_absente_ou_illisible_rend_liste_vide(value):
+    assert from_meta(value) == []
+
+
+@pytest.mark.parametrize("pairs", [_valid_meta()[:9], _valid_meta() + [["red", "top"]], {"a": 1}])
+def test_from_meta_pas_dix_paires_rend_liste_vide(pairs):
+    assert from_meta(json.dumps(pairs)) == []
+
+
+def test_from_meta_cote_inconnu_rend_liste_vide():
+    pairs = _valid_meta()
+    pairs[3][0] = "green"
+
+    assert from_meta(json.dumps(pairs)) == []
+
+
+def test_from_meta_poste_inconnu_rend_liste_vide():
+    pairs = _valid_meta()
+    pairs[0][1] = "adc"
+
+    assert from_meta(json.dumps(pairs)) == []
+
+
+@pytest.mark.parametrize("bad_pair", ["blue", ["blue"], ["blue", "top", "x"]])
+def test_from_meta_paire_malformee_rend_liste_vide(bad_pair):
+    pairs = _valid_meta()
+    pairs[0] = bad_pair
+
+    assert from_meta(json.dumps(pairs)) == []

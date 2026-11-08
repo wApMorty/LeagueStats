@@ -28,6 +28,8 @@ from typing import Dict, List, Optional
 
 import psutil
 
+from .analysis.blindability import compute_blindability
+from .analysis.pick_order import PICK_ORDER_META_KEY, pick_order, to_meta
 from .analysis.shrink import refresh_shrink_k
 from .config import config
 from .config_constants import data_quality_config, scraping_config
@@ -431,6 +433,18 @@ def run_pipeline(
             # Re-grade after the repair: a successful one clears the warnings,
             # so the run is "ok" (2026-09-24: Ahri repaired 1/1, run stuck "partial").
             completeness_report = check_completeness(db, include_synergies=include_synergies)
+
+        # ── 4c. Ordre de pick conseillé (SPEC-53 §4.1) ──────────────────────
+        # Après la réparation : les matrices lues ici sont les données définitives.
+        # Best-effort : une exception ne fait pas échouer le pipeline et n'écrit pas la clé.
+        try:
+            blindability = compute_blindability(db.connection)
+            line = pick_order(blindability["matchups"], blindability["synergies"])
+            if line:
+                db.set_meta(PICK_ORDER_META_KEY, to_meta(line))
+                logger.info("pick_order recalculé: %d picks", len(line))
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            logger.warning("pick_order non recalculé: %s", e)
 
         # ── 5. Freshness metadata ────────────────────────────────────────────
         if recompute_only:

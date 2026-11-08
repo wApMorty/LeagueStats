@@ -7,9 +7,15 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 import scripts.repair_data as repair_data_module
+from src.analysis.pick_order import PICK_ORDER_META_KEY, from_meta, pick_order
+from src.config_constants import scraping_config
 from src.data_quality import CompletenessReport, DataCompletenessError
 from src.progress import PipelineCancelled
+
+LANES = scraping_config.LANES
 
 
 def _scrape_stats():
@@ -291,6 +297,65 @@ class TestRunPipeline:
         assert "last_scrape_status" not in meta_keys
         assert "last_full_success_utc" not in meta_keys
         mocks["notifier"].notify_success.assert_called_once()
+
+    @pytest.mark.parametrize("recompute_only", [False, True])
+    def test_pick_order_written_in_both_paths(self, monkeypatch, recompute_only):
+        """SPEC-53 §4.1 : la ligne de pick est recalculée sur les matrices et écrite en meta,
+        après la réparation, sur le chemin scrape comme sur recompute_only."""
+        import src.pipeline as module
+
+        matchups = {lane: {other: 1.0 for other in LANES} for lane in LANES}
+        synergies = {lane: {other: 0.5 for other in LANES} for lane in LANES}
+        blindability = MagicMock(return_value={"matchups": matchups, "synergies": synergies})
+        monkeypatch.setattr(module, "compute_blindability", blindability)
+
+        result, mocks = self._run(monkeypatch, recompute_only=recompute_only)
+
+        assert result.status == "ok"
+        blindability.assert_called_once_with(mocks["db"].connection)
+        written = {c.args[0]: c.args[1] for c in mocks["db"].set_meta.call_args_list}
+        assert from_meta(written[PICK_ORDER_META_KEY]) == pick_order(matchups, synergies)
+
+    def test_pick_order_not_written_on_empty_matrices(self, monkeypatch):
+        import src.pipeline as module
+
+        monkeypatch.setattr(
+            module,
+            "compute_blindability",
+            MagicMock(return_value={"matchups": {}, "synergies": {}, "draws": {}}),
+        )
+
+        result, mocks = self._run(monkeypatch, recompute_only=True)
+
+        assert result.status == "ok"
+        meta_keys = [call.args[0] for call in mocks["db"].set_meta.call_args_list]
+        assert PICK_ORDER_META_KEY not in meta_keys
+
+    @pytest.mark.parametrize("recompute_only", [False, True])
+    def test_pick_order_failure_is_ignored_without_writing_key(self, monkeypatch, recompute_only):
+        """SPEC-53 §4.1 : une exception de compute_blindability est journalisée en WARNING,
+        n'écrit pas la clé et n'échoue pas le pipeline."""
+        import src.pipeline as module
+
+        monkeypatch.setattr(
+            module,
+            "compute_blindability",
+            MagicMock(side_effect=RuntimeError("base illisible")),
+        )
+        logger = MagicMock()
+        monkeypatch.setattr(module, "logger", logger)
+
+        result, mocks = self._run(monkeypatch, recompute_only=recompute_only)
+
+        assert result.status == "ok"
+        mocks["notifier"].notify_success.assert_called_once()
+        meta_keys = [call.args[0] for call in mocks["db"].set_meta.call_args_list]
+        assert PICK_ORDER_META_KEY not in meta_keys
+        warnings = [c.args for c in logger.warning.call_args_list]
+        assert any(
+            args[0].startswith("pick_order") and "base illisible" in str(args[-1])
+            for args in warnings
+        )
 
     def test_pool_scoped_run_skips_whole_roster_completeness_check(self, monkeypatch):
         result, mocks = self._run(monkeypatch, champions=["Ahri", "Zed"])

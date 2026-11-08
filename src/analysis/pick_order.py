@@ -9,15 +9,19 @@ Programmation dynamique sur les postes déjà pickés de chaque côté (32 × 32
 valeur : le premier poste dans l'ordre de ``scraping_config.LANES`` gagne.
 """
 
+import json
 import math
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import FrozenSet, Iterator, List, Mapping, Optional, Tuple
+from typing import FrozenSet, Iterator, List, Mapping, Optional, Sequence, Tuple
 
 from ..config_constants import scraping_config
 
 # Règle de la draft classée (B = blue, R = red) : 5 picks par côté, pas de bans pris en compte.
 PICK_SEQUENCE = "BRRBBRRBBR"
+
+# Clé de la table meta où la ligne recalculée est stockée (SPEC-53 §4.1).
+PICK_ORDER_META_KEY = "pick_order"
 
 Matrix = Mapping[str, Mapping[str, float]]
 
@@ -91,4 +95,35 @@ def pick_order(matchups: Matrix, synergies: Matrix) -> List[Pick]:
     for t, letter in enumerate(PICK_SEQUENCE):
         _, lane, blue, red = best(t, blue, red)
         line.append(Pick(slot=t + 1, side="blue" if letter == "B" else "red", lane=lane))
+    return line
+
+
+def to_meta(line: Sequence[Pick]) -> str:
+    """Sérialise une ligne de picks pour la table meta : ``[["blue", "jungle"], …]``."""
+    return json.dumps([[pick.side, pick.lane] for pick in line])
+
+
+def from_meta(value: Optional[str]) -> List[Pick]:
+    """Relit une ligne écrite par `to_meta`.
+
+    Returns:
+        Les 10 picks, ou ``[]`` si ``value`` est absent, illisible, ne compte pas 10 paires, ou
+        contient un côté hors ``blue``/``red`` ou un poste hors ``scraping_config.LANES``.
+    """
+    if value is None:
+        return []
+    try:
+        pairs = json.loads(value)
+    except (TypeError, ValueError):
+        return []
+    if not isinstance(pairs, list) or len(pairs) != len(PICK_SEQUENCE):
+        return []
+    line: List[Pick] = []
+    for slot, pair in enumerate(pairs, start=1):
+        if not isinstance(pair, list) or len(pair) != 2:
+            return []
+        side, lane = pair
+        if side not in ("blue", "red") or lane not in scraping_config.LANES:
+            return []
+        line.append(Pick(slot=slot, side=side, lane=lane))
     return line
