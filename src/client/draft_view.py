@@ -149,6 +149,34 @@ def _status(player: Dict[str, Any], kind: Optional[str]) -> str:
 
 
 SWAP_NAMES = {"pick_order": "ordre", "position": "rôle"}
+SIDE_LABELS = {"blue": "bleu", "red": "rouge"}
+
+
+def pick_advice_view(snapshot: Dict[str, Any]) -> Optional[Dict[str, str]]:
+    """Le rappel de place de pick (SPEC-53 §4.4) : « Top côté bleu : blind, vise le n° 8 (tu es n° 9) ».
+
+    None sans conseil. À ta place conseillée, la phrase dit que tu y es.
+    """
+    advice = snapshot.get("pick_advice")
+    if not advice:
+        return None
+    lane = ROLE_LABELS.get(advice["lane"], advice["lane"])
+    where = f"{lane} côté {SIDE_LABELS.get(advice['side'], advice['side'])}"
+    if advice["target"] == advice["current"]:
+        text = f"{where} : tu es à ta place conseillée (n° {advice['target']})"
+    else:
+        text = (
+            f"{where} : {advice['mode']}, vise le n° {advice['target']} "
+            f"(tu es n° {advice['current']})"
+        )
+    return {"text": text}
+
+
+def _advised_title(advice: Dict[str, Any]) -> str:
+    """Le titre du bouton « ⇄ ordre · conseillé » : ce que l'échange donne, ou le pas qu'il fait."""
+    if advice["target_cell"]:
+        return f"Te donne le n° {advice['target']}, ta place conseillée"
+    return f"Te rapproche de ta place conseillée (n° {advice['target']})"
 
 
 def _swap_buttons(snapshot: Dict[str, Any]) -> Dict[int, List[Dict[str, Any]]]:
@@ -156,17 +184,19 @@ def _swap_buttons(snapshot: Dict[str, Any]) -> Dict[int, List[Dict[str, Any]]]:
 
     Une entrée `AVAILABLE` se demande, une entrée `SENT` s'annule ; une demande reçue (`RECEIVED`) passe
     par le bandeau (`swap_requests`), une entrée `INVALID` n'offre rien. Le gain chiffré du coach s'ajoute
-    au bouton d'échange de rôle.
+    au bouton d'échange de rôle ; l'échange d'ordre conseillé (SPEC-53) se marque « conseillé ».
     """
     gains = {
         a["cell_id"]: a["gain_pts"]
         for a in snapshot.get("swap_advice") or []
         if a["kind"] == "position"
     }
+    advice = snapshot.get("pick_advice") or {}
     buttons: Dict[int, List[Dict[str, Any]]] = {}
     for swap in snapshot.get("swaps") or []:
         name = SWAP_NAMES[swap["kind"]]
         gain = gains.get(swap["cell_id"]) if swap["kind"] == "position" else None
+        advised = False
         if swap["state"] == "AVAILABLE":
             label = f"⇄ {name}" + (f" {signed(gain)} pts" if gain is not None else "")
             title = f"Demander l'échange de {name}" + (
@@ -174,6 +204,8 @@ def _swap_buttons(snapshot: Dict[str, Any]) -> Dict[int, List[Dict[str, Any]]]:
                 if gain is not None
                 else ""
             )
+            if swap["kind"] == "pick_order" and swap["cell_id"] == advice.get("cell_id"):
+                label, title, advised = "⇄ ordre · conseillé", _advised_title(advice), True
             action = "request"
         elif swap["state"] == "SENT":
             label, title, action = f"✕ {name}", f"Annuler ma demande d'échange de {name}", "cancel"
@@ -186,6 +218,7 @@ def _swap_buttons(snapshot: Dict[str, Any]) -> Dict[int, List[Dict[str, Any]]]:
                 "state": swap["state"].lower(),
                 "label": label,
                 "title": title,
+                "advised": advised,
             }
         )
     return buttons
@@ -200,6 +233,7 @@ def swap_requests(snapshot: Dict[str, Any]) -> List[Dict[str, Any]]:
         for a in snapshot.get("swap_advice") or []
         if a["kind"] == "position"
     }
+    effects = (snapshot.get("pick_advice") or {}).get("request_effects") or {}
     found = []
     for swap in snapshot.get("swaps") or []:
         if swap["state"] != "RECEIVED":
@@ -218,6 +252,11 @@ def swap_requests(snapshot: Dict[str, Any]) -> List[Dict[str, Any]]:
         else:
             detail = "vos rôles"
         gain = gains.get(swap["cell_id"]) if swap["kind"] == "position" else None
+        effect = effects.get(swap["cell_id"]) if swap["kind"] == "pick_order" else None
+        if effect == "closer":
+            detail += " · te rapproche de ta place conseillée"
+        elif effect == "farther":
+            detail += " · t'éloigne de ta place conseillée"
         found.append(
             {
                 "kind": swap["kind"],
@@ -591,6 +630,7 @@ def stage_view(
         "role": ROLE_LABELS.get(snapshot.get("local_role"), ""),
         "seals": sealed,
         "swap_requests": swap_requests(snapshot),
+        "pick_advice": pick_advice_view(snapshot),
         "strips": ban_strips(snapshot, champions),
         "skin": skin,
         "recs": recs,

@@ -20,7 +20,7 @@
   {% if m.hovering %}<svg class="d-dashring" data-spin="10" viewBox="0 0 112 112" aria-hidden="true"><circle cx="56" cy="56" r="54"/></svg>{% endif %}
   {% if m.order %}<span class="d-order" title="Pick n° {{ m.order }}">{{ m.order }}</span>{% endif %}
   <div class="d-caption"><div class="d-name">{{ m.name }}</div><div class="d-sub">{{ m.role }} · {{ m.status }}</div>
-    {% if m.swap %}<div class="d-swaps">{% for s in m.swap %}<button type="button" class="d-swap d-swap-{{ s.state }}" data-swap="{{ s.kind }}:{{ s.action }}:{{ m.cell_id }}" title="{{ s.title }}">{{ s.label }}</button>{% endfor %}</div>{% endif %}
+    {% if m.swap %}<div class="d-swaps">{% for s in m.swap %}<button type="button" class="d-swap d-swap-{{ s.state }}{{ ' d-swap-advised' if s.advised }}" data-swap="{{ s.kind }}:{{ s.action }}:{{ m.cell_id }}" title="{{ s.title }}">{{ s.label }}</button>{% endfor %}</div>{% endif %}
   </div>
 </div>
 {%- endmacro %}
@@ -78,6 +78,8 @@
     <div class="d-tick-n" id="d-tick-n">–</div>
   </div>
 </div>
+
+{% if v.pick_advice %}<p class="d-pick-advice" role="status" data-key="pick-advice" data-sig="{{ v.pick_advice|sig }}">{{ v.pick_advice.text }}</p>{% endif %}
 
 <div class="d-seal d-seal-ally" data-key="seal-ally" data-sig="seal-ally" data-sync>
   <div data-key="rings" data-sig="rings" class="d-seal-fx">{{ rings('dRing1', 160, 0, 'ᚠ ᚢ ᚦ ᚨ ᚱ ᚲ ᚷ ᚹ ᚺ ᚾ ᛁ ᛃ ᛇ ᛈ ᛉ ᛊ ᛏ ᛒ ᛖ ᛗ ᛚ ᛜ ᛞ ᛟ ᚠ ᚢ ᚦ ᚨ ᚱ ᚲ ᚷ ᚹ ᚺ ᚾ ᛁ ᛃ ᛇ ᛈ ᛉ ᛊ ᛏ ᛒ ᛖ ᛗ ᛚ ᛜ ᛞ ᛟ') }}</div>

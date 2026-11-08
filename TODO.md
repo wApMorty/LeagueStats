@@ -409,7 +409,7 @@ la boucle de draft). Découpage en SPEC-53 §5 (tâches 262 à 266, 12 pts) :
 | 262 | `to_meta` / `from_meta`, étape best-effort de `run_pipeline`, tests | 2 | — | ✅ 2026-11-08 : étape 4c après la réparation ; sur le scrape du 1er nov. (sauvegarde du 7 nov.), la séquence de SPEC-51 §1.3 (critère 2) ; sur celui du 7 nov., B top passe en 9 |
 | 263 | `src/draft/pick_advice.py` (`PickAdvice`, `pick_advice`, `request_effect`), tests | 3 | — | ✅ 2026-11-08 : 15 tests ; fixture `session_swaps.json` : top, bleu, blind, vise 8, n° 9, demande de la cellule 1 « farther » |
 | 264 | `SnapshotPickAdvice`, `_pick_advice` dans les recommandations, console, tests | 3 | 262, 263 | ✅ 2026-11-08 : 6 tests ; fixture : vise 8, n° 9, demande de la cellule 1 « farther », console une fois ; fait par le modèle principal (boucle de draft) |
-| 265 | Écran de draft : ligne de rappel, bouton conseillé, bandeau annoté, tests | 3 | 264 | |
+| 265 | Écran de draft : ligne de rappel, bouton conseillé, bandeau annoté, tests | 3 | 264 | ✅ 2026-11-08 : 8 tests ; ligne de rappel, bouton « ⇄ ordre · conseillé », bandeau annoté |
 | 266 | Clôture : exe vérifié, `PROJECT_STRUCTURE.md`, `CHANGELOG.md`, statut, README des specs, `TODO.md` | 1 | 265 | |
 
 ### Lot SPEC-52, suivi du rang par compte (✅ livrée le 2026-11-07, `alembic upgrade head` et recette @pj35 à faire)

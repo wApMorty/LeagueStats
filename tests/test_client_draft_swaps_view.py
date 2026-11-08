@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from src.draft.snapshot import SnapshotPickAdvice
 from tests.test_client_draft import (
     Tree,
     assets,
@@ -130,3 +131,87 @@ def test_l_etat_du_swap_entre_dans_l_empreinte_de_la_legende(client, bus):  # no
     )  # noqa: E731
     assert sigs(available) and sigs(available) != sigs(sent)
     assert "d-swap-banner" not in available + sent
+
+
+def advice(**fields):
+    """Le conseil de place de pick (SPEC-53) : Top côté bleu, vise 8, je suis 9, pas d'échange conseillé."""
+    values = dict(
+        lane="top",
+        side="blue",
+        mode="blind",
+        target=8,
+        current=9,
+        cell_id=None,
+        target_cell=False,
+        request_effects={},
+    )
+    values.update(fields)
+    return SnapshotPickAdvice(**values)
+
+
+def test_rappel_texte_des_deux_cas(client, bus):  # noqa: F811
+    html = stage(client, bus, pick_advice=advice())
+    assert 'class="d-pick-advice" role="status" data-key="pick-advice"' in html
+    assert "Top côté bleu : blind, vise le n° 8 (tu es n° 9)" in html
+    html = stage(client, bus, pick_advice=advice(current=8, mode="counter", side="red"))
+    assert "Top côté rouge : tu es à ta place conseillée (n° 8)" in html
+    assert "vise le n° 8" not in html
+
+
+def test_rien_sans_conseil(client, bus):  # noqa: F811
+    html = stage(client, bus, [swap("pick_order", 1, "AVAILABLE")])
+    assert "d-pick-advice" not in html and "conseillé" not in html
+
+
+def test_bouton_conseille_donne_le_titre_de_l_echange(client, bus):  # noqa: F811
+    html = stage(
+        client,
+        bus,
+        [swap("pick_order", 1, "AVAILABLE"), swap("pick_order", 2, "AVAILABLE")],
+        pick_advice=advice(cell_id=1, target_cell=True),
+    )
+    caption = caption_of(html, "Alistar")
+    assert "⇄ ordre · conseillé" in caption and "d-swap-advised" in caption
+    assert 'title="Te donne le n° 8, ta place conseillée"' in caption
+    assert 'data-swap="pick_order:request:1"' in caption
+    other = caption_of(html, "Jinx")
+    assert "⇄ ordre<" in other and "conseillé" not in other and "d-swap-advised" not in other
+
+
+def test_bouton_conseille_sans_cellule_exacte_rapproche(client, bus):  # noqa: F811
+    html = stage(
+        client,
+        bus,
+        [swap("pick_order", 1, "AVAILABLE")],
+        pick_advice=advice(cell_id=1, target_cell=False),
+    )
+    caption = caption_of(html, "Alistar")
+    assert 'title="Te rapproche de ta place conseillée (n° 8)"' in caption
+    assert "d-swap-advised" in caption
+
+
+def received(client, bus, effects):  # noqa: F811
+    """Une demande d'ordre reçue d'Alistar (cellule 1), avec ses effets sur ma place."""
+    snapshot = pick_snapshot(
+        swaps=[swap("pick_order", 1, "RECEIVED")],
+        pick_advice=advice(cell_id=None, request_effects=effects),
+    )
+    snapshot["allies"][1]["pick_order"], snapshot["allies"][0]["pick_order"] = 4, 1
+    bus.publish("draft", snapshot)
+    return client.get("/draft/stage").text
+
+
+def test_bandeau_annote_rapproche(client, bus):  # noqa: F811
+    html = received(client, bus, {1: "closer"})
+    assert "d-swap-banner" in html
+    assert "· te rapproche de ta place conseillée" in html
+
+
+def test_bandeau_annote_eloigne(client, bus):  # noqa: F811
+    html = received(client, bus, {1: "farther"})
+    assert "· t&#39;éloigne de ta place conseillée" in html
+
+
+def test_bandeau_sans_effet_pour_la_cellule_n_est_pas_annote(client, bus):  # noqa: F811
+    html = received(client, bus, {2: "closer"})
+    assert "d-swap-banner" in html and "ta place conseillée" not in html
