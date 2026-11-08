@@ -14,6 +14,7 @@ import pytest
 
 from src.analysis.mastery import Mastery, MasteryTerm, to_win_points, with_term
 from src.analysis.strategy import Strategy, WeightedEvaluator, find_strategy
+from src.config_constants import draft_config
 from src.draft.snapshot import Analysis
 from src.draft.state import Cell
 from src.draft.search import CandidatePool, DraftSearch, PickTurn, SearchResult
@@ -519,11 +520,11 @@ class TestStrategyLoading:
 
         assert monitor.strategy.name == "Counter"
         assert isinstance(monitor.search.evaluator, WeightedEvaluator)
-        assert monitor.strategy_names == ["Simple", "Counter", "Méta", "Complet"]
+        assert monitor.strategy_names == ["Simple", "Counter", "Complet", "Arbre"]
 
     def test_sans_preference_la_strategie_par_defaut(self, monitor):
         monitor.load_strategy()
-        assert monitor.strategy.name == "Simple"
+        assert monitor.strategy.name == draft_config.STRATEGY_DEFAULT == "Arbre"
 
     def test_complet_garde_l_evaluateur_calibre(self, monitor):
         monitor.set_strategy(find_strategy("Complet", ()))
@@ -558,11 +559,11 @@ class TestStrategyLoading:
         assert "[ALERTE] Changement de stratégie impossible" in capsys.readouterr().out
 
     def test_la_nouvelle_draft_relit_la_strategie(self, monitor):
-        save_active_strategy("Méta")
+        save_active_strategy("Counter")
 
         monitor.lifecycle._reload_strategy()
 
-        assert monitor.strategy.name == "Méta"
+        assert monitor.strategy.name == "Counter"
 
     def test_une_erreur_de_relecture_garde_la_strategie(self, monitor):
         monitor.load_strategy = Mock(side_effect=OSError("panne"))

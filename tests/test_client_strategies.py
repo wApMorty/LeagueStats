@@ -52,7 +52,7 @@ def snapshot(web):
 def test_la_page_liste_les_strategies_systeme_et_sert_la_nav(web):
     page = web.get("/strategies")
     assert page.status_code == 200
-    for name in ("Simple", "Counter", "Méta", "Complet"):
+    for name in ("Simple", "Counter", "Complet", "Arbre"):
         assert name in page.text
     assert 'href="/strategies"' in page.text
 
@@ -130,13 +130,14 @@ def test_nombre_maximal_de_strategies_refuse_la_copie(web):
     assert snapshot(web) == before
 
 
-def test_supprimer_la_strategie_active_rebascule_sur_simple(web):
+def test_supprimer_la_strategie_active_rebascule_sur_le_defaut(web):
     post(web, "/strategies/dupliquer?name=Simple", data={"nom": "Perso"})
     post(web, "/strategies/actif?name=Perso")
     reply = post(web, "/strategies/supprimer?name=Perso")
     assert "Stratégie « Perso » supprimée" in reply.text
-    assert prefs(web)["active_strategy"] == "Simple" and prefs(web)["strategies"] == []
-    assert web.lines == ["strategy Perso", "strategy Simple"]
+    defaut = draft_config.STRATEGY_DEFAULT
+    assert prefs(web)["active_strategy"] == defaut and prefs(web)["strategies"] == []
+    assert web.lines == ["strategy Perso", f"strategy {defaut}"]
 
 
 def test_commands_seulement_pour_les_seuls_cas_prevus(web):

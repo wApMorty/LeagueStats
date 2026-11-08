@@ -405,7 +405,8 @@ class DraftConfig:
     # ── SPEC-46 : stratégies de draft (src/analysis/strategy.py) ──
 
     # Stratégie active quand aucune n'est choisie, et repli d'une stratégie inconnue.
-    STRATEGY_DEFAULT: str = "Simple"
+    # Arbre : arbitrage SPEC-54 §2 (classement par l'arbre du pool).
+    STRATEGY_DEFAULT: str = "Arbre"
 
     # Poids maximal d'un terme. 0 coupe le terme, 1 garde la valeur calibrée.
     STRATEGY_WEIGHT_MAX: float = 3.0

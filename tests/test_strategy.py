@@ -277,7 +277,7 @@ class TestFindStrategy:
     def test_all_strategies_lists_system_then_custom(self):
         custom = [Strategy("Vite")]
         names = [s.name for s in all_strategies(custom)]
-        assert names == ["Simple", "Counter", "Méta", "Complet", "Vite"]
+        assert names == ["Simple", "Counter", "Complet", "Arbre", "Vite"]
 
     def test_strategy_of_reads_monitor_attribute_or_defaults(self):
         monitor = Mock()
@@ -288,8 +288,41 @@ class TestFindStrategy:
 
 class TestSystemStrategies:
     def test_order_and_names(self):
-        assert [s.name for s in SYSTEM_STRATEGIES] == ["Simple", "Counter", "Méta", "Complet"]
+        assert [s.name for s in SYSTEM_STRATEGIES] == ["Simple", "Counter", "Complet", "Arbre"]
         assert all(s.system for s in SYSTEM_STRATEGIES)
+
+    def test_arbre_is_a_tree_system_strategy_not_calibrated(self):
+        arbre = find_strategy("Arbre", ())
+        assert arbre.tree is True and arbre.system is True
+        assert arbre.is_calibrated is False
+
+    def test_only_arbre_is_a_tree(self):
+        assert [s.name for s in SYSTEM_STRATEGIES if s.tree] == ["Arbre"]
+
+    def test_meta_is_gone_and_falls_back_to_arbre(self):
+        assert find_strategy("Méta", ()).name == "Arbre"
+        assert find_strategy(None, ()).name == "Arbre"
+        assert draft_config.STRATEGY_DEFAULT == "Arbre"
+
+    def test_strategy_from_dict_never_produces_a_tree(self):
+        strategy = strategy_from_dict(
+            {
+                "name": "Vite",
+                "force": 1,
+                "duel": 1,
+                "other": 1,
+                "synergy": 1,
+                "mastery": 1,
+                "tree": True,
+            }
+        )
+        assert strategy.tree is False
+
+    def test_arbre_name_is_reserved(self):
+        with pytest.raises(ValueError, match="stratégie de base"):
+            strategy_from_dict(
+                {"name": "arbre", "force": 1, "duel": 1, "other": 1, "synergy": 1, "mastery": 1}
+            )
 
     def test_only_complet_is_calibrated_and_searches(self):
         calibrated = [s.name for s in SYSTEM_STRATEGIES if s.is_calibrated]

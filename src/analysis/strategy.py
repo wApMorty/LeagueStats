@@ -6,6 +6,9 @@ anticipation du vis-à-vis). Elle ne touche ni aux probabilités affichées ni a
 ``WeightedEvaluator`` applique les poids par-dessus les termes de ``GameEvaluator``,
 qui reste la référence.
 
+La stratégie système « Arbre » (SPEC-54) classe les champions par l'arbre du pool (``tree=True``) ;
+c'est la stratégie par défaut. Une stratégie perso n'est jamais un arbre.
+
 Seul ``strategy_from_dict`` valide une stratégie saisie ou lue depuis
 ``user_prefs.json`` ; ``parse_strategies`` et l'écran Stratégies passent par lui.
 """
@@ -34,6 +37,8 @@ class Strategy:
     mastery: float = 1.0
     search: bool = False  # False = calcul immédiat, True = réponse du vis-à-vis
     system: bool = False
+    # True = classement par l'arbre du pool (SPEC-54), jamais une stratégie perso.
+    tree: bool = False
 
     @property
     def is_calibrated(self) -> bool:
@@ -44,8 +49,9 @@ class Strategy:
 SYSTEM_STRATEGIES = (
     Strategy("Simple", 1.0, 1.0, 1.0, 0.0, 1.0, search=False, system=True),
     Strategy("Counter", 0.5, 2.0, 1.0, 0.0, 0.25, search=False, system=True),
-    Strategy("Méta", 1.0, 0.0, 0.0, 0.0, 0.0, search=False, system=True),
     Strategy("Complet", 1.0, 1.0, 1.0, 1.0, 1.0, search=True, system=True),
+    # Les poids ne servent qu'au repli « poste inconnu » et à la victoire calibrée (SPEC-54 §2).
+    Strategy("Arbre", 1.0, 1.0, 0.0, 0.0, 0.0, search=False, tree=True, system=True),
 )
 
 

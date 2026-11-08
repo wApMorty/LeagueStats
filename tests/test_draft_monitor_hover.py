@@ -252,6 +252,7 @@ class TestBlindPickMastery:
         """Garen 55 % mais −5,4 pts de maîtrise : Darius (51 %) passe devant."""
         monitor.assistant.get_matchups_for_draft.return_value = matchups(1000)
         monitor.mastery = MasteryTerm({"Garen": Mastery("Garen", 10, -6.0, -3.0)})
+        monitor.set_strategy(find_strategy("Simple", ()))
         assert monitor.mastery.points("Garen") < -4.0
 
         assert monitor._get_best_champion_from_pool() == "Darius"
@@ -278,7 +279,7 @@ class TestBlindPickStrategy:
     def test_sans_poids_de_maitrise_ma_maitrise_ne_compte_plus(self, monitor, lane_winrates):
         monitor.assistant.get_matchups_for_draft.return_value = matchups(1000)
         monitor.mastery = MasteryTerm({"Garen": Mastery("Garen", 10, -6.0, -3.0)})
-        monitor.set_strategy(find_strategy("Méta", ()))
+        monitor.set_strategy(Strategy("Sans maîtrise", mastery=0.0))
 
         assert monitor._get_best_champion_from_pool() == "Garen"
 

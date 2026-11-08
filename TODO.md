@@ -390,7 +390,7 @@ se lit sur l'écran Pool, la Méta du poste et la carte de draft. Rejoué sur 24
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
 | 267 | `src/analysis/pool_tree.py` (`build_tree`, `leaf`), tests | 3 | — | ✅ 2026-11-08 : 14 tests |
-| 268 | Stratégie système Arbre, Méta retirée, `STRATEGY_DEFAULT`, tests existants mis à jour | 2 | — | |
+| 268 | Stratégie système Arbre, Méta retirée, `STRATEGY_DEFAULT`, tests existants mis à jour | 2 | — || ✅ 2026-11-08 : 5 tests ajoutés, 6 tests recalés, suite 3365 verte |
 | 269 | Live Coach : `pool_tree` en cache, ordre de l'arbre dans `_provide`, console, survol de début de draft, tests | 5 | 267, 268, SPEC-53 | |
 | 270 | Snapshot et cartes de draft (`tree`, `tree_value`, lignes), tests | 3 | 269 | |
 | 271 | Client : `pool_tree.py`, partiel, route `/pool/arbre`, Méta du poste (`counters` retiré), écran Stratégies, tests | 5 | 267, 268 | |

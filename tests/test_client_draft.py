@@ -1824,8 +1824,8 @@ def test_basculer_memorise_et_previent_le_live_coach(strategy_client):
 
 
 def test_basculer_sans_live_coach_memorise_quand_meme(client):
-    assert _strategy_post(client, "Méta").status_code == 204
-    assert load_strategies()[0] == "Méta"
+    assert _strategy_post(client, "Complet").status_code == 204
+    assert load_strategies()[0] == "Complet"
 
 
 def test_une_strategie_inconnue_est_refusee_sans_ecriture(strategy_client):
