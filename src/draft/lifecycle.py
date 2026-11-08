@@ -164,6 +164,7 @@ class MonitorLifecycle:
         self.m._draft_episode = episode
         self._reload_mastery()
         self._reload_strategy()
+        self._forget_pool_trees()
         self.m._reset_for_next_game()
         timer.draft_seen(tracker.since())
 
@@ -184,6 +185,14 @@ class MonitorLifecycle:
         except Exception as error:  # pylint: disable=broad-exception-caught
             if self.m.verbose:
                 print(f"[ALERTE] Stratégie non rechargée ({error})")
+
+    def _forget_pool_trees(self) -> None:
+        """Les arbres de pool de la draft précédente (SPEC-54) : une mise à jour des données entre deux
+        drafts est prise en compte. Best-effort."""
+        try:
+            self.m._pool_trees.clear()
+        except Exception:  # pylint: disable=broad-exception-caught
+            pass
 
     def _handle_champ_select(self, champ_select_data: dict) -> None:
         """Traite une session de champ select : recommandations, runes, analyse finale."""

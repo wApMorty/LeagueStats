@@ -138,6 +138,21 @@ class HoverAutomation:
                 else:
                     skipped.append((champion_name, total_games))
 
+            # SPEC-54 : sous Arbre, le premier blind de l'arbre du pool, hors champions sans données.
+            strategy = strategy_of(self.m)
+            if strategy.tree and eligible:
+                tree = self.m.pool_tree(player_lane) if player_lane else None
+                if tree is not None:
+                    leaf = tree.leaf(None, [name for name, _ in skipped])
+                    if leaf.choices:
+                        best = leaf.choices[0]
+                        if self.m.verbose:
+                            print(
+                                f"  [OK] [INITIAL-HOVER] Blind de l'arbre : {best.champion} "
+                                f"({best.value:+.2f} pts)"
+                            )
+                        return best.champion
+
             # SPEC-18 : en blind pick, la force d'un champion est son winrate
             # de lane rétréci. score_against_team() sans adversaire revenait à
             # avg_delta2, nul par construction : le tri se faisait sur du bruit.
@@ -146,7 +161,6 @@ class HoverAutomation:
             )
             # SPEC-46 : force et maîtrise (SPEC-41) aux poids de la stratégie, à égalité le winrate.
             term = term_of(self.m)
-            strategy = strategy_of(self.m)
             weighted = WeightedEvaluator(self.m.evaluator, strategy)
             scores = []
             for champion_name, total_games in eligible:

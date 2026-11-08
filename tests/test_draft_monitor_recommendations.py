@@ -571,3 +571,138 @@ class TestStrategyLoading:
         monitor.lifecycle._reload_strategy()
 
         assert monitor.strategy.name == "Complet"
+
+
+class TestTree:
+    """SPEC-54 : sous Arbre, l'ordre suit l'arbre du pool ; les probabilités restent calibrées."""
+
+    @pytest.fixture
+    def board(self, monitor):
+        """Garen a la meilleure force de lane, Aatrox gagne le duel : l'arbre dit Sett puis Darius."""
+        db = monitor.assistant.db
+        db.get_all_matchups_bulk.return_value = {("aatrox", "leesin"): (1.0, 100_000)}
+        db.get_lane_winrates.return_value = {
+            "Aatrox": (50.0, 100_000),
+            "Darius": (50.0, 100_000),
+            "Garen": (56.0, 100_000),
+            "Sett": (50.0, 100_000),
+        }
+        db.get_lane_popularity.return_value = ["Fiora"]
+        monitor.search.candidates = CandidatePool(db, 8)
+        monitor.set_strategy(find_strategy("Arbre", ()))
+        monitor.pool_tree = lambda lane: self._tree() if lane == "top" else None
+        return monitor
+
+    @staticmethod
+    def _tree():
+        from src.analysis.pool_tree import PoolTree, TreeChoice
+
+        def table(*pairs):
+            return tuple(TreeChoice(name, value) for name, value in pairs)
+
+        return PoolTree(
+            "top",
+            table(("Darius", 0.4), ("Sett", 0.2), ("Garen", -0.5), ("Aatrox", -1.0)),
+            (
+                (
+                    "LeeSin",
+                    0.05,
+                    table(("Sett", 3.6), ("Darius", 2.1), ("Aatrox", 1.0), ("Garen", 0.0)),
+                ),
+            ),
+        )
+
+    @staticmethod
+    def _state(lane="top", bans=()):
+        return DraftState(
+            phase="BAN_PICK",
+            enemy_picks=[64],
+            remaining_picks=[OUR_TURN],
+            inferred_roles={64: lane},
+            ally_positions={0: "top"},
+            local_player_cell_id=0,
+            ally_bans=list(bans),
+        )
+
+    @staticmethod
+    def _analysis(monitor, state):
+        analysis = Analysis()
+        monitor.recommender._provide(state, analysis)
+        return analysis
+
+    def test_vis_a_vis_vu_le_n1_est_le_premier_de_sa_table(self, board, capsys):
+        analysis = self._analysis(board, self._state())
+
+        assert [r.champion for r in analysis.results] == ["Sett", "Darius", "Aatrox", "Garen"]
+        assert analysis.tree.branch == "counter" and analysis.tree.opponent == "LeeSin"
+        assert "[ARBRE] Counter de LeeSin : Sett (+3,60 pts)" in capsys.readouterr().out
+
+    def test_l_ordre_differe_du_classement_pondere(self, board):
+        """Sans l'arbre, Arbre (force + duel) classerait Garen ou Aatrox en tête, pas Sett."""
+        board.pool_tree = lambda lane: None
+        analysis = self._analysis(board, self._state())
+
+        assert analysis.results[0].champion != "Sett" and analysis.tree is None
+
+    def test_vis_a_vis_non_vu_le_n1_est_le_premier_blind(self, board, capsys):
+        analysis = self._analysis(board, self._state(lane="jungle"))
+
+        assert analysis.results[0].champion == "Darius"
+        assert analysis.tree.branch == "blind" and analysis.tree.opponent is None
+        assert "[ARBRE] Blind : Darius (+0,40 pt)" in capsys.readouterr().out
+
+    def test_un_choix_banni_passe_au_suivant(self, board, capsys):
+        analysis = self._analysis(board, self._state(bans=[875]))  # Sett banni
+
+        assert analysis.results[0].champion == "Darius"
+        assert analysis.tree.skipped == ("Sett",)
+        assert "indisponibles avant lui : Sett" in capsys.readouterr().out
+
+    def test_les_probabilites_restent_calibrees(self, board):
+        analysis = self._analysis(board, self._state())
+        term = board.mastery
+
+        for result in analysis.results:
+            expected = with_term(
+                board.evaluator.win_probability([(result.champion, "top")], [("LeeSin", "top")]),
+                term.logit(result.champion),
+            )
+            assert result.win_probability == pytest.approx(expected)
+
+    def test_poste_inconnu_classement_force_et_duel(self, board, capsys):
+        state = self._state()
+        state.ally_positions = {}
+        analysis = self._analysis(board, state)
+
+        assert analysis.tree is None and analysis.results
+        assert "[INFO] Arbre : poste inconnu, classement force + duel" in capsys.readouterr().out
+
+    def test_un_arbre_qui_leve_n_interrompt_pas_la_draft(self, monitor, capsys):
+        """Vraie méthode `pool_tree` : une construction qui lève est annoncée une fois, puis gardée."""
+        monitor.set_strategy(find_strategy("Arbre", ()))
+        with patch("src.draft_monitor.PoolEvaluator", side_effect=RuntimeError("base")):
+            first = self._analysis(monitor, self._state())
+            second = self._analysis(monitor, self._state())
+
+        assert first.results and second.results and first.tree is None
+        assert capsys.readouterr().out.count("[ALERTE] Arbre du pool indisponible (base)") == 1
+
+    def test_une_nouvelle_draft_vide_le_cache(self, monitor):
+        monitor._pool_trees[(("Aatrox",), "top")] = None
+        monitor.phase_tracker = Mock(draft_episode=7)
+        monitor.lifecycle._rearm_for_new_draft(Mock())
+
+        assert monitor._pool_trees == {}
+
+    def test_l_arbre_est_construit_une_fois_par_pool_et_lane(self, monitor):
+        with (
+            patch("src.draft_monitor.PoolEvaluator") as evaluator,
+            patch("src.draft_monitor.draw_shifts", return_value={}),
+            patch("src.draft_monitor.PoolScorer"),
+            patch("src.draft_monitor.build_tree", return_value="arbre"),
+        ):
+            assert monitor.pool_tree("top") == "arbre"
+            assert monitor.pool_tree("top") == "arbre"
+            assert monitor.pool_tree(None) is None
+
+        assert evaluator.call_count == 1

@@ -299,3 +299,48 @@ class TestBlindPickStrategy:
         monitor.set_strategy(Strategy("Force", force=3.0, mastery=0.0))
 
         assert monitor._get_best_champion_from_pool() != "Darius"
+
+
+class TestBlindPickTree:
+    """SPEC-54 : sous Arbre, le survol de début de draft prend le premier blind de l'arbre du pool."""
+
+    @staticmethod
+    def _tree(*blind):
+        from src.analysis.pool_tree import PoolTree, TreeChoice
+
+        return PoolTree("top", tuple(TreeChoice(name, value) for name, value in blind), ())
+
+    def test_le_premier_blind_de_l_arbre_est_survole(self, monitor, lane_winrates):
+        monitor.assistant.get_matchups_for_draft.return_value = matchups(1000)
+        monitor.pool_lane = "top"
+        monitor.set_strategy(find_strategy("Arbre", ()))
+        monitor.pool_tree = lambda lane: self._tree(("Darius", 0.3), ("Garen", 0.1))
+
+        assert monitor._get_best_champion_from_pool() == "Darius"
+
+    def test_un_champion_sans_donnees_passe_au_suivant(self, monitor, lane_winrates):
+        """Darius sans données dans la lane : l'arbre se replie sur Garen."""
+        monitor.assistant.get_matchups_for_draft.side_effect = lambda name, lane=None: (
+            [] if name == "Darius" else matchups(1000)
+        )
+        monitor.pool_lane = "top"
+        monitor.set_strategy(find_strategy("Arbre", ()))
+        monitor.pool_tree = lambda lane: self._tree(("Darius", 0.3), ("Garen", 0.1))
+
+        assert monitor._get_best_champion_from_pool() == "Garen"
+
+    def test_sans_arbre_le_calcul_habituel_reste(self, monitor, lane_winrates):
+        monitor.assistant.get_matchups_for_draft.return_value = matchups(1000)
+        monitor.pool_lane = "top"
+        monitor.set_strategy(find_strategy("Arbre", ()))
+        monitor.pool_tree = lambda lane: None
+
+        assert monitor._get_best_champion_from_pool() == "Garen"
+
+    def test_sous_simple_l_arbre_n_est_pas_lu(self, monitor, lane_winrates):
+        monitor.assistant.get_matchups_for_draft.return_value = matchups(1000)
+        monitor.pool_lane = "top"
+        monitor.set_strategy(find_strategy("Simple", ()))
+        monitor.pool_tree = Mock(side_effect=AssertionError("arbre lu sous Simple"))
+
+        assert monitor._get_best_champion_from_pool() == "Garen"

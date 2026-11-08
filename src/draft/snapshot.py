@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from ..analysis.mastery import term_of
+from ..analysis.pool_tree import TreeLeaf
 from ..analysis.strategy import strategy_of
 from ..config_constants import draft_config
 from .search import SearchResult
@@ -180,6 +181,8 @@ class Analysis:
     )  # championId -> victoire si je le prends
     # SPEC-46 : champion -> terme -> points de victoire sous la stratégie (termes de poids nul omis).
     parts: Dict[str, Dict[str, float]] = field(default_factory=dict)
+    # SPEC-54 : feuille de l'arbre du pool qui a ordonné le classement, sous la stratégie Arbre.
+    tree: Optional[TreeLeaf] = None
 
 
 def _is_acting(state: DraftState, cell_id: int) -> bool:
