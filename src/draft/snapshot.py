@@ -96,6 +96,8 @@ class SnapshotRecommendation:
     personal_games: int = 0  # mes parties capturées sur ce champion (SPEC-41)
     # Ce que chaque terme de la stratégie lui apporte, en points de victoire (SPEC-46).
     parts: Dict[str, float] = field(default_factory=dict)
+    # SPEC-54 : valeur de ce champion dans la feuille de l'arbre (points de winrate), None hors arbre.
+    tree_value: Optional[float] = None
 
 
 @dataclass
@@ -164,6 +166,8 @@ class DraftSnapshot:
     strategy: Optional[str] = None  # stratégie active (SPEC-46)
     strategies: List[str] = field(default_factory=list)  # boutons du sélecteur
     pick_advice: Optional[SnapshotPickAdvice] = None  # place de pick conseillée (SPEC-53)
+    # SPEC-54 : branche de l'arbre, vis-à-vis et indisponibles ; None sans stratégie Arbre.
+    tree: Optional[Dict[str, Any]] = None
 
 
 @dataclass
@@ -261,6 +265,8 @@ def build_snapshot(
     mastery = term_of(monitor)
     ids = {n.lower(): i for i, n in monitor.champion_id_to_name.items()}
     names = getattr(monitor, "strategy_names", None)
+    tree = analysis.tree
+    tree_values = {} if tree is None else {c.champion.casefold(): c.value for c in tree.choices}
     ban_rows, gains = (
         monitor.ban_advisor.advice(state, draft_config.SNAPSHOT_BAN_COUNT, ids)
         if is_ban
@@ -300,6 +306,7 @@ def build_snapshot(
                 personal_points=r.personal_points,
                 personal_games=mastery.games(r.champion),
                 parts=analysis.parts.get(r.champion, {}),
+                tree_value=tree_values.get(r.champion.casefold()),
             )
             for r in results
         ],
@@ -320,4 +327,9 @@ def build_snapshot(
         strategy=strategy_of(monitor).name,
         strategies=list(names) if isinstance(names, list) else [],
         pick_advice=pick_advice,
+        tree=(
+            None
+            if tree is None
+            else {"branch": tree.branch, "opponent": tree.opponent, "skipped": list(tree.skipped)}
+        ),
     )

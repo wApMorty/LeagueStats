@@ -451,6 +451,28 @@ def _decomposition(rec: Dict[str, Any]) -> str:
     return text[:1].upper() + text[1:]
 
 
+def _tree_line(tree: Dict[str, Any], rec: Dict[str, Any], index: int) -> str:
+    """La ligne d'une carte sous l'arbre du pool (SPEC-54 §4.4), ex. « Blind · +0,34 pt ».
+
+    Carte 0 : la branche (blind, ou counter du vis-à-vis) et les champions du pool écartés avant elle.
+    Les cartes suivantes sont des replis. Valeur absente : le libellé seul.
+    """
+    value = rec.get("tree_value")
+    if index == 0:
+        label = "Blind" if tree["branch"] == "blind" else f"Counter de {tree['opponent']}"
+    else:
+        label = "Repli"
+    parts = [label]
+    if value is not None:
+        unit = "pt" if round(abs(value), 2) < 2 else "pts"
+        parts.append(f"{signed(value, 2)} {unit}")
+    skipped = tree.get("skipped") or []
+    if index == 0 and skipped:
+        verb = "indisponible" if len(skipped) == 1 else "indisponibles"
+        parts.append(f"{', '.join(skipped)} {verb}")
+    return " · ".join(parts)
+
+
 def reply_name(rec: Dict[str, Any]) -> str:
     """« Darius (Top) » : la réponse attendue du vis-à-vis, vide sans anticipation (SPEC-48)."""
     reply = rec.get("reply")
@@ -469,6 +491,7 @@ def recommendations(snapshot: Dict[str, Any], champions: Champions) -> List[Dict
     """
     immediate = _immediate(snapshot)
     base = snapshot.get("base_probability")
+    tree = snapshot.get("tree")
     cards = []
     for index, rec in enumerate(snapshot["recommendations"][: client_config.DRAFT_REC_COUNT]):
         now = immediate.get(rec["champion_id"])
@@ -482,7 +505,8 @@ def recommendations(snapshot: Dict[str, Any], champions: Champions) -> List[Dict
         line = (
             f"Réponse attendue : {reply}, {fr(rec['win_probability'] * 100, 2)} %" if reply else ""
         )
-        line = " · ".join(text for text in (_decomposition(rec), line, _personal(rec)) if text)
+        head = _tree_line(tree, rec, index) if tree else _decomposition(rec)
+        line = " · ".join(text for text in (head, line, _personal(rec)) if text)
         cards.append(
             {
                 "champion_id": rec["champion_id"],

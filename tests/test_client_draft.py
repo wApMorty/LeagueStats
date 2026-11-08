@@ -1840,3 +1840,82 @@ def test_une_strategie_inconnue_est_refusee_sans_ecriture(strategy_client):
 def test_basculer_sans_jeton_est_refuse(strategy_client):
     assert _strategy_post(strategy_client, "Counter", token=False).status_code == 403
     assert load_strategies()[0] is None
+
+
+# ---------- arbre du pool sur les cartes (SPEC-54 §4.4, tâche 270) ----------
+
+
+def _tree_snapshot(tree, values):
+    """Le snapshot de `pick_snapshot` sous un arbre : `values` pour Aatrox (carte 1) puis Darius."""
+    snapshot = pick_snapshot(tree=tree)
+    for rec, value in zip(snapshot["recommendations"], values):
+        rec["tree_value"] = value
+    return snapshot
+
+
+def _lines(snapshot, assets):
+    return [
+        card["line"] for card in draft_view.recommendations(snapshot, draft_view.Champions(assets))
+    ]
+
+
+def test_carte_blind_ligne_de_l_arbre_avec_indisponibles(assets):
+    snapshot = _tree_snapshot(
+        {"branch": "blind", "opponent": None, "skipped": ["Ornn"]}, [0.34, 2.1]
+    )
+    lines = _lines(snapshot, assets)
+    assert lines[0].startswith(
+        "Blind · +0,34 pt · Ornn indisponible · Réponse attendue : Alistar (Support), 54,82 %"
+    )
+    assert lines[1] == "Repli · +2,10 pts · aucune partie sur Darius"
+
+
+def test_carte_counter_ligne_du_vis_a_vis_et_repli_en_pt(assets):
+    snapshot = _tree_snapshot(
+        {"branch": "counter", "opponent": "Darius", "skipped": []}, [3.62, 0.5]
+    )
+    lines = _lines(snapshot, assets)
+    assert lines[0].startswith("Counter de Darius · +3,62 pts · Réponse attendue")
+    assert lines[1] == "Repli · +0,50 pt · aucune partie sur Darius"
+
+
+def test_unite_selon_la_valeur_arrondie(assets):
+    snapshot = _tree_snapshot({"branch": "blind", "opponent": None, "skipped": []}, [2.0, 1.99])
+    lines = _lines(snapshot, assets)
+    assert lines[0].startswith("Blind · +2,00 pts")
+    assert lines[1].startswith("Repli · +1,99 pt ")
+
+
+def test_indisponibles_au_pluriel(assets):
+    snapshot = _tree_snapshot(
+        {"branch": "blind", "opponent": None, "skipped": ["Ornn", "Shen"]}, [0.34, 0.2]
+    )
+    assert _lines(snapshot, assets)[0].startswith("Blind · +0,34 pt · Ornn, Shen indisponibles")
+
+
+def test_valeur_absente_le_libelle_seul(assets):
+    snapshot = _tree_snapshot({"branch": "blind", "opponent": None, "skipped": []}, [None, None])
+    lines = _lines(snapshot, assets)
+    assert (
+        lines[0]
+        == "Blind · Réponse attendue : Alistar (Support), 54,82 % · aucune partie sur Aatrox"
+    )
+    assert lines[1] == "Repli · aucune partie sur Darius"
+
+
+def test_sans_arbre_la_decomposition_ne_change_pas(assets):
+    snapshot = pick_snapshot()
+    snapshot["recommendations"][0]["parts"] = {"force": 0.4, "duel": 4.2}
+    lines = _lines(snapshot, assets)
+    assert lines[0].startswith("Force +0,4 · duel +4,2 · Réponse attendue")
+    assert "Blind" not in lines[0] and "Repli" not in lines[1]
+
+
+def test_arbre_rendu_sur_la_carte(client, bus):
+    bus.publish(
+        "draft",
+        _tree_snapshot({"branch": "blind", "opponent": None, "skipped": ["Ornn"]}, [0.34, 2.1]),
+    )
+    html = client.get("/draft/stage").text
+    assert "Blind · +0,34 pt · Ornn indisponible" in html
+    assert "Repli · +2,10 pts" in html
