@@ -20,11 +20,13 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 from ..analysis.game_eval import Placed
 from ..analysis.mastery import term_of, to_win_points, with_term
+from ..analysis.pick_order import PICK_ORDER_META_KEY, Pick, from_meta
 from ..analysis.strategy import Strategy, WeightedEvaluator, strategy_of
 from ..config_constants import draft_config, ui_config
 from ..utils.display import format_games_count
 from .search import PickTurn, SearchResult
-from .snapshot import TOPIC, Analysis, SnapshotSwapAdvice, build_snapshot
+from .pick_advice import pick_advice as advise_pick, request_effect
+from .snapshot import TOPIC, Analysis, SnapshotPickAdvice, SnapshotSwapAdvice, build_snapshot
 from .state import DraftState
 from .swap_advice import has_open_swap, role_swaps
 
@@ -38,6 +40,8 @@ class DraftRecommender:
         self._last_key = None
         self._swap_key = None
         self._swap_cache: List[SnapshotSwapAdvice] = []
+        self._pick_line: Optional[List[Pick]] = None  # séquence lue une fois par champ select
+        self._pick_said: Optional[tuple] = None  # dernier conseil écrit dans la console
 
     # ---------- préparation de la position ----------
 
@@ -221,6 +225,7 @@ class DraftRecommender:
 
     def clear(self) -> None:
         """Fin du champ select : l'écran de draft repasse à l'état vide (publie `None` une seule fois)."""
+        self._pick_line = self._pick_said = None  # la séquence se relit à la draft suivante
         try:
             if self._last_key is None:
                 return
@@ -253,7 +258,12 @@ class DraftRecommender:
                     self._placed(state.ally_picks, state), self._placed(state.enemy_picks, state)
                 )
             snapshot = build_snapshot(
-                self.m, state, analysis, self._advice(state), self._swap_advice(state)
+                self.m,
+                state,
+                analysis,
+                self._advice(state),
+                self._swap_advice(state),
+                self._pick_advice(state),
             )
             self.m.last_snapshot = snapshot
             bus = getattr(self.m, "bus", None)
@@ -262,6 +272,41 @@ class DraftRecommender:
         except Exception as e:  # pylint: disable=broad-exception-caught
             if self.m.verbose is True:
                 print(f"[WARNING] Snapshot du draft non publié: {e}")
+
+    def _pick_advice(self, state: DraftState) -> Optional[SnapshotPickAdvice]:
+        """Place de pick conseillée (SPEC-53), tant que la session liste des échanges d'ordre et que
+        mon pick reste à jouer. La séquence vient de `db_meta`, écrite à la mise à jour des données.
+
+        Best-effort : une panne ne coûte que le conseil, jamais le snapshot ni la boucle.
+        """
+        try:
+            if not any(swap.kind == "pick_order" for swap in state.swaps):
+                return None
+            if not any(turn.is_local_player for turn in state.remaining_picks):
+                return None
+            if self._pick_line is None:
+                self._pick_line = from_meta(self.m.assistant.db.get_meta(PICK_ORDER_META_KEY))
+            ally_cells = {cell.cell_id for cell in state.ally_cells}
+            ranks = {cell: rank for cell, rank in state.pick_order.items() if cell in ally_cells}
+            me = state.local_player_cell_id
+            advice = advise_pick(
+                self._pick_line, state.ally_positions.get(me), me, ranks, state.swaps
+            )
+            if advice is None:
+                return None
+            effects = {}
+            for swap in state.swaps:
+                if swap.kind == "pick_order" and swap.state == "RECEIVED":
+                    effect = request_effect(advice, ranks, swap.cell_id)
+                    if effect is not None:
+                        effects[swap.cell_id] = effect
+            said = (advice.target, advice.current, advice.cell_id)
+            if said != self._pick_said:
+                self._pick_said = said
+                print(f"[INFO] Place conseillée : {_pick_line_text(advice)}")
+            return SnapshotPickAdvice(**vars(advice), request_effects=effects)
+        except Exception:  # pylint: disable=broad-exception-caught
+            return None
 
     def _swap_advice(self, state: DraftState) -> List[SnapshotSwapAdvice]:
         """Conseils d'échange de rôle ; recalculés quand les picks, les lanes ou les échanges changent.
@@ -456,3 +501,14 @@ class DraftRecommender:
         advice = self._advice(state)
         if advice:
             print(f"\n[ADVICE] {advice}")
+
+
+_SIDES = {"blue": "bleu", "red": "rouge"}
+
+
+def _pick_line_text(advice) -> str:
+    """Le conseil de place en une ligne de console, sans emoji (SPEC-53 §4.3)."""
+    head = f"{advice.lane} côté {_SIDES.get(advice.side, advice.side)}, {advice.mode}"
+    if advice.current == advice.target:
+        return f"{head}, tu es à ta place (n° {advice.target})"
+    return f"{head}, vise le n° {advice.target} (tu es n° {advice.current})"

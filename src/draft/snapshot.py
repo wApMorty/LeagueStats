@@ -60,6 +60,20 @@ class SnapshotSwapAdvice:
 
 
 @dataclass
+class SnapshotPickAdvice:
+    """La place de pick conseillée pour mon poste et mon côté (SPEC-53), tant qu'on peut échanger."""
+
+    lane: str
+    side: str  # "blue" | "red"
+    mode: str  # "blind" | "counter"
+    target: int  # rang visé, 1 à 10
+    current: int  # mon rang
+    cell_id: Optional[int]  # allié avec qui demander l'échange d'ordre, ou None
+    target_cell: bool  # l'échange conseillé donne exactement la place visée
+    request_effects: Dict[int, str] = field(default_factory=dict)  # cellule -> "closer" | "farther"
+
+
+@dataclass
 class SnapshotBan:
     champion_id: int
     champion: str
@@ -148,6 +162,7 @@ class DraftSnapshot:
     loadout: Optional[Dict[str, Any]] = None
     strategy: Optional[str] = None  # stratégie active (SPEC-46)
     strategies: List[str] = field(default_factory=list)  # boutons du sélecteur
+    pick_advice: Optional[SnapshotPickAdvice] = None  # place de pick conseillée (SPEC-53)
 
 
 @dataclass
@@ -232,6 +247,7 @@ def build_snapshot(
     analysis: Analysis,
     advice: Optional[str],
     swap_advice: Sequence[SnapshotSwapAdvice] = (),
+    pick_advice: Optional[SnapshotPickAdvice] = None,
 ) -> DraftSnapshot:
     """Le snapshot de ce tick ; `monitor` fournit les noms, la pool, les prédicats de phase et le loadout."""
     name = monitor._get_display_name  # pylint: disable=protected-access
@@ -300,4 +316,5 @@ def build_snapshot(
         loadout=monitor.loadout.state(),
         strategy=strategy_of(monitor).name,
         strategies=list(names) if isinstance(names, list) else [],
+        pick_advice=pick_advice,
     )
