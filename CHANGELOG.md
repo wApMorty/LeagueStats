@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### ✨ Feature
+
+- **Rappel de place en draft (SPEC-53)** : pendant la sélection, tant qu'on peut encore échanger l'ordre de pick, l'écran de draft dit quelle place viser pour ton poste et ton côté, par exemple « Top côté bleu : blind, vise le n° 8 (tu es n° 9) ». Le bouton « ⇄ ordre » de l'allié qui t'en rapproche passe en « conseillé », une demande reçue indique si elle te rapproche ou t'éloigne de ta place, et la console du Live Coach l'écrit aussi. La séquence vient des matrices de la Méta du poste ; elle est calculée à chaque mise à jour des données. **Action requise** : sur une base existante, `python scripts/update_all.py --recompute-only` l'ajoute sans scrape.
+
 ## [7.0.0] - 2026-11-07
 
 Le suivi du rang distingue enfin tes comptes : jouer sur un smurf ne fait plus plonger la courbe du principal. La page Méta du poste remplace Blindabilité et Suggestions, avec le générateur de pools ; l'ELO du scrape se règle sur l'écran Données, et le client ne rame plus quand League est fermé.

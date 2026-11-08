@@ -50,7 +50,7 @@ src/
 │   ├── mastery.py                    # Maîtrise personnelle par champion, terme du moteur de draft (SPEC-41)
 │   ├── strategy.py                   # Stratégies de draft : poids par terme, évaluateur pondéré (SPEC-46)
 │   ├── blindability.py               # Matrice des postes et tirage des champions, lus dans les tables de paires
-│   ├── pick_order.py                 # Séquence de pick conseillée sur les matrices des postes (SPEC-51)
+│   ├── pick_order.py                 # Séquence de pick conseillée sur les matrices des postes, stockée dans db_meta (SPEC-51, SPEC-53)
 │   ├── pool_statistics.py            # Statistiques de pool
 │   ├── pool_generator.py             # Pool de N qui maximise ½ blind + ½ counter, sur un ou plusieurs scrapes (SPEC-50)
 │   ├── pool_swipe.py                 # Échanges qui améliorent un pool, sans maîtrise ; PoolScorer net du tirage (SPEC-49, SPEC-50)
@@ -61,6 +61,7 @@ src/
 ├── draft/                   # Logique du Live Coach (extrait de draft_monitor.py, SPEC-07 E10)
 │   ├── state.py, state_parser.py     # DraftState, parsing des snapshots LCU
 │   ├── scoring.py                     # DraftScorer (blend matchup + synergie)
+│   ├── pick_advice.py                  # Place de pick conseillée et échange d'ordre qui en rapproche (SPEC-53)
 │   ├── recommendations.py              # Recommandations de pick en direct
 │   ├── final_analysis.py                # Écran de fin de draft
 │   ├── reality_check.py                 # Postes prédits vs réels en partie, recalcul du face-à-face (SPEC-27)
