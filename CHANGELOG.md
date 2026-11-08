@@ -4,6 +4,12 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+## [8.0.0] - 2026-11-08
+
+La draft devient catégorique : par défaut, la stratégie Arbre joue l'arbre de décision de ton pool, le meilleur counter contre ton vis-à-vis s'il est posé, sinon le meilleur blind. La stratégie système « Méta » disparaît. L'écran de draft dit aussi quelle place de pick viser pour ton poste tant que l'ordre peut s'échanger.
+
+**Action requise** : `python scripts/update_all.py --recompute-only` sur une base existante, pour calculer la séquence de pick du rappel de place (SPEC-53), sans scrape. Pas de migration Alembic.
+
 ### ✨ Feature
 
 - **Arbre de décision du pool et stratégie « Arbre » par défaut (SPEC-54)** : chaque pool a son arbre, calculé sur les matrices du scrape actuel, sans maîtrise. Si ton vis-à-vis est posé, il prend le meilleur counter du pool contre lui ; sinon, le meilleur blind exposé au counter ; si ce choix est pris ou banni, le suivant. C'est la politique pour laquelle le générateur de pools optimise. La nouvelle stratégie système « Arbre », désormais par défaut, classe la draft et le survol de début de draft selon cet arbre ; les % de victoire restent ceux du modèle calibré. La carte n° 1 dit sa branche (« Blind · +0,34 pt », « Counter de Darius · +3,62 pts ») et les suivantes « Repli », la console écrit une ligne `[ARBRE]`. L'arbre se lit aussi sur l'écran Pool (ordre de blind, puis choix et repli contre chaque adversaire joué à 1 % au moins), dans la Méta du poste (pool du poste et pool généré, à la place du tableau des counters) et sur l'écran Stratégies. La stratégie système « Méta » (force seule) disparaît ; une stratégie active « Méta » passe sur Arbre. Rejoué sur 245 parties top : +0,98 pt en premier pick (Ornn plutôt que Malphite), −0,3 à −0,7 pt contre une stratégie pondérée complète en fin de draft, jugé dans le modèle calibré.
