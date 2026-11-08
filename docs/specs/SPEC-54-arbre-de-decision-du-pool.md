@@ -1,7 +1,9 @@
 # SPEC-54 — Arbre de décision du pool
 
-**Statut** : 🟡 Rédigée le 2026-11-08, arbitrages validés par @pj35 le même jour (§2). À implémenter après
-[SPEC-53](SPEC-53-rappel-de-place-en-draft.md), qui touche les mêmes fichiers de draft (§4.9).
+**Statut** : ✅ Livrée le 2026-11-08, recette @pj35 à faire (draft classée réelle sous Arbre). Écarts : l'arbre du
+pool généré est porté par `GeneratedPool.tree` plutôt que par le cache de `_compute` (même résultat) ; `portrait` et
+`data_version` vivent dans `src/client/pool_tree.py`, importés par `src/client/pool_swipe.py` (import circulaire
+évité).
 
 **Origine** : @pj35, 2026-11-08 — « Maintenant qu'on a des stratégies de construction de pool efficaces, j'aimerais
 qu'on soit beaucoup plus catégoriques sur la recommandation de champion. Chaque pool devrait avoir son arbre de
