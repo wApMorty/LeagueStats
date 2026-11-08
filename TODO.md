@@ -407,7 +407,7 @@ la boucle de draft). Découpage en SPEC-53 §5 (tâches 262 à 266, 12 pts) :
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
 | 262 | `to_meta` / `from_meta`, étape best-effort de `run_pipeline`, tests | 2 | — | |
-| 263 | `src/draft/pick_advice.py` (`PickAdvice`, `pick_advice`, `request_effect`), tests | 3 | — | |
+| 263 | `src/draft/pick_advice.py` (`PickAdvice`, `pick_advice`, `request_effect`), tests | 3 | — | ✅ 2026-11-08 : 15 tests ; fixture `session_swaps.json` : top, bleu, blind, vise 8, n° 9, demande de la cellule 1 « farther » |
 | 264 | `SnapshotPickAdvice`, `_pick_advice` dans les recommandations, console, tests | 3 | 262, 263 | |
 | 265 | Écran de draft : ligne de rappel, bouton conseillé, bandeau annoté, tests | 3 | 264 | |
 | 266 | Clôture : exe vérifié, `PROJECT_STRUCTURE.md`, `CHANGELOG.md`, statut, README des specs, `TODO.md` | 1 | 265 | |
