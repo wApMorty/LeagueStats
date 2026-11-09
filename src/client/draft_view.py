@@ -495,7 +495,15 @@ def recommendations(snapshot: Dict[str, Any], champions: Champions) -> List[Dict
         line = (
             f"Réponse attendue : {reply}, {fr(rec['win_probability'] * 100, 2)} %" if reply else ""
         )
-        head = _exposure_line(rec) if snapshot.get("exposure") else _decomposition(rec)
+        if snapshot.get("exposure"):
+            head = _exposure_line(rec)
+            # Counterpick : la carte n° 1 rappelle contre qui « Connu » est calculé.
+            if index == 0 and snapshot.get("versus"):
+                head = " · ".join(
+                    text for text in (f"Counter de {snapshot['versus']}", head) if text
+                )
+        else:
+            head = _decomposition(rec)
         line = " · ".join(text for text in (head, line, _personal(rec)) if text)
         cards.append(
             {

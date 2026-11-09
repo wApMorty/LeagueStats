@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### ✨ Feature
+
+- **Vis-à-vis rappelé sur la carte de draft** : en counterpick sous la stratégie Arbre, la carte n° 1 commence par « Counter de Darius » avant « Connu · Exposition », comme avant la 8.1.0.
+
 ## [8.1.0] - 2026-11-09
 
 La stratégie Arbre ne regarde plus seulement ton vis-à-vis : elle compte la draft posée (duels, synergies) et l'exposition au counter des lanes ennemies encore vides, avec la même règle sur tous les postes. Le client se déplace aussi proprement sous Komorebi.

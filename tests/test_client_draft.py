@@ -1903,3 +1903,13 @@ def test_ligne_d_exposition_rendue_dans_la_page(client, bus):
     bus.publish("draft", exposure_snapshot())
     html = client.get("/draft/stage").text
     assert "Connu +1,20 · Exposition −0,85 · Réponse attendue : Alistar (Support)" in html
+
+
+def test_counterpick_la_carte_1_dit_le_vis_a_vis(assets):
+    lines = _lines(exposure_snapshot(versus="Tryndamere"), assets)
+    assert lines[0].startswith("Counter de Tryndamere · Connu +1,20 · Exposition −0,85 · ")
+    assert "Counter de" not in lines[1]
+
+
+def test_sans_vis_a_vis_pas_d_indication(assets):
+    assert "Counter de" not in _lines(exposure_snapshot(), assets)[0]
