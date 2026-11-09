@@ -9,7 +9,6 @@ import pytest
 from src.client.bus import EventBus
 from src.config_constants import draft_config
 from src.draft.search import PickTurn, SearchResult
-from src.analysis.pool_tree import TreeChoice, TreeLeaf
 from src.analysis.strategy import find_strategy
 from src.draft.snapshot import TOPIC, Analysis, build_snapshot
 from src.draft.state_parser import DraftStateParser
@@ -461,34 +460,32 @@ def test_snapshot_d_un_monitor_simule_reste_serialisable():
     assert snapshot.strategy == draft_config.STRATEGY_DEFAULT
 
 
-# ---------- arbre du pool (SPEC-54 §4.4, tâche 270) ----------
+# ---------- règle D (SPEC-55 §4.2, tâche 274) ----------
 
 
-def tree_payload(monitor, leaf):
-    analysis = Analysis(results=RANKED, base_probability=0.517, tree=leaf)
+def exposure_payload(monitor, exposure):
+    analysis = Analysis(results=RANKED, base_probability=0.517, exposure=exposure)
     return asdict(build_snapshot(monitor, pick_state(), analysis, None))
 
 
-def test_snapshot_sans_arbre_tree_et_valeurs_absentes(monitor):
+def test_snapshot_sans_d_exposure_et_valeurs_absentes(monitor):
     _, payload = snapshot_of(monitor, pick_state(), RANKED)
-    assert payload["tree"] is None
-    assert all(rec["tree_value"] is None for rec in payload["recommendations"])
+    assert payload["exposure"] is False
+    assert all(rec["known_points"] is None for rec in payload["recommendations"])
+    assert all(rec["exposure_points"] is None for rec in payload["recommendations"])
 
 
-def test_snapshot_arbre_blind_porte_branche_repli_et_valeurs(monitor):
-    leaf = TreeLeaf(
-        "blind", None, (TreeChoice("aatrox", 0.34), TreeChoice("Garen", 0.2)), ("Ornn",)
-    )
-    payload = tree_payload(monitor, leaf)
+def test_snapshot_d_porte_connu_et_exposition(monitor):
+    names = [r.champion for r in RANKED]
+    payload = exposure_payload(monitor, {names[0]: (1.2, -0.85), names[2]: (0.4, 0.0)})
     json.dumps(payload)
-    assert payload["tree"] == {"branch": "blind", "opponent": None, "skipped": ["Ornn"]}
-    # Aatrox rapproché sans casse ; Darius et Sett absents de la feuille.
-    assert [rec["tree_value"] for rec in payload["recommendations"]] == [0.34, None, 0.2, None]
+    recs = payload["recommendations"]
+    assert payload["exposure"] is True
+    assert [rec["known_points"] for rec in recs] == [1.2, None, 0.4, None]
+    assert [rec["exposure_points"] for rec in recs] == [-0.85, None, 0.0, None]
 
 
-def test_snapshot_arbre_counter_porte_le_vis_a_vis(monitor):
-    leaf = TreeLeaf("counter", "Darius", (TreeChoice("Darius", 3.62),), ())
-    payload = tree_payload(monitor, leaf)
-    assert payload["tree"] == {"branch": "counter", "opponent": "Darius", "skipped": []}
-    assert payload["recommendations"][1]["tree_value"] == 3.62
-    assert payload["recommendations"][0]["tree_value"] is None
+def test_snapshot_d_vide_reste_un_classement_d(monitor):
+    """D a tourné sans candidat : la carte le dit, sans valeur."""
+    payload = exposure_payload(monitor, {})
+    assert payload["exposure"] is True

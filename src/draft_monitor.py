@@ -3,7 +3,7 @@ import json
 import os
 import queue
 import threading
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set
 from .lcu_client import LCUClient
 from .assistant import Assistant
 from .utils.console import clear_console
@@ -19,11 +19,8 @@ from .draft import display
 from .draft.memory_diagnostics import log_memory_usage
 from .draft.tick_timer import TickTimer, open_journal
 from .analysis.game_eval import GameEvaluator
-from .analysis.blindability import draw_shifts
+from .analysis.exposure import Popularity, lane_popularity
 from .analysis.mastery import MasteryTerm
-from .analysis.pool_swipe import PoolScorer
-from .analysis.pool_tree import PoolTree, build_tree
-from .analysis.pool_value import PoolEvaluator
 from .analysis.shrink import shrink_is_measured
 from .analysis.strategy import Strategy, WeightedEvaluator, all_strategies, find_strategy
 from .draft.search import CandidatePool, DraftSearch
@@ -119,8 +116,9 @@ class DraftMonitor:
             verbose=verbose,
         )
         self.strategy: Strategy = find_strategy(None, ())
-        # SPEC-54 : arbre du pool par (pool, lane), vidé à chaque nouvelle draft (lifecycle).
-        self._pool_trees: Dict[Tuple[Tuple[str, ...], str], Optional[PoolTree]] = {}
+        # SPEC-55 : popularité par lane pour l'exposition, lue une fois par draft (lifecycle la vide).
+        self._lane_popularity: Optional[Popularity] = None
+        self._lane_popularity_read = False
         self.strategy_names: List[str] = []  # SPEC-46 : boutons du sélecteur de draft
         self.load_strategy()
         self.state_parser = DraftStateParser(self.lcu, self._get_display_name, verbose=verbose)
@@ -368,26 +366,25 @@ class DraftMonitor:
             else WeightedEvaluator(self.evaluator, strategy)
         )
 
-    def pool_tree(self, lane: Optional[str]) -> Optional[PoolTree]:
-        """Arbre du pool courant sur `lane` (SPEC-54), construit une fois par (pool, lane) et par draft.
+    def lane_popularity(self) -> Optional[Popularity]:
+        """Popularité par lane de l'exposition (SPEC-55), lue une fois par draft.
 
-        None sans lane ou si la construction échoue : best-effort, jamais d'exception, et l'échec
-        est gardé en cache pour ne l'annoncer qu'une fois.
+        None si la lecture échoue : best-effort, jamais d'exception, et l'échec est gardé pour ne
+        l'annoncer qu'une fois.
         """
-        if not lane:
-            return None
-        key = (tuple(self.current_pool or ()), lane)
-        if key not in self._pool_trees:
+        if not self._lane_popularity_read:
+            self._lane_popularity_read = True
             try:
-                db = self.assistant.db
-                scorer = PoolScorer(
-                    PoolEvaluator(db, lane), draw_shifts(db.connection).get(lane, {})
-                )
-                self._pool_trees[key] = build_tree(scorer, list(self.current_pool or ()))
+                self._lane_popularity = lane_popularity(self.assistant.db)
             except Exception as error:  # pylint: disable=broad-exception-caught
-                print(f"[ALERTE] Arbre du pool indisponible ({error})")
-                self._pool_trees[key] = None
-        return self._pool_trees[key]
+                print(f"[ALERTE] Popularité des lanes indisponible ({error})")
+                self._lane_popularity = None
+        return self._lane_popularity
+
+    def forget_lane_popularity(self) -> None:
+        """Relit la popularité à la prochaine draft : une mise à jour des données est prise en compte."""
+        self._lane_popularity = None
+        self._lane_popularity_read = False
 
     def load_strategy(self) -> None:
         """La stratégie active et les noms du sélecteur, lus dans les préférences (SPEC-46)."""

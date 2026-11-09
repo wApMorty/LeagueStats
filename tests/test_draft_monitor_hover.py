@@ -14,6 +14,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from src.analysis.exposure import DScore
 from src.analysis.mastery import Mastery, MasteryTerm
 from src.analysis.strategy import Strategy, find_strategy
 from src.config_constants import analysis_config, draft_config
@@ -158,6 +159,9 @@ class TestGetBestChampionFromPool:
         du bruit, il ne doit plus être appelé."""
         monitor.assistant.get_matchups_for_draft.return_value = matchups(1000)
         monitor.pool_lane = "top"
+        # Sous Arbre, poste connu, le survol suit la règle D (SPEC-55) : le calcul SPEC-18 est celui
+        # des autres stratégies.
+        monitor.set_strategy(find_strategy("Simple", ()))
 
         with patch("src.draft.automation.shrunk_lane_winrates", return_value=lane_winrates) as m:
             monitor._get_best_champion_from_pool()
@@ -301,46 +305,53 @@ class TestBlindPickStrategy:
         assert monitor._get_best_champion_from_pool() != "Darius"
 
 
-class TestBlindPickTree:
-    """SPEC-54 : sous Arbre, le survol de début de draft prend le premier blind de l'arbre du pool."""
+class TestBlindPickExposure:
+    """SPEC-55 : sous Arbre, le survol de début de draft prend le n° 1 de la règle D, draft vide."""
 
     @staticmethod
-    def _tree(*blind):
-        from src.analysis.pool_tree import PoolTree, TreeChoice
+    def _scores(*names):
+        return [DScore(name, 0.0, -float(index)) for index, name in enumerate(names)]
 
-        return PoolTree("top", tuple(TreeChoice(name, value) for name, value in blind), ())
-
-    def test_le_premier_blind_de_l_arbre_est_survole(self, monitor, lane_winrates):
+    @pytest.fixture
+    def arbre(self, monitor):
         monitor.assistant.get_matchups_for_draft.return_value = matchups(1000)
         monitor.pool_lane = "top"
         monitor.set_strategy(find_strategy("Arbre", ()))
-        monitor.pool_tree = lambda lane: self._tree(("Darius", 0.3), ("Garen", 0.1))
+        monitor.lane_popularity = lambda: {"top": []}
+        return monitor
 
-        assert monitor._get_best_champion_from_pool() == "Darius"
+    def test_le_n1_de_d_est_survole(self, arbre, lane_winrates):
+        with patch("src.draft.automation.d_scores", return_value=self._scores("Darius", "Garen")):
+            assert arbre._get_best_champion_from_pool() == "Darius"
 
-    def test_un_champion_sans_donnees_passe_au_suivant(self, monitor, lane_winrates):
-        """Darius sans données dans la lane : l'arbre se replie sur Garen."""
-        monitor.assistant.get_matchups_for_draft.side_effect = lambda name, lane=None: (
+    def test_d_ne_recoit_que_les_champions_avec_donnees_et_les_bans(self, arbre, lane_winrates):
+        """Darius sans données dans la lane : D ne le voit pas ; Aatrox banni va dans les indisponibles."""
+        arbre.assistant.get_matchups_for_draft.side_effect = lambda name, lane=None: (
             [] if name == "Darius" else matchups(1000)
         )
-        monitor.pool_lane = "top"
-        monitor.set_strategy(find_strategy("Arbre", ()))
-        monitor.pool_tree = lambda lane: self._tree(("Darius", 0.3), ("Garen", 0.1))
+        arbre.last_draft_state = Mock(ally_bans=[266], enemy_bans=[])
+        arbre._get_display_name = lambda champion_id: {266: "Aatrox"}.get(champion_id, "?")
+        with patch("src.draft.automation.d_scores", return_value=self._scores("Garen")) as scores:
+            assert arbre._get_best_champion_from_pool() == "Garen"
 
-        assert monitor._get_best_champion_from_pool() == "Garen"
+        args = scores.call_args.args
+        assert "Darius" not in args[2] and args[5] == ["Aatrox"]
 
-    def test_sans_arbre_le_calcul_habituel_reste(self, monitor, lane_winrates):
-        monitor.assistant.get_matchups_for_draft.return_value = matchups(1000)
-        monitor.pool_lane = "top"
-        monitor.set_strategy(find_strategy("Arbre", ()))
-        monitor.pool_tree = lambda lane: None
+    def test_d_indisponible_le_calcul_habituel_reste(self, arbre, lane_winrates):
+        arbre.lane_popularity = lambda: None
 
-        assert monitor._get_best_champion_from_pool() == "Garen"
+        assert arbre._get_best_champion_from_pool() == "Garen"
 
-    def test_sous_simple_l_arbre_n_est_pas_lu(self, monitor, lane_winrates):
+    def test_d_qui_leve_le_calcul_habituel_reste(self, arbre, lane_winrates, capsys):
+        with patch("src.draft.automation.d_scores", side_effect=RuntimeError("calcul")):
+            assert arbre._get_best_champion_from_pool() == "Garen"
+
+        assert "[ALERTE] Exposition indisponible au survol (calcul)" in capsys.readouterr().out
+
+    def test_sous_simple_d_n_est_pas_lu(self, monitor, lane_winrates):
         monitor.assistant.get_matchups_for_draft.return_value = matchups(1000)
         monitor.pool_lane = "top"
         monitor.set_strategy(find_strategy("Simple", ()))
-        monitor.pool_tree = Mock(side_effect=AssertionError("arbre lu sous Simple"))
+        monitor.lane_popularity = Mock(side_effect=AssertionError("D lu sous Simple"))
 
         assert monitor._get_best_champion_from_pool() == "Garen"

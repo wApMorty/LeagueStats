@@ -10,7 +10,6 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from ..analysis.mastery import term_of
-from ..analysis.pool_tree import TreeLeaf
 from ..analysis.strategy import strategy_of
 from ..config_constants import draft_config
 from .search import SearchResult
@@ -96,8 +95,9 @@ class SnapshotRecommendation:
     personal_games: int = 0  # mes parties capturées sur ce champion (SPEC-41)
     # Ce que chaque terme de la stratégie lui apporte, en points de victoire (SPEC-46).
     parts: Dict[str, float] = field(default_factory=dict)
-    # SPEC-54 : valeur de ce champion dans la feuille de l'arbre (points de winrate), None hors arbre.
-    tree_value: Optional[float] = None
+    # SPEC-55 : règle D, valeur sur la draft connue et exposition aux picks à venir (points), None hors D.
+    known_points: Optional[float] = None
+    exposure_points: Optional[float] = None
 
 
 @dataclass
@@ -166,8 +166,8 @@ class DraftSnapshot:
     strategy: Optional[str] = None  # stratégie active (SPEC-46)
     strategies: List[str] = field(default_factory=list)  # boutons du sélecteur
     pick_advice: Optional[SnapshotPickAdvice] = None  # place de pick conseillée (SPEC-53)
-    # SPEC-54 : branche de l'arbre, vis-à-vis et indisponibles ; None sans stratégie Arbre.
-    tree: Optional[Dict[str, Any]] = None
+    # SPEC-55 : vrai si le classement vient de la règle D (stratégie Arbre).
+    exposure: bool = False
 
 
 @dataclass
@@ -185,8 +185,8 @@ class Analysis:
     )  # championId -> victoire si je le prends
     # SPEC-46 : champion -> terme -> points de victoire sous la stratégie (termes de poids nul omis).
     parts: Dict[str, Dict[str, float]] = field(default_factory=dict)
-    # SPEC-54 : feuille de l'arbre du pool qui a ordonné le classement, sous la stratégie Arbre.
-    tree: Optional[TreeLeaf] = None
+    # SPEC-55 : champion -> (connu, exposition) en points, quand la règle D a ordonné le classement.
+    exposure: Optional[Dict[str, Tuple[float, float]]] = None
 
 
 def _is_acting(state: DraftState, cell_id: int) -> bool:
@@ -265,8 +265,7 @@ def build_snapshot(
     mastery = term_of(monitor)
     ids = {n.lower(): i for i, n in monitor.champion_id_to_name.items()}
     names = getattr(monitor, "strategy_names", None)
-    tree = analysis.tree
-    tree_values = {} if tree is None else {c.champion.casefold(): c.value for c in tree.choices}
+    exposure = analysis.exposure or {}
     ban_rows, gains = (
         monitor.ban_advisor.advice(state, draft_config.SNAPSHOT_BAN_COUNT, ids)
         if is_ban
@@ -306,7 +305,8 @@ def build_snapshot(
                 personal_points=r.personal_points,
                 personal_games=mastery.games(r.champion),
                 parts=analysis.parts.get(r.champion, {}),
-                tree_value=tree_values.get(r.champion.casefold()),
+                known_points=exposure.get(r.champion, (None, None))[0],
+                exposure_points=exposure.get(r.champion, (None, None))[1],
             )
             for r in results
         ],
@@ -327,9 +327,5 @@ def build_snapshot(
         strategy=strategy_of(monitor).name,
         strategies=list(names) if isinstance(names, list) else [],
         pick_advice=pick_advice,
-        tree=(
-            None
-            if tree is None
-            else {"branch": tree.branch, "opponent": tree.opponent, "skipped": list(tree.skipped)}
-        ),
+        exposure=analysis.exposure is not None,
     )

@@ -21,7 +21,7 @@ from typing import Dict, List, Optional, Sequence, Tuple
 from ..analysis.game_eval import Placed
 from ..analysis.mastery import term_of, to_win_points, with_term
 from ..analysis.pick_order import PICK_ORDER_META_KEY, Pick, from_meta
-from ..analysis.pool_tree import TreeLeaf
+from ..analysis.exposure import d_scores
 from ..analysis.strategy import Strategy, WeightedEvaluator, strategy_of
 from ..config_constants import draft_config, ui_config
 from ..utils.display import format_games_count
@@ -391,42 +391,60 @@ class DraftRecommender:
             for result in results
         }
 
-    def _tree_order(
+    def _exposure_order(
         self,
         results: Sequence[SearchResult],
+        allies: List[Placed],
+        enemies: List[Placed],
+        banned: Sequence[str],
         player_lane: Optional[str],
-        opponent: Optional[str],
-        unavailable: Sequence[str],
-    ) -> Tuple[List[SearchResult], Optional[TreeLeaf]]:
-        """Le classement dans l'ordre de l'arbre du pool (SPEC-54), et la feuille qui l'a donné.
+    ) -> Tuple[List[SearchResult], Optional[Dict[str, Tuple[float, float]]]]:
+        """Le classement dans l'ordre de la règle D (SPEC-55), et (connu, exposition) en points.
 
-        Les champions hors de l'arbre passent après, dans l'ordre reçu. Sans lane ou sans arbre,
-        l'ordre reçu et None : la console le dit.
+        Les champions hors de D passent après, dans l'ordre reçu. Sans lane, ou si D échoue,
+        l'ordre reçu et None : la console le dit, la draft continue (best-effort).
         """
-        tree = self.m.pool_tree(player_lane) if player_lane else None
-        if tree is None:
-            reason = "poste inconnu" if not player_lane else "arbre indisponible"
-            print(f"  [INFO] Arbre : {reason}, classement force + duel")
+        if not player_lane:
+            print("  [INFO] Arbre : poste inconnu, classement force + duel")
             return list(results), None
-        leaf = tree.leaf(opponent, unavailable)
-        rank = {choice.champion.casefold(): index for index, choice in enumerate(leaf.choices)}
+        try:
+            popularity = self.m.lane_popularity()
+            if popularity is None:
+                return list(results), None
+            scores = d_scores(
+                self.m.evaluator,
+                player_lane,
+                [result.champion for result in results],
+                allies,
+                enemies,
+                banned,
+                popularity,
+            )
+        except Exception as error:  # pylint: disable=broad-exception-caught
+            print(f"  [ALERTE] Exposition indisponible ({error})")
+            return list(results), None
+        rank = {score.champion.casefold(): index for index, score in enumerate(scores)}
         ordered = sorted(
             enumerate(results),
             key=lambda item: (rank.get(item[1].champion.casefold(), len(rank)), item[0]),
         )
-        return [result for _, result in ordered], leaf
+        exposure = {
+            score.champion: (to_win_points(score.known), to_win_points(score.exposure))
+            for score in scores
+        }
+        if scores:
+            self._print_exposure(scores[0].champion, *exposure[scores[0].champion])
+        return [result for _, result in ordered], exposure
 
     @staticmethod
-    def _print_tree(leaf: TreeLeaf) -> None:
-        """`[ARBRE] Counter de Darius : Teemo (+3,62 pts)` : la branche et le choix de l'arbre."""
-        if not leaf.choices:
-            return
-        choice = leaf.choices[0]
-        value = f"{choice.value:+.2f}".replace(".", ",")
-        unit = "pt" if abs(round(choice.value, 2)) < 2 else "pts"
-        branch = "Blind" if leaf.branch == "blind" else f"Counter de {leaf.opponent}"
-        skipped = f" · indisponibles avant lui : {', '.join(leaf.skipped)}" if leaf.skipped else ""
-        print(f"  [ARBRE] {branch} : {choice.champion} ({value} {unit}){skipped}")
+    def _print_exposure(champion: str, known: float, exposure: float) -> None:
+        """`[D] Ornn : connu +1,20 pt · exposition -0,85 pt` : le n° 1 de la règle D."""
+
+        def points(value: float) -> str:
+            unit = "pt" if abs(round(value, 2)) < 2 else "pts"
+            return f"{value:+.2f}".replace(".", ",") + f" {unit}"
+
+        print(f"  [D] {champion} : connu {points(known)} · exposition {points(exposure)}")
 
     def _base_probability(self, allies: List[Placed], enemies: List[Placed]) -> Optional[float]:
         """Probabilité de victoire de la position actuelle, référence des écarts du classement."""
@@ -491,13 +509,9 @@ class DraftRecommender:
                 results = self._calibrated(results, allies, enemies, strategy)
                 analysis.parts = self._parts(results, allies, enemies, strategy)
                 if strategy.tree:
-                    unavailable = [name for name, _ in allies + enemies] + banned
-                    unavailable += [name for name, _ in skipped]
-                    results, analysis.tree = self._tree_order(
-                        results, player_lane, direct_counter_name, unavailable
+                    results, analysis.exposure = self._exposure_order(
+                        results, allies, enemies, banned, player_lane
                     )
-                    if analysis.tree is not None:
-                        self._print_tree(analysis.tree)
 
             analysis.player_lane = player_lane
             analysis.direct_counter = direct_counter_name

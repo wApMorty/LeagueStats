@@ -164,7 +164,7 @@ class MonitorLifecycle:
         self.m._draft_episode = episode
         self._reload_mastery()
         self._reload_strategy()
-        self._forget_pool_trees()
+        self._forget_lane_popularity()
         self.m._reset_for_next_game()
         timer.draft_seen(tracker.since())
 
@@ -186,11 +186,11 @@ class MonitorLifecycle:
             if self.m.verbose:
                 print(f"[ALERTE] Stratégie non rechargée ({error})")
 
-    def _forget_pool_trees(self) -> None:
-        """Les arbres de pool de la draft précédente (SPEC-54) : une mise à jour des données entre deux
-        drafts est prise en compte. Best-effort."""
+    def _forget_lane_popularity(self) -> None:
+        """La popularité des lanes de la draft précédente (SPEC-55) : une mise à jour des données entre
+        deux drafts est prise en compte. Best-effort."""
         try:
-            self.m._pool_trees.clear()
+            self.m.forget_lane_popularity()
         except Exception:  # pylint: disable=broad-exception-caught
             pass
 

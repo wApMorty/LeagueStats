@@ -11,6 +11,7 @@ many cross-domain touches for plain composition.
 
 from typing import List, Optional, Tuple
 
+from ..analysis.exposure import d_scores
 from ..analysis.mastery import term_of
 from ..analysis.shrink import shrunk_lane_winrates
 from ..analysis.strategy import WeightedEvaluator, strategy_of
@@ -101,6 +102,31 @@ class HoverAutomation:
             return last_state.ally_positions.get(last_state.local_player_cell_id)
         return None
 
+    def _banned_names(self) -> List[str]:
+        """Noms des champions bannis dans la dernière draft vue ; vide sans draft. Best-effort."""
+        state = getattr(self.m, "last_draft_state", None)
+        if state is None:
+            return []
+        return [self.m._get_display_name(ban) for ban in state.ally_bans + state.enemy_bans]
+
+    def _exposure_blind(self, lane: str, candidates: List[str]) -> Optional[str]:
+        """N° 1 de la règle D (SPEC-55) sans aucun pick posé ; None si D est indisponible ou échoue."""
+        try:
+            popularity = self.m.lane_popularity()
+            if popularity is None:
+                return None
+            scores = d_scores(
+                self.m.evaluator, lane, candidates, [], [], self._banned_names(), popularity
+            )
+        except Exception as error:  # pylint: disable=broad-exception-caught
+            print(f"  [ALERTE] Exposition indisponible au survol ({error})")
+            return None
+        if not scores:
+            return None
+        if self.m.verbose:
+            print(f"  [OK] [INITIAL-HOVER] Règle D : {scores[0].champion}")
+        return scores[0].champion
+
     def get_best_champion_from_pool(self) -> str:
         """Get the best champion from current pool using tier list analysis."""
         try:
@@ -138,20 +164,12 @@ class HoverAutomation:
                 else:
                     skipped.append((champion_name, total_games))
 
-            # SPEC-54 : sous Arbre, le premier blind de l'arbre du pool, hors champions sans données.
+            # SPEC-55 : sous Arbre, le n° 1 de la règle D sur une draft vide, hors champions sans données.
             strategy = strategy_of(self.m)
-            if strategy.tree and eligible:
-                tree = self.m.pool_tree(player_lane) if player_lane else None
-                if tree is not None:
-                    leaf = tree.leaf(None, [name for name, _ in skipped])
-                    if leaf.choices:
-                        best = leaf.choices[0]
-                        if self.m.verbose:
-                            print(
-                                f"  [OK] [INITIAL-HOVER] Blind de l'arbre : {best.champion} "
-                                f"({best.value:+.2f} pts)"
-                            )
-                        return best.champion
+            if strategy.tree and eligible and player_lane:
+                best = self._exposure_blind(player_lane, [name for name, _ in eligible])
+                if best is not None:
+                    return best
 
             # SPEC-18 : en blind pick, la force d'un champion est son winrate
             # de lane rétréci. score_against_team() sans adversaire revenait à
