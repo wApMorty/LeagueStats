@@ -192,7 +192,7 @@ def test_bornes_du_gabarit_lues_de_draft_config(web, monkeypatch):
 def test_arbre_se_lit_sans_poids_ni_duplicata(web):
     page = web.get("/strategies", params={"nom": "Arbre"}).text
     assert "Arbre · " in page
-    assert "Vis-à-vis vu : le meilleur counter du pool contre lui." in page
+    assert "plus le pire counter attendu des lanes ennemies pas encore choisies" in page
     assert 'hx-post="/strategies/dupliquer?name=Arbre"' not in page
     assert 'type="range"' not in page
 

@@ -12,7 +12,7 @@ from typing import Collection, List, Optional, Sequence, Tuple
 
 from ..config_constants import pool_stats_config
 from .pool_swipe import PoolScorer, pool_score
-from .pool_tree import PoolTree, build_tree
+from .pool_tree import PoolTree
 
 # Gain minimal d'un échange pour être appliqué : sous ce seuil, l'échange est considéré nul.
 _SWAP_EPSILON = 1e-12
@@ -28,8 +28,8 @@ class GeneratedPool:
     per_scrape: Tuple[float, ...]  # J de chaque scrape, du plus récent au plus ancien
     blind: Tuple[Tuple[str, float], ...]  # blind de chaque champion (scrape le plus récent)
     counter_share: Tuple[Tuple[str, float], ...]  # part de popularité où il est le meilleur counter
-    tree: PoolTree  # arbre du pool sur le scrape le plus récent
     candidates: int
+    tree: Optional[PoolTree] = None  # posé par la route (règle D), absent ici
 
 
 def mean_score(scorers: Sequence[PoolScorer], pool: Sequence[str]) -> float:
@@ -137,6 +137,5 @@ def generate_pool(
         per_scrape=per_scrape,
         blind=tuple((c, recent.blind(c)) for c in champions),
         counter_share=tuple((c, share[c]) for c in champions),
-        tree=build_tree(recent, champions),
         candidates=len(candidates),
     )

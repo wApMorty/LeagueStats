@@ -1,7 +1,8 @@
-"""Arbre de décision du pool côté client (SPEC-54) : vues de `partials/pool_tree.html`.
+"""Arbre de décision du pool côté client (SPEC-54, lu dans la règle D depuis SPEC-55) : vues de
+`partials/pool_tree.html`.
 
-L'arbre (`analysis/pool_tree.py`) se calcule sur les matrices du scrape actuel, sans maîtrise,
-pour le poste du pool. Le calcul de l'écran Pool est gardé en cache sur la version des données.
+L'arbre (`analysis/exposure.py`, `exposure_tree`) se calcule sur les matrices du scrape actuel, sans
+maîtrise, pour le poste du pool. Le calcul de l'écran Pool est gardé en cache sur la version des données.
 """
 
 import sqlite3
@@ -9,10 +10,10 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, Optional, Sequence, Tuple, Union
 
-from ..analysis.blindability import draw_shifts
-from ..analysis.pool_swipe import PoolScorer
-from ..analysis.pool_tree import PoolTree, build_tree
-from ..analysis.pool_value import PoolEvaluator, dominant_lane
+from ..analysis.exposure import exposure_tree, lane_popularity
+from ..analysis.game_eval import GameEvaluator
+from ..analysis.pool_tree import PoolTree
+from ..analysis.pool_value import dominant_lane
 from ..config_constants import pool_stats_config
 from ..data_freshness import get_freshness_info
 from ..db import Database
@@ -75,8 +76,10 @@ def _tree(db_path: str, lane: str, champions: Tuple[str, ...], version: str) -> 
     db = Database(db_path)
     try:
         db.connect_read_only()
-        scorer = PoolScorer(PoolEvaluator(db, lane), draw_shifts(db.connection).get(lane, {}))
-        return build_tree(scorer, list(champions))
+        # Sonde : les dépôts avalent les erreurs de lecture ; sans elle, une base illisible
+        # donnerait un arbre vide au lieu de lever sqlite3.Error (None côté vue).
+        db.connection.execute("SELECT 1 FROM sqlite_master LIMIT 1").fetchone()
+        return exposure_tree(GameEvaluator(db), lane, list(champions), lane_popularity(db))
     finally:
         db.close()
 

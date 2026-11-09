@@ -12,14 +12,17 @@ hors champions exclus du poste. Son résultat est gardé dans un cache de module
 """
 
 import sqlite3
+from dataclasses import replace
 from datetime import date
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 from ..analysis.blindability import draw_shifts
+from ..analysis.exposure import exposure_tree, lane_popularity
+from ..analysis.game_eval import GameEvaluator
 from ..analysis.pool_generator import GeneratedPool, generate_pool, mean_score
 from ..analysis.pool_swipe import PoolScorer, SwapCard, swap_cards
-from ..analysis.pool_tree import PoolTree, build_tree
+from ..analysis.pool_tree import PoolTree
 from ..analysis.pool_value import PoolEvaluator
 from ..config_constants import pool_stats_config
 from ..data_freshness import get_freshness_info
@@ -93,7 +96,8 @@ def _stack(
         db.connect_read_only()
         scorer = PoolScorer(PoolEvaluator(db, lane), draw_shifts(db.connection).get(lane, {}))
         stack = swap_cards(scorer, list(champions), passed, excluded) if cards else []
-        return stack, build_tree(scorer, list(champions)), None
+        tree = exposure_tree(GameEvaluator(db), lane, list(champions), lane_popularity(db))
+        return stack, tree, None
     except sqlite3.Error:
         return [], None, DB_UNAVAILABLE
     finally:
@@ -183,6 +187,14 @@ def _compute(
             )
         generated = generate_pool(scorers, size, excluded)
         current = mean_score(scorers, champions) if champions else None
+        if generated is not None:
+            tree = exposure_tree(
+                GameEvaluator(databases[0]),
+                lane,
+                generated.champions,
+                lane_popularity(databases[0]),
+            )
+            generated = replace(generated, tree=tree)
         return generated, current
     except sqlite3.Error:
         raise Refusal(DB_UNAVAILABLE)
@@ -255,7 +267,7 @@ def _generated_view(
         "score": signed(generated.score, 2),
         "per_scrape": [signed(score, 2) for score in generated.per_scrape],
         "gap": signed(generated.score - current, 2) if current is not None else None,
-        "tree": tree_payload(generated.tree, champions),
+        "tree": tree_payload(generated.tree, champions) if generated.tree is not None else None,
         "candidates": generated.candidates,
     }
 

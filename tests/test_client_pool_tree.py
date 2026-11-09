@@ -95,6 +95,21 @@ def test_tree_view_sans_poste_ou_sans_champion_est_none(seeded_db, tmp_path):
     assert client_pool_tree.tree_view(seeded_db, "top", [], portraits(tmp_path)) is None
 
 
+def test_tree_view_lit_exposure_tree_sur_le_poste_et_les_champions(
+    seeded_db, tmp_path, monkeypatch
+):
+    appels = []
+
+    def faux(evaluator, lane, champions, popularity):
+        appels.append((lane, list(champions)))
+        return arbre_factice()
+
+    monkeypatch.setattr(client_pool_tree, "exposure_tree", faux)
+    payload = client_pool_tree.tree_view(seeded_db, "top", ["Ahri", "Garen"], portraits(tmp_path))
+    assert appels == [("top", ["Ahri", "Garen"])]
+    assert payload == client_pool_tree.tree_payload(arbre_factice(), portraits(tmp_path))
+
+
 def test_tree_view_base_illisible_est_none(tmp_path):
     bad = tmp_path / "bad.db"
     bad.write_text("pas une base", encoding="utf-8")

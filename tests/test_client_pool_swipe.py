@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 
 from src import pool_manager, user_prefs
 from src.analysis.pool_swipe import SwapCard
+from src.analysis.pool_tree import PoolTree, TreeChoice
 from src.client import pool_swipe as client_pool_swipe
 from src.client.app import create_app
 from src.client.bus import EventBus
@@ -445,3 +446,32 @@ def test_pool_genere_expose_un_arbre_et_plus_de_counters(web):
         "Darius",
         "Ahri",
     }
+
+
+def test_arbre_du_poste_vient_de_exposure_tree(web, monkeypatch):
+    designer_main_top(web)
+    appels = []
+
+    def faux(evaluator, lane, champions, popularity):
+        appels.append((lane, tuple(champions)))
+        return PoolTree(lane, (TreeChoice("Ahri", 9.0),), ())
+
+    monkeypatch.setattr(client_pool_swipe, "exposure_tree", faux)
+    tree = vue(web)["tree"]
+    assert appels == [("top", ("Ahri",))]
+    assert [c["name"] for c in tree["blind"]] == ["Ahri"]
+
+
+def test_pool_genere_porte_l_arbre_de_exposure_tree(web, monkeypatch):
+    designer_main_top(web)
+
+    def faux(evaluator, lane, champions, popularity):
+        return PoolTree(lane, tuple(TreeChoice(c, 1.0) for c in champions), ())
+
+    monkeypatch.setattr(client_pool_swipe, "exposure_tree", faux)
+    post(web, "/meta/generer?poste=top&taille=3&mode=actuel")
+    generated = vue(web, 3, "actuel")["generated"]
+    assert generated is not None
+    assert [c["name"] for c in generated["tree"]["blind"]] == [
+        c["name"] for c in generated["champions"]
+    ]

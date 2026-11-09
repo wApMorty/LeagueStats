@@ -217,16 +217,13 @@ def test_counter_share_sums_to_one_and_is_per_champion():
     assert sum(shares.values()) == pytest.approx(1.0)
 
 
-def test_tree_blind_suit_l_ordre_du_pool_et_une_table_par_adversaire():
+def test_generate_pool_ne_construit_pas_d_arbre():
+    """L'arbre se pose par la route (règle D, `exposure_tree`) : le générateur le laisse à None."""
     names = ["Big", "Mid", "Small", "Tiny"]
-    popularity = [0.5, 0.3, 0.19, 0.01]
     values = {n: [1.0, 1.0, 1.0, 1.0] for n in names}
-    scorer = _uniform_scorer(names, values=values, popularity=popularity)
+    scorer = _uniform_scorer(names, values=values, popularity=[0.5, 0.3, 0.19, 0.01])
 
     result = generate_pool([scorer], 3, excluded=())
 
     assert result is not None
-    assert [choice.champion for choice in result.tree.blind] == list(result.champions)
-    assert [enemy for enemy, _, _ in result.tree.counters] == names
-    for _, _, table in result.tree.counters:
-        assert {choice.champion for choice in table} == set(result.champions)
+    assert result.tree is None

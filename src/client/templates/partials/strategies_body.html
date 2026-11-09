@@ -22,7 +22,7 @@
           {% endif %}
         </div>
         {% if s.tree %}
-        <p class="fine">Vis-à-vis vu : le meilleur counter du pool contre lui. Sinon : le meilleur blind exposé. Matrices seules, sans maîtrise. Les % de victoire ne changent pas.</p>
+        <p class="fine">Connu + exposition : la valeur sur la draft posée (duels, synergies, autres lanes), plus le pire counter attendu des lanes ennemies pas encore choisies. Matrices seules, sans maîtrise. Les % de victoire ne changent pas.</p>
         {% elif s.editable %}
         <form class="strat-form" hx-post="/strategies/modifier?name={{ s.name|urlencode }}">
           {% for w in s.weights %}
