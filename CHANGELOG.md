@@ -6,7 +6,7 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ### ✨ Feature
 
-- **Vis-à-vis rappelé sur la carte de draft** : en counterpick sous la stratégie Arbre, la carte n° 1 commence par « Counter de Darius » avant « Connu · Exposition », comme avant la 8.1.0.
+- **Vis-à-vis rappelé sur la carte de draft** : en counterpick sous la stratégie Arbre, la carte n° 1 commence par le duel compté contre lui, « Duel vs Darius +3,62 », avant « Connu · Exposition ». Pas « Counter de » : la règle D classe sur toute la draft, et un duel perdant peut passer n° 1 (Ornn contre Yone, duel −1,86, porté par sa force et sa synergie avec Rengar).
 
 ## [8.1.0] - 2026-11-09
 

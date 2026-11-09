@@ -1906,10 +1906,13 @@ def test_ligne_d_exposition_rendue_dans_la_page(client, bus):
 
 
 def test_counterpick_la_carte_1_dit_le_vis_a_vis(assets):
-    lines = _lines(exposure_snapshot(versus="Tryndamere"), assets)
-    assert lines[0].startswith("Counter de Tryndamere · Connu +1,20 · Exposition −0,85 · ")
-    assert "Counter de" not in lines[1]
+    snapshot = exposure_snapshot(versus="Tryndamere")
+    for rec in snapshot["recommendations"][:2]:
+        rec["parts"] = {"force": 0.4, "duel": 3.62}
+    lines = _lines(snapshot, assets)
+    assert lines[0].startswith("Duel vs Tryndamere +3,62 · Connu +1,20 · Exposition −0,85 · ")
+    assert "Duel vs" not in lines[1]
 
 
 def test_sans_vis_a_vis_pas_d_indication(assets):
-    assert "Counter de" not in _lines(exposure_snapshot(), assets)[0]
+    assert "Duel vs" not in _lines(exposure_snapshot(), assets)[0]

@@ -497,11 +497,12 @@ def recommendations(snapshot: Dict[str, Any], champions: Champions) -> List[Dict
         )
         if snapshot.get("exposure"):
             head = _exposure_line(rec)
-            # Counterpick : la carte n° 1 rappelle contre qui « Connu » est calculé.
-            if index == 0 and snapshot.get("versus"):
-                head = " · ".join(
-                    text for text in (f"Counter de {snapshot['versus']}", head) if text
-                )
+            # Counterpick : la carte n° 1 dit le duel compté contre le vis-à-vis, jamais « counter »
+            # (D classe sur toute la draft, un duel perdant peut passer n° 1).
+            duel = (rec.get("parts") or {}).get("duel")
+            if index == 0 and snapshot.get("versus") and duel is not None:
+                versus = f"Duel vs {snapshot['versus']} {signed(duel, 2)}"
+                head = " · ".join(text for text in (versus, head) if text)
         else:
             head = _decomposition(rec)
         line = " · ".join(text for text in (head, line, _personal(rec)) if text)
