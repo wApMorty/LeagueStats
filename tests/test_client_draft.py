@@ -1857,3 +1857,49 @@ def test_sans_arbre_la_decomposition_ne_change_pas(assets):
     lines = _lines(snapshot, assets)
     assert lines[0].startswith("Force +0,4 · duel +4,2 · Réponse attendue")
     assert "Blind" not in lines[0] and "Repli" not in lines[1]
+
+
+def exposure_snapshot(known=1.2, exposure=-0.85, **overrides):
+    """Snapshot classé par la règle D : la carte 1 porte connu et exposition (SPEC-55 §4.5)."""
+    snapshot = pick_snapshot(**overrides)
+    snapshot["exposure"] = True
+    snapshot["recommendations"][0]["known_points"] = known
+    snapshot["recommendations"][0]["exposure_points"] = exposure
+    return snapshot
+
+
+def test_ligne_d_exposition_complete_sur_la_carte_1(assets):
+    lines = _lines(exposure_snapshot(), assets)
+    assert lines[0].startswith(
+        "Connu +1,20 · Exposition −0,85 · Réponse attendue : Alistar (Support), 54,82 %"
+    )
+
+
+def test_ligne_d_exposition_une_seule_valeur(assets):
+    assert _lines(exposure_snapshot(exposure=None), assets)[0].startswith(
+        "Connu +1,20 · Réponse attendue"
+    )
+    assert _lines(exposure_snapshot(known=None), assets)[0].startswith(
+        "Exposition −0,85 · Réponse attendue"
+    )
+
+
+def test_ligne_d_exposition_sans_valeur_reste_la_reponse(assets):
+    line = _lines(exposure_snapshot(known=None, exposure=None), assets)[0]
+    assert line.startswith("Réponse attendue : Alistar (Support), 54,82 %")
+    assert "Connu" not in line and "Exposition" not in line
+
+
+def test_sans_exposure_la_decomposition_reste_meme_avec_des_points_de_regle_d(assets):
+    snapshot = exposure_snapshot()
+    snapshot["exposure"] = False
+    snapshot["recommendations"][0]["parts"] = {"force": 0.4, "duel": 4.2}
+    line = _lines(snapshot, assets)[0]
+    assert line.startswith("Force +0,4 · duel +4,2 · Réponse attendue")
+    assert "Connu" not in line
+
+
+def test_ligne_d_exposition_rendue_dans_la_page(client, bus):
+    bus.publish("draft", exposure_snapshot())
+    html = client.get("/draft/stage").text
+    assert "Connu +1,20 · Exposition −0,85 · Réponse attendue : Alistar (Support)" in html

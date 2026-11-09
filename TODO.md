@@ -389,7 +389,7 @@ IC 90 % hors de 0), y compris en pick aveugle hors B1. Découpage en SPEC-55 §5
 |---|---|---|---|---|
 | 273 | `src/analysis/exposure.py` (`lane_popularity`, `d_scores`, `exposure_tree`), tests | 3 | — || ✅ 2026-11-09 : 14 tests |
 | 274 | Live Coach : Arbre classe par D (`_provide`, survol initial), `lane_popularity` en cache, `[D]` en console, retrait de `_tree_order` / `pool_tree`, tests | 5 | 273 || ✅ 2026-11-09 : 9 tests de classement, 5 de survol, 3 de snapshot ; champs du snapshot avancés depuis 275 |
-| 275 | Snapshot et carte de draft (`known_points`, `exposure_points`, `_exposure_line`), tests | 2 | 274 | |
+| 275 | Snapshot et carte de draft (`known_points`, `exposure_points`, `_exposure_line`), tests | 2 | 274 || ✅ 2026-11-09 : 5 tests (champs du snapshot faits en 274) |
 | 276 | Arbre affiché par `exposure_tree` : écran Pool, Méta du poste, pool généré, libellés, tests | 3 | 273 | |
 | 277 | Clôture : CHANGELOG, statuts SPEC-55 et SPEC-54, README des specs, structure | 1 | 274-276 | |
 

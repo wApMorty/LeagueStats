@@ -451,25 +451,16 @@ def _decomposition(rec: Dict[str, Any]) -> str:
     return text[:1].upper() + text[1:]
 
 
-def _tree_line(tree: Dict[str, Any], rec: Dict[str, Any], index: int) -> str:
-    """La ligne d'une carte sous l'arbre du pool (SPEC-54 §4.4), ex. « Blind · +0,34 pt ».
+def _exposure_line(rec: Dict[str, Any]) -> str:
+    """« Connu +1,20 · Exposition −0,85 » : la règle D en points (SPEC-55 §4.5).
 
-    Carte 0 : la branche (blind, ou counter du vis-à-vis) et les champions du pool écartés avant elle.
-    Les cartes suivantes sont des replis. Valeur absente : le libellé seul.
+    Une partie absente si sa valeur est None ; chaîne vide si les deux le sont.
     """
-    value = rec.get("tree_value")
-    if index == 0:
-        label = "Blind" if tree["branch"] == "blind" else f"Counter de {tree['opponent']}"
-    else:
-        label = "Repli"
-    parts = [label]
-    if value is not None:
-        unit = "pt" if round(abs(value), 2) < 2 else "pts"
-        parts.append(f"{signed(value, 2)} {unit}")
-    skipped = tree.get("skipped") or []
-    if index == 0 and skipped:
-        verb = "indisponible" if len(skipped) == 1 else "indisponibles"
-        parts.append(f"{', '.join(skipped)} {verb}")
+    parts = []
+    if rec.get("known_points") is not None:
+        parts.append(f"Connu {signed(rec['known_points'], 2)}")
+    if rec.get("exposure_points") is not None:
+        parts.append(f"Exposition {signed(rec['exposure_points'], 2)}")
     return " · ".join(parts)
 
 
@@ -491,7 +482,6 @@ def recommendations(snapshot: Dict[str, Any], champions: Champions) -> List[Dict
     """
     immediate = _immediate(snapshot)
     base = snapshot.get("base_probability")
-    tree = snapshot.get("tree")
     cards = []
     for index, rec in enumerate(snapshot["recommendations"][: client_config.DRAFT_REC_COUNT]):
         now = immediate.get(rec["champion_id"])
@@ -505,7 +495,7 @@ def recommendations(snapshot: Dict[str, Any], champions: Champions) -> List[Dict
         line = (
             f"Réponse attendue : {reply}, {fr(rec['win_probability'] * 100, 2)} %" if reply else ""
         )
-        head = _tree_line(tree, rec, index) if tree else _decomposition(rec)
+        head = _exposure_line(rec) if snapshot.get("exposure") else _decomposition(rec)
         line = " · ".join(text for text in (head, line, _personal(rec)) if text)
         cards.append(
             {
