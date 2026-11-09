@@ -1,6 +1,6 @@
 # SPEC-54 — Arbre de décision du pool
 
-**Statut** : ✅ Livrée le 2026-11-08, recette @pj35 à faire (draft classée réelle sous Arbre). Écarts : l'arbre du
+**Statut** : ✅ Livrée le 2026-11-08 ; classement et arbre affiché remplacés par la règle D de SPEC-55 le 2026-11-09. Écarts : l'arbre du
 pool généré est porté par `GeneratedPool.tree` plutôt que par le cache de `_compute` (même résultat) ; `portrait` et
 `data_version` vivent dans `src/client/pool_tree.py`, importés par `src/client/pool_swipe.py` (import circulaire
 évité).

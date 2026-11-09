@@ -54,7 +54,8 @@ src/
 │   ├── pool_statistics.py            # Statistiques de pool
 │   ├── pool_generator.py             # Pool de N qui maximise ½ blind + ½ counter, sur un ou plusieurs scrapes (SPEC-50)
 │   ├── pool_swipe.py                 # Échanges qui améliorent un pool, sans maîtrise ; PoolScorer net du tirage (SPEC-49, SPEC-50)
-│   ├── pool_tree.py                  # Arbre de décision d'un pool : ordre de blind et table par adversaire (SPEC-54)
+│   ├── exposure.py                   # Règle D : connu + exposition aux picks à venir, arbre du pool lu dans D (SPEC-55)
+│   ├── pool_tree.py                  # Types de l'arbre du pool : table blind et table par adversaire (SPEC-54, SPEC-55)
 │   ├── team_analysis.py               # TeamAnalyzer (code non appelé par un menu)
 │   └── pool_value.py, trio_holistic.py, trio_counterpick.py,
 │       trio_tactics.py  # Team Builder (menu 5), valeur de pool SPEC-18
@@ -108,7 +109,7 @@ src/
 │   ├── lobby.py, social.py                        # Lobby et file d'attente (écriture gardée par la phase), social en lecture seule
 │   ├── strategies.py                              # Écran Stratégies : choisir, dupliquer, régler les poids (SPEC-46)
 │   ├── pool_swipe.py                              # Panneau de la Méta du poste : générateur et cartes d'échange (SPEC-49 à 51)
-│   ├── pool_tree.py                               # Vue de l'arbre du pool, écran Pool et Méta du poste (SPEC-54)
+│   ├── pool_tree.py                               # Vue de l'arbre du pool lu dans la règle D, écran Pool et Méta du poste (SPEC-54, SPEC-55)
 │   ├── templates/                                # Jinja : coque, un gabarit par écran, fragments htmx dans partials/
 │   └── static/                                    # style.css (jetons « Alchimie »), motion.js, un module JS par écran, fonts/
 │

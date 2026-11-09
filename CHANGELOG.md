@@ -4,6 +4,10 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+### ✨ Feature
+
+- **L'Arbre classe par connu + exposition (SPEC-55)** : la stratégie Arbre suit maintenant la même règle sur tous les postes. Chaque champion du pool vaut ce qu'il apporte face à la draft posée (duels, synergies, autres lanes, tirage retiré) plus son exposition : le pire counter attendu, sur 7 tirages selon la popularité, de chaque lane ennemie pas encore choisie. Un top choisi en B4-B5 sans vis-à-vis reste donc protégé du counter, et un ADC voit la synergie avec son support. La carte de draft affiche « Connu +1,20 · Exposition −0,85 », la console une ligne `[D]` ; les % de victoire restent ceux du modèle calibré, et la maîtrise n'entre pas dans l'ordre. L'arbre de l'écran Pool et de la Méta du poste devient cette même règle sur une draft vide (ordre de blind) et face au seul vis-à-vis. Rejoué sur 4 841 parties de `crawl.db` : +0,24 à +0,59 pt par décision contre l'ancien arbre sur les cinq postes, intervalle à 90 % hors de 0, y compris en pick aveugle.
+
 ### 🐛 Fix
 
 - **Déplacement du client sous Komorebi** : glisser la barre de titre passe par la boucle de déplacement de Windows. Un gestionnaire de fenêtres comme Komorebi voit donc le déplacement et remet la fenêtre à sa tuile (ou l'échange) au relâché, au lieu de la laisser là où on la lâche. Le double clic sur la barre agrandit toujours.

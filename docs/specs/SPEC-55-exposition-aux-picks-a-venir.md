@@ -1,6 +1,9 @@
 # SPEC-55 — Exposition aux picks à venir : l'Arbre classe par la règle D
 
-**Statut** : 🟡 Rédigée le 2026-11-09, arbitrages validés par @pj35 (§2), relecture attendue avant `/implement`.
+**Statut** : ✅ Livrée le 2026-11-09, recette @pj35 à faire (draft classée réelle sous Arbre). Écarts : les champs du
+snapshot sont faits en tâche 274 avec le Live Coach (le commit restait vert) ; `_tree` sonde la base avant
+`exposure_tree` (les dépôts avalent les erreurs de lecture) ; libellé Arbre de l'écran Stratégies réécrit. Mesuré sur
+la base du 8 nov. : arbre de l'écran Pool 0,58 s (39 adversaires), classement D 142 ms à froid.
 
 **Origine** : @pj35, 2026-11-09 — l'arbre de SPEC-54 ne voit que la lane, alors qu'à l'ADC la synergie avec le
 support pèse autant que le duel. Pas de règle par poste : « un système qui s'appuie sur des indicateurs factuels et
