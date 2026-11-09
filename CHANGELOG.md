@@ -4,6 +4,12 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+## [8.1.0] - 2026-11-09
+
+La stratégie Arbre ne regarde plus seulement ton vis-à-vis : elle compte la draft posée (duels, synergies) et l'exposition au counter des lanes ennemies encore vides, avec la même règle sur tous les postes. Le client se déplace aussi proprement sous Komorebi.
+
+Aucune action requise : ni migration Alembic, ni scrape.
+
 ### ✨ Feature
 
 - **L'Arbre classe par connu + exposition (SPEC-55)** : la stratégie Arbre suit maintenant la même règle sur tous les postes. Chaque champion du pool vaut ce qu'il apporte face à la draft posée (duels, synergies, autres lanes, tirage retiré) plus son exposition : le pire counter attendu, sur 7 tirages selon la popularité, de chaque lane ennemie pas encore choisie. Un top choisi en B4-B5 sans vis-à-vis reste donc protégé du counter, et un ADC voit la synergie avec son support. La carte de draft affiche « Connu +1,20 · Exposition −0,85 », la console une ligne `[D]` ; les % de victoire restent ceux du modèle calibré, et la maîtrise n'entre pas dans l'ordre. L'arbre de l'écran Pool et de la Méta du poste devient cette même règle sur une draft vide (ordre de blind) et face au seul vis-à-vis. Rejoué sur 4 841 parties de `crawl.db` : +0,24 à +0,59 pt par décision contre l'ancien arbre sur les cinq postes, intervalle à 90 % hors de 0, y compris en pick aveugle.
