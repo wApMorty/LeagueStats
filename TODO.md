@@ -387,7 +387,7 @@ IC 90 % hors de 0), y compris en pick aveugle hors B1. Découpage en SPEC-55 §5
 
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
-| 273 | `src/analysis/exposure.py` (`lane_popularity`, `d_scores`, `exposure_tree`), tests | 3 | — | |
+| 273 | `src/analysis/exposure.py` (`lane_popularity`, `d_scores`, `exposure_tree`), tests | 3 | — || ✅ 2026-11-09 : 14 tests |
 | 274 | Live Coach : Arbre classe par D (`_provide`, survol initial), `lane_popularity` en cache, `[D]` en console, retrait de `_tree_order` / `pool_tree`, tests | 5 | 273 | |
 | 275 | Snapshot et carte de draft (`known_points`, `exposure_points`, `_exposure_line`), tests | 2 | 274 | |
 | 276 | Arbre affiché par `exposure_tree` : écran Pool, Méta du poste, pool généré, libellés, tests | 3 | 273 | |
