@@ -4,6 +4,12 @@ All notable changes to LeagueStats Coach will be documented in this file.
 
 ## [Unreleased]
 
+## [8.2.0] - 2026-11-10
+
+La build du duel est cohérente de bout en bout : l'ordre des compétences suit le duel (Malphite contre Nasus : W > E > Q), un core du duel demande 9 parties avant de remplacer la build générale, et les bottes prennent leur rang d'achat dans le bloc Core. La carte de draft rappelle aussi le vis-à-vis en counterpick.
+
+Aucune action requise : ni migration Alembic, ni scrape.
+
 ### ✨ Feature
 
 - **Vis-à-vis rappelé sur la carte de draft** : en counterpick sous la stratégie Arbre, la carte n° 1 commence par le duel compté contre lui, « Duel vs Darius +3,62 », avant « Connu · Exposition ». Pas « Counter de » : la règle D classe sur toute la draft, et un duel perdant peut passer n° 1 (Ornn contre Yone, duel −1,86, porté par sa force et sa synergie avec Rengar).
