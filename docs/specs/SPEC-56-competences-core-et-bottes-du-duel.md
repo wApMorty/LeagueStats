@@ -1,6 +1,6 @@
 # SPEC-56 — Compétences, core et bottes du duel
 
-**Statut** : 🟡 Rédigée le 2026-11-10, arbitrages tranchés par @pj35 le 2026-11-10 sauf deux valeurs « à valider » en §2.
+**Statut** : ✅ Livrée le 2026-11-10 (tâches 278 à 281), recette @pj35 en partie réelle à faire. Arbitrages tranchés par @pj35 le 2026-11-10.
 
 **Origine** : @pj35, 2026-11-10 — partie Malphite top contre Nasus (`game_id` 8041820924) : « le Client m'a suggéré le
 mauvais Skill Order, et les items après le core build ne correspondaient pas au core build (qui était un peu particulier
@@ -64,9 +64,9 @@ prennent leur rang dans le core, comme sur OneTricks.
 |---|---|
 | Compétences du duel | **Validé (@pj35, 2026-11-10)** : même test binomial que les objets et les runes (`_best_option`, `LOADOUT_MATCHUP_ALPHA`) sur les ordres de maximisation ; substitution « Compétences » affichée avec sa raison ; la montée est celle de l'ordre retenu. |
 | Core du duel | **Validé (@pj35, 2026-11-10)** : plancher de parties ; sous le plancher, le core général reste et celui du duel peut figurer dans « Autres cores » (via `_matchup_items`, inchangé). |
-| Valeur du plancher | **À valider** : `LOADOUT_CORE_MIN_GAMES` = 9, soit 3 × `LOADOUT_PATH_MIN_GAMES` (assez pour qu'au moins une suite du core passe le filtre de 3 parties). Ne s'applique qu'au core : Swiftness (7 parties) reste substituée. |
+| Valeur du plancher | **Validé (@pj35, 2026-11-10)** : `LOADOUT_CORE_MIN_GAMES` = 9, soit 3 × `LOADOUT_PATH_MIN_GAMES` (assez pour qu'au moins une suite du core passe le filtre de 3 parties). Ne s'applique qu'au core : Swiftness (7 parties) reste substituée. |
 | Bottes dans le core | **Validé (@pj35, 2026-11-10)** : les bottes retenues sont insérées dans le bloc Core à leur rang d'achat ; le bloc Bottes ne garde que les alternatives ; le « prochain objet » de l'écran En partie suit cet ordre. |
-| Page de la séquence | **À valider** : la séquence des bottes retenues se lit sur la page du duel si elle la publie, sinon sur la page générale (« certains matchups » : c'est le duel qui dit « bottes en 1er »). Sans séquence publiée, les bottes vont après le core (comportement actuel du prochain objet). |
+| Page de la séquence | **Validé (@pj35, 2026-11-10)** : la séquence des bottes retenues se lit sur la page du duel si elle la publie, sinon sur la page générale (« certains matchups » : c'est le duel qui dit « bottes en 1er »). Sans séquence publiée, les bottes vont après le core (comportement actuel du prochain objet). |
 | Règle de substitution des bottes | **Validé (@pj35, 2026-11-10)** : inchangée. Contre Nasus, Swiftness en tête ; sa séquence la met en 2e objet. |
 
 ## 3. Approches considérées
@@ -114,7 +114,7 @@ prochain objet restent faux.
   hors composant Boots (1001), plafonné à `core_len`. Constante `BOOTS_COMPONENT = 1001` en tête de module (id Riot,
   pas un réglage).
 - `_item_blocks` reçoit `boots_rank: Optional[int]` : le bloc Core devient `core[:rang] + (bottes,) + core[rang:]`,
-  titré `Core (18 %, bottes 59 %)` ; le bloc suivant devient `Autres bottes` (alternatives seules). `boots_rank=None`
+  titré `Core (18%, bottes 59%)` ; le bloc suivant devient `Autres bottes` (alternatives seules). `boots_rank=None`
   (aucune séquence) : bottes insérées après le core, mêmes titres.
 - `pick_build` lit la séquence sur la page générale ; `adapt_to_matchup` sur la page du duel si
   `bootsTimingSequences` y contient les bottes retenues, sinon sur la générale.
@@ -125,7 +125,7 @@ prochain objet restent faux.
 
 - `build_view` vise les objets du bloc Core dans l'ordre ; une paire de bottes du core compte comme faite si le joueur
   possède **n'importe quelle** paire de `loadout["boots"]` (il a pris une alternative). Le bloc `Autres bottes` n'est
-  jamais visé. `NEXT_BLOCKS` devient `("Core",)`.
+  jamais visé. `NEXT_BLOCKS`, inutilisée, est retirée.
 - Un loadout d'avant SPEC-56 (sans clé `boots`, bloc « Bottes ») garde le comportement actuel : pas de migration de
   snapshot, le repli suffit.
 

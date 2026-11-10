@@ -7,6 +7,12 @@ All notable changes to LeagueStats Coach will be documented in this file.
 ### ✨ Feature
 
 - **Vis-à-vis rappelé sur la carte de draft** : en counterpick sous la stratégie Arbre, la carte n° 1 commence par le duel compté contre lui, « Duel vs Darius +3,62 », avant « Connu · Exposition ». Pas « Counter de » : la règle D classe sur toute la draft, et un duel perdant peut passer n° 1 (Ornn contre Yone, duel −1,86, porté par sa force et sa synergie avec Rengar).
+- **Bottes à leur rang dans le core** (SPEC-56) : le bloc Core du set d'items place la paire de bottes retenue à son rang d'achat publié par OneTricks, lu sur la page du duel quand elle le publie (Malphite : Sunfire, Steelcaps, Thornmail). Le bloc « Bottes » devient « Autres bottes » ; l'écran « En partie » vise les objets dans cet ordre, et une paire alternative achetée compte pour celle du core.
+- **Core du duel sur 9 parties au moins** (SPEC-56) : un core que le duel sur-représente ne remplace plus celui de la build générale sous 9 parties. Contre Nasus, Eclipse + Jak'Sho (4 parties sur 40) vidait « Situationnels » ; Sunfire + Thornmail reste, avec ses suites.
+
+### 🐛 Fix
+
+- **Ordre des compétences du duel** (SPEC-56) : l'écran « En partie » lisait l'ordre sur la page générale, jamais celle du duel. Il passe maintenant par le même test que les objets : contre Nasus, Malphite affiche W > E > Q (32 % de 40 parties) au lieu de Q > E > W, avec la raison dans les adaptations au duel. La montée est celle de l'ordre retenu.
 
 ## [8.1.0] - 2026-11-09
 
