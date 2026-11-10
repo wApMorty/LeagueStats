@@ -1057,11 +1057,11 @@ def test_page_prevue_depuis_onetricks(client, bus, runes_assets, onetricks):
     plan = client.get("/draft/loadout", params={"champion_id": 222}).json()
     assert plan["available"] and plan["source"] == "onetricks" and plan["games"] > 0
     assert plan["page"]["primary"] == 8000 and plan["page"]["keystone"] == 8008
-    assert len(plan["spells"]) == 2 and [b["title"] for b in plan["items"]] == [
-        "Départ",
-        "Core",
-        "Bottes",
-    ]
+    # SPEC-56 : les bottes sont dans le core, leurs alternatives restent dans le set du client.
+    assert len(plan["spells"]) == 2 and [b["title"] for b in plan["items"]] == ["Départ", "Core"]
+    assert (
+        plan["items"][1]["ids"][-1] == 3006
+    )  # Jinx : pas de séquence publiée, bottes après le core
     assert onetricks == [("Jinx", "bottom", None)]
 
 

@@ -389,7 +389,7 @@ plancher de 9 parties et la séquence lue sur la page du duel. Découpage en SPE
 |---|---|---|---|---|
 | 278 | Test de régression Malphite vs Nasus (rouge), compétences dans `Build` avec test du duel, `_skills` retirée, `option_name` « Compétences », tests | 3 | — | ✅ 2026-11-10 : régression vue rouge (Q > E > W) puis verte ; 7 tests ; vs Nasus : W > E > Q, plafond 13,8 % |
 | 279 | Plancher `LOADOUT_CORE_MIN_GAMES` dans `adapt_to_matchup`, tests | 2 | — | ✅ 2026-11-10 : 2 tests ; vs Nasus, Eclipse + Jak'Sho (4 parties) écarté, Sunfire + Thornmail et ses situationnels gardés |
-| 280 | Bottes à leur rang dans le bloc Core (`_boots_rank`, `_item_blocks`, `Build.boots`, séquence du duel), « Autres bottes », tests existants adaptés | 3 | 279 | ⬜ |
+| 280 | Bottes à leur rang dans le bloc Core (`_boots_rank`, `_item_blocks`, `Build.boots`, séquence du duel), « Autres bottes », tests existants adaptés | 3 | 279 | ✅ 2026-11-10 : 11 tests, 4 adaptés ; Malphite : Sunfire, Steelcaps, Thornmail ; vs Nasus : Sunfire, Swiftness, Thornmail ; colonne de draft : Départ et Core |
 | 281 | Prochain objet en partie : bottes du core, alternative possédée, repli ancien format, tests | 2 | 280 | ⬜ |
 | 282 | Clôture : CHANGELOG, statut SPEC-56, README des specs, recette @pj35 | 1 | 278-281 | ⬜ |
 

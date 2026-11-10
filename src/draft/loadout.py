@@ -37,6 +37,8 @@ PathItem = Tuple[int, float, int]
 # Ordre des compétences : (maximisation en indices de "QWER", part des parties, montée en lettres).
 Skills = Tuple[Tuple[int, ...], float, Tuple[str, ...]]
 SKILL_KEYS = "QWER"
+# Composant « Boots » (id Riot) : acheté tôt, il ne compte pas dans le rang des bottes (SPEC-56).
+BOOTS_COMPONENT = 1001
 
 # Catégories comparées au duel, chacune comme une unité : (nom, clé OneTricks).
 CATEGORIES = (
@@ -69,6 +71,7 @@ class Build:
     games: int  # parties one-tricks derrière la page, pour la console
     path_games: int = 0  # parties du core derrière « Situationnels » (SPEC-31) ; 0 = repli
     skills: Optional[Skills] = None  # SPEC-56 : None si la page ne publie pas l'ordre
+    boots: Tuple[int, ...] = ()  # SPEC-56 : bottes retenues puis alternatives publiées
 
 
 @dataclass(frozen=True)
@@ -199,12 +202,40 @@ def _read_path(
     return None, 0
 
 
+def _boots_sequence(pages: List[dict], boots: int) -> Optional[List[int]]:
+    """Ordre d'achat jusqu'aux bottes (``bootsTimingSequences``) sur la première page qui le publie.
+
+    ``pages`` : agrégats ALL, dans l'ordre de préférence. None si aucune page ne le publie.
+    """
+    for stats in pages:
+        try:
+            return [int(item) for item in stats["bootsTimingSequences"][str(boots)]]
+        except (KeyError, TypeError, ValueError):
+            continue
+    return None
+
+
+def _boots_rank(sequence: List[int], boots: int, core_len: int) -> int:
+    """Rang des bottes dans le core : objets achetés avant elles, hors composant Boots, plafonné au core."""
+    if boots not in sequence:
+        return core_len
+    before = [item for item in sequence[: sequence.index(boots)] if item != BOOTS_COMPONENT]
+    return min(len(before), core_len)
+
+
+def _boots_of(stats: dict, chosen: Tuple[int, ...]) -> Tuple[int, ...]:
+    """Bottes retenues puis alternatives publiées par la page, sans doublon."""
+    published = [item for option, _ in stats.get("boots") or [] for item in _option(option)]
+    return tuple(dict.fromkeys((*chosen, *published)))
+
+
 def _item_blocks(
     stats: dict,
     chosen: Dict[str, Tuple[Tuple[int, ...], float]],
     matchup_items: Tuple[int, ...] = (),
     path: Optional[List[PathItem]] = None,
     matchup_alt: Tuple[int, ...] = (),
+    boots_rank: Optional[int] = None,
 ) -> tuple:
     """Blocs du set, du choix le plus joué aux alternatives, façon Coachless.
 
@@ -218,6 +249,8 @@ def _item_blocks(
     ``matchup_items`` : items que le duel sur-représente et qui sont dans le chemin du
     core, en tête de « Situationnels » ; ``matchup_alt`` : ceux qui n'y sont pas mais
     appartiennent à un autre core, en tête de « Autres cores » (``adapt_to_matchup`` les trie).
+    ``boots_rank`` : rang d'achat des bottes retenues dans le core (SPEC-56, ``_boots_rank``) ;
+    None (séquence non publiée) les place après le core. « Autres bottes » garde les alternatives.
     """
     (start, start_share), (core, core_share), (boots, boots_share) = (
         chosen[category] for category, _ in _ITEM_CHOICES
@@ -234,12 +267,14 @@ def _item_blocks(
     items_of_other_cores = [
         item for item in _other_core_items(stats, core) if path is None or item not in in_path
     ]
+    rank = len(core) if boots_rank is None else boots_rank
+    core_with_boots = core[:rank] + boots + core[rank:]
     blocks = [(f"Départ ({start_share:.0%})", start)]
     seen = set(start)
     sections = [
         ("Autres départs", ids("startingItems"), None),
-        (f"Core ({core_share:.0%})", core, None),
-        (f"Bottes ({boots_share:.0%})", boots + tuple(ids("boots")), None),
+        (f"Core ({core_share:.0%}, bottes {boots_share:.0%})", core_with_boots, None),
+        ("Autres bottes", ids("boots"), None),
         ("Composants", ids("componentBuildPaths"), None),
         ("Situationnels", situational, draft_config.LOADOUT_SITUATIONAL_ITEMS),
     ]
@@ -321,17 +356,21 @@ def pick_build(page: dict) -> Optional[Build]:
         spell1, spell2 = stats["sSpells"][0][0]
         games = int(page["patchStats"]["all"])
         chosen = _chosen_items(stats)
-        path, path_games = _read_path([(stats, games)], chosen["Core"][0])
+        core, boots = chosen["Core"][0], chosen["Bottes"][0]
+        path, path_games = _read_path([(stats, games)], core)
+        sequence = _boots_sequence([stats], boots[0])
+        rank = None if sequence is None else _boots_rank(sequence, boots[0], len(core))
         return Build(
             primary_style=int(primary_style),
             sub_style=int(sub_style),
             perks=tuple(int(perk) for perk in perks),
             shards=tuple(int(shard) for shard in stats["popStat"]),
-            item_blocks=_item_blocks(stats, chosen, path=path),
+            item_blocks=_item_blocks(stats, chosen, path=path, boots_rank=rank),
             spells=(int(spell1), int(spell2)),
             games=games,
             path_games=path_games,
             skills=_top_skills(stats),
+            boots=_boots_of(stats, boots),
         )
     except (KeyError, IndexError, TypeError, ValueError):
         return None
@@ -620,7 +659,11 @@ def adapt_to_matchup(general: dict, duel: dict) -> Optional[Tuple[Build, List[Su
         elsewhere = tuple(
             sub.new[0] for sub in matchup if sub.new[0] not in in_path and sub.new[0] in in_cores
         )
-        blocks = _item_blocks(general_stats, chosen, followers, path, elsewhere)
+        # SPEC-56 : le rang des bottes retenues se lit sur le duel s'il le publie, sinon en général.
+        boots = chosen["Bottes"][0]
+        sequence = _boots_sequence([duel_stats, general_stats], boots[0])
+        rank = None if sequence is None else _boots_rank(sequence, boots[0], len(core))
+        blocks = _item_blocks(general_stats, chosen, followers, path, elsewhere, rank)
         # Seuls ceux qui atterrissent dans le set le changent (pas un item du core).
         placed = dict(blocks)
         for sub in matchup:
@@ -628,7 +671,7 @@ def adapt_to_matchup(general: dict, duel: dict) -> Optional[Tuple[Build, List[Su
                 substitutions.append(sub)
             elif sub.new[0] in elsewhere and sub.new[0] in placed["Autres cores"]:
                 substitutions.append(replace(sub, category="Autres cores"))
-        build = replace(build, path_games=path_games)
+        build = replace(build, path_games=path_games, boots=_boots_of(general_stats, boots))
         return replace(build, item_blocks=blocks), substitutions
     except (KeyError, IndexError, TypeError, ValueError, ZeroDivisionError):
         return None

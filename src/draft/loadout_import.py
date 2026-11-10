@@ -86,14 +86,14 @@ class LoadoutImporter:
         # champion en fait partie : la page et le set portent son nom et son id.
         self._applied: Optional[Tuple[int, str, Build]] = None
         # SPEC-24 tâche 106 : substitutions du duel et noms d'objets de cette build (pour l'écran).
-        self._duel_info: Dict = {"substitutions": [], "skills": None, "item_names": {}}
+        self._duel_info: Dict = {"substitutions": [], "skills": None, "item_names": {}, "boots": []}
 
     def set_manual(self, manual: bool) -> None:
         """La page est choisie à la main (l'import du lock-in s'efface) ou rendue à l'import."""
         if self.manual and not manual:
             self._last_key = None  # le prochain tick réimporte la build OneTricks
             self._applied = None
-            self._duel_info = {"substitutions": [], "skills": None, "item_names": {}}
+            self._duel_info = {"substitutions": [], "skills": None, "item_names": {}, "boots": []}
         self.manual = manual
 
     def state(self, with_duel: bool = False) -> Optional[Dict]:
@@ -240,6 +240,7 @@ class LoadoutImporter:
         return {
             "substitutions": rows,
             "skills": _skills_detail(build.skills),
+            "boots": list(build.boots),  # SPEC-56 : le prochain objet en partie
             "item_names": {item: names[item] for item in sorted(ids) if item in names},
         }
 

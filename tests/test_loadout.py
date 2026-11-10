@@ -28,7 +28,8 @@ from src.draft.loadout import (
     rune_pages,
     RunePage,
 )
-from src.draft.loadout import _core_path, _option, _skill_options
+from src.draft.loadout import _boots_rank, _core_path, _option, _skill_options
+from src.draft.loadout_import import LoadoutImporter
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -64,8 +65,8 @@ class TestPickBuild:
             item_blocks=(
                 ("Départ (94%)", (1086, 2003, 2003, 3340)),
                 ("Autres départs", ()),
-                ("Core (57%)", (2523, 3085)),
-                ("Bottes (78%)", (3006, 3008, 3047)),
+                ("Core (57%, bottes 78%)", (2523, 3085, 3006)),  # sans séquence : après le core
+                ("Autres bottes", (3008, 3047)),
                 ("Composants", (1037, 6670, 1036, 1083, 1038, 3144)),
                 ("Situationnels", (3031, 3036, 3033, 3026, 3072)),
                 ("Autres cores", (3032, 3046)),
@@ -73,6 +74,7 @@ class TestPickBuild:
             spells=(21, 4),
             games=500,
             path_games=283,
+            boots=(3006, 3008, 3047),
         )
 
     def test_matchup_page_has_the_same_shape(self):
@@ -327,7 +329,8 @@ class TestAdaptToMatchup:
         monkeypatch.setattr(draft_config, "LOADOUT_MATCHUP_ALPHA", 0.3)
         build, subs = adapt_to_matchup(load(GENERAL), load(DUEL))
         blocks = dict(build.item_blocks)
-        assert blocks["Core (13%)"] == (2523, 3031)  # popularité dans le duel
+        # Popularité dans le duel ; à α = 0,3, les bottes changent aussi (Plated Steelcaps).
+        assert blocks["Core (13%, bottes 4%)"] == (2523, 3031, 3047)
         # Le nouveau core n'existe que dans le duel (5 parties) : son chemin y est relu, mais
         # aucune suite n'atteint 3 parties ; Runaan's, l'ancien core, passe en tête d'« Autres cores ».
         assert build.path_games == 5
@@ -576,7 +579,7 @@ class TestCoreFloor:
         build, subs = adapt_to_matchup(load(MALPHITE), load(MALPHITE_NASUS))
         assert "Core" not in [sub.category for sub in subs]
         core_blocks = [items for title, items in build.item_blocks if title.startswith("Core")]
-        assert core_blocks == [(3068, 3075)]
+        assert core_blocks == [(3068, 3009, 3075)]  # Swiftness à son rang, lu sur le duel
         assert dict(build.item_blocks)["Situationnels"] != ()
 
     def test_floor_is_read_from_the_config(self, monkeypatch):
@@ -584,6 +587,56 @@ class TestCoreFloor:
         _, subs = adapt_to_matchup(load(MALPHITE), load(MALPHITE_NASUS))
         core = next(sub for sub in subs if sub.category == "Core")
         assert core.new == (6692, 6665)
+
+
+def core_block(build):
+    return next(items for title, items in build.item_blocks if title.startswith("Core"))
+
+
+class TestBootsInTheCore:
+    """SPEC-56 §4.3 : les bottes retenues prennent leur rang d'achat dans le bloc Core."""
+
+    @pytest.mark.parametrize(
+        "sequence, boots, rank",
+        [
+            ([1001, 3068, 3047], 3047, 1),  # Malphite : Boots, Sunfire, Steelcaps
+            ([3047, 3068], 3047, 0),  # Malphite vs Nasus : Steelcaps en 1er
+            ([1001, 3068, 3009], 3009, 1),  # Malphite vs Nasus : Swiftness après Sunfire
+            ([6692, 1001, 6333, 3158], 3158, 2),  # Ambessa : Ionian après deux objets
+            ([6692, 6333, 3071, 3158], 3158, 2),  # plafonné à la taille du core
+            ([6692], 3158, 2),  # bottes absentes de la séquence : après le core
+        ],
+    )
+    def test_rank_counts_the_items_bought_before_the_boots(self, sequence, boots, rank):
+        assert _boots_rank(sequence, boots, 2) == rank
+
+    def test_general_pages_put_the_boots_at_their_rank(self):
+        assert core_block(pick_build(load(MALPHITE))) == (3068, 3047, 3075)
+        assert core_block(pick_build(load(AMBESSA))) == (6692, 3047, 3071)
+        blocks = dict(pick_build(load(MALPHITE)).item_blocks)
+        assert 3047 not in blocks["Autres bottes"] and 3111 in blocks["Autres bottes"]
+
+    def test_the_duel_sequence_wins_and_the_general_one_is_the_fallback(self):
+        general, duel = load(MALPHITE), load(MALPHITE_NASUS)
+        stats(duel)["bootsTimingSequences"]["3009"] = [3009, 3068]
+        build, _ = adapt_to_matchup(general, duel)
+        assert core_block(build) == (3009, 3068, 3075)  # Swiftness en 1er d'après le duel
+        stats(duel).pop("bootsTimingSequences")
+        stats(general)["bootsTimingSequences"]["3009"] = [3068, 3075, 3009]
+        assert core_block(adapt_to_matchup(general, duel)[0]) == (3068, 3075, 3009)
+        assert adapt_to_matchup(general, duel)[0].boots[0] == 3009
+
+    def test_malformed_sequence_puts_the_boots_after_the_core(self):
+        page = load(MALPHITE)
+        stats(page)["bootsTimingSequences"] = {"3047": ["x"]}
+        assert core_block(pick_build(page)) == (3068, 3075, 3047)
+
+    def test_boots_are_the_retained_pair_then_the_alternatives(self):
+        general, duel = load(MALPHITE), load(MALPHITE_NASUS)
+        build, _ = adapt_to_matchup(general, duel)
+        assert build.boots == (3009, 3047, 3111, 3158, 3020, 3008)
+        # L'écran « En partie » les reçoit avec le détail du duel.
+        assert LoadoutImporter._describe(build, [], general, duel)["boots"] == list(build.boots)
 
 
 class TestOptionName:
