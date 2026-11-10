@@ -15,7 +15,8 @@ from src.client.app import create_app
 from src.client.assets import Assets
 from src.client.ingame import me_of
 from src.config_client import client_config
-from src.draft.loadout_import import _skills
+from src.draft.loadout import _top_skills
+from src.draft.loadout_import import _skills_detail
 from tests.test_client_draft import BASE, CHAMPIONS, LOCAL, bus  # noqa: F401  (fixture)
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -164,6 +165,11 @@ def test_pas_de_plan_sans_loadout():
 
 
 # ---------- ordre des compétences : seulement si la page le publie ----------
+
+
+def _skills(page):
+    """Ordre des compétences de la page tel que l'écran le reçoit (SPEC-56 : via la build)."""
+    return _skills_detail(_top_skills(page.get("firstItemStats", {}).get("all", {}).get("all", {})))
 
 
 def page_with_skills():

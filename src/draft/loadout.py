@@ -34,6 +34,9 @@ _NEXT_DATA = re.compile(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', re.S)
 PageKey = Tuple[str, Optional[str], Optional[str]]
 # Une suite du core : (item, part des parties du core, parties).
 PathItem = Tuple[int, float, int]
+# Ordre des compétences : (maximisation en indices de "QWER", part des parties, montée en lettres).
+Skills = Tuple[Tuple[int, ...], float, Tuple[str, ...]]
+SKILL_KEYS = "QWER"
 
 # Catégories comparées au duel, chacune comme une unité : (nom, clé OneTricks).
 CATEGORIES = (
@@ -65,6 +68,7 @@ class Build:
     spells: Tuple[int, int]
     games: int  # parties one-tricks derrière la page, pour la console
     path_games: int = 0  # parties du core derrière « Situationnels » (SPEC-31) ; 0 = repli
+    skills: Optional[Skills] = None  # SPEC-56 : None si la page ne publie pas l'ordre
 
 
 @dataclass(frozen=True)
@@ -262,6 +266,52 @@ def _chosen_items(stats: dict) -> Dict[str, Tuple[Tuple[int, ...], float]]:
     }
 
 
+def _skill_options(stats: dict) -> Dict[Tuple[int, ...], Tuple[float, Tuple[str, ...]]]:
+    """Ordres de maximisation publiés (``maxSkillOrders``) -> (part, montée), du plus joué au moins joué.
+
+    La montée est lue dans le ``skillPaths`` de l'ordre lui-même, à défaut dans celui de la page.
+    ``{}`` si la page ne publie rien ou si la structure est inattendue : la build ne doit pas en dépendre.
+    """
+    try:
+        options = {}
+        for entry in stats.get("maxSkillOrders") or []:
+            paths = entry.get("skillPaths") or stats["skillPaths"]
+            levels = tuple(SKILL_KEYS[int(step[0]["skillSlot"]) - 1] for step in paths[0][0])
+            options[tuple(int(i) for i in entry["order"])] = (float(entry["playrate"]), levels)
+        return options
+    except (KeyError, IndexError, TypeError, ValueError, AttributeError):
+        return {}
+
+
+def _top_skills(stats: dict) -> Optional[Skills]:
+    """L'ordre des compétences le plus joué de la page, None si elle n'en publie pas."""
+    options = _skill_options(stats)
+    if not options:
+        return None
+    order, (share, levels) = next(iter(options.items()))
+    return order, share, levels
+
+
+def _skill_substitution(
+    build: Build, general: dict, duel: dict, duel_games: int
+) -> Optional[Tuple[Substitution, Skills]]:
+    """Ordre de maximisation que le duel sur-représente (SPEC-56), avec l'ordre complet du duel."""
+    general_options = _skill_options(general["firstItemStats"]["all"]["all"])
+    duel_options = _skill_options(duel["firstItemStats"]["all"]["all"])
+    if build.skills is None or not general_options or not duel_options:
+        return None
+    shares = {order: share for order, (share, _) in general_options.items()}
+    ceiling = max(
+        min(min(shares.values()), 1.0 - sum(shares.values())),
+        1.0 / int(general["patchStats"]["all"]),
+    )
+    duel_shares = {order: share for order, (share, _) in duel_options.items()}
+    sub = _best_option("Compétences", build.skills[0], shares, duel_shares, ceiling, duel_games)
+    if sub is None:
+        return None
+    return sub, (sub.new, sub.duel_share, duel_options[sub.new][1])
+
+
 def pick_build(page: dict) -> Optional[Build]:
     """La build la plus jouée de la page : keystone, page de runes, items, sorts."""
     try:
@@ -281,6 +331,7 @@ def pick_build(page: dict) -> Optional[Build]:
             spells=(int(spell1), int(spell2)),
             games=games,
             path_games=path_games,
+            skills=_top_skills(stats),
         )
     except (KeyError, IndexError, TypeError, ValueError):
         return None
@@ -541,6 +592,10 @@ def adapt_to_matchup(general: dict, duel: dict) -> Optional[Tuple[Build, List[Su
                 )
             else:
                 chosen[sub.category] = (sub.new, sub.duel_share)
+        skill_sub = _skill_substitution(build, general, duel, duel_games)
+        if skill_sub is not None:
+            substitutions.append(skill_sub[0])
+            build = replace(build, skills=skill_sub[1])
         matchup = _matchup_items(general, duel, duel_games)
         # SPEC-31 : le core final (peut-être celui du duel) a son chemin lu sur la page
         # générale, sinon sur celle du duel ; un item du duel n'entre en tête que s'il suit le core.
@@ -574,6 +629,8 @@ def adapt_to_matchup(general: dict, duel: dict) -> Optional[Tuple[Build, List[Su
 
 def option_name(page: dict, category: str, option: Tuple[int, ...]) -> str:
     """Nom lisible d'une option, pour la console (ids en repli)."""
+    if category == "Compétences":
+        return " > ".join(SKILL_KEYS[i] for i in option)
     if category in ("Keystone", *RUNE_SLOTS, SECONDARY):
         names = {str(rune): name for rune, (_, _, name) in _rune_table(page).items()}
     else:

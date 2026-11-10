@@ -168,7 +168,7 @@ li_http = li.http
 
 
 def test_l_ordre_des_competences_va_de_la_page_onetricks_a_la_charge_utile(importer):
-    """Bout en bout : page OneTricks publiée -> `_skills` -> `state(with_duel=True)` ; absente -> None."""
+    """Bout en bout : page OneTricks publiée -> `Build.skills` -> `state(with_duel=True)` ; absente -> None."""
     skills = json.loads((li.FIXTURES / "onetricks_skills_yorick_top.json").read_text("utf-8"))
 
     def served(url, params=None, **kwargs):

@@ -28,7 +28,7 @@ from src.draft.loadout import (
     rune_pages,
     RunePage,
 )
-from src.draft.loadout import _core_path, _option
+from src.draft.loadout import _core_path, _option, _skill_options
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -509,6 +509,65 @@ class TestRuneSlots:
         assert adapt_to_matchup(loadout._trim(load(GENERAL)), loadout._trim(load(DUEL))) == raw
 
 
+MALPHITE = "onetricks_malphite_top.json"
+MALPHITE_NASUS = "onetricks_malphite_top_vs_nasus.json"
+
+
+class TestSkillOrder:
+    """SPEC-56 §4.1 : l'ordre des compétences fait partie de la build et suit le duel."""
+
+    def test_general_build_takes_the_most_played_order_and_its_own_levels(self):
+        build = pick_build(load(MALPHITE))
+        order, share, levels = build.skills
+        assert order == (0, 2, 1) and share == pytest.approx(0.555, abs=0.001)
+        assert levels[:6] == ("Q", "W", "E", "Q", "Q", "R")
+
+    def test_levels_are_read_in_the_retained_order(self):
+        stats_ = stats(load(MALPHITE_NASUS))
+        stats_["skillPaths"] = [
+            [[[{"skillSlot": "1"}]], 1.0]
+        ]  # la page dit Q, l'ordre W > E > Q dit W
+        assert _skill_options(stats_)[(1, 2, 0)][1][0] == "W"
+        stats_["maxSkillOrders"][0].pop("skillPaths")
+        assert _skill_options(stats_)[(1, 2, 0)][1] == ("Q",)  # repli sur la page
+
+    def test_unlisted_duel_order_is_bounded_by_the_remaining_mass(self):
+        """W > E > Q : 32 % de 40 parties, absent en général (reste 13,8 %), p ~ 0,002."""
+        build, subs = adapt_to_matchup(load(MALPHITE), load(MALPHITE_NASUS))
+        sub = next(sub for sub in subs if sub.category == "Compétences")
+        assert (sub.old, sub.new) == ((0, 2, 1), (1, 2, 0))
+        assert not sub.general_listed
+        assert sub.general_share == pytest.approx(1 - 0.555 - 0.307, abs=0.001)
+        assert build.skills[0] == (1, 2, 0) and build.skills[2][0] == "W"
+
+    def test_listed_order_without_significance_keeps_the_general_one(self):
+        general, duel = load(MALPHITE), load(MALPHITE_NASUS)
+        stats(duel)["maxSkillOrders"] = [
+            {**entry, "order": [0, 1, 2]} if entry["order"] == [1, 2, 0] else entry
+            for entry in stats(duel)["maxSkillOrders"][:1]
+        ]  # Q > W > E à 32 % du duel contre 30,7 % en général
+        build, subs = adapt_to_matchup(general, duel)
+        assert "Compétences" not in [sub.category for sub in subs]
+        assert build.skills == pick_build(general).skills
+
+    @pytest.mark.parametrize(
+        "breakage",
+        [
+            lambda stats_: stats_.pop("maxSkillOrders"),
+            lambda stats_: stats_.update(maxSkillOrders=[{"order": [0, 1, 2]}]),
+            lambda stats_: stats_.update(maxSkillOrders=[{"order": [0], "playrate": 1.0}])
+            or stats_.update(skillPaths=[]),
+        ],
+    )
+    def test_missing_or_malformed_order_gives_no_skills_but_a_build(self, breakage):
+        page = load(MALPHITE)
+        breakage(stats(page))
+        build = pick_build(page)
+        assert build is not None and build.skills is None
+        _, subs = adapt_to_matchup(page, load(MALPHITE_NASUS))
+        assert "Compétences" not in [sub.category for sub in subs]
+
+
 class TestOptionName:
     def test_names_come_from_the_page(self):
         page = loadout._trim(load(GENERAL))
@@ -517,6 +576,7 @@ class TestOptionName:
         assert option_name(page, "Keystone", (8008,)) == "Lethal Tempo"
         assert option_name(page, "Rune 3", (8014,)) == "Coup de Grace"
         assert option_name(page, "Secondaire", (8233, 8236)) == "Absolute Focus+Gathering Storm"
+        assert option_name(page, "Compétences", (1, 2, 0)) == "W > E > Q"
 
     def test_unknown_id_falls_back_to_the_id(self):
         assert option_name(loadout._trim(load(GENERAL)), "Bottes", (999999,)) == "999999"

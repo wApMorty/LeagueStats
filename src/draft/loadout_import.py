@@ -14,7 +14,9 @@ from typing import Dict, List, Optional, Tuple
 
 from ..config_constants import draft_config
 from .loadout import (
+    SKILL_KEYS,
     Build,
+    Skills,
     Substitution,
     adapt_to_matchup,
     get_page,
@@ -55,22 +57,18 @@ def locked_champion(champ_select_data: Dict) -> Optional[int]:
     return me.get("championId") or None
 
 
-def _skills(page: dict) -> Optional[Dict]:
-    """L'ordre des compétences que la page OneTricks publie (SPEC-24 tâche 110) : la maximisation
-    (« Q > E > W », part des parties) et la montée des premiers niveaux ; None si elle ne le publie pas.
+def _skills_detail(skills: Optional[Skills]) -> Optional[Dict]:
+    """L'ordre des compétences de la build pour l'écran (SPEC-24 tâche 110, SPEC-56) : la maximisation
+    (« Q > E > W », part des parties) et la montée des premiers niveaux ; None si la page ne le publie pas.
     """
-    try:
-        stats = page["firstItemStats"]["all"]["all"]
-        letters = "QWER"
-        top = stats["maxSkillOrders"][0]
-        path = stats["skillPaths"][0][0]
-        return {
-            "max_order": [letters[index] for index in top["order"]],
-            "playrate": top["playrate"],
-            "levels": [letters[int(step[0]["skillSlot"]) - 1] for step in path],
-        }
-    except (KeyError, IndexError, TypeError, ValueError):
+    if skills is None:
         return None
+    order, playrate, levels = skills
+    return {
+        "max_order": [SKILL_KEYS[index] for index in order],
+        "playrate": playrate,
+        "levels": list(levels),
+    }
 
 
 class LoadoutImporter:
@@ -241,7 +239,7 @@ class LoadoutImporter:
             )
         return {
             "substitutions": rows,
-            "skills": _skills(page),
+            "skills": _skills_detail(build.skills),
             "item_names": {item: names[item] for item in sorted(ids) if item in names},
         }
 

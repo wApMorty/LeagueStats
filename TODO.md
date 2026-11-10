@@ -387,7 +387,7 @@ plancher de 9 parties et la séquence lue sur la page du duel. Découpage en SPE
 
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
-| 278 | Test de régression Malphite vs Nasus (rouge), compétences dans `Build` avec test du duel, `_skills` retirée, `option_name` « Compétences », tests | 3 | — | ⬜ |
+| 278 | Test de régression Malphite vs Nasus (rouge), compétences dans `Build` avec test du duel, `_skills` retirée, `option_name` « Compétences », tests | 3 | — | ✅ 2026-11-10 : régression vue rouge (Q > E > W) puis verte ; 7 tests ; vs Nasus : W > E > Q, plafond 13,8 % |
 | 279 | Plancher `LOADOUT_CORE_MIN_GAMES` dans `adapt_to_matchup`, tests | 2 | — | ⬜ |
 | 280 | Bottes à leur rang dans le bloc Core (`_boots_rank`, `_item_blocks`, `Build.boots`, séquence du duel), « Autres bottes », tests existants adaptés | 3 | 279 | ⬜ |
 | 281 | Prochain objet en partie : bottes du core, alternative possédée, repli ancien format, tests | 2 | 280 | ⬜ |
