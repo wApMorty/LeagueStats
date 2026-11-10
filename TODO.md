@@ -1,6 +1,6 @@
 # TODO — LeagueStats Coach
 
-**Mis à jour** : 2026-11-10 (SPEC-56 livrée : compétences, core et bottes du duel, recette @pj35 à faire ; SPEC-55 livrée : l'Arbre classe par la règle D, connu + exposition aux picks à venir, recette @pj35 à faire ; SPEC-54 livrée : arbre de décision du pool, stratégie Arbre par défaut, recette @pj35 à faire ; SPEC-53 livrée : rappel de place en draft, `--recompute-only` et recette @pj35 à faire ; SPEC-52 livrée : suivi du rang par compte, `alembic upgrade head` et recette @pj35 à faire ; SPEC-51 livrée : Méta du poste, la page Blindabilité réarrangée avec le générateur de SPEC-50, recette @pj35 à faire ; SPEC-50 livrée avec SPEC-51 ; SPEC-49 livrée : suggestions de pool à swiper, recette @pj35 à faire ; SPEC-47 rédigée : la draft dans la win chance, relecture @pj35 attendue ; SPEC-46 du 2026-10-30 : SPEC-46 livrée : stratégies de draft, `alembic upgrade head` et recette @pj35 à faire ; SPEC-45 livrée : affichage des LP sur l'écran post-game, recette @pj35 à faire ; SPEC-44 livrée : un pool par poste, recette @pj35 à faire, choisi selon le poste assigné en draft ; SPEC-43 livrée : force intrinsèque dans le moteur et K recalibrés sur crawl.db, `spec43-v1`, recette @pj35 à faire ; SPEC-42 close : maîtrise selon le matchup mesurée sur crawl.db, rien d'adopté ; SPEC-41 livrée : maîtrise personnelle dans le moteur de draft, mesurée sur crawl.db puis adoptée, recette @pj35 à faire ; SPEC-40 livrée : victoire immédiate sur les cartes de draft, comme le grimoire, recette @pj35 à faire ; SPEC-39 livrée : diagnostic complet et « Appliquer » sur l'écran Calibration, recette @pj35 à faire ; SPEC-38 livrée : trois pages de runes OneTricks au choix pendant la draft, recette @pj35 à faire ; SPEC-37 livrée : écran « Données » pour actualiser la base depuis le client, recette @pj35 à faire ; SPEC-36 livrée : morts sans contrepartie, axe et revue, recette @pj35 à faire ; SPEC-35 livrée : étude « Moneyball » du début de partie, aucune action adoptée ; SPEC-33 livrée : éclaireur et pastilles de forme en partie, terme de forme mesuré et refusé, recette @pj35 à faire, recette @pj35 à faire ; SPEC-32 livrée : classement MVP / ACE en post-game, recette @pj35 à faire ; SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette @pj35 à faire)
+**Mis à jour** : 2026-11-10 (recette groupée validée en bloc par @pj35, 31 specs soldées, `docs/RECETTE_2026_11.md` ; SPEC-56 livrée : compétences, core et bottes du duel, recette validée le 2026-11-10 ; SPEC-55 livrée : l'Arbre classe par la règle D, connu + exposition aux picks à venir, recette validée le 2026-11-10 ; SPEC-54 livrée : arbre de décision du pool, stratégie Arbre par défaut, recette validée le 2026-11-10 ; SPEC-53 livrée : rappel de place en draft, `--recompute-only` et recette validée le 2026-11-10 ; SPEC-52 livrée : suivi du rang par compte, `alembic upgrade head` et recette validée le 2026-11-10 ; SPEC-51 livrée : Méta du poste, la page Blindabilité réarrangée avec le générateur de SPEC-50, recette validée le 2026-11-10 ; SPEC-50 livrée avec SPEC-51 ; SPEC-49 livrée : suggestions de pool à swiper, recette validée le 2026-11-10 ; SPEC-47 livrée : la draft dans la win chance, recette validée le 2026-11-10 ; SPEC-46 du 2026-10-30 : SPEC-46 livrée : stratégies de draft, `alembic upgrade head` et recette validée le 2026-11-10 ; SPEC-45 livrée : affichage des LP sur l'écran post-game, recette validée le 2026-11-10 ; SPEC-44 livrée : un pool par poste, recette validée le 2026-11-10, choisi selon le poste assigné en draft ; SPEC-43 livrée : force intrinsèque dans le moteur et K recalibrés sur crawl.db, `spec43-v1`, recette validée le 2026-11-10 ; SPEC-42 close : maîtrise selon le matchup mesurée sur crawl.db, rien d'adopté ; SPEC-41 livrée : maîtrise personnelle dans le moteur de draft, mesurée sur crawl.db puis adoptée, recette validée le 2026-11-10 ; SPEC-40 livrée : victoire immédiate sur les cartes de draft, comme le grimoire, recette validée le 2026-11-10 ; SPEC-39 livrée : diagnostic complet et « Appliquer » sur l'écran Calibration, recette validée le 2026-11-10 ; SPEC-38 livrée : trois pages de runes OneTricks au choix pendant la draft, recette validée le 2026-11-10 ; SPEC-37 livrée : écran « Données » pour actualiser la base depuis le client, recette validée le 2026-11-10 ; SPEC-36 livrée : morts sans contrepartie, axe et revue, recette validée le 2026-11-10 ; SPEC-35 livrée : étude « Moneyball » du début de partie, aucune action adoptée ; SPEC-33 livrée : éclaireur et pastilles de forme en partie, terme de forme mesuré et refusé, recette validée le 2026-11-10 ; SPEC-32 livrée : classement MVP / ACE en post-game, recette validée le 2026-11-10 ; SPEC-31 rédigée : situationnels liés au core ; SPEC-30 livrée, recette validée le 2026-11-10)
 **Source** : analyse d'état du 2026-09-05, vérifiée sur le code et la base de production.
 Constats détaillés dans les specs elles-mêmes (`docs/specs/`). Historique complet : `docs/archive/`
 (`AUDIT_2026_06.md`, `AUDIT_2026_08.md`, `BACKLOG_2026_08.md`, `specs/SPEC-01` à `SPEC-07`).
@@ -88,7 +88,7 @@ les LP sont suivis depuis le LCU. Découpage détaillé en SPEC-19 §11 (tâches
 | 2 | Métriques des 10 participants, exploration (faite sur 24 parties, grille révisée en SPEC-19 §5.3) | 5 | ✅ 2026-09-29 |
 | 3 | Grille par rôle, moteur de constats, rapport console | 8 | ✅ 2026-09-29 |
 | 4 | Récurrence, tendances, axes de travail, bilan (commandes `bilan`, `axe`, menu 4) | 11 | ✅ 2026-09-29 |
-| — | Recette en partie réelle : rapport de fin de partie, rappel d'axe en draft | 1 | ⬜ |
+| — | Recette en partie réelle : rapport de fin de partie, rappel d'axe en draft | 1 | ✅ soldée le 2026-11-10 (`docs/RECETTE_2026_11.md`, F5) |
 | — | Refaire l'exploration vers 50 parties (`scripts/explore_gameplay.py`), réviser la grille et `GRID_VERSION` | 1 | ⬜ |
 
 ### Lot suivant — SPEC-20, win chance et impact (🟡 rédigée le 2026-10-01)
@@ -103,9 +103,9 @@ Répond à la confusion cause/effet des constats de SPEC-19. Ordre validé par @
 |---|---|---|---|
 | 1 | Collecte LCU continue en tâche de fond du Live Coach (`data/crawl.db`), une semaine de mesure | 6 | 🟡 tâche 39 faite (2026-10-02), reste la semaine de mesure (tâche 40) |
 | 2 | État de partie, modèle logistique, calibration, réentraînement déclenché par les données | 10 | 🟡 tâches 41, 42 et 42b faites (2026-10-02) ; critère du §11.2 tenu à 5 300 parties (Brier 0,155, écart 2,3 pts en validation croisée poolée, 3,3 pts en découpage temporel ; protocole à confirmer, SPEC-20 §4.3 bis) ; reste à brancher le réentraînement au Live Coach (processus détaché, `.exe` figé à trancher) |
-| 3 | Impact par événement, rapport de fin de partie | 7 | ✅ tâches 43 et 44 (2026-10-02, `impact.py`, `report.py`, migration `c8f3a1d95e26`) ; reste la recette en partie réelle |
+| 3 | Impact par événement, rapport de fin de partie | 7 | ✅ tâches 43 et 44 (2026-10-02, `impact.py`, `report.py`, migration `c8f3a1d95e26`) ; recette en partie réelle soldée le 2026-11-10 |
 | 4 | Impact dans le bilan et les schémas de SPEC-19 | 3 | ✅ tâche 45 (2026-10-02, section du bilan : impact par partie et par type d'événement) ; révision de la grille de SPEC-19 à rouvrir sur données |
-| 5 | Live Client API et overlay en jeu | 4 | ✅ tâches 46 et 47 (2026-10-02, `live.py`, `overlay.py`) ; reste la recette en partie réelle de l'overlay |
+| 5 | Live Client API et overlay en jeu | 4 | ✅ tâches 46 et 47 (2026-10-02, `live.py`, `overlay.py`) ; recette en partie réelle de l'overlay soldée le 2026-11-10 |
 
 ### Lot suivant — SPEC-21, client LeagueStats (🟡 plan revu le 2026-10-05)
 
@@ -125,11 +125,11 @@ SPEC-21 §5 :
 | **Lot 1 — Socle, coque et motion (31 pts)** | | | | |
 | 48 | Spike d'empaquetage et de fluidité : fenêtre `pywebview` depuis l'exe, taille, démarrage, temps d'image | 5 | — | ✅ 2026-10-04 : exe +7,2 Mo (82,3 Mo), démarrage 2,0 à 2,5 s, p95 6,2 ms par image, sans bordure confirmée (SPEC-21 §8) ; prise en main par @pj35 faite ; une première exécution d'un exe neuf n'a pas affiché la page (non reproduite), à surveiller à la recette |
 | 49 | Socle : config, connexion lecture seule, serveur en thread, fabrique d'app, jeton de session | 5 | 48 | ✅ 2026-10-04 : 25 tests ; port libre choisi par l'OS (validé) ; `fastapi`/`uvicorn` déclarés dès maintenant pour que la CI reste verte (le reste des dépendances à leur tâche) ; `writable()` laissé à la tâche 71 (écritures du coaching à valider) |
-| 68 | Coque : fenêtre, navigation, transitions de page, états « client fermé » | 5 | 49 | ✅ 2026-10-04 : 30 tests ; poignées gauche/haut mesurées sans saut (`resize(fix_point)`, SPEC-21 §8) ; **recette @pj35 à faire** : poignées `s`/`se`, jeton de session sur une requête htmx POST, transition de page à l'œil (aucun test d'interface sans ton accord) |
+| 68 | Coque : fenêtre, navigation, transitions de page, états « client fermé » | 5 | 49 | ✅ 2026-10-04 : 30 tests ; poignées gauche/haut mesurées sans saut (`resize(fix_point)`, SPEC-21 §8) ; **recette validée par @pj35 le 2026-11-10** : poignées `s`/`se`, jeton de session sur une requête htmx POST, transition de page à l'œil (aucun test d'interface sans ton accord) |
 | 70 | Bus, SSE et WebSocket LCU | 5 | 49 | ✅ 2026-10-04 : 18 tests (faux serveur WebSocket local) ; `LcuEvents` pas encore lancé (tâche 55) ; consommateur JS du SSE (`fetch` avec jeton, `EventSource` n'envoie pas d'en-tête) à écrire avec le premier écran qui l'utilise (tâche 73) |
-| 69 | Jetons, polices et coque « Alchimie » (barre de titre, navigation, réglage Motion) | 5 | 68 | ✅ 2026-10-05 : 17 tests ajoutés, suite complète verte (1571) ; réglage Motion dans la clé `motion` de `user_prefs.json`, hors de `UserPrefs` (le Live Coach réécrit le fichier, et un fichier créé par le client ne doit pas lui cacher ses questions) ; **recette @pj35 à faire** : rendu à l'œil dans la fenêtre (aucun test d'interface sans ton accord) |
+| 69 | Jetons, polices et coque « Alchimie » (barre de titre, navigation, réglage Motion) | 5 | 68 | ✅ 2026-10-05 : 17 tests ajoutés, suite complète verte (1571) ; réglage Motion dans la clé `motion` de `user_prefs.json`, hors de `UserPrefs` (le Live Coach réécrit le fichier, et un fichier créé par le client ne doit pas lui cacher ses questions) ; **recette validée par @pj35 le 2026-11-10** : rendu à l'œil dans la fenêtre (aucun test d'interface sans ton accord) |
 | 84 | `motion.js` et banc `/_motion` | 3 | 69 | ✅ 2026-10-05 : `motion.js` repris et branché (`htmx:load`, braises, mode Réduit) ; banc `/_motion` (4 scènes : braises, 1 600 particules, tracé, sceau ; p95 par scène) ; **mesure du p95 à faire par @pj35** (bouton « Tout mesurer » dans la fenêtre : aucun test d'interface sans ton accord), à consigner en SPEC-21 §8 (critère 11) |
-| 55 | Lancement : `--client`, option 7 du menu (Quitter en 8), Live Coach en fil sans entrée console, message `[INFO]`/`[ALERTE]` + tests | 3 | 49, 70 | ✅ 2026-10-05 : 14 tests ; point d'entrée validé par @pj35 ; `DraftMonitor(console_input=False)`, le fil attend le client LoL (15 s) ; `LcuEvents` lancé ; **recette @pj35** : `python lol_coach.py --client` avec le vrai client LoL ouvert puis fermé |
+| 55 | Lancement : `--client`, option 7 du menu (Quitter en 8), Live Coach en fil sans entrée console, message `[INFO]`/`[ALERTE]` + tests | 3 | 49, 70 | ✅ 2026-10-05 : 14 tests ; point d'entrée validé par @pj35 ; `DraftMonitor(console_input=False)`, le fil attend le client LoL (15 s) ; `LcuEvents` lancé ; **recette @pj35, validée le 2026-11-10** : `python lol_coach.py --client` avec le vrai client LoL ouvert puis fermé |
 | **Lot 2 — Draft Alchimie (51 pts)** | | | | |
 | 72 | `DraftSnapshot`, recommandations structurées, sortie console identique | 5 | 70 | ✅ 2026-10-05 : 11 tests ; sortie console identique (chaînes relevées avant la refonte) ; `DraftSnapshot` publié sur le bus (sujet `draft`), delta face à la position actuelle (`GameEvaluator.win_probability`) ; emplacements, survols et temps restant lus dans le champ select |
 | 85 | Bans conseillés et balance dans le snapshot | 3 | 72 | ✅ 2026-10-05 : 6 tests ; `ban_advice` structuré (gain, meilleure réponse, matchups ; 4 bans, la console en garde 3), balance actuelle et projetée (`GameEvaluator`, pas `winprob` qui reste le modèle de partie) ; « si X est verrouillé » = la probabilité du classement de X |
@@ -145,7 +145,7 @@ SPEC-21 §5 :
 | **Lot 3 — File trouvée et transition de page (8 pts)** | | | | |
 | 93 | File trouvée : overlay, accepter / refuser | 5 | 84, 55 | ✅ 2026-10-05 : 19 tests avec faux LCU ; `found.py` (`/found/state`, `POST /found/accept|decline`, refus 409 hors file trouvée, liste blanche), `found.js` (overlay : convergence de 90 runes, pilier, anneau de 10 s, impact, acceptation avec explosion et effondrement, mention de l'auto-accept ; pastille « Champ select en cours »), `sse.js` partagé avec la draft ; **à confirmer en partie réelle** : la forme du `timer` du ready-check (décompte = 10 s moins le timer) ; rendu à voir par @pj35 |
 | 94 | Transition de page signature | 3 | 84, 73 | ✅ 2026-10-05 : 9 tests ; `transition.js` remplace les View Transitions : cercle runique tracé et 44 runes en convergence pendant que le contenu s'assombrit, implosion de 860 ms (= `hx-swap swap:860ms` de #view), puis explosion, éclair cuivre, secousse de 8 px et ouverture par `clip-path` ; la navigation glisse à la sortie de la draft ; Réduit = remplacement instantané ; le voile ne capte aucun clic et un nouveau clic relance la transition ; durées en config ; **rendu à voir par @pj35** (l'extension Chrome était déconnectée, pas de capture) |
-| **Lot 4 — Coaching et post-game (39 pts)** : fait le 2026-10-05, recette @pj35 à faire | | | | |
+| **Lot 4 — Coaching et post-game (39 pts)** : fait le 2026-10-05, recette validée par @pj35 le 2026-11-10 | | | | |
 | 50 | `charts.py` : graphiques SVG purs, tracé animable | 5 | 84 | ✅ 2026-10-05 : 23 tests ; `line_chart` (bandes, filets gradués, repères, dernier point lumineux), `sparkline`, `bar_chart` divergent, `reliability_chart`, `diverging` ; dégradés en `userSpaceOnUse` (une courbe plate ne serait pas dessinée en `objectBoundingBox`) ; classes CSS des graphiques (`ch-*`, `spark-*`) posées avec le premier écran qui les utilise (tâche 51) |
 | 51 | Écran Rang | 5 | 50 | ✅ 2026-10-05 : 18 tests ; `data.rank_view` (courbes Solo et Flex sur l'échelle de `lp_scale()`, photos qui répètent leur voisine omises de la courbe, histogramme des LP, cartes par file), `/rang`, `CoachingRepository.rank_history()`, `coaching.js` (barres, lignes, pile) ; lecture en `mode=ro`, tables absentes = état vide ; **rendu à voir par @pj35** (aucun test d'interface sans ton accord) |
 | 52 | Écran Progression | 5 | 50 | ✅ 2026-10-05 : 21 tests ; `data.progression_view` (puces de poste, grille de `coaching/grid.py`, Toi / Norme / Objectif, tendance = moyenne glissante du z sur 10 parties, verdict de `trends()`, schémas de `patterns()`), `/progression?role=` ; puces rechargées par htmx sans transition de page ; **`trends()` compare deux moitiés de 5 parties : sous 5 parties « n/5 », de 5 à 9 « n/10 », le message le dit** ; rendu à voir par @pj35 |
@@ -154,19 +154,19 @@ SPEC-21 §5 :
 | 71 | Accueil Coaching : axes, constats, colonne latérale | 5 | 51–53 | ✅ 2026-10-05 : 25 tests ; `home.py` (axes avec leurs cinq pastilles, places libres et proposition du coach, derniers constats en barres divergentes, carte de rang et sparkline, dix dernières parties, bilan du rôle), `goals.next_proposal()` (proposer sans écrire), `db.writable()` (`mode=rw`, jamais créée), **écritures validées par @pj35 le 2026-10-05** : `POST /accueil/axe` (fixer, ou choisir une autre métrique) et `POST /accueil/axe/{id}/clore`, derrière le jeton et le contrôle `Origin` ; **rendu et clic à voir par @pj35** |
 | 75 | Post-game, données et page de revue | 5 | 72, 53 | ✅ 2026-10-05 : 24 tests ; `GameCapture.on_post_game` publie `game_captured` (la plus récente des parties prises, best-effort) et, bus branché, **la revue remplace le rapport console** (partie et impact ; le reste de la console inchangé) ; `/postgame` (dernière partie, « Revue de partie · il y a … ») et `/parties/{id}` : LP et rang, axes jugés (`goal_verdicts`), pile des 10 événements les plus lourds, impact attribué et résidu (recalculé seulement avec le modèle qui a rangé les lignes), écarts à la norme et à l'objectif, variante Défaite (rose) ; `coaching.js` bascule sur `/postgame` à l'événement, **sauf pendant une draft** ; mise en scène (sceau, compteurs) à la tâche 95 ; **à voir en partie réelle par @pj35** |
 | 95 | Post-game, mise en scène | 3 | 75, 84 | ✅ 2026-10-05 : 9 tests ; sceau de 104 px (menthe en victoire, rose en défaite) apposé une fois à l'arrivée par `Motion.seal` (menthe, or, blanc ou rose, cuivre, blanc) avec secousse de 9 px, en Réduit posé sans particules ni secousse (câblage de `coaching.js` exécuté sous node avec un `Motion` factice), titre qui se transmute, LP en compteur, courbe tracée à l'encre, marqueurs qui apparaissent le long du tracé, pile d'impact (un événement toutes les 110 ms) ; **à voir par @pj35** (aucun test d'interface sans ton accord ; le p95 sur cette page reste à mesurer, critère 11) |
-| 56 | Empaquetage : dépendances, `.spec`, CI, exe vérifié, docs | 3 | 55, 71, 75, 92 | ✅ 2026-10-05 : 10 tests ; `.spec` embarque `src/client/templates` et `static` (polices comprises) sous leur chemin de développement, dépendances déjà déclarées (test qui compare les imports du client à `requirements.txt`), `scripts/check_exe_assets.py` (étape de la CI : 38 fichiers du client et 8 modules dans l'archive, sans lancer l'exe) ; **exe construit le 2026-10-05 : 82,8 Mo (spike : 82,3), les 38 fichiers et les 8 modules y sont** ; README, `PROJECT_STRUCTURE.md`, `CHANGELOG.md` ; **recette @pj35** : lancer l'exe, ouvrir le client (un premier lancement d'un exe neuf n'avait pas affiché la page au spike, à surveiller) |
-| **Lot 5 — Profil et historique (13 pts)** : fait le 2026-10-05, recette @pj35 à faire | | | | |
+| 56 | Empaquetage : dépendances, `.spec`, CI, exe vérifié, docs | 3 | 55, 71, 75, 92 | ✅ 2026-10-05 : 10 tests ; `.spec` embarque `src/client/templates` et `static` (polices comprises) sous leur chemin de développement, dépendances déjà déclarées (test qui compare les imports du client à `requirements.txt`), `scripts/check_exe_assets.py` (étape de la CI : 38 fichiers du client et 8 modules dans l'archive, sans lancer l'exe) ; **exe construit le 2026-10-05 : 82,8 Mo (spike : 82,3), les 38 fichiers et les 8 modules y sont** ; README, `PROJECT_STRUCTURE.md`, `CHANGELOG.md` ; **recette @pj35, validée le 2026-11-10** : lancer l'exe, ouvrir le client (un premier lancement d'un exe neuf n'avait pas affiché la page au spike, à surveiller) |
+| **Lot 5 — Profil et historique (13 pts)** : fait le 2026-10-05, recette validée par @pj35 le 2026-11-10 | | | | |
 | 76 | Spike des endpoints de navigation, fixtures | 3 | 70 | ✅ 2026-10-05 : 19 lectures `GET` (`scripts/dump_lcu_nav_forms.py`), 17 fixtures dans `tests/fixtures/lcu_nav/` (19 tests), SPEC-21 §10 ; **lobby et file non relevés** (aucun lobby ouvert, 404 : formes construites d'après `/help`, à confronter à un vrai lobby) ; l'historique n'a renvoyé qu'une partie |
 | 77 | Profil, rang, régalia, défis | 5 | 76 | ✅ 2026-10-05 : 16 tests sur les fixtures de la tâche 76 ; `profil.py` (`read_profile`, `profile_view` pures), `/profil` (identité et XP, cartes Solo et Flex dans le style de `/rang`, régalia, défis : catégories et trois meilleurs), `screen()` de `app.py` : « client fermé » ou « indisponible » (aussi sur une forme inattendue), jamais une 500 ; liste blanche étendue (ranked, regalia, challenges) ; `profileicon` ajouté aux assets ; **rendu à voir par @pj35** (aucun test d'interface sans ton accord) |
 | 78 | Historique (20 parties) et détail | 5 | 76, 53 | ✅ 2026-10-05 : 17 tests ; `historique.py` (`read_history`, `read_game`, vues pures), `/historique` (portrait, résultat, KDA, sbires par minute, durée, file, badge « Capturée ») et `/historique/{id}` (deux équipes, objectifs, bans, dix joueurs avec dégâts et objets, joueur repéré par son `puuid`), lien vers `/parties/{id}` pour une partie capturée (`CoachingRepository.captured_game_ids`) ; entrée « Historique » dans la navigation ; files nommées en français (Normale, ARAM, Partie rapide, Arena, Clash) ; **rendu à voir par @pj35** |
-| **Lot 6 — Collection, lobby, file, social, clôture (21 pts)** : fait le 2026-10-05, recette @pj35 à faire | | | | |
+| **Lot 6 — Collection, lobby, file, social, clôture (21 pts)** : fait le 2026-10-05, recette validée par @pj35 le 2026-11-10 | | | | |
 | 79 | Collection (lecture) | 5 | 76 | ✅ 2026-10-05 : 12 tests ; `collection.py` (`read_collection` ne lit que l'onglet demandé), `/collection?vue=champions|runes|objets&role=` : champions possédés (filtre par classe, portraits, rotation), pages de runes (page active d'abord, rune majeure), sets d'objets (champions associés, blocs) ; lecture seule ; **rendu à voir par @pj35** |
 | 80 | Lobby : créer, choisir, quitter | 5 | 76 | ✅ 2026-10-05 : 35 tests avec faux LCU ; `lobby.py` (files proposées = non personnalisées de la Faille et de l'ARAM, disponibles et visibles ; `create`, `leave`, `set_positions` gardés par la phase du client lue à l'appel, refus 409 sans écriture), `/lobby`, `/lobby/etat` (corps relu par `lobby.js` aux événements du LCU, sans animation ni perte du focus d'une liste), `POST /lobby/creer|quitter|postes` derrière le jeton ; liste blanche : ouvrir, quitter, postes ; aucune invitation ni gestion du groupe ; **formes du lobby construites d'après `/help`, à confronter à un vrai lobby ; rendu à voir par @pj35** |
 | 81 | File : lancer, annuler ; barre de titre | 5 | 80, 93 | ✅ 2026-10-05 : 24 tests avec faux LCU ; `lobby.file_state`, `start`, `cancel` (chef du groupe, hors recherche, restriction du lobby citée ; annuler refusé hors `Matchmaking`, jamais pendant une partie trouvée), `GET /file/state`, `POST /file/lancer|annuler` derrière le jeton ; barre de titre : « Lancer la file » puis « En file m:ss · estimée » avec « Annuler » (`file.js`), mêmes boutons sur l'écran Lobby ; liste blanche : recherche du lobby seulement ; cohabitation avec l'auto-accept : l'info-bulle de la recherche le signale, la partie trouvée reste celle de `found.js` ; **forme de `lol-matchmaking/v1/search` construite d'après `/help`, à confirmer en vraie file ; rendu à voir par @pj35** |
 | 82 | Social en lecture seule | 3 | 76 | ✅ 2026-10-05 : 19 tests ; `social.py` (`read_social`, `social_view` pures), `/social` : profil de chat, amis en partie (file, champion, rang), connectés, hors ligne (repliés), conversations (non lus, dernier message tronqué) ; **aucune écriture** : liste blanche limitée à `me`, `friends`, `conversations`, aucune route d'envoi ni d'invitation (tests des critères 5 et 6) ; pseudos et messages échappés ; **rendu à voir par @pj35** |
-| 83 | Clôture : exe vérifié, docs, statuts | 3 | 56, 77–79, 81, 82, 95 | ✅ 2026-10-05 : exe construit (82,9 Mo, spike 82,3), `check_exe_assets.py` : 48 fichiers du client et 8 modules présents ; README, `PROJECT_STRUCTURE.md`, `CHANGELOG.md`, statuts de la spec et du README des specs ; **recette @pj35** : lancer l'exe, parcourir Profil, Historique, Collection, Lobby (ouvrir, postes, quitter), file (lancer, annuler), Social ; confronter les formes du lobby et de la file au client réel |
+| 83 | Clôture : exe vérifié, docs, statuts | 3 | 56, 77–79, 81, 82, 95 | ✅ 2026-10-05 : exe construit (82,9 Mo, spike 82,3), `check_exe_assets.py` : 48 fichiers du client et 8 modules présents ; README, `PROJECT_STRUCTURE.md`, `CHANGELOG.md`, statuts de la spec et du README des specs ; **recette @pj35, validée le 2026-11-10** : lancer l'exe, parcourir Profil, Historique, Collection, Lobby (ouvrir, postes, quitter), file (lancer, annuler), Social ; confronter les formes du lobby et de la file au client réel |
 
-### Lot suivant — SPEC-24, retours sur le client (✅ livrée le 2026-10-07, recettes @pj35 à faire)
+### Lot suivant — SPEC-24, retours sur le client (✅ livrée le 2026-10-07, recette validée le 2026-11-10)
 
 [SPEC-24](docs/specs/SPEC-24-retours-gui-bans-ordre-en-partie.md) : le ban visé n'arrive pas dans le client
 LoL (cause **non établie**, le chemin n'a jamais vu une vraie phase de bans : relevé d'abord) ; ordre de pick
@@ -178,12 +178,12 @@ utilisables seuls, 16 tâches (96 à 111, 61 pts) ; arbitrages « à valider » 
 |---|---|---|---|---|
 | **Lot 1 — Bans et acteur courant (8 pts)** | | | | |
 | 96 | `dump_lcu_draft_forms.py --watch`, relevé d'une draft classée et d'une normale par @pj35, fixtures réelles | 3 | — | ✅ 2026-10-07 : relevé d'une draft classée (file 420, 73 formes) ; fixtures réelles anonymisées `session_ban`, `session_ban_simultane`, `session_pick`, `session_swaps` (reçue), `session_swaps_sent`, `bannable_*` (jeton du chat retiré) ; constats en SPEC-24 §4.1 ; **non relevé** : draft normale, chemins `POST` des swaps (le relevé est en lecture seule) |
-| 97 | Ban : cause racine sur le relevé, correctif, régression rouge puis verte, audit de `hover_champion` (console) | 3 | 96 | ⬜✅ 2026-10-07 : 3 défauts relevés (liste `[-1]` qui refusait chaque ban, survol console écrit sur l'action de pick, tour lu sur `current_actor` alors que bans et picks sont simultanés) ; 8 tests de régression rouges avant, `ban_logic.js` sans présélection (5 tests node), refus du client expliqués ; **écart** : cartes non filtrées sur `bannable-champion-ids` (inutilisable, SPEC-24 §4.2) ; recette @pj35 : valider un ban depuis le client LeagueStats en draft classée |
+| 97 | Ban : cause racine sur le relevé, correctif, régression rouge puis verte, audit de `hover_champion` (console) | 3 | 96 | ⬜✅ 2026-10-07 : 3 défauts relevés (liste `[-1]` qui refusait chaque ban, survol console écrit sur l'action de pick, tour lu sur `current_actor` alors que bans et picks sont simultanés) ; 8 tests de régression rouges avant, `ban_logic.js` sans présélection (5 tests node), refus du client expliqués ; **écart** : cartes non filtrées sur `bannable-champion-ids` (inutilisable, SPEC-24 §4.2) ; recette @pj35, validée le 2026-11-10 : valider un ban depuis le client LeagueStats en draft classée |
 | 98 | `current_actor` de la cellule 0 (`if state.current_actor:` écrase l'acteur) et `acting_cells` : correctif et régression | 2 | — | ✅ 2026-10-06 : 4 tests, rouge avant le fix ; `parse` teste `is not None` et remplit `acting_cells` (`isInProgress`), `phases` teste `is None` ; les autres appelants de `current_actor` / `local_player_cell_id` relus, aucun autre test sur la valeur |
 | **Lot 2 — Ordre de pick et swaps (24 pts)** | | | | |
 | 99 | `pick_order` et `swaps` dans `DraftState` et `DraftSnapshot`, console identique | 3 | 96, 98 | ⬜✅ 2026-10-07 : 8 tests sur les fixtures réelles ; `DraftState.pick_order` (rang 1 à 10 dans l'ordre des actions, permutation vérifiée), `DraftState.swaps` (`Swap(kind, id, cell_id, state)`), `SnapshotPlayer.pick_order`, `DraftSnapshot.swaps` (sans `id`, qui reste côté serveur), `is_acting` lu sur `acting_cells` (cellule 0 et lots comprises), empreinte du tick étendue (cellule locale, acteurs, échanges) ; console inchangée (tests d'identité de la tâche 72 verts) ; `swap_advice` viendra avec la tâche 102 |
 | 100 | Ordre de pick à l'écran : numéro sur chaque sceau, anneau du joueur en cours | 3 | 99 | ⬜✅ 2026-10-07 : 5 tests ; médaillon `.d-order` (n° 1 à 10, couleur de camp, infobulle « Pick n° N ») sur chaque sceau dont le moi, anneau `.d-acting` du joueur en cours (cellule 0 et lots de deux comprises), dès la phase de bans, rien sans actions du LCU, rang dans l'empreinte `sig` ; **rendu à voir par @pj35** |
-| 101 | Actions de swap : liste blanche, `draft_swaps.run`, `POST /draft/swap/{kind}/{action}` | 5 | 96, 99 | ⬜✅ 2026-10-07 : 27 tests sur les fixtures réelles ; `draft_swaps.run` (demander `AVAILABLE`, accepter et refuser `RECEIVED`, annuler `SENT`, l'`id` lu dans la session pour la cellule nommée, jamais du front), un seul motif ajouté à `WRITES` (les huit chemins `POST`, testé contre la liste attendue, aucun autre chemin d'échange accepté), `POST /draft/swap/{kind}/{action}?cell_id=` (403 sans jeton, 409 sans écriture hors état attendu, 422) ; cadre validé par @pj35 ; **chemins `POST` d'après `/help`, jamais exercés en vrai : recette** |
+| 101 | Actions de swap : liste blanche, `draft_swaps.run`, `POST /draft/swap/{kind}/{action}` | 5 | 96, 99 | ⬜✅ 2026-10-07 : 27 tests sur les fixtures réelles ; `draft_swaps.run` (demander `AVAILABLE`, accepter et refuser `RECEIVED`, annuler `SENT`, l'`id` lu dans la session pour la cellule nommée, jamais du front), un seul motif ajouté à `WRITES` (les huit chemins `POST`, testé contre la liste attendue, aucun autre chemin d'échange accepté), `POST /draft/swap/{kind}/{action}?cell_id=` (403 sans jeton, 409 sans écriture hors état attendu, 422) ; cadre validé par @pj35 ; **chemins `POST` d'après `/help`, jamais exercés en vrai : recette, validée le 2026-11-10** |
 | 102 | Conseil de swap de rôle (`swap_advice.role_swaps`) | 3 | 99 | ⬜✅ 2026-10-07 : 10 tests ; `swap_advice.role_swaps` (gain = `win_probability` après − avant en points ; seulement un échange de rôle ouvert, `AVAILABLE` ou `RECEIVED`, avec un champion des deux côtés, moi survolé ou verrouillé ; meilleur gain d'abord), `SWAP_MIN_GAIN_PTS = 1,0` dans `draft_config`, calculé dans `DraftRecommender._publish` seulement quand la session liste un échange de rôle ouvert, cache sur picks, lanes et échanges, best-effort (évaluateur qui lève : conseil vide) ; `SnapshotSwapAdvice` dans `DraftSnapshot.swap_advice` ; **écart de signature** : `allies` est un dict cellule -> (champion, lane), les échanges nommant l'autre joueur par sa cellule |
 | 103 | Conseil de swap d'ordre, bench, calibrage du seuil (**conditionnelle** au bench) | 5 | 102 | ⬜✅ clos 2026-10-07 sans conseil d'ordre (décision @pj35) : bench fait (`scripts/bench_swap_advice.py`), stabilité 2/2 mais sans sens (la recherche écarte les tours qui précèdent le mien) ; les boutons d'ordre restent (tâches 101 et 104) ; à rouvrir avec une recherche qui chaîne la racine (SPEC-24 §4.6) |
 | 104 | Carte « Échanges » : icônes, popover, bandeau de demande reçue, annuler | 5 | 100, 101, 102 | ⬜✅ 2026-10-07 : 8 tests ; sur la légende d'un allié dont la session liste un échange : « ⇄ ordre » et « ⇄ rôle » (avec « +1,2 pts » du coach), « ✕ » pour annuler une demande envoyée, rien pour `INVALID` ; demande reçue : bandeau « X te propose d'échanger … » avec Accepter et Refuser (et le gain du coach pour un rôle) ; refus 409 en toast (`post` existant) ; l'`id` n'est jamais envoyé par le front (testé) ; fragments keyés avec empreinte (contrat `data-sync` testé) ; **écart** : boutons directs sur la légende et bandeau dans le fragment de l'écran, pas de popover ni de bandeau dans `#d-overlays` (même effet, un clic de moins) ; **rendu à voir par @pj35** |
@@ -194,9 +194,9 @@ utilisables seuls, 16 tâches (96 à 111, 61 pts) ; arbitrages « à valider » 
 | 108 | Écran « En partie » : cadre, navigation, pastille, face-à-face de la draft | 5 | 106, 107 | ⬜✅ 2026-10-07 : 17 tests ; `GET /en-partie` et `/en-partie/stage` (200 dans `idle`, `live`, `ended`, aucune route d'écriture sous `/en-partie`, testé), entrée « En partie » dans le groupe Partie, pastille « En partie » dans la barre de titre pendant `live` (sur toutes les pages, **sans bascule automatique**, testé), horloge, win chance et variation, face-à-face de la draft (chevrons de duel, « peu de données »), « analyse indisponible » sans `FinalAnalysis`, « pas de modèle : python -m src.winprob.retrain --force » ; `en_partie.js` relit le fragment à chaque événement `ingame` ; **rendu à voir par @pj35** |
 | 109 | Courbe de win chance en direct | 3 | 107, 108 | ⬜✅ 2026-10-07 : 7 tests ; `charts.line_chart` sur la série (axe en minutes, bande des 50 %, dernier point lumineux, repères dragon / Héraut / Nashor / tour / inhibiteur tirés des événements Live Client, couleur de gain ou de perte selon le camp), variation sur la dernière minute, moins de deux points : un message et pas de courbe, client ouvert en cours de partie (`INGAME_LATE_START_S`) : l'écran le dit, objectifs d'avant le premier point non repérés, point de départ de la draft non tracé ; **rendu à voir par @pj35** |
 | 110 | Build : plan d'objets, suivi des achats, ordre des compétences si publié | 5 | 105, 108 | ⬜✅ 2026-10-07 : 16 tests ; `en_partie.build_view` : plan d'objets du loadout de `FinalAnalysis` (blocs, noms français de Data Dragon, `Assets.items()` nouveau), objets possédés cochés, prochain objet (Core puis première paire de bottes, les alternatives ne comptent pas), coût restant (assemblage + composants non possédés) et manque d'or (`activePlayer.currentGold`), `items` absent de l'API : « achats indisponibles » (distinct d'une liste vide), substitutions du duel avec leur raison, **ordre des compétences** (`loadout_import._skills` d'après `maxSkillOrders` / `skillPaths` de la page OneTricks, ligne absente quand la page ne le publie pas) ; **rendu à voir par @pj35** |
-| 111 | Clôture : exe vérifié, docs, SPEC-21 §7, statuts | 3 | 104, 109, 110 | ⬜✅ 2026-10-07 : `python build_app.py` (83,1 Mo) puis `check_exe_assets.py` : 52 fichiers du client et 11 modules (dont `ingame`, `en_partie`, `draft_swaps`) présents ; README, `PROJECT_STRUCTURE.md`, `CHANGELOG.md`, SPEC-21 §7 (« écran en partie » rouvert et livré), statuts ; **recette @pj35** : lancer l'exe, ouvrir « En partie » pendant une partie (courbe qui avance, plan qui se coche à l'achat), valider un ban et demander, recevoir, accepter un échange en draft classée |
+| 111 | Clôture : exe vérifié, docs, SPEC-21 §7, statuts | 3 | 104, 109, 110 | ⬜✅ 2026-10-07 : `python build_app.py` (83,1 Mo) puis `check_exe_assets.py` : 52 fichiers du client et 11 modules (dont `ingame`, `en_partie`, `draft_swaps`) présents ; README, `PROJECT_STRUCTURE.md`, `CHANGELOG.md`, SPEC-21 §7 (« écran en partie » rouvert et livré), statuts ; **recette @pj35, validée le 2026-11-10** : lancer l'exe, ouvrir « En partie » pendant une partie (courbe qui avance, plan qui se coche à l'achat), valider un ban et demander, recevoir, accepter un échange en draft classée |
 
-### Lot livré — SPEC-25, suivi de phase et capture de fin de partie (✅ 2026-10-07, recette @pj35 à faire)
+### Lot livré — SPEC-25, suivi de phase et capture de fin de partie (✅ 2026-10-07, recette validée le 2026-11-10)
 
 [SPEC-25](docs/specs/SPEC-25-suivi-de-phase-et-capture-de-fin-de-partie.md) : les LP et l'écran de fin ne sont plus
 capturés depuis le 2026-10-05 (11 parties) ; les deux endpoints ne répondent que sur l'écran de fin et sont
@@ -213,9 +213,9 @@ la tâche 64 de SPEC-23. Découpage en SPEC-25 §5 (tâches 112 à 118, 24 pts) 
 | 115 | Capture hors boucle (`read_transients`, `PostGameWatcher`), erreurs affichées une fois, régression | 5 | 112, 113 | ⬜✅ 2026-10-07 : 11 tests dont la régression (rouge sans le fil : aucune LP écrite, et `AttributeError` sur le code d'avant ; verte après) ; `GameCapture.read_transients(lcu)` sans base, `_lp_by_game` et verrou, `write_lp_snapshots` rejoue une notification refusée par une base verrouillée, `ranked.snapshot_after_game(note, db)` et `valid_notification`, `PostGameWatcher` (module `src/coaching/post_game_watcher.py` à part pour que le critère 7 tienne : `capture.py` importe sqlite3) lit chaque `PHASE_POST_POLL_S` avec son client, une dernière lecture à la sortie de `post`, borné par `POST_GAME_RETRY_WINDOW`, erreurs de capture affichées une fois en `[ALERTE]` hors `-v` |
 | 116 | Pastille de phase dans la barre de titre, `LiveGame` sur le tracker | 3 | 113 | ⬜✅ 2026-10-07 : 8 tests ; la pastille `#tb-phase` de la barre de titre remplace la pastille « En partie » (même emplacement, lien vers l'écran En partie, jamais de bascule de page) : six états rendus (Hors partie, En file, Champion select, En partie, Fin de partie, Client LoL fermé) d'après `bus.latest("phase")` au chargement puis le sujet `phase` en SSE (`client_config.PHASE_LABELS`, plus « Erreur de partie » et « Phase inconnue »), `LiveGame` lit la phase du tracker avec la sonde `LcuProbe` en repli quand le tracker est muet ; **rendu à voir par @pj35** |
 | 117 | **Conditionnelle** au spike : notification de LP lue dans l'événement `/lol-ranked` | 3 | 112, 115 | ⬜✅ 2026-10-07 : 9 tests ; spike favorable (SPEC-25 §4.0) : `PhaseTracker.subscribe_events` passe les événements `/lol-ranked/v1/current-lp-change-notification` à `GameCapture.on_lcu_event`, qui met la notification de côté dès qu'elle naît (même photo que le sondage sur la fixture réelle ; un écran quitté avant toute lecture donne quand même les LP) ; l'écran de fin n'est pas lu dans l'événement |
-| 118 | Clôture : exe, docs, `CHANGELOG.md`, SPEC-23 et SPEC-24, statuts | 2 | 114, 115, 116 | ⬜✅ 2026-10-07 : `python build_app.py` (83,2 Mo) puis `check_exe_assets.py` : 52 fichiers du client et 13 modules (dont `phase_tracker` et `post_game_watcher`, ajoutés au script) présents ; `PROJECT_STRUCTURE.md`, README, `CHANGELOG.md`, SPEC-23 (`step(phase)` lit la phase du tracker) et SPEC-24 (pastille), écarts à la rédaction en SPEC-25 §4.7, statuts ; **recette @pj35** : lancer l'exe pendant une partie classée, regarder la pastille (En file, Champion select, En partie, Fin de partie, Hors partie), cliquer « Rejouer » dans les 3 s après l'écran de fin, puis `SELECT lp_delta, game_id FROM rank_snapshots ORDER BY id DESC LIMIT 1` (non nul) et `SELECT raw_eog IS NOT NULL FROM game_records ORDER BY game_creation_utc DESC LIMIT 1` (1) |
+| 118 | Clôture : exe, docs, `CHANGELOG.md`, SPEC-23 et SPEC-24, statuts | 2 | 114, 115, 116 | ⬜✅ 2026-10-07 : `python build_app.py` (83,2 Mo) puis `check_exe_assets.py` : 52 fichiers du client et 13 modules (dont `phase_tracker` et `post_game_watcher`, ajoutés au script) présents ; `PROJECT_STRUCTURE.md`, README, `CHANGELOG.md`, SPEC-23 (`step(phase)` lit la phase du tracker) et SPEC-24 (pastille), écarts à la rédaction en SPEC-25 §4.7, statuts ; **recette @pj35, validée le 2026-11-10** : lancer l'exe pendant une partie classée, regarder la pastille (En file, Champion select, En partie, Fin de partie, Hors partie), cliquer « Rejouer » dans les 3 s après l'écran de fin, puis `SELECT lp_delta, game_id FROM rank_snapshots ORDER BY id DESC LIMIT 1` (non nul) et `SELECT raw_eog IS NOT NULL FROM game_records ORDER BY game_creation_utc DESC LIMIT 1` (1) |
 
-### Lot suivant — SPEC-26, partie trouvée persistante et bascule en partie (✅ livré le 2026-10-08, recette @pj35 à faire)
+### Lot suivant — SPEC-26, partie trouvée persistante et bascule en partie (✅ livré le 2026-10-08, recette validée le 2026-11-10)
 
 [SPEC-26](docs/specs/SPEC-26-file-trouvee-persistante-et-bascule-en-partie.md) : après « Accepter », l'overlay se
 referme puis se rouvre en entier tant que les autres joueurs n'ont pas accepté (`apply` rappelle `show`, la
@@ -226,11 +226,11 @@ séquence se rejoue) ; il doit rester jusqu'à l'ouverture de la draft. À la fi
 
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
-| 119 | Banc `support_found_js.py`, régression rouge puis table de décision de l'overlay (`asking` / `held` / `entering`), `hold_max` et `enter_wait` | 5 | — | ✅ 2026-10-08 : 19 tests ; régression `test_regression_found_overlay_reopens.py` rouge avant (6 overlays créés pour 1 attendu) puis verte, banc `node` `tests/support_found_js.py` (horloge virtuelle), table de décision dans `found.js` (`expectDraft` supprimé), `FOUND_HOLD_MAX_S` = 30 s et `FOUND_ENTER_WAIT_S` = 1,5 s dans `/found/state` ; **recette @pj35** : accepter une vraie partie, l'overlay reste sur « Acceptée » puis s'efface sur la draft, et relever `playerResponse` et `state` du ready-check après acceptation |
-| 120 | Bascule vers « En partie » : `Transition.go` exposé, sujet `phase` dans `found.js` | 3 | 119 | ✅ 2026-10-08 : 13 tests ; `window.Transition = { go }`, `found.js` écoute le sujet `phase` et appelle `Transition.go("/en-partie")` au seul passage `draft` vers `game` (jamais au premier événement vu, ni si `/en-partie` est déjà ouverte), `en_partie.js` inchangé ; **recette @pj35** : verrouiller les 10 champions, le client bascule sur « En partie » depuis la draft puis depuis une autre page |
-| 121 | Clôture : SPEC-24 et SPEC-25 rouvertes, `CHANGELOG.md`, statuts | 2 | 119, 120 | ✅ 2026-10-08 : entrées Fix et Feature sous `[Unreleased]`, statut de SPEC-26, SPEC-24 §2 et §7, SPEC-25 §7 et README des specs à jour ; recette réelle laissée à @pj35 (SPEC-26 §6) |
+| 119 | Banc `support_found_js.py`, régression rouge puis table de décision de l'overlay (`asking` / `held` / `entering`), `hold_max` et `enter_wait` | 5 | — | ✅ 2026-10-08 : 19 tests ; régression `test_regression_found_overlay_reopens.py` rouge avant (6 overlays créés pour 1 attendu) puis verte, banc `node` `tests/support_found_js.py` (horloge virtuelle), table de décision dans `found.js` (`expectDraft` supprimé), `FOUND_HOLD_MAX_S` = 30 s et `FOUND_ENTER_WAIT_S` = 1,5 s dans `/found/state` ; **recette @pj35, validée le 2026-11-10** : accepter une vraie partie, l'overlay reste sur « Acceptée » puis s'efface sur la draft, et relever `playerResponse` et `state` du ready-check après acceptation |
+| 120 | Bascule vers « En partie » : `Transition.go` exposé, sujet `phase` dans `found.js` | 3 | 119 | ✅ 2026-10-08 : 13 tests ; `window.Transition = { go }`, `found.js` écoute le sujet `phase` et appelle `Transition.go("/en-partie")` au seul passage `draft` vers `game` (jamais au premier événement vu, ni si `/en-partie` est déjà ouverte), `en_partie.js` inchangé ; **recette @pj35, validée le 2026-11-10** : verrouiller les 10 champions, le client bascule sur « En partie » depuis la draft puis depuis une autre page |
+| 121 | Clôture : SPEC-24 et SPEC-25 rouvertes, `CHANGELOG.md`, statuts | 2 | 119, 120 | ✅ 2026-10-08 : entrées Fix et Feature sous `[Unreleased]`, statut de SPEC-26, SPEC-24 §2 et §7, SPEC-25 §7 et README des specs à jour ; recette réelle validée par @pj35 le 2026-11-10 (SPEC-26 §6) |
 
-### Lot suivant — SPEC-27, vérification des postes en partie (✅ livrée le 2026-10-12, recette @pj35 à faire)
+### Lot suivant — SPEC-27, vérification des postes en partie (✅ livrée le 2026-10-12, recette validée le 2026-11-10)
 
 [SPEC-27](docs/specs/SPEC-27-verification-des-postes-en-partie.md) : les postes adverses sont devinés pendant la draft
 (85 % d'équipes adverses entièrement justes sur 69 parties, mesure rejouée) et plus jamais vérifiés ; l'écran « En
@@ -247,9 +247,9 @@ spike de la tâche 122. Découpage en SPEC-27 §5 (tâches 122 à 128, 23 pts) :
 | 125 | `LoadoutImporter.retarget` (calcul sans écriture dans le client LoL), `_import` inchangé, tests | 3 | — | ✅ 2026-10-12 : 3 tests ; `_import` scindé en `_compute` + application, `retarget` sans écriture dans le client LoL, tests existants inchangés |
 | 126 | `RealityCheck.step` : stabilité, recalcul de l'analyse et de la build, republication du sujet `game`, console, remise à zéro, appel dans `monitor_loop` | 5 | 122, 123, 124, 125 | ✅ 2026-10-12 : 18 tests ; `RealityCheck.step` (stabilité 10 s de jeu, recalcul de `game` et de la build, `REALITY_MAX_CORRECTIONS` = 3, remise à zéro), appel dans `monitor_loop` en `InProgress` ; page choisie à la main : analyse recalculée, build conservée |
 | 127 | Écran « En partie » (gabarit SPEC-30) : ligne d'état entre `.panel-head` et `table.ig-table` de `section.ig-draft`, marquage des lignes corrigées du tableau à 5 colonnes, `FinalAnalysis.reality` ; `scripts/measure_en_partie.py` reste `[OK]` avec la ligne réelle | 3 | 126 | ✅ 2026-10-12 : 12 tests ; ligne `.ig-reality` (quatre états), lignes `is-corrected` + « poste corrigé », `FinalAnalysis.reality` ; `measure_en_partie.py` `[OK]` : marge **30 px** (seuil 30, sans marge de sécurité : 33 px sans modèle, 30 px avec) |
-| 128 | Clôture : `CHANGELOG.md`, statut, `docs/specs/README.md`, `PROJECT_STRUCTURE.md`, recette @pj35 | 2 | 127 | ✅ 2026-10-12 : `CHANGELOG.md`, statut de SPEC-27, README des specs et `PROJECT_STRUCTURE.md` à jour ; recette réelle laissée à @pj35 (SPEC-27 §6) |
+| 128 | Clôture : `CHANGELOG.md`, statut, `docs/specs/README.md`, `PROJECT_STRUCTURE.md`, recette @pj35 | 2 | 127 | ✅ 2026-10-12 : `CHANGELOG.md`, statut de SPEC-27, README des specs et `PROJECT_STRUCTURE.md` à jour ; recette réelle validée par @pj35 le 2026-11-10 (SPEC-27 §6) |
 
-### Lot suivant — SPEC-28, la draft suivante ne doit plus rester muette (✅ livrée le 2026-10-09, recette @pj35 à faire)
+### Lot suivant — SPEC-28, la draft suivante ne doit plus rester muette (✅ livrée le 2026-10-09, recette validée le 2026-11-10)
 
 [SPEC-28](docs/specs/SPEC-28-draft-muette-apres-une-partie.md) : à l'enchaînement « Rejouer » puis file, le client dit
 « Champion select » mais la console reste muette et l'écran Draft vide, tantôt en retard, tantôt jusqu'à la fin du
@@ -266,7 +266,7 @@ Seuils et journal validés (SPEC-28 §2). Découpage en SPEC-28 §5 (tâches 129
 | 131 | Céder la main : `LCUClient.yield_if`, `draft_pending()`, pose et remise dans `monitor_loop`, régression | 5 | 129 | ✅ |
 | 132 | Clôture : `CHANGELOG.md`, statuts, README des specs, SPEC-25 §2 renvoyé ici, recette @pj35 | 2 | 130, 131 | ✅ |
 
-### Lot suivant — SPEC-29, constats sur dix parties et axes par objectif (✅ livrée le 2026-10-11, recette @pj35 à faire)
+### Lot suivant — SPEC-29, constats sur dix parties et axes par objectif (✅ livrée le 2026-10-11, recette validée le 2026-11-10)
 
 [SPEC-29](docs/specs/SPEC-29-constats-sur-dix-parties-et-axes-par-objectif.md) : « Derniers constats » ne montre que la
 dernière partie, et les axes de travail ne se proposent jamais (@pj35, 2026-10-10). Mesuré : sur 90 parties top, aucun
@@ -284,7 +284,7 @@ SPEC-29 §5 (tâches 133 à 137, 17 pts) :
 | 136 | Tenir sur un écran : mesure en vraie fenêtre Chrome 1920×986 sur copie de la base, `scrollHeight` 1351 → 950 = `clientHeight` avec `notice` (cause : l'anneau décoratif, passé en `fixed`) ; cartes et lignes non compactées, 57 px de marge | 3 | 135 | ✅ |
 | 137 | Clôture : CHANGELOG, statuts, README des specs, `latest_findings` supprimée, recette @pj35 (`alembic upgrade head`, accueil sur la vraie base, un clic sur « Fixer cet axe » puis la partie suivante) | 2 | 136 | ✅ |
 
-### Lot suivant — SPEC-30, écran « En partie » sur un seul écran (✅ livrée le 2026-10-12, recette @pj35 à faire)
+### Lot suivant — SPEC-30, écran « En partie » sur un seul écran (✅ livrée le 2026-10-12, recette validée le 2026-11-10)
 
 [SPEC-30](docs/specs/SPEC-30-ecran-en-partie-sur-un-ecran.md) : l'écran « En partie » empile quatre panneaux sur
 ~1 600 px pour 890 utiles à 1 920 × 950 (estimation arithmétique), dont ~600 pour la seule courbe. Validé par @pj35 le
@@ -298,9 +298,9 @@ Firefox headless. Passe **avant** la tâche 127 de SPEC-27, réécrite pour ce g
 | 138 | Vue : `Champions.by_name`, portrait, nom Data Dragon et infobulle Mat/Syn dans `_score`, tests | 3 | — | ✅ |
 | 139 | Gabarit et CSS : bandeau, grille à deux colonnes, tableau à 5 colonnes, place de la ligne SPEC-27, `GAME_CURVE_SIZE`, tests | 5 | 138 | ✅ |
 | 140 | Mesure : `scripts/measure_en_partie.py` (Firefox headless, cas le plus lourd, 1 920 × 986, ≥ 30 px de marge), ajustements. Mesuré : ancien gabarit `scrollHeight` 1 698 pour `clientHeight` 950 ; nouveau, 950 = 950, contenu 913 / 916 px (sans / avec modèle), marge 37 / **34 px**, `scrollWidth` 1 700 = 1 700 ; 1 400 × 900 : une colonne. Aucun ajustement de CSS (le script mesurait la marge sur `scrollHeight`, plafonné à `clientHeight` : mesure corrigée sur le bas du contenu) | 3 | 139 | ✅ |
-| 141 | Clôture : SPEC-27 §4.6 et tâche 127 réécrites, `CHANGELOG.md`, statuts, README des specs, recette @pj35 | 2 | 140 | ✅ 2026-10-12 : SPEC-27 §4.6, §5 et critère 6 visent `section.ig-draft` ; entrée `[Unreleased]`, statut de SPEC-30 et README des specs à jour ; recette réelle laissée à @pj35 (SPEC-30 §6) |
+| 141 | Clôture : SPEC-27 §4.6 et tâche 127 réécrites, `CHANGELOG.md`, statuts, README des specs, recette @pj35 | 2 | 140 | ✅ 2026-10-12 : SPEC-27 §4.6, §5 et critère 6 visent `section.ig-draft` ; entrée `[Unreleased]`, statut de SPEC-30 et README des specs à jour ; recette réelle validée par @pj35 le 2026-11-10 (SPEC-30 §6) |
 
-### Lot suivant — SPEC-31, situationnels liés au core (✅ livrée le 2026-10-12, recette @pj35 à faire)
+### Lot suivant — SPEC-31, situationnels liés au core (✅ livrée le 2026-10-12, recette validée le 2026-11-10)
 
 [SPEC-31](docs/specs/SPEC-31-situationnels-suivent-le-core.md) : « Situationnels » est rempli avec `popularItems`, sans
 rapport avec le core choisi (mesuré le 2026-10-12 : 4 à 6 items sur 8 hors du chemin du core à Ambessa et Yorick) ;
@@ -315,9 +315,9 @@ bruit (liste plus courte). Restent à valider : valeur des deux seuils et volume
 | 143 | Duel : chemin lu sur les deux pages, items du duel dans le chemin ou « Autres cores », `blocks[-1]` corrigé, tests réécrits | 3 | 142 | ✅ 2026-10-12 : core substitué par le duel (5 parties) = Situationnels vide, ancien core en tête d'« Autres cores » (seuils de §4.2, à relire) |
 | 144 | Banc `scripts/bench_loadout_paths.py` (12 pages espacées de 20 s), réglage des deux seuils | 3 | 143 | ✅ 2026-10-12 : hors chemin 53 → 0, repli 0 / 12, médiane 8 → 4 situationnels ; seuils 5 % / 3 parties inchangés ; supports non mesurables (404, rôle `supp`) |
 | 145 | Ligne console, bloc « Autres cores » dans l'écran « En partie », remesure `measure_en_partie.py` | 2 | 143 | ✅ 2026-10-12 : remesuré à 1 920 × 986, marge 33 / **30 px** (sans / avec modèle, était 37 / 34), une colonne à 1 400 × 900 |
-| 146 | Clôture : `CHANGELOG.md`, notes SPEC-15, statuts, README des specs, recette @pj35 | 2 | 144, 145 | ✅ 2026-10-12 (recette réelle laissée à @pj35, SPEC-31 §6) |
+| 146 | Clôture : `CHANGELOG.md`, notes SPEC-15, statuts, README des specs, recette @pj35 | 2 | 144, 145 | ✅ 2026-10-12 (recette réelle validée par @pj35 le 2026-11-10, SPEC-31 §6) |
 
-### Lot SPEC-32, classement des joueurs en post-game (✅ livré le 2026-10-12, recette @pj35 à faire)
+### Lot SPEC-32, classement des joueurs en post-game (✅ livré le 2026-10-12, recette validée le 2026-11-10)
 
 [SPEC-32](docs/specs/SPEC-32-classement-des-joueurs-post-game.md) : la revue de partie ne montre que l'impact du joueur ;
 elle classe maintenant les dix joueurs par ΔP cumulé de SPEC-20 (portraits Data Dragon, déjà servis par `assets.py`), en deux
@@ -330,9 +330,9 @@ Emplacement du panneau (entre la courbe et les cartes) validé le 2026-10-12. D�
 | 147 | `src/client/classement.py` : `ranking` (ΔP par participant, équipes, MVP / ACE, ex æquo, remake) et tests purs | 3 | — | ✅ 2026-10-12 : 12 tests purs |
 | 148 | `game_page` : clé `ranking`, formatage et barres sur les dix joueurs, absence sans impact, tests de page | 2 | 147 | ✅ 2026-10-12 : 4 tests de page, review.py 471 lignes |
 | 149 | Gabarit et CSS : deux listes, portraits, barres, badges MVP et ACE, rupture à 1 500 px, tests de rendu | 5 | 148 | ✅ 2026-10-12 : 4 tests de rendu (rendu à l'œil laissé à @pj35) |
-| 150 | Clôture : vérification sur les 98 parties de la base, module ajouté aux listes, `CHANGELOG.md`, statuts, recette @pj35 | 2 | 149 | ✅ 2026-10-12 : 98 / 98 parties, 17 ACE négatifs ; recette à l'œil laissée à @pj35 |
+| 150 | Clôture : vérification sur les 98 parties de la base, module ajouté aux listes, `CHANGELOG.md`, statuts, recette @pj35 | 2 | 149 | ✅ 2026-10-12 : 98 / 98 parties, 17 ACE négatifs ; recette à l'œil validée par @pj35 le 2026-11-10 |
 
-### Lot SPEC-33, éclaireur des joueurs en partie (✅ livrée le 2026-10-21, recette @pj35 à faire)
+### Lot SPEC-33, éclaireur des joueurs en partie (✅ livrée le 2026-10-21, recette validée le 2026-11-10)
 
 [SPEC-33](docs/specs/SPEC-33-eclaireur-des-joueurs-en-partie.md) : dès l'écran de chargement, une pastille de niveau à côté
 de chacun des dix champions du face-à-face (ΔP moyen sur 10 parties classées, taux de victoire en attendant), détail 5 / 10 / 20
@@ -353,11 +353,11 @@ Tous les arbitrages validés par @pj35 le 2026-10-13 (suite en partie à 2 threa
 | 157 | Écran « En partie » : pastilles et infobulle dans le face-à-face, remesure de la marge | 5 | 155, 156 | ✅ 2026-10-15 : 16 tests ; pastille dans la cellule Tot (§4.4), marge 30 px à 1 920 × 986 |
 | 158 | `crawl_histories` : forme brute rangée à chaque visite d'historique (aucune requête de plus) | 3 | 152, 153 | ✅ 2026-10-13 : 2 tests (visite de la collecte, éclaireur) |
 | 159 | `scripts/measure_form_term.py` : seuil figé, mesure du terme de forme une fois `crawl_histories` fournie | 5 | 158 | ✅ 2026-10-15 : script livré, 6 tests, essai `--force --limit 3000` en 113 s ; mesure faite le 2026-10-21 (92 689 parties) : `form_wr`, `form_kda` et `form_impact` refusés (meilleur gain +0,0013 < 0,002, SPEC-33 §7) |
-| 160 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure, exe, recette @pj35 | 2 | 157, 159 | ✅ 2026-10-21 ; exe : éclaireur et pastilles livrés depuis la 5.4.0 ; recette (pastilles en partie, forme de la session gameflow) laissée à @pj35 |
+| 160 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure, exe, recette @pj35 | 2 | 157, 159 | ✅ 2026-10-21 ; exe : éclaireur et pastilles livrés depuis la 5.4.0 ; recette (pastilles en partie, forme de la session gameflow) validée par @pj35 le 2026-11-10 |
 | 161 | *Conditionnelle* : terme de forme dans le modèle si la tâche 159 l'adopte | 3 | 159 | ⏸️ rejugé le 2026-11-01 sans le seuil de 0,002 (ADR-004) : `form_impact` indétectable sur 65 parties couvertes, +0,00024 (IC 90 % +0,00001 à +0,00046) sur toutes les parties. À remesurer avec `scripts/rejudge_winchance_terms.py` à ~4 800 parties couvertes, avant la purge du patch (SPEC-33 §7) ; `form_wr` et `form_kda` restent refusés |
 | 162 | Visites de couverture : après chaque partie lue, historique de ses joueurs non couverts (amendement du 2026-10-15) | 2 | 158 | ✅ 2026-10-15 : 2 tests ; couverture à suivre par `scripts/monitor_crawl.py` |
 
-### Lot SPEC-34, vitrine : mode démo, captures, README et teaser (✅ livrée le 2026-10-16, recette @pj35 à faire)
+### Lot SPEC-34, vitrine : mode démo, captures, README et teaser (✅ livrée le 2026-10-16, recette validée le 2026-11-10)
 
 [SPEC-34](docs/specs/SPEC-34-vitrine-readme-et-teaser.md) prépare la présentation pro. Un mode démo,
 `scripts/demo_client.py`, rejoue un scénario (profil, file, draft, partie, revue) sans client LoL, avec des pseudos
@@ -375,9 +375,9 @@ pile réelle sur faux LCU (§3). Découpage en SPEC-34 §5 (tâches 163 à 170, 
 | 167 | `README.md` réécrit avec captures et avertissement Riot ; `.gitignore` de `docs/presentation/` | 2 | 166 | ✅ 2026-10-16 : 9 captures, chiffres du manifeste (173 champions, 57 612 matchups), section démo ; image de tête provisoire (`draft-pick.png`) jusqu'au GIF de la tâche 169 |
 | 168 | Projet Remotion : versions exactes, config, polices, scènes « Accroche », « Draft », « Verrouillage » et « Clôture » | 5 | 166 | ✅ 2026-10-16 : Remotion 4.0.531 (licence gratuite pour un particulier, vérifiée sur LICENSE.md), polices du client, chiffres de draft relevés dans le manifeste par `capture_screens.py` (n° 1 Dr. Mundo 55,96 %, fin de draft 54,6 %) |
 | 169 | Scènes « En partie » (courbe SVG), « Revue et coaching » et « Mosaïque » ; `hero.gif` dans le README | 5 | 167, 168 | ✅ 2026-10-16 : teaser de 30,0 s en 1 920 × 1 080 sans audio (12,2 Mo) ; `hero.gif` 960 × 540 à 10 i/s, 4,1 Mo, encodé par ffmpeg (palette optimisée ; l'encodeur GIF de Remotion donnait 10,3 Mo), fond figé dans la boucle |
-| 170 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure ; recette à l'œil de @pj35 | 3 | 169 | ✅ 2026-10-16 ; recette à l'œil (captures, GIF, `docs/presentation/video/out/teaser.mp4`) laissée à @pj35 |
+| 170 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure ; recette à l'œil de @pj35 | 3 | 169 | ✅ 2026-10-16 ; recette à l'œil (captures, GIF, `docs/presentation/video/out/teaser.mp4`) validée par @pj35 le 2026-11-10 |
 
-### Lot SPEC-56, compétences, core et bottes du duel (✅ livrée le 2026-11-10, recette @pj35 à faire)
+### Lot SPEC-56, compétences, core et bottes du duel (✅ livrée le 2026-11-10, recette validée le 2026-11-10)
 
 [SPEC-56](docs/specs/SPEC-56-competences-core-et-bottes-du-duel.md) : partie Malphite contre Nasus. L'ordre des
 compétences suit le duel quand il diffère significativement (W > E > Q contre Nasus, p = 0,002 ; l'écran lisait la page
@@ -391,9 +391,9 @@ page du duel quand elle le publie. Découpage en SPEC-56 §5 (tâches 278 à 282
 | 279 | Plancher `LOADOUT_CORE_MIN_GAMES` dans `adapt_to_matchup`, tests | 2 | — | ✅ 2026-11-10 : 2 tests ; vs Nasus, Eclipse + Jak'Sho (4 parties) écarté, Sunfire + Thornmail et ses situationnels gardés |
 | 280 | Bottes à leur rang dans le bloc Core (`_boots_rank`, `_item_blocks`, `Build.boots`, séquence du duel), « Autres bottes », tests existants adaptés | 3 | 279 | ✅ 2026-11-10 : 11 tests, 4 adaptés ; Malphite : Sunfire, Steelcaps, Thornmail ; vs Nasus : Sunfire, Swiftness, Thornmail ; colonne de draft : Départ et Core |
 | 281 | Prochain objet en partie : bottes du core, alternative possédée, repli ancien format, tests | 2 | 280 | ✅ 2026-11-10 : 2 tests ; `NEXT_BLOCKS` (inutilisée) retirée ; ancien format inchangé |
-| 282 | Clôture : CHANGELOG, statut SPEC-56, README des specs, recette @pj35 | 1 | 278-281 | ✅ 2026-11-10 ; **recette @pj35** : partie réelle avec un duel publié (substitution « Compétences » en console, bottes dans le bloc Core du set, prochain objet dans cet ordre) |
+| 282 | Clôture : CHANGELOG, statut SPEC-56, README des specs, recette @pj35 | 1 | 278-281 | ✅ 2026-11-10 ; **recette @pj35, validée le 2026-11-10** : partie réelle avec un duel publié (substitution « Compétences » en console, bottes dans le bloc Core du set, prochain objet dans cet ordre) |
 
-### Lot SPEC-55, exposition aux picks à venir (✅ livrée le 2026-11-09, recette @pj35 à faire)
+### Lot SPEC-55, exposition aux picks à venir (✅ livrée le 2026-11-09, recette validée le 2026-11-10)
 
 [SPEC-55](docs/specs/SPEC-55-exposition-aux-picks-a-venir.md) : la stratégie « Arbre » classe par la règle D, la même
 pour tous les postes : la valeur calibrée de la draft connue (duels, synergies, sans tirage), plus l'exposition aux
@@ -407,9 +407,9 @@ IC 90 % hors de 0), y compris en pick aveugle hors B1. Découpage en SPEC-55 §5
 | 274 | Live Coach : Arbre classe par D (`_provide`, survol initial), `lane_popularity` en cache, `[D]` en console, retrait de `_tree_order` / `pool_tree`, tests | 5 | 273 || ✅ 2026-11-09 : 9 tests de classement, 5 de survol, 3 de snapshot ; champs du snapshot avancés depuis 275 |
 | 275 | Snapshot et carte de draft (`known_points`, `exposure_points`, `_exposure_line`), tests | 2 | 274 || ✅ 2026-11-09 : 5 tests (champs du snapshot faits en 274) |
 | 276 | Arbre affiché par `exposure_tree` : écran Pool, Méta du poste, pool généré, libellés, tests | 3 | 273 || ✅ 2026-11-09 : `build_tree`, `leaf`, `TreeLeaf` retirés ; 3 tests ajoutés, tests de l'arbre SPEC-54 réduits à `_ranked` |
-| 277 | Clôture : CHANGELOG, statuts SPEC-55 et SPEC-54, README des specs, structure | 1 | 274-276 || ✅ 2026-11-09 ; **recette @pj35** : draft classée réelle sous Arbre (carte « Connu · Exposition », ligne `[D]`), écran Pool |
+| 277 | Clôture : CHANGELOG, statuts SPEC-55 et SPEC-54, README des specs, structure | 1 | 274-276 || ✅ 2026-11-09 ; **recette @pj35, validée le 2026-11-10** : draft classée réelle sous Arbre (carte « Connu · Exposition », ligne `[D]`), écran Pool |
 
-### Lot SPEC-54, arbre de décision du pool (✅ livrée le 2026-11-08, recette @pj35 à faire)
+### Lot SPEC-54, arbre de décision du pool (✅ livrée le 2026-11-08, recette validée le 2026-11-10)
 
 [SPEC-54](docs/specs/SPEC-54-arbre-de-decision-du-pool.md) : chaque pool a un arbre à deux branches, calculé sur les
 matrices du scrape actuel : vis-à-vis vu, le meilleur counter du pool contre lui ; sinon, le meilleur blind exposé ;
@@ -426,9 +426,9 @@ se lit sur l'écran Pool, la Méta du poste et la carte de draft. Rejoué sur 24
 | 269 | Live Coach : `pool_tree` en cache, ordre de l'arbre dans `_provide`, console, survol de début de draft, tests | 5 | 267, 268, SPEC-53 || ✅ 2026-11-08 : 13 tests (9 classement, 4 survol) |
 | 270 | Snapshot et cartes de draft (`tree`, `tree_value`, lignes), tests | 3 | 269 || ✅ 2026-11-08 : 10 tests |
 | 271 | Client : `pool_tree.py`, partiel, route `/pool/arbre`, Méta du poste (`counters` retiré), écran Stratégies, tests | 5 | 267, 268 || ✅ 2026-11-08 : `portrait` et `data_version` déplacés dans `src/client/pool_tree.py` (import circulaire évité) |
-| 272 | Clôture : exe vérifié, `PROJECT_STRUCTURE.md`, `CHANGELOG.md`, statut, README des specs, `TODO.md`, stratégie active de @pj35 sur Arbre | 2 | 270, 271 | ✅ 2026-11-08 : suite 3414 tests verte, exe 91,5 Mo (`check_exe_assets.py` : 64 fichiers, 17 modules), critère 3 vérifié sur la base du 7 nov., `active_strategy` = Arbre ; **recette @pj35** : écran Pool (arbre de TOP GÉNÉRÉ), Méta du poste, draft classée réelle sous Arbre |
+| 272 | Clôture : exe vérifié, `PROJECT_STRUCTURE.md`, `CHANGELOG.md`, statut, README des specs, `TODO.md`, stratégie active de @pj35 sur Arbre | 2 | 270, 271 | ✅ 2026-11-08 : suite 3414 tests verte, exe 91,5 Mo (`check_exe_assets.py` : 64 fichiers, 17 modules), critère 3 vérifié sur la base du 7 nov., `active_strategy` = Arbre ; **recette @pj35, validée le 2026-11-10** : écran Pool (arbre de TOP GÉNÉRÉ), Méta du poste, draft classée réelle sous Arbre |
 
-### Lot SPEC-53, rappel de place en draft (✅ livrée le 2026-11-08, `--recompute-only` et recette @pj35 à faire)
+### Lot SPEC-53, rappel de place en draft (✅ livrée le 2026-11-08, `--recompute-only` et recette validée le 2026-11-10)
 
 [SPEC-53](docs/specs/SPEC-53-rappel-de-place-en-draft.md) : pendant la sélection, l'écran de draft dit quelle place
 de pick viser pour mon poste et mon côté (« Top côté bleu : blind, vise le n° 8 (tu es n° 9) »), marque le bouton
@@ -442,9 +442,9 @@ la boucle de draft). Découpage en SPEC-53 §5 (tâches 262 à 266, 12 pts) :
 | 263 | `src/draft/pick_advice.py` (`PickAdvice`, `pick_advice`, `request_effect`), tests | 3 | — | ✅ 2026-11-08 : 15 tests ; fixture `session_swaps.json` : top, bleu, blind, vise 8, n° 9, demande de la cellule 1 « farther » |
 | 264 | `SnapshotPickAdvice`, `_pick_advice` dans les recommandations, console, tests | 3 | 262, 263 | ✅ 2026-11-08 : 6 tests ; fixture : vise 8, n° 9, demande de la cellule 1 « farther », console une fois ; fait par le modèle principal (boucle de draft) |
 | 265 | Écran de draft : ligne de rappel, bouton conseillé, bandeau annoté, tests | 3 | 264 | ✅ 2026-11-08 : 8 tests ; ligne de rappel, bouton « ⇄ ordre · conseillé », bandeau annoté |
-| 266 | Clôture : exe vérifié, `PROJECT_STRUCTURE.md`, `CHANGELOG.md`, statut, README des specs, `TODO.md` | 1 | 265 | ✅ 2026-11-08 : suite 3360 tests verte (la « 1 error » vient du Live Coach ouvert, `draft_monitor_memory.log`), exe 91,5 Mo avec `pick_advice` et `pick_order` ; **à faire par @pj35** : `python scripts/update_all.py --recompute-only`, puis recette en partie classée |
+| 266 | Clôture : exe vérifié, `PROJECT_STRUCTURE.md`, `CHANGELOG.md`, statut, README des specs, `TODO.md` | 1 | 265 | ✅ 2026-11-08 : suite 3360 tests verte (la « 1 error » vient du Live Coach ouvert, `draft_monitor_memory.log`), exe 91,5 Mo avec `pick_advice` et `pick_order` ; **fait par @pj35** : `python scripts/update_all.py --recompute-only` (2026-11-08), recette en partie classée validée le 2026-11-10 |
 
-### Lot SPEC-52, suivi du rang par compte (✅ livrée le 2026-11-07, `alembic upgrade head` et recette @pj35 à faire)
+### Lot SPEC-52, suivi du rang par compte (✅ livrée le 2026-11-07, `alembic upgrade head` et recette validée le 2026-11-10)
 
 [SPEC-52](docs/specs/SPEC-52-suivi-du-rang-par-compte.md) : les photos de rang ne portaient pas le compte, et une
 journée sur le smurf (Or I) faisait croire à −952 LP sur la courbe du principal (Diamant IV). Chaque photo porte
@@ -457,9 +457,9 @@ périmètre). Découpage en SPEC-52 §5 (tâches 258 à 261, 9 pts) :
 | 258 | Migration `rank_snapshots.puuid` et rattachement de l'historique, `tests/conftest.py`, tests de migration | 3 | — | ✅ 2026-11-07 : 5 tests ; copie de `data/db.db` : 427 photos sur 427 rattachées, smurf 11 photos toutes en GOLD, montée-descente-montée propre |
 | 259 | Écriture du puuid : `insert_rank_snapshot`, `snapshot_current`, `snapshot_after_game`, `GameCapture`, tests | 2 | 258 | ✅ 2026-11-07 : 7 tests ; écran de fin d'abord, puis compte connecté, puis NULL ; démarrage sans compte : aucune photo |
 | 260 | Lecture par compte : `rank_account`, `rank_history`, `rank_snapshots`, `current_puuid`, Rang, Accueil, bilan console, test de régression | 3 | 258 | ✅ 2026-11-07 : 11 tests dont la régression (rouge avant, verte après) ; client fermé, Rang et Accueil montrent le dernier compte vu |
-| 261 | Clôture : `CHANGELOG.md`, statuts, README des specs, `TODO.md` ; `alembic upgrade head` et recette @pj35 | 1 | 259, 260 | ✅ 2026-11-07 : suite 3314 tests verte (seule la garde de session, scrape en cours), black propre, pylint 9,54 ; **recette @pj35** : `alembic upgrade head`, écran Rang client fermé (courbe du principal sans creux en Or), une partie classée sur le smurf, bascule de courbe en changeant de compte |
+| 261 | Clôture : `CHANGELOG.md`, statuts, README des specs, `TODO.md` ; `alembic upgrade head` et recette @pj35 | 1 | 259, 260 | ✅ 2026-11-07 : suite 3314 tests verte (seule la garde de session, scrape en cours), black propre, pylint 9,54 ; **recette @pj35, validée le 2026-11-10** : `alembic upgrade head`, écran Rang client fermé (courbe du principal sans creux en Or), une partie classée sur le smurf, bascule de courbe en changeant de compte |
 
-### Lot SPEC-51, Méta du poste : la page Blindabilité réarrangée autour d'un rôle (✅ livrée le 2026-11-06, recette @pj35 à faire)
+### Lot SPEC-51, Méta du poste : la page Blindabilité réarrangée autour d'un rôle (✅ livrée le 2026-11-06, recette validée le 2026-11-10)
 
 [SPEC-51](docs/specs/SPEC-51-meta-du-poste.md) : la page Blindabilité devient « Méta du poste » (`/meta`). Un rôle
 choisi en haut, mémorisé ; ses cases en surbrillance dans les matrices Adversaires et Alliés ; la séquence des
@@ -474,9 +474,9 @@ SPEC-51 §5 (tâches 252 à 257, 16 pts) :
 | 254 | `meta_poste.py` (renomme `blindabilite.py`), `GET /meta`, redirections, `NAV`, tests | 3 | 252, 253 | ✅ 2026-11-06 : 12 tests ; `tests/test_blindability.py` adapté (décision du plan) |
 | 255 | Panneau latéral : reprise de `d6e5956` en `aside_view`, routes `/meta/*`, suppression de l'écran Suggestions, liens, tests | 5 | 254 | ✅ 2026-11-06 : sur copies de `data/`, top sans Gangplank ni Fiora, moyenne, 5 : Urgot, Shen, Riven, Malphite, Pantheon (critère 6) ; `/pool/suggestions` et `/blindabilite` en 303 |
 | 256 | `meta_poste.html`, `partials/meta_aside.html`, styles (grille, surbrillance, séquence) | 3 | 255 | ✅ 2026-11-06 : 3 tests de rendu ; relu dans le navigateur intégré à 1 440 px (deux colonnes, cases entourées, séquence) |
-| 257 | Clôture : exe vérifié, `PROJECT_STRUCTURE.md`, `CHANGELOG.md`, statuts SPEC-49, SPEC-50 et SPEC-51, README des specs, `TODO.md` | 1 | 256 | ✅ 2026-11-06 : suite 3286 tests verte, exe 90,4 Mo (`check_exe_assets.py` : 63 fichiers, 17 modules ; `pick_order`, `meta_poste`, `meta_aside.html` présents) ; **recette @pj35** : menu Coaching → Méta du poste, cases du top entourées, picks 8 et 10, générer et créer un pool, prendre une carte |
+| 257 | Clôture : exe vérifié, `PROJECT_STRUCTURE.md`, `CHANGELOG.md`, statuts SPEC-49, SPEC-50 et SPEC-51, README des specs, `TODO.md` | 1 | 256 | ✅ 2026-11-06 : suite 3286 tests verte, exe 90,4 Mo (`check_exe_assets.py` : 63 fichiers, 17 modules ; `pick_order`, `meta_poste`, `meta_aside.html` présents) ; **recette @pj35, validée le 2026-11-10** : menu Coaching → Méta du poste, cases du top entourées, picks 8 et 10, générer et créer un pool, prendre une carte |
 
-### Lot SPEC-50, générateur de pools (✅ livré le 2026-11-06 avec SPEC-51, recette @pj35 à faire)
+### Lot SPEC-50, générateur de pools (✅ livré le 2026-11-06 avec SPEC-51, recette validée le 2026-11-10)
 
 [SPEC-50](docs/specs/SPEC-50-generateur-de-pools.md) : un bouton « Générer » propose, pour chaque poste, le pool de
 3 à 6 champions qui maximise ½ blind exposé au counter + ½ counter, forces nettes du tirage, sur le scrape actuel ou
@@ -494,7 +494,7 @@ Shen, Urgot (+1,66). Dépend du seuil Blindabilité à 15 000 (à commiter). Dé
 | 250 | Section « Générer un pool » du partiel, styles, sans JS | 2 | 249 | ↩️ 2026-11-06 : livrée puis annulée par `git revert` à la demande de @pj35 ; l'interface sera portée sur la page Blindabilité (spec à réviser) |
 | 251 | Clôture : exe vérifié, `PROJECT_STRUCTURE.md`, `CHANGELOG.md`, statuts, README des specs, `TODO.md` | 1 | 250 | ↩️ 2026-11-06 : clôture faite (suite verte, exe vérifié), puis interface retirée ; à refaire avec la spec révisée |
 
-### Lot SPEC-49, suggestions de pool à swiper (✅ livrée le 2026-11-03, recette @pj35 à faire)
+### Lot SPEC-49, suggestions de pool à swiper (✅ livrée le 2026-11-03, recette validée le 2026-11-10)
 
 [SPEC-49](docs/specs/SPEC-49-suggestions-de-pool-a-swiper.md) : rien ne propose de changer de pool quand les données
 changent, et avec la maîtrise l'avis serait muet (meilleur échange +0,00 aux trois scrapes). Sans maîtrise, une carte
@@ -509,7 +509,7 @@ au top aujourd'hui, 20 cartes, Gangplank pour Olaf en tête (+0,26). Découpage 
 | 244 | `pool_suggestions.html`, partiel, `pool_swipe.js`, styles, bouton sur l'écran Pool, lien sur l'écran Données | 3 | 243 | ✅ |
 | 245 | Clôture : exe vérifié, `PROJECT_STRUCTURE.md`, `CHANGELOG.md`, statuts, README des specs, `TODO.md` | 1 | 244 | ✅ |
 
-### Lot SPEC-48, la réponse du vis-à-vis remplace le minimax (✅ livrée le 2026-11-01, recette @pj35 à faire)
+### Lot SPEC-48, la réponse du vis-à-vis remplace le minimax (✅ livrée le 2026-11-01, recette validée le 2026-11-10)
 
 [SPEC-48](docs/specs/SPEC-48-reponse-du-vis-a-vis.md) : rejoué sur 219 parties, le minimax ne bat jamais le calcul immédiat
 avec maîtrise, mais WIN LANE, stratégie active, en dépend (24 à 35 % des n° 1). Une réponse à un pli du vis-à-vis non vu
@@ -523,7 +523,7 @@ garde le même n° 1 à 90 %, en moins de 0,1 ms en médiane. Découpage en SPEC
 | 239 | Écran Stratégies, constantes, `PickTurn.lane`, scripts supprimés | 2 | 236 | ✅ 2026-11-01 |
 | 240 | Clôture : exe vérifié, `PROJECT_STRUCTURE.md`, README, `TODO.md` (reports SPEC-17 retirés), `CHANGELOG.md`, statuts | 2 | 238, 239 | ✅ 2026-11-01 |
 
-### Lot SPEC-47, la draft dans la win chance en partie (🟡 implémentée le 2026-11-01, recette @pj35 à faire)
+### Lot SPEC-47, la draft dans la win chance en partie (✅ livrée le 2026-11-01, recette validée le 2026-11-10)
 
 [SPEC-47](docs/specs/SPEC-47-draft-dans-la-win-chance.md) : la courbe part de ~50 % alors qu'à chaque extrême de draft
 le résultat observé s'en écarte de 7 à 8 pts. `draft` devient une variable du modèle, réentraîné sur le patch en
@@ -539,7 +539,7 @@ post-game suivent. Découpage en SPEC-47 §5 (tâches 230 à 235, 14 pts) :
 | 234 | `WINPROB_IMPACT_CONVENTION` à 3, doc, CHANGELOG, statuts | 1 | 232, 233 | ✅ 2026-11-01 |
 | 235 | Réentraînement réel, mesures en SPEC-47 §8 | 2 | 234 | ✅ 2026-11-01 : `wp-d819a71d`, Brier 0,1498 → 0,1488 après 10 min ; Brier ≤ 10 min non relevé |
 
-### Lot SPEC-46, stratégies de draft (✅ livrée le 2026-10-30, recette @pj35 à faire)
+### Lot SPEC-46, stratégies de draft (✅ livrée le 2026-10-30, recette validée le 2026-11-10)
 
 [SPEC-46](docs/specs/SPEC-46-strategies-de-draft.md) : sur 180 positions rejouées depuis les parties de @pj35,
 Olaf sort n° 1 à 95 %, la maîtrise pèse 0,33 logit sur le pool contre 0,06 pour le duel, et la recherche ne change
@@ -555,9 +555,9 @@ Découpage en SPEC-46 §5 (tâches 223 à 229, 22 pts) :
 | 226 | Migration `predictions.strategy`, `insert_prediction`, `FinalDraftAnalyzer`, tests | 2 | 223 | ✅ 2026-10-30 : 5 tests ; migration `a3f6c1d8b7e2` aller-retour sur une copie de `data/db.db` (293 prédictions gardées, `strategy` à NULL) ; `alembic upgrade head` requis côté @pj35 |
 | 227 | Snapshot, cartes, sélecteur de la rangée, `POST /strategies/active`, `draft.js`, CSS | 3 | 225 | ✅ 2026-10-30 : 15 tests ; ligne de décomposition sur les cartes, suite et profondeur réservées aux stratégies à recherche ; **rendu à voir par @pj35** |
 | 228 | Écran Stratégies : `strategies.py`, routes, gabarits, navigation, validation, tests | 5 | 224, 227 | ✅ 2026-10-30 : 11 tests ; refus affichés sans écriture, stratégies système figées ; **rendu à voir par @pj35** |
-| 229 | Clôture : exe vérifié, `PROJECT_STRUCTURE.md`, README, `CHANGELOG.md`, statuts | 2 | 226, 228 | ✅ 2026-10-30 : exe de 89,2 Mo, `check_exe_assets.py` : 60 fichiers du client et 17 modules présents ; **recette @pj35** : `alembic upgrade head`, puis en draft classée basculer de Simple à Counter puis à Complet et relire la dernière ligne de `predictions` |
+| 229 | Clôture : exe vérifié, `PROJECT_STRUCTURE.md`, README, `CHANGELOG.md`, statuts | 2 | 226, 228 | ✅ 2026-10-30 : exe de 89,2 Mo, `check_exe_assets.py` : 60 fichiers du client et 17 modules présents ; **recette @pj35, validée le 2026-11-10** : `alembic upgrade head`, puis en draft classée basculer de Simple à Counter puis à Complet et relire la dernière ligne de `predictions` |
 
-### Lot SPEC-45, affichage des LP sur l'écran post-game (✅ livrée le 2026-10-28, recette @pj35 à faire)
+### Lot SPEC-45, affichage des LP sur l'écran post-game (✅ livrée le 2026-10-28, recette validée le 2026-11-10)
 
 [SPEC-45](docs/specs/SPEC-45-affichage-des-lp-post-game.md) : sur la revue, le nombre du « +19 LP » sort en
 15 px gris, la règle `.lp-gain span` de la ligne de rang attrapant aussi le compteur. Pour 6 parties classées
@@ -570,9 +570,9 @@ mention remake. Arbitrages validés le 2026-10-28. Découpage en SPEC-45 §5 (t�
 | 219 | Correctif CSS `.lp-gain > span` + régression `test_regression_lp_counter_style.py` | 1 | — | ✅ 2026-10-28 : 2 tests, rouges sans le correctif, verts après |
 | 220 | `lp_view` : ton gain / perte / neutre, « 0 LP », mention remake, liste des parties + tests | 2 | 219 | ✅ 2026-10-28 : `lp_view` seule source de l'encart (`tone`, `note`) ; 6 tests |
 | 221 | LP tardives : `rank_captured`, partiel `lp_gain.html`, route `/parties/{id}/lp`, écouteur `coaching.js` + tests | 3 | 220 | ✅ 2026-10-28 : publication best-effort dans `write_lp_snapshots`, `#lp-slot` en `display: contents` ; 8 tests |
-| 222 | Clôture : critères, `CHANGELOG.md`, statut, README des specs, `TODO.md` | 1 | 221 | ✅ 2026-10-28 ; recette @pj35 à faire (une classée : « +19 LP » entier dans le dégradé ; LP tardives : l'encart apparaît sans recharger) |
+| 222 | Clôture : critères, `CHANGELOG.md`, statut, README des specs, `TODO.md` | 1 | 221 | ✅ 2026-10-28 ; recette validée par @pj35 le 2026-11-10 (une classée : « +19 LP » entier dans le dégradé ; LP tardives : l'encart apparaît sans recharger) |
 
-### Lot SPEC-44, un pool par poste (✅ livrée le 2026-10-28, recette @pj35 à faire)
+### Lot SPEC-44, un pool par poste (✅ livrée le 2026-10-28, recette validée le 2026-11-10)
 
 [SPEC-44](docs/specs/SPEC-44-un-pool-par-poste.md) : @pj35 joue plusieurs rôles, mais le Live Coach garde un
 seul pool par session, et le rôle de ce pool passe avant le poste assigné (avec « Top playable » et un poste
@@ -587,9 +587,9 @@ Le pool par défaut couvre son propre rôle tant qu'aucun pool n'y est désigné
 | 215 | `user_prefs` : `pools_by_role`, lecture tolérante, `save_role_pool` + tests | 2 | — || ✅ 2026-10-28 : `resolve_pool_for_lane` (poste, défaut, système) partagé par 216 et 217 ; 12 tests |
 | 216 | Live Coach : `select_for_position` au premier tick, `launch_pool_name`, `pool_declared_lane`, `handle_pool_command` garde le poste, bans précalculés seulement sur leur lane + tests | 5 | 215 || ✅ 2026-10-28 : `select_at_launch` (pool de lancement) et `select_for_position` ; pool par défaut lu dans les préférences pour le client, pool de lancement en console ; sauvegarde du coach console corrigée (gardait le pool du dernier poste, effaçait les pools par poste) ; 15 tests, dont la régression `test_regression_pool_per_position.py` |
 | 217 | Écran Pool : désignation par poste, en-tête, badges, « Pool par défaut » + tests | 3 | 215 || ✅ 2026-10-28 : rangée de 5 postes sur le pool ouvert, en-tête « Par défaut · Top · … » avec la source de chaque poste, badges « Défaut » et postes ; 6 tests |
-| 218 | Clôture : critères, `CHANGELOG.md`, statut, README des specs, `TODO.md` | 1 | 216, 217 | ✅ 2026-10-28 ; recette @pj35 à faire (désigner Mid et Support, une classée : `[INFO] Poste …`, blind pick et bans du poste ; une normale blind repart sur le pool par défaut) |
+| 218 | Clôture : critères, `CHANGELOG.md`, statut, README des specs, `TODO.md` | 1 | 216, 217 | ✅ 2026-10-28 ; recette validée par @pj35 le 2026-11-10 (désigner Mid et Support, une classée : `[INFO] Poste …`, blind pick et bans du poste ; une normale blind repart sur le pool par défaut) |
 
-### Lot SPEC-43, force intrinsèque et recalibrage sur `crawl.db` (✅ livrée le 2026-10-25, recette @pj35 à faire)
+### Lot SPEC-43, force intrinsèque et recalibrage sur `crawl.db` (✅ livrée le 2026-10-25, recette validée le 2026-11-10)
 
 [SPEC-43](docs/specs/SPEC-43-force-intrinseque-et-recalibrage.md) fait suite à une défaite sur Olaf (prédiction
 257). Le moteur n'était pas en faute : Olaf reste 1er de la pool, porté par la maîtrise. Mais le backtest sur
@@ -606,7 +606,7 @@ surconfiant (coefficient 0,66). Terme par champion dans `GameEvaluator.contribut
 | 211 | `config_constants` : K de 210, `MODEL_VERSION` `spec43-v1` ; 210 relancé, coefficient en vigueur ≈ 1 | 1 | 210 | ✅ 2026-10-25 : purge du 16.20 par le crawler, K pris sur les 96 987 parties du cache (décision @pj35) : K_MATCHUP 0,68, K_SYNERGY 1,49, K_INTRINSIC 0,83 ; sur 5 158 parties 16.21, AUC en vigueur 0,538 → 0,548 et coefficient 0,995 [0,75 ; 1,24] |
 | 212 | `calibration.json` : `K_INTRINSIC`, garde de version périmée, SPEC-39 (console et client) + tests | 3 | 211 | ✅ 2026-10-25 (passée avant 211, valeurs indépendantes) : `K_INTRINSIC` facultatif, `base_version`, fichier d'une autre base ignoré avec `[INFO]`, proposition à trois K ; 15 tests ajoutés |
 | 213 | Étude de maîtrise relancée sur le nouveau logit, `MASTERY_LOGIT_PER_POINT` revu si hors IC95 ; §8 | 2 | 211 | ✅ 2026-10-25 : 4 865 parties seulement (purge), b = −0,003 [−0,46 ; +0,44], IC 35 fois plus large que celui de SPEC-41 qu'il contient : coefficient gardé à 0,0717, à relancer sur un patch plus fourni |
-| 214 | Clôture : suppression du script SPEC-18, SPEC-18, README des specs, `CHANGELOG.md`, `TODO.md` | 1 | 212, 213 | ✅ 2026-10-25 ; recette @pj35 à faire (une draft réelle : cartes cohérentes, prédiction journalisée sous `spec43-v1`) |
+| 214 | Clôture : suppression du script SPEC-18, SPEC-18, README des specs, `CHANGELOG.md`, `TODO.md` | 1 | 212, 213 | ✅ 2026-10-25 ; recette validée par @pj35 le 2026-11-10 (une draft réelle : cartes cohérentes, prédiction journalisée sous `spec43-v1`) |
 
 ### Lot SPEC-42, maîtrise selon le matchup (✅ close le 2026-10-22, rien d'adopté)
 
@@ -626,7 +626,7 @@ même règle de choix que SPEC-41. Arbitrages validés le 2026-10-22. Découpage
 | 207 | *Conditionnelle (205)* : sous-ligne « dont toi sur X contre Y » (snapshot, cartes, console) + tests | 2 | 206 | ❌ Abandonnée le 2026-10-22 : rien d'adopté (205) |
 | 208 | Clôture : critères, `CHANGELOG.md`, statuts, README des specs | 1 | 205 (207 si adoptée) | ✅ 2026-10-22 |
 
-### Lot SPEC-41, maîtrise personnelle dans le moteur de draft (✅ livrée le 2026-10-21, recette @pj35 à faire)
+### Lot SPEC-41, maîtrise personnelle dans le moteur de draft (✅ livrée le 2026-10-21, recette validée le 2026-11-10)
 
 [SPEC-41](docs/specs/SPEC-41-maitrise-personnelle-dans-le-moteur.md) ajoute au moteur un terme de maîtrise par
 champion, tiré de l'impact ΔP de SPEC-20 (et non du winrate). Sur 5 parties, Gnar fait 3 victoires mais un impact de
@@ -646,9 +646,9 @@ le rattrapage dans `game_records` et la prédiction journalisée sans le terme. 
 | 200 | *Conditionnelle (199)* : `MasteryTerm`, terme à la racine de la recherche, `SearchResult.personal_points`, console + tests | 3 | 199 | ✅ 2026-10-21 : terme chargé au démarrage et à chaque nouvelle draft ; sur la vraie base Gnar −2,0 pts, Olaf +5,7, Ambessa −3,2 |
 | 201 | *Conditionnelle (199)* : grimoire, analyse finale (affichée seulement), blind pick + tests | 3 | 200 | ✅ 2026-10-21 : grimoire et analyse finale affichée avec ma maîtrise, prédiction journalisée sur la draft seule, blind pick en points de victoire |
 | 202 | *Conditionnelle (199)* : snapshot et sous-ligne « dont toi sur X » des cartes + tests | 2 | 200 | ✅ 2026-10-21 : sous-ligne « dont toi sur X : ±n pts (k parties) » ou « aucune partie sur X » ; 302 tests du client et des régressions verts |
-| 203 | Clôture : critères, `CHANGELOG.md`, statuts, README des specs | 1 | 199 (202 si adoptée) | ✅ 2026-10-21 ; recette @pj35 à faire (une draft réelle avec Gnar dans la pool : sous-ligne « dont toi sur Gnar », classement) |
+| 203 | Clôture : critères, `CHANGELOG.md`, statuts, README des specs | 1 | 199 (202 si adoptée) | ✅ 2026-10-21 ; recette validée par @pj35 le 2026-11-10 (une draft réelle avec Gnar dans la pool : sous-ligne « dont toi sur Gnar », classement) |
 
-### Lot SPEC-40, victoire immédiate sur les cartes de draft (✅ livrée le 2026-10-20, recette @pj35 à faire)
+### Lot SPEC-40, victoire immédiate sur les cartes de draft (✅ livrée le 2026-10-20, recette validée le 2026-11-10)
 
 [SPEC-40](docs/specs/SPEC-40-victoire-immediate-sur-les-cartes-de-draft.md) aligne les cartes de recommandation et la
 jauge sur le grimoire. Aujourd'hui la carte montre la fin de draft attendue de la recherche (adversaires qui contrent
@@ -660,9 +660,9 @@ survolé. Arbitrages validés le 2026-10-20. Découpage en SPEC-40 §5 (tâches 
 | # | Tâche | Pts | Dépend de | État |
 |---|---|---|---|---|
 | 194 | `_immediate`, cartes (gros chiffre, écart, sous-ligne) et `state.win` / `state.names` dans `draft_view.py` ; test de régression rouge puis vert ; tests de la jauge et du repli | 3 | — | ✅ 2026-10-20 : régression rouge puis verte (carte Aatrox 54,82 % → 50,27 %, comme sa tuile) ; `state.win` couvre tout champion libre |
-| 195 | Barre du grimoire (`_info`) avec les deux chiffres et son test ; `CHANGELOG.md`, statuts, README des specs ; recette @pj35 | 1 | 194 | ✅ 2026-10-20 : barre à deux chiffres, `test_meta_des_tuiles_en_pick` mis au nouveau texte ; suite complète 2 847 tests verte ; recette @pj35 à faire (cartes = tuiles du grimoire en draft réelle) |
+| 195 | Barre du grimoire (`_info`) avec les deux chiffres et son test ; `CHANGELOG.md`, statuts, README des specs ; recette @pj35 | 1 | 194 | ✅ 2026-10-20 : barre à deux chiffres, `test_meta_des_tuiles_en_pick` mis au nouveau texte ; suite complète 2 847 tests verte ; recette validée par @pj35 le 2026-11-10 (cartes = tuiles du grimoire en draft réelle) |
 
-### Lot SPEC-39, écran Calibration : diagnostic complet et « Appliquer » (✅ livrée le 2026-10-20, recette @pj35 à faire)
+### Lot SPEC-39, écran Calibration : diagnostic complet et « Appliquer » (✅ livrée le 2026-10-20, recette validée le 2026-11-10)
 
 [SPEC-39](docs/specs/SPEC-39-calibration-appliquee-depuis-le-client.md) complète l'écran Calibration avec la fin de
 `calibrate_model.py` : facteur d'échelle, intervalle à 90 % et K suggérés, affichés d'office (66 ms de calcul). Un
@@ -675,9 +675,9 @@ intervalle de −1,17 à 2,25, refus « l'intervalle atteint 0 »). Arbitrages v
 |---|---|---|---|---|
 | 191 | `Diagnostic` et `diagnose()` dans `calibration_notice.py`, `build_proposal` qui s'appuie dessus ; `phase_reason` dans `data.py` ; champs de `calibration_view` ; tests | 3 | — | ✅ 2026-10-20 : 13 tests ; `phase_reason` dans `data.py` (cycle d'import avec `donnees.py`) ; sur `db.db` : facteur 0,613, intervalle [−1,17 ; 2,25], refus « l'intervalle atteint 0 » |
 | 192 | Route `POST /calibration/appliquer`, phase dans `GET /calibration`, gabarit et CSS ; tests de route | 3 | 191 | ✅ 2026-10-20 : 9 tests (409 en draft, en partie et sur refus du diagnostic, 403 sans jeton, écriture de `calibration.json` en `+cal1`, 500 sans changement) ; garde htmx des 409/500 sur `#calib`, la cible de `htmx:beforeSwap` ; échange réel à voir à la recette |
-| 193 | Clôture : `CHANGELOG.md`, statuts, README des specs, recette @pj35 | 1 | 192 | ✅ 2026-10-20 (docs) ; recette @pj35 à faire (bouton grisé avec la raison sur l'écran réel) |
+| 193 | Clôture : `CHANGELOG.md`, statuts, README des specs, recette @pj35 | 1 | 192 | ✅ 2026-10-20 (docs) ; recette validée par @pj35 le 2026-11-10 (bouton grisé avec la raison sur l'écran réel) |
 
-### Lot SPEC-38, trois pages de runes OneTricks au choix (✅ livrée le 2026-10-20, recette @pj35 à faire)
+### Lot SPEC-38, trois pages de runes OneTricks au choix (✅ livrée le 2026-10-20, recette validée le 2026-11-10)
 
 [SPEC-38](docs/specs/SPEC-38-trois-pages-de-runes-onetricks.md) ajoute à la colonne « Runes & sorts » de la draft un
 écran superposé avec les trois pages de runes les plus recommandées par OneTricks : la page de l'import du lock-in
@@ -691,9 +691,9 @@ OneTricks de plus (pages en cache). Arbitrages validés le 2026-10-20. Découpag
 | 187 | `RunePage`, `loadout.rune_pages()`, `LOADOUT_RUNE_PAGES` + 5 tests sur fixtures | 3 | — | ✅ 2026-10-20 : 7 tests (Ambessa 8,2 / 7,6 / 6,9 %, parts du duel Jinx contre Draven, page adaptée en tête, sans doublon, une page, `popRunes` absent, `count`) |
 | 188 | `draft_loadout.pages()` et route `GET /draft/loadout/pages` + tests | 2 | 187 | ✅ 2026-10-20 : 6 tests (trois pages Jinx, page 1 = plan, parts du duel contre Draven sur 40 parties, pages après verrouillage depuis OneTricks, champion inconnu et page indisponible, sans champ select) |
 | 189 | Écran « Pages OneTricks » : bouton, écran superposé, `pageCard` paramétré, `is-diff`, « Choisir » qui écrit, CSS + test du script | 5 | 188 | ✅ 2026-10-20 : `node --check` propre, test du script ; rendu à juger à la recette |
-| 190 | Clôture : `CHANGELOG.md`, statuts, README des specs, recette @pj35 en draft réelle | 1 | 189 | ✅ 2026-10-20 (docs) ; recette @pj35 à faire |
+| 190 | Clôture : `CHANGELOG.md`, statuts, README des specs, recette @pj35 en draft réelle | 1 | 189 | ✅ 2026-10-20 (docs) ; recette validée par @pj35 le 2026-11-10 |
 
-### Lot SPEC-37, écran « Données » : actualiser la base depuis le client (✅ livrée le 2026-10-20, recette @pj35 à faire)
+### Lot SPEC-37, écran « Données » : actualiser la base depuis le client (✅ livrée le 2026-10-20, recette validée le 2026-11-10)
 
 [SPEC-37](docs/specs/SPEC-37-ecran-donnees-et-actualisation.md) ajoute au groupe Coaching un écran « Données » : un
 bouton « Actualiser » lance `run_pipeline` dans un fil du client, et la page (relue toutes les 2 s par htmx) suit
@@ -710,9 +710,9 @@ SPEC-37 §5 (tâches 181 à 186, 18 pts) :
 | 183 | `src/client/donnees.py` : `UpdateJob` (fil, état, ETA, logging restauré, `cancel`) et `donnees_view` ; constantes `DONNEES_*` | 3 | 181 | ✅ 2026-10-20 : 9 tests (lanes et champions en cours, échecs, ETA à 5 pages, double lancement, logging restauré, run qui lève, arrêt, `db_meta` tolérant, vue) |
 | 184 | Écran Données : routes, `NAV`, gabarits, CSS, refus en `draft`/`game`, bandeau de l'écran Draft | 5 | 182, 183 | ✅ 2026-10-20 : 7 tests (page et lien actif, sondage seulement pendant un run, 409 en draft et en partie, 403 sans jeton, bandeau du Draft) ; bandeau à clé `updating` pour la synchro par clé de `draft.js` |
 | 185 | Fermeture gardée : `window.run(should_close)`, dialogue de confirmation, `cancel` dans `launch.py` | 2 | 183 | ✅ 2026-10-20 : 4 tests (fermeture libre à l'arrêt, « non » garde la fenêtre, « oui » arrête avec le délai, câblage sur faux `webview` et garde en échec) ; dialogue réel à voir à la recette |
-| 186 | Clôture : `CHANGELOG.md`, statuts, README des specs, `docs/PROJECT_STRUCTURE.md`, recette @pj35 | 1 | 184, 185 | ✅ 2026-10-20 (docs) ; recette @pj35 à faire |
+| 186 | Clôture : `CHANGELOG.md`, statuts, README des specs, `docs/PROJECT_STRUCTURE.md`, recette @pj35 | 1 | 184, 185 | ✅ 2026-10-20 (docs) ; recette validée par @pj35 le 2026-11-10 |
 
-### Lot SPEC-36, morts sans contrepartie : axe et revue (✅ livrée le 2026-10-20, recette @pj35 à faire)
+### Lot SPEC-36, morts sans contrepartie : axe et revue (✅ livrée le 2026-10-20, recette validée le 2026-11-10)
 
 [SPEC-36](docs/specs/SPEC-36-morts-sans-contrepartie.md) traduit SPEC-35 en jeu : au top, une mort sans contrepartie
 avant 14 min coûte −6,6 pts de win chance, et tes parties à 2 ou plus se gagnent à 27 % (64 % à 0). La règle passe
@@ -726,7 +726,7 @@ décision ; arbitrages validés le 2026-10-20. Découpage en SPEC-36 §5 (tâche
 | 177 | `metrics.death_trades` (règle déplacée de `moneyball.py`), métrique `untraded_deaths_14`, grille des cinq rôles, `GRID_VERSION` 2 | 3 | — | ✅ 2026-10-20 : 8 tests (échange le plus proche, fenêtre, métrique égale à l'étude, grille) ; tests Moneyball inchangés |
 | 178 | Référence `fixed` : `GOAL_FIXED_TARGETS`, `set_goal` | 2 | 177 | ✅ 2026-10-20 : 4 tests (axe fixe sans historique, verdict à ≤ 1, route de l'accueil, choix sur une place libre) |
 | 179 | Revue : panneau « Tes morts avant 14 min », `MONEYBALL_DEATH_PTS` | 3 | 177 | ✅ 2026-10-20 : 3 tests (morts échangées et ΔP stocké, mort sans contrepartie dans la page, pas de panneau sans timeline) ; un objectif inconnu d'`event_kind` (Atakhan) se dit « Objectif » |
-| 180 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure, recette @pj35 | 1 | 178, 179 | ✅ 2026-10-20 (docs) ; recette @pj35 à faire |
+| 180 | Clôture : `CHANGELOG.md`, statuts, README des specs, structure, recette @pj35 | 1 | 178, 179 | ✅ 2026-10-20 (docs) ; recette validée par @pj35 le 2026-11-10 |
 
 ### Lot SPEC-35, étude « Moneyball » du début de partie (✅ livrée le 2026-10-20, rien d'adopté)
 
@@ -795,6 +795,7 @@ rétréci. Le modèle de prédiction ne change pas (approche C, @pj35).
 | Tâche | Spec | Rouvrir quand |
 |---|---|---|
 | Modèle de win chance plus riche (arbre boosté, puis réseau de neurones), entraînement éventuellement dans un projet adjacent | SPEC-20 §13 | La logistique de la phase 2 est mesurée (Brier, calibration, coût de l'exclusion de l'or) et laisse une marge |
+| Draft lente : 11 drafts sur 212 vues après plus de 6 s (max 21,8 s) et étape `draft` au-delà de 6 s à 38 reprises en sélection (max 28,7 s le 2026-11-07), cause non cherchée | SPEC-28, `docs/RECETTE_2026_11.md` §2 | @pj35 reprend le sujet (reporté le 2026-11-10) |
 | Moteur d'optimisation, phase A (shrinkage mesuré du WPA) | SPEC-16 §2 | Coachless donne son autorisation écrite : le spike (SPEC-15 §2.1.1, 2026-09-24) confirme un WPA par composant avec échantillons, mais les CGU interdisent l'accès direct à l'API |
 
 **Abandonné** (ADR-003) : la table `build_snapshots`, l'étape de collecte du pipeline, l'alerte

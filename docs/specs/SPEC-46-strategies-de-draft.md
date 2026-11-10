@@ -1,6 +1,6 @@
 # SPEC-46 — Stratégies de draft
 
-**Statut** : ✅ Livrée le 2026-10-30, recette @pj35 à faire (`alembic upgrade head`, bascule en draft classée réelle).
+**Statut** : ✅ Livrée le 2026-10-30, recette validée par @pj35 le 2026-11-10 (`docs/RECETTE_2026_11.md`).
 
 **Origine** : @pj35, 2026-10-30 — « J'ai l'impression qu'on a trop compliqué le moteur d'évaluation des
 drafts. Je pense qu'on devrait mettre une option visuelle pour switch entre plusieurs stratégies (et une

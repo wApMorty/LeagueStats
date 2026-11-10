@@ -1,6 +1,6 @@
 # SPEC-45 — Affichage des LP sur l'écran post-game
 
-**Statut** : ✅ Livrée le 2026-10-28 (tâches 219 à 222), recette @pj35 à faire. Arbitrages validés par @pj35 le 2026-10-28 (§2).
+**Statut** : ✅ Livrée le 2026-10-28 (tâches 219 à 222), recette validée par @pj35 le 2026-11-10 (`docs/RECETTE_2026_11.md`). Arbitrages validés par @pj35 le 2026-10-28 (§2).
 
 **Origine** : @pj35, 2026-10-28 — « Il faut réparer l'affichage des LP sur l'écran post-game. » Symptôme
 précisé en interview : le « + » et le « LP » sont gros, le nombre entre les deux est petit et gris.

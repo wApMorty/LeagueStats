@@ -1,6 +1,6 @@
 # SPEC-26 — Partie trouvée persistante et bascule vers « En partie »
 
-**Statut** : ✅ Implémentée le 2026-10-08 (3 tâches, 10 pts) ; **recette en conditions réelles à faire par @pj35**
+**Statut** : ✅ Implémentée le 2026-10-08 (3 tâches, 10 pts) ; **recette en conditions réelles validée par @pj35 le 2026-11-10** (`docs/RECETTE_2026_11.md`)
 (§6, vérification de bout en bout). Rédigée le 2026-10-08 ; écran cible et déclencheur de la bascule validés par
 @pj35 (§2), les trois réglages « à valider » (30 s, texte d'attente, pas de réglage) validés avec leurs valeurs
 par défaut.

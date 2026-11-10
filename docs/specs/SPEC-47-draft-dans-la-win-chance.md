@@ -1,7 +1,6 @@
 # SPEC-47 — La draft dans la win chance en partie
 
-**Statut** : 🟡 Implémentée le 2026-11-01 sur la branche `claude/clever-jang-6d19f8`, à fusionner. Recette @pj35
-à faire.
+**Statut** : ✅ Livrée le 2026-11-01 (branche `claude/clever-jang-6d19f8`, fusionnée dans `master`). Recette validée par @pj35 le 2026-11-10 (`docs/RECETTE_2026_11.md`).
 
 **Origine** : @pj35, 2026-10-19 : la courbe de win chance part toujours de ~50 % sans tenir compte de la draft.
 Terme écarté ce jour-là au seuil de 0,002, rejugé le 2026-11-01 sans seuil
@@ -193,4 +192,4 @@ relevé, et `adopt` ne regarde que les images après 10 min.
 | `read_logit` | `Database.connect_read_only` (nouveau) | `connect` crée des index, cette lecture n'écrit rien (test) |
 
 `draft_reader` lève si `db.db` ne se lit pas : un réentraînement à draft nulle silencieuse donnerait un poids nul.
-Pas lu dans une partie réelle : la vérification de bout en bout du §6 reste la recette de @pj35.
+Pas lu dans une partie réelle : la vérification de bout en bout du §6 était la recette de @pj35, validée le 2026-11-10.

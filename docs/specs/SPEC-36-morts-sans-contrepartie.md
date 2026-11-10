@@ -1,7 +1,6 @@
 # SPEC-36 — Morts sans contrepartie : axe de travail et revue de partie
 
-**Statut** : ✅ Livrée le 2026-10-20 (tâches 177 à 180) ; recette réelle de @pj35 à faire (§6, vérification de bout
-en bout).
+**Statut** : ✅ Livrée le 2026-10-20 (tâches 177 à 180) ; recette réelle validée par @pj35 le 2026-11-10 (`docs/RECETTE_2026_11.md`).
 
 **Origine** : @pj35, 2026-10-20, après la mesure de SPEC-35 : « Comment traduire ces stats en stratégie pour gagner ? »,
 puis : « Rédige une spec avec les deux : axe morts sans contrepartie avant 14 min (je lève le seuil, à ma décision) et

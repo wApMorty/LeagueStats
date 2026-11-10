@@ -1,6 +1,6 @@
 # SPEC-48 — La réponse du vis-à-vis remplace le minimax
 
-**Statut** : ✅ Livrée le 2026-11-01, recette @pj35 à faire (draft classée réelle sous WIN LANE, §6).
+**Statut** : ✅ Livrée le 2026-11-01, recette validée par @pj35 le 2026-11-10 (`docs/RECETTE_2026_11.md`).
 
 **Origine** : @pj35, 2026-11-01 — « Est-ce que tu crois qu'on pourrait déclarer une stratégie optimale qui
 s'appuierait sur nos matrices de matchups et de synergies ? », puis, après la comparaison, feu vert pour retirer le

@@ -1,6 +1,6 @@
 # SPEC-56 — Compétences, core et bottes du duel
 
-**Statut** : ✅ Livrée le 2026-11-10 (tâches 278 à 281), recette @pj35 en partie réelle à faire. Arbitrages tranchés par @pj35 le 2026-11-10.
+**Statut** : ✅ Livrée le 2026-11-10 (tâches 278 à 281), recette en partie réelle validée par @pj35 le 2026-11-10 (`docs/RECETTE_2026_11.md`). Arbitrages tranchés par @pj35 le 2026-11-10.
 
 **Origine** : @pj35, 2026-11-10 — partie Malphite top contre Nasus (`game_id` 8041820924) : « le Client m'a suggéré le
 mauvais Skill Order, et les items après le core build ne correspondaient pas au core build (qui était un peu particulier

@@ -1,7 +1,7 @@
 # SPEC-43 — Force intrinsèque dans le moteur, recalibrage sur `crawl.db`
 
 **Statut** : ✅ Livrée le 2026-10-25 (tâches 209 à 214), arbitrages de §2 validés par @pj35 le 2026-10-25. K adoptés
-sur les 96 987 parties du cache de §1.3, la purge du crawler ayant retiré le 16.20 (§8, décision de @pj35).
+sur les 96 987 parties du cache de §1.3, la purge du crawler ayant retiré le 16.20 (§8, décision de @pj35). Recette validée par @pj35 le 2026-11-10 (`docs/RECETTE_2026_11.md`).
 
 **Origine** : @pj35, 2026-10-25 — « Il y a définitivement un problème avec l'algorithme de recommandation de
 champions. Je viens de me retrouver à pick Olaf dans une game catastrophique pour mon champion. […] trouve-moi une

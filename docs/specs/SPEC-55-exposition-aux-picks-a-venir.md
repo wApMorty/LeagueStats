@@ -1,6 +1,6 @@
 # SPEC-55 — Exposition aux picks à venir : l'Arbre classe par la règle D
 
-**Statut** : ✅ Livrée le 2026-11-09, recette @pj35 à faire (draft classée réelle sous Arbre). Écarts : les champs du
+**Statut** : ✅ Livrée le 2026-11-09, recette validée par @pj35 le 2026-11-10 (`docs/RECETTE_2026_11.md`). Écarts : les champs du
 snapshot sont faits en tâche 274 avec le Live Coach (le commit restait vert) ; `_tree` sonde la base avant
 `exposure_tree` (les dépôts avalent les erreurs de lecture) ; libellé Arbre de l'écran Stratégies réécrit. Mesuré sur
 la base du 8 nov. : arbre de l'écran Pool 0,58 s (39 adversaires), classement D 142 ms à froid.

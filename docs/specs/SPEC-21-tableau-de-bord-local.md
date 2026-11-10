@@ -7,8 +7,8 @@ remplacée). Forme, périmètre, ordre, temps réel et niveau d'écriture valid�
 (`docs/design/client_alchimie/`) : 37 tâches, et une fiche par écran à coder (§4.10, §5). **Validé le
 2026-10-05** : ordre des lots, taille de la fenêtre, thème clair reporté, écrans sans maquette extrapolés
 d'« Alchimie ». Point d'entrée et **écritures du coaching validés le 2026-10-05**. **Lot 4 (coaching et post-game) fait le
-2026-10-05** : tâches 50 à 54, 71, 75, 95 et 56 ; reste la recette de @pj35 (rendu des écrans, clic sur les axes, partie
-réelle). **Lots 5 et 6 faits le 2026-10-05** : tâches 76 à 83, relevé des endpoints en §10 ; reste la recette de @pj35 (rendu des écrans, lobby et file en conditions réelles).
+2026-10-05** : tâches 50 à 54, 71, 75, 95 et 56 ; recette validée par @pj35 le 2026-11-10 (rendu des écrans, clic sur les axes, partie
+réelle). **Lots 5 et 6 faits le 2026-10-05** : tâches 76 à 83, relevé des endpoints en §10 ; recette validée par @pj35 le 2026-11-10 (rendu des écrans, lobby et file en conditions réelles).
 
 **Origine** : feature candidate 5 du `TODO.md` (ex-tâche #6, `ROADMAP_2026.md` Horizon 3),
 repriorisée le 2026-09-26. Reformulée par @pj35 le 2026-10-04 : « bien plus qu'un rapport HTML en
@@ -20,7 +20,7 @@ coaching, et en revoyant la draft et le post-game avec le Live Coach. » Ajout l
 discuter avec @pj35).
 
 **Effort** : ~33 jours, 37 tâches, 163 pts, en six lots utilisables chacun seuls (§5), tous faits
-(163 pts) ; reste la recette de @pj35.
+(163 pts) ; recette validée par @pj35 le 2026-11-10 (`docs/RECETTE_2026_11.md`).
 
 ---
 

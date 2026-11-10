@@ -1,6 +1,6 @@
 # SPEC-34 — Vitrine : mode démo, captures, README et teaser
 
-**Statut** : ✅ Livrée le 2026-10-16, recette à l'œil de @pj35 à faire. Validée par @pj35 le 2026-10-15 (moteur du mode démo : approche A, pile réelle sur faux LCU) ; tâches 163 à 170 livrées le 2026-10-16 (mode démo, captures, README, teaser, GIF).
+**Statut** : ✅ Livrée le 2026-10-16, recette à l'œil validée par @pj35 le 2026-11-10 (`docs/RECETTE_2026_11.md`). Validée par @pj35 le 2026-10-15 (moteur du mode démo : approche A, pile réelle sur faux LCU) ; tâches 163 à 170 livrées le 2026-10-16 (mode démo, captures, README, teaser, GIF).
 
 **Origine** : @pj35, 2026-10-15 : « Je vais bientôt commencer à présenter le projet dans mon environnement
 professionnel. […] consolider la vitrine de ce projet en retravaillant le README, notamment en y intégrant des

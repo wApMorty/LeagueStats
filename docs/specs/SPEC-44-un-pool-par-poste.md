@@ -1,6 +1,6 @@
 # SPEC-44 — Un pool par poste
 
-**Statut** : ✅ Livrée le 2026-10-28 (tâches 215 à 218), recette @pj35 à faire. Validée le 2026-10-28 (tous les arbitrages de §2).
+**Statut** : ✅ Livrée le 2026-10-28 (tâches 215 à 218), recette validée par @pj35 le 2026-11-10 (`docs/RECETTE_2026_11.md`). Validée le 2026-10-28 (tous les arbitrages de §2).
 
 **Origine** : @pj35, 2026-10-28 — « J'aimerais pouvoir charger plusieurs champion pools car je joue
 plusieurs rôles. L'appli choisirait le bon pool en fonction du rôle sur lequel je tombe. »

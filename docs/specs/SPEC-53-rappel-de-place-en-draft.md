@@ -1,6 +1,6 @@
 # SPEC-53 — Rappel de place en draft : quelle place de pick demander
 
-**Statut** : ✅ Livrée le 2026-11-08, `python scripts/update_all.py --recompute-only` et recette @pj35 à faire. Arbitrages validés par @pj35 le même jour (§2). Écarts : la séquence est calculée après l'étape de réparation du pipeline (données définitives) plutôt que juste après les K de shrink ; le critère 2 est vérifié sur le scrape du 1er nov. conservé dans la sauvegarde du 7 nov. (sur le scrape du 7 nov., bleu pique le top en 9 au lieu de 8, chaque poste garde son blind ou counter) ; tâche 264 faite par le modèle principal (boucle de draft).
+**Statut** : ✅ Livrée le 2026-11-08, `python scripts/update_all.py --recompute-only` lancé, recette validée par @pj35 le 2026-11-10 (`docs/RECETTE_2026_11.md`). Arbitrages validés par @pj35 le même jour (§2). Écarts : la séquence est calculée après l'étape de réparation du pipeline (données définitives) plutôt que juste après les K de shrink ; le critère 2 est vérifié sur le scrape du 1er nov. conservé dans la sauvegarde du 7 nov. (sur le scrape du 7 nov., bleu pique le top en 9 au lieu de 8, chaque poste garde son blind ou counter) ; tâche 264 faite par le modèle principal (boucle de draft).
 
 **Origine** : @pj35, 2026-11-08 — « Maintenant qu'on a défini l'ordre de draft optimal, tu pourrais ajouter un
 rappel pendant la draft pour me dire quelle place je dois demander ? » Suite de SPEC-51 (`pick_order`).

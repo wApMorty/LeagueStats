@@ -1,6 +1,6 @@
 # SPEC-31 — Items situationnels liés au core, selon les chemins OneTricks
 
-**Statut** : ✅ Implémentée le 2026-10-12 (tâches 142 à 146) ; recette en partie réelle de @pj35 à faire (§6). Arbitrages de §2 validés par @pj35 le 2026-10-12 ; seuils de départ conservés après le banc (§1), banc lancé une fois (12 pages).
+**Statut** : ✅ Implémentée le 2026-10-12 (tâches 142 à 146) ; recette en partie réelle validée par @pj35 le 2026-11-10 (`docs/RECETTE_2026_11.md`). Arbitrages de §2 validés par @pj35 le 2026-10-12 ; seuils de départ conservés après le banc (§1), banc lancé une fois (12 pages).
 
 **Origine** : @pj35, 2026-10-12 : « Il arrive souvent que l'algorithme me recommande des items Situationnels qui n'ont pas
 de lien avec le Core Build. Est-ce qu'il serait possible d'améliorer l'algorithme d'optimisation des builds en suivant les

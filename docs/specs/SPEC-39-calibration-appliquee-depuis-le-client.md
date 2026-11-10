@@ -1,6 +1,6 @@
 # SPEC-39 — Écran Calibration : diagnostic complet et « Appliquer »
 
-**Statut** : ✅ Livrée le 2026-10-20 (tâches 191 à 193) ; recette réelle de @pj35 à faire (§6, vérification de bout en bout).
+**Statut** : ✅ Livrée le 2026-10-20 (tâches 191 à 193) ; recette réelle validée par @pj35 le 2026-11-10 (`docs/RECETTE_2026_11.md`).
 
 **Origine** : @pj35, 2026-10-20 — « Il faudrait que l'écran calibration me propose un bouton pour exécuter
 calibrate_model. »

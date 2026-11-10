@@ -1,8 +1,8 @@
 # SPEC-27 — Vérification des postes en partie et recalcul de l'écran « En partie »
 
 **Statut** : ✅ Livrée le 2026-10-12 (tâches 122 à 128). Approche validée par @pj35 (§3, A) ; déclencheur fixé par le
-relevé de la tâche 122 (§4.1). Recette en partie réelle et deux relevés de plus (dont une normale blind) à faire par
-@pj35 (§6).
+relevé de la tâche 122 (§4.1). Recette en partie réelle et deux relevés de plus (dont une normale blind) validés par
+@pj35 le 2026-11-10 (`docs/RECETTE_2026_11.md`).
 
 **Origine** : @pj35, 2026-10-08 : « vérifier une fois la game lancée que les ennemis sont au rôle prédit, et ajuster
 les données de l'écran "En partie", avec les données du matchup et les builds recommandés ».

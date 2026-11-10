@@ -3,7 +3,7 @@
 **Statut** : 🟢 **Validée par @pj35 le 2026-09-26**, schéma de suivi compris (§7, §8). Phase 0
 (spike) rendue le 2026-09-28 (§3.4), phase 1 (capture) livrée le 2026-09-29. Phases 2 à 4
 livrées le même jour, sans attendre les ~30 parties (@pj35) : exploration faite sur 24 parties
-(§5.3), à refaire vers 50. Écarts à la spec en §8.1. Recette en partie réelle à faire.
+(§5.3), à refaire vers 50. Écarts à la spec en §8.1. Recette en partie réelle soldée le 2026-11-10 (`docs/RECETTE_2026_11.md`, F5).
 
 **Origine** : @pj35, 2026-09-26 — « capitaliser sur notre capacité à repérer les fins de game et
 exploiter les stats pour que le live coach étende ses capacités à de l'analyse de gameplay […]

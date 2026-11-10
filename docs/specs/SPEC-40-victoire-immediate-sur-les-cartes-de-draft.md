@@ -1,6 +1,6 @@
 # SPEC-40 — Victoire immédiate sur les cartes de draft
 
-**Statut** : ✅ Livrée le 2026-10-20 (tâches 194 et 195) ; recette réelle de @pj35 à faire (§6, vérification de bout en bout).
+**Statut** : ✅ Livrée le 2026-10-20 (tâches 194 et 195) ; recette réelle validée par @pj35 le 2026-11-10 (`docs/RECETTE_2026_11.md`).
 
 **Origine** : @pj35, 2026-10-20 — « J'ai l'impression que l'assistant draft du GUI n'affiche pas le win chance
 recalculé pour chaque pick. Cependant je les retrouve correctement lorsque j'ouvre la page de sélection étendue. »

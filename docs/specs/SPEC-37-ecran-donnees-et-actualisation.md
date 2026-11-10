@@ -1,6 +1,6 @@
 # SPEC-37 — Écran « Données » : actualiser la base depuis le client
 
-**Statut** : ✅ Livrée le 2026-10-20 (tâches 181 à 186) ; recette réelle de @pj35 à faire (§6, vérification de bout en bout).
+**Statut** : ✅ Livrée le 2026-10-20 (tâches 181 à 186) ; recette réelle validée par @pj35 le 2026-11-10 (`docs/RECETTE_2026_11.md`).
 
 **Origine** : @pj35, 2026-10-20 — « Il manque un bouton/écran pour gérer le parsing des données depuis le GUI. Une
 page avec bouton "Actualiser" et état d'avancement (lane par lane, jauge 43/67 et champion en cours) semblerait

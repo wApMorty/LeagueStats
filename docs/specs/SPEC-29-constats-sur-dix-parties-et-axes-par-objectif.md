@@ -1,6 +1,6 @@
 # SPEC-29 — Constats sur dix parties et axes de travail choisis par le coach
 
-**Statut** : ✅ Livrée le 2026-10-11 (tâches 133 à 137), arbitrages de §2 validés par @pj35 le 2026-10-11 ; recette @pj35 à faire (§6, vérification de bout en bout).
+**Statut** : ✅ Livrée le 2026-10-11 (tâches 133 à 137), arbitrages de §2 validés par @pj35 le 2026-10-11 ; recette validée par @pj35 le 2026-11-10 (`docs/RECETTE_2026_11.md`).
 
 **Origine** : @pj35, 2026-10-10 : « Le GUI m'affiche les métriques marquantes de ma dernière game uniquement,
 dans la section Derniers constats de la page d'accueil. J'aimerais qu'il m'affiche les constats plus loin (sur les

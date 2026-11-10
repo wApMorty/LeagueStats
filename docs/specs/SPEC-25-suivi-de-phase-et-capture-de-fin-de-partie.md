@@ -1,6 +1,6 @@
 # SPEC-25 — Suivi de phase de jeu et capture de fin de partie
 
-**Statut** : ✅ Implémentée le 2026-10-07 (7 tâches, 24 pts) ; **recette en conditions réelles à faire par @pj35**
+**Statut** : ✅ Implémentée le 2026-10-07 (7 tâches, 24 pts) ; **recette en conditions réelles validée par @pj35 le 2026-11-10** (`docs/RECETTE_2026_11.md`)
 (§6, vérification de bout en bout : « Rejouer » dans les 3 s après l'écran de fin, et la pastille à voir). Rédigée le
 2026-10-07 ; source de phase, déclencheur, périmètre et spike validés par @pj35 (§2), les trois points « à valider » aussi.
 La fenêtre bornée par la phase est établie par le spike (§4.0) ; que « Rejouer » rapide en soit la cause reste à

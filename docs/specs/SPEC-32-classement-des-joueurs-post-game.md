@@ -1,6 +1,6 @@
 # SPEC-32 — Classement des joueurs en post-game : MVP et ACE
 
-**Statut** : ✅ Implémentée le 2026-10-12 (tâches 147 à 150) ; score, forme, règle de l'ACE et emplacement du panneau validés par @pj35 le 2026-10-12 ; recette à l'œil de @pj35 à faire (§6).
+**Statut** : ✅ Implémentée le 2026-10-12 (tâches 147 à 150) ; score, forme, règle de l'ACE et emplacement du panneau validés par @pj35 le 2026-10-12 ; recette à l'œil validée par @pj35 le 2026-11-10 (`docs/RECETTE_2026_11.md`).
 
 **Origine** : @pj35, 2026-10-12 : « J'aimerais que le post game donne également un classement des joueurs (en utilisant les
 icônes des champions via l'API DataDragons) en fonction de leur impact dans la game (avec un petit badge/couronne pour le
