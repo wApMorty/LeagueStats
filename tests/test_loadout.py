@@ -323,6 +323,7 @@ class TestAdaptToMatchup:
         assert start.general_share == pytest.approx(1 - 0.938, abs=0.001)
 
     def test_a_new_core_leaves_the_follow_up_items(self, monkeypatch):
+        monkeypatch.setattr(draft_config, "LOADOUT_CORE_MIN_GAMES", 0)
         monkeypatch.setattr(draft_config, "LOADOUT_MATCHUP_ALPHA", 0.3)
         build, subs = adapt_to_matchup(load(GENERAL), load(DUEL))
         blocks = dict(build.item_blocks)
@@ -566,6 +567,23 @@ class TestSkillOrder:
         assert build is not None and build.skills is None
         _, subs = adapt_to_matchup(page, load(MALPHITE_NASUS))
         assert "Compétences" not in [sub.category for sub in subs]
+
+
+class TestCoreFloor:
+    """SPEC-56 §4.2 : un core du duel ne remplace la page générale qu'à partir de 9 parties."""
+
+    def test_thin_duel_core_is_not_substituted(self):
+        build, subs = adapt_to_matchup(load(MALPHITE), load(MALPHITE_NASUS))
+        assert "Core" not in [sub.category for sub in subs]
+        core_blocks = [items for title, items in build.item_blocks if title.startswith("Core")]
+        assert core_blocks == [(3068, 3075)]
+        assert dict(build.item_blocks)["Situationnels"] != ()
+
+    def test_floor_is_read_from_the_config(self, monkeypatch):
+        monkeypatch.setattr(draft_config, "LOADOUT_CORE_MIN_GAMES", 4)
+        _, subs = adapt_to_matchup(load(MALPHITE), load(MALPHITE_NASUS))
+        core = next(sub for sub in subs if sub.category == "Core")
+        assert core.new == (6692, 6665)
 
 
 class TestOptionName:

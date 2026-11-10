@@ -369,6 +369,9 @@ class DraftConfig:
     # (5,2 %, 9 parties) reste (mesure du 2026-10-12, SPEC-31 §1).
     LOADOUT_PATH_MIN_SHARE: float = 0.05
     LOADOUT_PATH_MIN_GAMES: int = 3
+    # Parties de duel minimales pour qu'un core du duel remplace celui de la page générale :
+    # 3 × LOADOUT_PATH_MIN_GAMES, pour qu'au moins une suite du core passe le filtre (SPEC-56).
+    LOADOUT_CORE_MIN_GAMES: int = 9
     # Taille du bloc « Autres cores » : seconds items des autres cores (Ambessa 3, Jinx 2).
     LOADOUT_ALT_CORE_ITEMS: int = 4
     # Pages de runes proposées au choix dans la draft (SPEC-38) : la page de l'import, puis

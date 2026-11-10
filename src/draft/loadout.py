@@ -564,6 +564,13 @@ def adapt_to_matchup(general: dict, duel: dict) -> Optional[Tuple[Build, List[Su
             )
             if sub is not None
         ]
+        # SPEC-56 : un core du duel trop peu joué ne remplace pas celui de la page générale.
+        substitutions = [
+            sub
+            for sub in substitutions
+            if sub.category != "Core"
+            or round(sub.duel_share * sub.duel_games) >= draft_config.LOADOUT_CORE_MIN_GAMES
+        ]
         if all(sub.category != "Keystone" for sub in substitutions):
             substitutions = _rune_substitutions(build, general, duel, duel_games) + substitutions
         general_stats = general["firstItemStats"]["all"]["all"]
