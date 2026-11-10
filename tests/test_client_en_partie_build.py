@@ -121,6 +121,29 @@ def test_un_bloc_autres_cores_s_affiche_sans_etre_vise():
     assert done["next"] is None and done["complete"]  # « Autres cores » non possédés : pas de cible
 
 
+def test_bottes_en_premier_dans_le_core_se_visent_a_leur_rang():
+    """SPEC-56 §4.4 : la paire de bottes retenue est visée à son rang, sans bloc « Bottes » à part."""
+    blocks = [
+        {"title": "Départ (60%)", "items": [1120, 1036]},
+        {"title": "Core (45%, bottes 70%)", "items": [3047, 3071, 3053]},
+        {"title": "Autres bottes", "items": [3008]},
+    ]
+    lo = loadout(item_blocks=blocks, boots=[3047, 3008])
+    assert view([], analysis_loadout=lo)["next"]["id"] == 3047
+    assert view(owned(3047), analysis_loadout=lo)["next"]["id"] == 3071
+
+
+def test_bottes_alternatives_possedees_ne_sont_pas_visees_dans_le_core():
+    blocks = [
+        {"title": "Core (45%, bottes 70%)", "items": [3047, 3071, 3053]},
+        {"title": "Autres bottes", "items": [3008]},
+    ]
+    lo = loadout(item_blocks=blocks, boots=[3047, 3008])
+    assert view(owned(3008), analysis_loadout=lo)["next"]["id"] == 3071
+    done = view(owned(3008, 3071, 3053), analysis_loadout=lo)
+    assert done["next"] is None and done["complete"]
+
+
 def test_le_cout_de_la_partie_reelle():
     real = me_of(
         json.loads((FIXTURES / "spike_live" / "allgamedata_items.json").read_text("utf-8"))

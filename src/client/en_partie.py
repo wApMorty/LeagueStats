@@ -306,10 +306,6 @@ def curve_view(ingame: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-# Blocs du plan dont les objets se visent un à un (le reste : alternatives, composants, situationnels).
-NEXT_BLOCKS = ("Core", "Bottes")
-
-
 def _remaining_cost(
     item_id: int, owned: Counter, items: Dict[int, Dict[str, Any]]
 ) -> Optional[int]:
@@ -361,11 +357,14 @@ def build_view(
     ]
     next_item = None
     if mine is not None:
+        boots = set(loadout.get("boots") or [])
+        # une alternative prise compte pour la paire du core
+        has_boots = any(owned[b] > 0 for b in boots)
         targets: List[Dict[str, Any]] = []
         for block in blocks:
             base = block["title"].split(" (")[0]
             if base == "Core":
-                targets += block["items"]
+                targets += [i for i in block["items"] if not (has_boots and i["id"] in boots)]
             elif base == "Bottes" and not any(i["owned"] for i in block["items"]):
                 targets += block["items"][:1]  # les suivantes sont des alternatives
         target = next((i for i in targets if not i["owned"]), None)
