@@ -118,6 +118,8 @@ prochain objet restent faux.
   (aucune séquence) : bottes insérées après le core, mêmes titres.
 - `pick_build` lit la séquence sur la page générale ; `adapt_to_matchup` sur la page du duel si
   `bootsTimingSequences` y contient les bottes retenues, sinon sur la générale.
+- Aperçu de draft (`src/client/draft_loadout._items`, décision du plan d'implémentation) : il montre Départ et Core,
+  bottes retenues comprises ; les alternatives (« Autres bottes ») restent dans le set d'items du client seulement.
 - `Build` gagne `boots: Tuple[int, ...] = ()` : bottes retenues puis alternatives, exposées par
   `LoadoutImporter.state()` sous la clé `boots`.
 
@@ -163,7 +165,7 @@ prochain objet restent faux.
 4. `pick_build` sur la fixture Malphite générale : bloc Core = Sunfire, Plated Steelcaps, Thornmail ; sur
    `onetricks_jinx_bot.json` (sans séquence) : bottes après le core.
 5. `grep -n "LOADOUT_CORE_MIN_GAMES" src/config_constants.py` renvoie la constante, commentée avec son origine.
-6. `grep -n "def _skills" src/draft/loadout_import.py` ne renvoie rien.
+6. `grep -n "def _skills(" src/draft/loadout_import.py` ne renvoie rien (remplacée par `_skills_detail`).
 7. `CHANGELOG.md` (`[Unreleased]`), statut de cette spec et `docs/specs/README.md` à jour.
 
 **Vérification de bout en bout** : recette @pj35 en partie réelle avec un duel publié (idéalement Malphite contre
